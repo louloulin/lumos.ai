@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use lomusai_core::workflow::basic::{StepCondition, BasicWorkflow, WorkflowStep};
 use lomusai_core::workflow::basic::Workflow;
-use lomusai_core::llm::{Message, Role, LlmProvider, LlmOptions};
-use lomusai_core::agent::{Agent, AgentConfig, create_basic_agent};
+use lomusai_core::llm::{Message, LlmProvider, LlmOptions};
+use lomusai_core::agent::{AgentConfig, create_basic_agent};
 use lomusai_core::error::Result as LumusResult;
 use async_trait::async_trait;
 use serde_json::json;

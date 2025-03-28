@@ -15,6 +15,8 @@ pub mod tool;
 pub mod types;
 pub mod vector;
 pub mod workflow;
+pub mod app;
+pub mod rag;
 
 /// Re-export common types and traits
 pub use error::{Error, Result};
@@ -47,3 +49,10 @@ pub use vector::{
     sqlite::create_sqlite_vector_storage,
     sqlite::create_sqlite_vector_storage_in_memory
 }; 
+
+pub use crate::agent::{Message, MessageRole};
+pub use crate::tool::{Tool, ToolParameter, ToolResult};
+pub use crate::app::LumosApp;
+pub use crate::rag::{RagPipeline, QueryResult, DocumentSource, create_basic_rag_pipeline};
+pub use crate::vector::{Document, MemoryVectorStore};
+pub use crate::workflow::{Workflow, StepResult, StepCondition, WorkflowStep, BasicWorkflow, create_basic_workflow}; 

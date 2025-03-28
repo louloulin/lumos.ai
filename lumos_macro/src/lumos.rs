@@ -1,17 +1,20 @@
 use proc_macro::TokenStream;
 use quote::{quote, format_ident};
-use syn::{parse_macro_input, LitStr, Expr, Token, braced, parse::{Parse, ParseStream}};
-use syn::punctuated::Punctuated;
+use syn::{
+    parse_macro_input, braced, Expr, Ident, LitStr, Token,
+    parse::{Parse, ParseStream},
+    punctuated::Punctuated,
+};
 
-// 配置项结构
-struct AgentRef {
-    name: syn::Ident,
+// 应用组件项目
+struct ComponentItem {
+    name: Ident,
     expr: Option<Expr>,
 }
 
-impl Parse for AgentRef {
+impl Parse for ComponentItem {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let name = input.parse()?;
+        let name: Ident = input.parse()?;
         
         let expr = if input.peek(Token![:]) {
             let _: Token![:] = input.parse()?;
@@ -20,89 +23,41 @@ impl Parse for AgentRef {
             None
         };
         
-        Ok(AgentRef { name, expr })
+        Ok(ComponentItem { name, expr })
     }
 }
 
-// 代理配置集合
-struct AgentsConfig {
-    agents: Punctuated<AgentRef, Token![,]>,
+// 应用组件集合
+struct ComponentsConfig {
+    items: Punctuated<ComponentItem, Token![,]>,
 }
 
-impl Parse for AgentsConfig {
+impl Parse for ComponentsConfig {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
-        braced!(content in input);
+        let _ = braced!(content in input);
         
-        let agents = Punctuated::parse_terminated(&content)?;
+        let items = Punctuated::parse_terminated(&content)?;
         
-        Ok(AgentsConfig { agents })
+        Ok(ComponentsConfig { items })
     }
 }
 
-// 工具配置集合
-struct ToolsConfig {
-    tools: Punctuated<AgentRef, Token![,]>,
-}
-
-impl Parse for ToolsConfig {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        braced!(content in input);
-        
-        let tools = Punctuated::parse_terminated(&content)?;
-        
-        Ok(ToolsConfig { tools })
-    }
-}
-
-// RAG配置集合
-struct RagConfig {
-    rags: Punctuated<AgentRef, Token![,]>,
-}
-
-impl Parse for RagConfig {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        braced!(content in input);
-        
-        let rags = Punctuated::parse_terminated(&content)?;
-        
-        Ok(RagConfig { rags })
-    }
-}
-
-// 工作流配置集合
-struct WorkflowsConfig {
-    workflows: Punctuated<AgentRef, Token![,]>,
-}
-
-impl Parse for WorkflowsConfig {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        braced!(content in input);
-        
-        let workflows = Punctuated::parse_terminated(&content)?;
-        
-        Ok(WorkflowsConfig { workflows })
-    }
-}
-
-// Lumos应用配置
-struct LumosConfig {
-    name: Option<LitStr>,
+// 应用定义
+struct LumosAppDef {
+    name: LitStr,
     description: Option<LitStr>,
-    agents: Option<AgentsConfig>,
-    tools: Option<ToolsConfig>,
-    rags: Option<RagConfig>,
-    workflows: Option<WorkflowsConfig>,
+    agents: Option<ComponentsConfig>,
+    tools: Option<ComponentsConfig>,
+    rags: Option<ComponentsConfig>,
+    workflows: Option<ComponentsConfig>,
     mcp_endpoints: Option<Expr>,
 }
 
-impl Parse for LumosConfig {
+impl Parse for LumosAppDef {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
-        braced!(content in input);
+        let _ = braced!(content in input);
         
         let mut name = None;
         let mut description = None;
@@ -113,7 +68,7 @@ impl Parse for LumosConfig {
         let mut mcp_endpoints = None;
         
         while !content.is_empty() {
-            let key: syn::Ident = content.parse()?;
+            let key: Ident = content.parse()?;
             let _: Token![:] = content.parse()?;
             
             match key.to_string().as_str() {
@@ -145,11 +100,13 @@ impl Parse for LumosConfig {
                     mcp_endpoints = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
                 },
-                _ => return Err(syn::Error::new(key.span(), "Unknown field in Lumos configuration")),
+                _ => return Err(syn::Error::new(key.span(), "Unknown field in Lumos app definition")),
             }
         }
         
-        Ok(LumosConfig {
+        let name = name.ok_or_else(|| syn::Error::new(content.span(), "Missing 'name' field in Lumos app definition"))?;
+        
+        Ok(LumosAppDef {
             name,
             description,
             agents,
@@ -161,134 +118,112 @@ impl Parse for LumosConfig {
     }
 }
 
-/// 配置整个Lumos应用，参考Mastra的应用级API
-/// 
-/// # 示例
-/// 
-/// ```rust
-/// let app = lumos! {
-///     name: "stock_assistant",
-///     description: "一个能够提供股票信息的AI助手",
-///     
-///     agents: {
-///         stockAgent
-///     },
-///     
-///     tools: {
-///         stockPriceTool,
-///         stockInfoTool
-///     },
-///     
-///     rags: {
-///         stockKnowledgeBase
-///     },
-///     
-///     workflows: {
-///         stockAnalysisWorkflow
-///     },
-///     
-///     mcp_endpoints: vec!["https://api.example.com/mcp"]
-/// };
-/// ```
+/// 实现lumos!宏
 pub fn lumos(input: TokenStream) -> TokenStream {
-    let config = parse_macro_input!(input as LumosConfig);
+    let app_def = parse_macro_input!(input as LumosAppDef);
     
-    // 应用名称和描述
-    let name = match &config.name {
-        Some(name) => quote! { .with_name(#name) },
-        None => quote! {},
-    };
+    let app_name = &app_def.name;
+    let app_name_str = app_name.value();
+    let app_var_name = format_ident!("{}", app_name_str.to_lowercase().replace("-", "_"));
     
-    let description = match &config.description {
+    // 描述
+    let description = match &app_def.description {
         Some(desc) => quote! { .with_description(#desc) },
         None => quote! {},
     };
     
-    // 处理代理配置
-    let agents_config = if let Some(agents_cfg) = &config.agents {
-        let agent_refs = agents_cfg.agents.iter().map(|agent| {
-            let agent_name = &agent.name;
+    // 处理代理
+    let agent_registrations = if let Some(agents) = &app_def.agents {
+        let agent_statements = agents.items.iter().map(|item| {
+            let agent_name = &item.name;
             
-            if let Some(expr) = &agent.expr {
-                quote! { app.add_agent(#agent_name, #expr); }
-            } else {
-                quote! { app.add_agent(#agent_name, #agent_name); }
+            let agent_expr = match &item.expr {
+                Some(expr) => quote! { #expr },
+                None => quote! { #agent_name },
+            };
+            
+            quote! {
+                app.add_agent(#agent_name.to_string(), #agent_expr);
             }
         }).collect::<Vec<_>>();
         
         quote! {
-            // 添加代理
-            #(#agent_refs)*
+            #(#agent_statements)*
         }
     } else {
         quote! {}
     };
     
-    // 处理工具配置
-    let tools_config = if let Some(tools_cfg) = &config.tools {
-        let tool_refs = tools_cfg.tools.iter().map(|tool| {
-            let tool_name = &tool.name;
+    // 处理工具
+    let tool_registrations = if let Some(tools) = &app_def.tools {
+        let tool_statements = tools.items.iter().map(|item| {
+            let tool_name = &item.name;
             
-            if let Some(expr) = &tool.expr {
-                quote! { app.add_tool(#tool_name, #expr); }
-            } else {
-                quote! { app.add_tool(#tool_name, #tool_name()); }
+            let tool_expr = match &item.expr {
+                Some(expr) => quote! { #expr() },
+                None => quote! { #tool_name() },
+            };
+            
+            quote! {
+                app.add_tool(#tool_name.to_string(), #tool_expr);
             }
         }).collect::<Vec<_>>();
         
         quote! {
-            // 添加工具
-            #(#tool_refs)*
+            #(#tool_statements)*
         }
     } else {
         quote! {}
     };
     
-    // 处理RAG配置
-    let rags_config = if let Some(rags_cfg) = &config.rags {
-        let rag_refs = rags_cfg.rags.iter().map(|rag| {
-            let rag_name = &rag.name;
+    // 处理RAG
+    let rag_registrations = if let Some(rags) = &app_def.rags {
+        let rag_statements = rags.items.iter().map(|item| {
+            let rag_name = &item.name;
             
-            if let Some(expr) = &rag.expr {
-                quote! { app.add_rag(#rag_name, #expr); }
-            } else {
-                quote! { app.add_rag(#rag_name, #rag_name); }
+            let rag_expr = match &item.expr {
+                Some(expr) => quote! { #expr },
+                None => quote! { #rag_name },
+            };
+            
+            quote! {
+                app.add_rag(#rag_name.to_string(), #rag_expr);
             }
         }).collect::<Vec<_>>();
         
         quote! {
-            // 添加RAG
-            #(#rag_refs)*
+            #(#rag_statements)*
         }
     } else {
         quote! {}
     };
     
-    // 处理工作流配置
-    let workflows_config = if let Some(workflows_cfg) = &config.workflows {
-        let workflow_refs = workflows_cfg.workflows.iter().map(|workflow| {
-            let workflow_name = &workflow.name;
+    // 处理工作流
+    let workflow_registrations = if let Some(workflows) = &app_def.workflows {
+        let workflow_statements = workflows.items.iter().map(|item| {
+            let workflow_name = &item.name;
             
-            if let Some(expr) = &workflow.expr {
-                quote! { app.add_workflow(#workflow_name, #expr); }
-            } else {
-                quote! { app.add_workflow(#workflow_name, #workflow_name); }
+            let workflow_expr = match &item.expr {
+                Some(expr) => quote! { #expr },
+                None => quote! { #workflow_name },
+            };
+            
+            quote! {
+                app.add_workflow(#workflow_name.to_string(), #workflow_expr);
             }
         }).collect::<Vec<_>>();
         
         quote! {
-            // 添加工作流
-            #(#workflow_refs)*
+            #(#workflow_statements)*
         }
     } else {
         quote! {}
     };
     
-    // 处理MCP配置
-    let mcp_config = if let Some(endpoints) = &config.mcp_endpoints {
+    // 处理MCP端点
+    let mcp_config = if let Some(endpoints) = &app_def.mcp_endpoints {
         quote! {
-            // 添加MCP配置
-            app.configure_mcp(#endpoints);
+            app.set_mcp_endpoints(#endpoints);
         }
     } else {
         quote! {}
@@ -296,20 +231,28 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     
     let expanded = quote! {
         {
-            // 创建应用实例
-            let mut app = lomusai_core::app::LumosApp::new()
-                #name
-                #description;
+            use lomusai_core::app::LumosApp;
             
-            // 配置组件
-            #agents_config
-            #tools_config
-            #rags_config
-            #workflows_config
+            let mut app = LumosApp::new(#app_name)
+                #description;
+                
+            // 注册代理
+            #agent_registrations
+            
+            // 注册工具
+            #tool_registrations
+            
+            // 注册RAG
+            #rag_registrations
+            
+            // 注册工作流
+            #workflow_registrations
+            
+            // 配置MCP端点
             #mcp_config
             
-            // 返回配置好的应用实例
-            app
+            let #app_var_name = app;
+            #app_var_name
         }
     };
     

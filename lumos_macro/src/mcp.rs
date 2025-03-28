@@ -212,8 +212,7 @@ impl Parse for McpClientDef {
 ///     }
 /// }
 /// ```
-#[proc_macro]
-pub fn mcp_client(input: TokenStream) -> TokenStream {
+pub fn mcp_client_impl(input: TokenStream) -> TokenStream {
     let mcp_client_def = parse_macro_input!(input as McpClientDef);
     
     let discovery = &mcp_client_def.discovery;

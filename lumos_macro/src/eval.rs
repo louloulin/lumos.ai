@@ -156,8 +156,7 @@ impl Parse for EvalSuiteDef {
 ///     }
 /// }
 /// ```
-#[proc_macro]
-pub fn eval_suite(input: TokenStream) -> TokenStream {
+pub fn eval_suite_impl(input: TokenStream) -> TokenStream {
     let eval_suite_def = parse_macro_input!(input as EvalSuiteDef);
     
     let name = &eval_suite_def.name;

@@ -339,8 +339,7 @@ impl Parse for RagPipelineDef {
 ///     }
 /// }
 /// ```
-#[proc_macro]
-pub fn rag_pipeline(input: TokenStream) -> TokenStream {
+pub fn rag_pipeline_impl(input: TokenStream) -> TokenStream {
     let rag_pipeline_def = parse_macro_input!(input as RagPipelineDef);
     
     let name = &rag_pipeline_def.name;

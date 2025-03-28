@@ -4,6 +4,17 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, DeriveInput, Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}, punctuated::Punctuated};
 use syn::{Attribute, Data, DataStruct, Fields};
+use syn::spanned::Spanned;
+
+mod tool_macro;
+mod agent_macro;
+mod workflow;
+mod rag;
+mod eval;
+mod mcp;
+mod agent;
+mod tools;
+mod lumos;
 
 /// Macro for defining a tool in a simplified way
 /// 
@@ -45,7 +56,7 @@ use syn::{Attribute, Data, DataStruct, Fields};
 /// ```
 #[proc_macro_attribute]
 pub fn tool(attr: TokenStream, item: TokenStream) -> TokenStream {
-    tool_macro::tool_impl(attr, item)
+    tool_macro::tool_macro(attr, item)
 }
 
 struct ToolAttributes {
@@ -214,8 +225,8 @@ impl Parse for AgentAttributes {
 /// }
 /// ```
 #[proc_macro_derive(LlmAdapter)]
-pub fn llm_adapter(input: TokenStream) -> TokenStream {
-    llm_adapter_macro::llm_adapter_impl(input)
+pub fn derive_llm_adapter(input: TokenStream) -> TokenStream {
+    agent_macro::derive_llm_adapter(input)
 }
 
 /// A macro for quick tool execution setup
@@ -233,22 +244,7 @@ pub fn llm_adapter(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn lumos_execute_tool(input: TokenStream) -> TokenStream {
-    let input_parsed = parse_macro_input!(input as ToolExecuteArgs);
-    
-    let tool_name = &input_parsed.tool;
-    let params = &input_parsed.params;
-    
-    let expanded = quote! {
-        {
-            let mut params_map = HashMap::new();
-            #params
-            let options = ToolExecutionOptions::default();
-            let tool = #tool_name();
-            tool.execute(params_map, &options).await.expect("Tool execution failed")
-        }
-    };
-    
-    TokenStream::from(expanded)
+    tool_macro::lumos_execute_tool(input)
 }
 
 struct ToolExecuteArgs {
@@ -286,17 +282,6 @@ impl Parse for ToolExecuteArgs {
     }
 }
 
-mod tool_macro;
-mod agent_macro;
-mod llm_adapter_macro;
-mod workflow;
-mod rag;
-mod eval;
-mod mcp;
-mod agent_dsl;
-mod tools_dsl;
-mod lumos;
-
 /// 创建一个工作流定义，参考Mastra的工作流API设计
 /// 
 /// # 示例
@@ -322,7 +307,7 @@ mod lumos;
 /// ```
 #[proc_macro]
 pub fn workflow(input: TokenStream) -> TokenStream {
-    workflow::workflow(input)
+    workflow::workflow_impl(input)
 }
 
 /// 创建一个RAG管道，参考Mastra的RAG原语API设计
@@ -361,7 +346,7 @@ pub fn workflow(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn rag_pipeline(input: TokenStream) -> TokenStream {
-    rag::rag_pipeline(input)
+    rag::rag_pipeline_impl(input)
 }
 
 /// 创建一个评估套件，参考Mastra的Eval框架
@@ -391,7 +376,7 @@ pub fn rag_pipeline(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn eval_suite(input: TokenStream) -> TokenStream {
-    eval::eval_suite(input)
+    eval::eval_suite_impl(input)
 }
 
 /// 创建一个MCP客户端配置，参考Mastra的MCP支持
@@ -422,7 +407,7 @@ pub fn eval_suite(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn mcp_client(input: TokenStream) -> TokenStream {
-    mcp::mcp_client(input)
+    mcp::mcp_client_impl(input)
 }
 
 /// 创建一个代理定义，参考Mastra的Agent API设计
@@ -453,7 +438,7 @@ pub fn mcp_client(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn agent(input: TokenStream) -> TokenStream {
-    agent_dsl::agent(input)
+    agent::agent(input)
 }
 
 /// 一次性定义多个工具，参考Mastra的工具API设计
@@ -518,7 +503,7 @@ pub fn agent(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn tools(input: TokenStream) -> TokenStream {
-    tools_dsl::tools(input)
+    tools::tools(input)
 }
 
 /// 配置整个Lumos应用，参考Mastra的应用级API

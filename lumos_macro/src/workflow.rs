@@ -149,8 +149,7 @@ impl Parse for WorkflowDef {
 ///     }
 /// }
 /// ```
-#[proc_macro]
-pub fn workflow(input: TokenStream) -> TokenStream {
+pub fn workflow_impl(input: TokenStream) -> TokenStream {
     let workflow_def = parse_macro_input!(input as WorkflowDef);
     
     let workflow_name = &workflow_def.name;

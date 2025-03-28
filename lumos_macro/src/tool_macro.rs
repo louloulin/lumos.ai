@@ -1,6 +1,14 @@
 use proc_macro::TokenStream;
-use quote::quote;
-use syn::{parse_macro_input, ItemFn, Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
+use quote::{quote, format_ident};
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input, parse_quote,
+    punctuated::Punctuated,
+    token, Arm, Attribute, Expr, ExprClosure, ExprLit, FnArg, Ident, ItemFn, LitBool, LitStr, 
+    Meta, MetaList, MetaNameValue, NestedMeta, Pat, PatIdent, PatType, Result, Token, Type
+};
+use syn::spanned::Spanned;
+use proc_macro2::Span;
 
 // 工具属性解析
 pub struct ToolAttributes {
@@ -171,6 +179,26 @@ pub fn tool_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
                     #fn_body
                 },
             ))
+        }
+    };
+    
+    TokenStream::from(expanded)
+}
+
+// lumos_execute_tool宏的实现
+pub fn lumos_execute_tool(input: TokenStream) -> TokenStream {
+    let input_parsed = parse_macro_input!(input as ToolExecuteArgs);
+    
+    let tool_name = &input_parsed.tool;
+    let params = &input_parsed.params;
+    
+    let expanded = quote! {
+        {
+            let mut params_map = HashMap::new();
+            #params
+            let options = ToolExecutionOptions::default();
+            let tool = #tool_name();
+            tool.execute(params_map, &options).await.expect("Tool execution failed")
         }
     };
     

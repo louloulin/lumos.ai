@@ -1,12 +1,15 @@
-//! Workflow module for executing sequences of steps
+//! 工作流模块，用于执行由步骤组成的工作流
 
-pub struct Workflow {
-    pub id: String,
-    pub name: String,
-}
+mod types;
+mod step;
+mod workflow;
+#[cfg(test)]
+mod tests;
 
-impl Workflow {
-    pub fn new(id: String, name: String) -> Self {
-        Self { id, name }
-    }
-} 
+// 重新导出公共项
+pub use types::{
+    Step, StepContext, StepResult, StepStatus, StepCondition,
+    WorkflowRunResult, WorkflowState, RetryConfig
+};
+pub use step::{BasicStep, StepBuilder, StepConfig};
+pub use workflow::{Workflow, WorkflowInstance, resume_workflow}; 

@@ -125,7 +125,7 @@ impl OpenAiProvider {
         messages
             .iter()
             .map(|msg| OpenAIRequestMessage {
-                role: msg.role.clone(),
+                role: msg.role.as_str().to_string(),
                 content: msg.content.clone(),
             })
             .collect()
@@ -138,7 +138,7 @@ impl LlmProvider for OpenAiProvider {
         // 准备请求数据
         let url = format!("{}/chat/completions", self.base_url);
         
-        let mut messages = vec![
+        let messages = vec![
             serde_json::json!({
                 "role": "user",
                 "content": prompt
@@ -205,7 +205,7 @@ impl LlmProvider for OpenAiProvider {
             .iter()
             .map(|msg| {
                 serde_json::json!({
-                    "role": String::from(msg.role.clone()),
+                    "role": msg.role.as_str(),
                     "content": msg.content.clone(),
                     "name": msg.name.clone(),
                 })

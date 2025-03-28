@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use reqwest::header::{HeaderMap, HeaderValue};
@@ -246,7 +245,7 @@ impl LlmProvider for AnthropicProvider {
         Ok(content.trim().to_string())
     }
     
-    async fn generate_stream<'a>(&'a self, prompt: &'a str, _options: &'a LlmOptions) -> Result<BoxStream<'a, Result<String>>> {
+    async fn generate_stream<'a>(&'a self, _prompt: &'a str, _options: &'a LlmOptions) -> Result<BoxStream<'a, Result<String>>> {
         // Anthropic支持流式输出，但我们暂时不实现
         Err(Error::Llm("Stream generation not implemented for Anthropic".to_string()))
     }

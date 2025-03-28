@@ -7,7 +7,7 @@ use crate::metrics::{Metric, MetricResult};
 use lomusai_core::llm::{LlmProvider, LlmOptions, Message, Role};
 
 /// 准确性评估指标，用于评估输出在事实上的准确性
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct AccuracyMetric {
     /// 任意名称
     pub name: String,
@@ -15,12 +15,24 @@ pub struct AccuracyMetric {
     /// 该指标的描述
     pub description: String,
     
-    /// 用于评估的LLM提供者
+    /// 用于评估的LLM提供者（可选）
     #[serde(skip)]
     llm: Option<Box<dyn LlmProvider>>,
     
     /// 用于评估的提示模板
     pub prompt_template: String,
+}
+
+// 手动实现Clone
+impl Clone for AccuracyMetric {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            description: self.description.clone(),
+            llm: None, // LLM不能克隆，所以设为None
+            prompt_template: self.prompt_template.clone(),
+        }
+    }
 }
 
 impl Default for AccuracyMetric {

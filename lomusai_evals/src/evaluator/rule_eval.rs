@@ -26,20 +26,52 @@ pub struct Rule {
 }
 
 /// 规则类型
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum RuleType {
     /// 正则表达式规则，检查输出是否匹配正则
+    #[serde(rename = "regex")]
     Regex(String),
     
     /// 关键词规则，检查输出是否包含关键词
+    #[serde(rename = "keywords")]
     Keywords(Vec<String>),
     
     /// 长度规则，检查输出长度是否在指定范围内
+    #[serde(rename = "length")]
     Length { min: Option<usize>, max: Option<usize> },
     
     /// 自定义规则，使用闭包评估
     #[serde(skip)]
-    Custom(Box<dyn Fn(&str, &str) -> (bool, Option<String>) + Send + Sync>),
+    Custom(#[serde(skip)] Box<dyn Fn(&str, &str) -> (bool, Option<String>) + Send + Sync>),
+}
+
+// 手动实现Debug特性
+impl std::fmt::Debug for RuleType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RuleType::Regex(pattern) => write!(f, "Regex({:?})", pattern),
+            RuleType::Keywords(keywords) => write!(f, "Keywords({:?})", keywords),
+            RuleType::Length { min, max } => write!(f, "Length {{ min: {:?}, max: {:?} }}", min, max),
+            RuleType::Custom(_) => write!(f, "Custom(function)"),
+        }
+    }
+}
+
+// 手动实现Clone特性
+impl Clone for RuleType {
+    fn clone(&self) -> Self {
+        match self {
+            RuleType::Regex(pattern) => RuleType::Regex(pattern.clone()),
+            RuleType::Keywords(keywords) => RuleType::Keywords(keywords.clone()),
+            RuleType::Length { min, max } => RuleType::Length { 
+                min: min.clone(), 
+                max: max.clone() 
+            },
+            // 自定义规则不能克隆，返回默认正则
+            RuleType::Custom(_) => RuleType::Regex(".*".to_string()),
+        }
+    }
 }
 
 /// 规则评估结果
@@ -318,10 +350,7 @@ mod tests {
                 name: "length_check".to_string(),
                 description: "回答长度应在指定范围内".to_string(),
                 weight: 1.0,
-                rule_type: RuleType::Length { 
-                    min: Some(10), 
-                    max: Some(100) 
-                },
+                rule_type: RuleType::Length { min: Some(10), max: Some(100) },
             });
             
         // 测试长度在范围内的情况

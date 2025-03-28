@@ -7,7 +7,7 @@ use crate::metrics::{Metric, MetricResult};
 use lomusai_core::llm::{LlmProvider, LlmOptions, Message, Role};
 
 /// 相关性评估指标，用于评估输出与输入问题的相关程度
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RelevanceMetric {
     /// 指标名称
     pub name: String,
@@ -21,6 +21,18 @@ pub struct RelevanceMetric {
     
     /// 用于评估的提示模板
     pub prompt_template: String,
+}
+
+// 手动实现Clone
+impl Clone for RelevanceMetric {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            description: self.description.clone(),
+            llm: None, // LLM不能克隆，所以设为None
+            prompt_template: self.prompt_template.clone(),
+        }
+    }
 }
 
 impl Default for RelevanceMetric {

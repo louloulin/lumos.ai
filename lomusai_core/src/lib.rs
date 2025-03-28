@@ -3,22 +3,17 @@
 //! 提供了Agent、工作流、工具、LLM接口等核心功能
 
 pub mod agent;
+pub mod error;
 pub mod llm;
-pub mod tool;
-pub mod workflow;
 pub mod memory;
 pub mod telemetry;
-pub mod error;
+pub mod tool;
 pub mod types;
+pub mod workflow;
 
 /// Re-export common types and traits
-pub use error::Error;
-pub use llm::LlmProvider;
-pub use agent::Agent;
-pub use tool::Tool;
-pub use workflow::Workflow;
-pub use memory::{Memory, MemoryConfig};
-pub use llm::{Role, Message, LlmOptions};
-
-/// Result type used throughout the library
-pub type Result<T> = std::result::Result<T, Error>; 
+pub use error::{Error, Result};
+pub use llm::{LlmProvider, LlmOptions, Message, Role};
+pub use agent::AgentConfig;
+pub use memory::Memory;
+pub use tool::Tool; 

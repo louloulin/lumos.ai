@@ -53,7 +53,7 @@ impl BasicStep {
     /// 创建一个简单的步骤
     pub fn create_simple<F>(id: String, description: String, f: F) -> Self
     where
-        F: Fn(serde_json::Value) -> Result<serde_json::Value, Error> + Send + Sync + 'static,
+        F: Fn(serde_json::Value) -> Result<serde_json::Value, Error> + Send + Sync + 'static + Clone,
     {
         Self::new(
             id,

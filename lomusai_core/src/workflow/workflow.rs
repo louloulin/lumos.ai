@@ -1,10 +1,9 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
-use async_trait::async_trait;
-use futures::future::BoxFuture;
+use std::sync::Arc;
 use uuid::Uuid;
 use chrono::Utc;
 use tokio::time::sleep;
+use tokio::sync::Mutex;
 use std::time::Duration;
 
 use crate::error::Error;
@@ -86,16 +85,42 @@ impl WorkflowInstance {
     
     /// 开始执行工作流
     pub async fn run(&self) -> Result<WorkflowRunResult, Error> {
-        // 执行初始节点
-        for step_id in &self.graph.initial {
-            self.execute_step(step_id).await?;
+        // 使用层次遍历处理工作流步骤
+        let mut pending_steps: Vec<String> = self.graph.initial.clone();
+        let mut processed_steps: HashSet<String> = HashSet::new();
+        
+        // 处理所有步骤，直到没有更多步骤或所有步骤都已处理
+        while !pending_steps.is_empty() {
+            let step_id = pending_steps.remove(0);
+            
+            // 如果步骤已处理过，跳过
+            if processed_steps.contains(&step_id) {
+                continue;
+            }
+            
+            // 执行步骤
+            if let Err(e) = self.execute_step(&step_id).await {
+                eprintln!("执行步骤 {} 失败: {}", step_id, e);
+            }
+            
+            // 标记为已处理
+            processed_steps.insert(step_id.clone());
+            
+            // 添加后续步骤到待处理列表
+            if let Some(next_steps) = self.graph.edges.get(&step_id) {
+                for next_step in next_steps {
+                    if !processed_steps.contains(next_step) {
+                        pending_steps.push(next_step.clone());
+                    }
+                }
+            }
         }
         
         // 等待所有步骤执行完成或失败
         self.wait_for_completion().await?;
         
         // 返回工作流结果
-        Ok(self.get_result())
+        Ok(self.get_result().await)
     }
     
     /// 等待工作流执行完成
@@ -107,7 +132,7 @@ impl WorkflowInstance {
         
         while retry_count < max_retries {
             let is_completed = {
-                let state = self.state.lock().unwrap();
+                let state = self.state.lock().await;
                 let active_steps = state.active_paths.len();
                 active_steps == 0 || state.suspended_steps.is_some()
             };
@@ -135,7 +160,7 @@ impl WorkflowInstance {
         };
         
         // 首先检查条件是否满足
-        let check_result = self.check_dependencies(step_id, &node).await?;
+        let check_result = self.check_dependencies(&node).await?;
         
         match check_result {
             DependencyCheckOutput::ConditionsMet => {
@@ -146,28 +171,19 @@ impl WorkflowInstance {
                     StepExecutorOutput::StepSuccess { output } => {
                         // 更新状态
                         let result = StepResult::Success { output: output.clone() };
-                        self.update_step_result(step_id, result.clone());
-                        
-                        // 执行下一步
-                        self.trigger_next_steps(step_id).await?;
-                        
+                        self.update_step_result(step_id, result.clone()).await;
                         Ok(result)
                     },
                     StepExecutorOutput::StepFailed { error } => {
                         // 更新状态
                         let result = StepResult::Failed { error: error.clone() };
-                        self.update_step_result(step_id, result.clone());
-                        
-                        // 执行下一步（即使有错误也需要走流程，下一步的条件会控制是否执行）
-                        self.trigger_next_steps(step_id).await?;
-                        
+                        self.update_step_result(step_id, result.clone()).await;
                         Ok(result)
                     },
                     StepExecutorOutput::StepWaiting => {
                         // 步骤等待中
                         let result = StepResult::Waiting;
-                        self.update_step_result(step_id, result.clone());
-                        
+                        self.update_step_result(step_id, result.clone()).await;
                         Ok(result)
                     }
                 }
@@ -175,21 +191,13 @@ impl WorkflowInstance {
             DependencyCheckOutput::ConditionsSkipped => {
                 // 条件不满足，跳过步骤
                 let result = StepResult::Skipped;
-                self.update_step_result(step_id, result.clone());
-                
-                // 执行下一步
-                self.trigger_next_steps(step_id).await?;
-                
+                self.update_step_result(step_id, result.clone()).await;
                 Ok(result)
             },
             DependencyCheckOutput::ConditionFailed { error } => {
                 // 条件检查失败
                 let result = StepResult::Failed { error };
-                self.update_step_result(step_id, result.clone());
-                
-                // 执行下一步
-                self.trigger_next_steps(step_id).await?;
-                
+                self.update_step_result(step_id, result.clone()).await;
                 Ok(result)
             },
             DependencyCheckOutput::Suspended => {
@@ -198,32 +206,29 @@ impl WorkflowInstance {
                     suspend_payload: None, 
                     output: None 
                 };
-                self.update_step_result(step_id, result.clone());
-                
+                self.update_step_result(step_id, result.clone()).await;
                 Ok(result)
             },
             DependencyCheckOutput::Waiting => {
                 // 步骤等待
                 let result = StepResult::Waiting;
-                self.update_step_result(step_id, result.clone());
-                
+                self.update_step_result(step_id, result.clone()).await;
                 Ok(result)
             },
             DependencyCheckOutput::ConditionsLimbo => {
                 // 步骤暂停
                 let result = StepResult::Waiting;
-                self.update_step_result(step_id, result.clone());
-                
+                self.update_step_result(step_id, result.clone()).await;
                 Ok(result)
             }
         }
     }
     
     /// 检查步骤依赖条件
-    async fn check_dependencies(&self, step_id: &str, node: &StepNode) -> Result<DependencyCheckOutput, Error> {
+    async fn check_dependencies(&self, node: &StepNode) -> Result<DependencyCheckOutput, Error> {
         if let Some(condition) = &node.when {
             // 获取当前状态
-            let state = self.state.lock().unwrap();
+            let state = self.state.lock().await;
             
             // 构建步骤上下文
             let context = StepContext {
@@ -375,7 +380,7 @@ impl WorkflowInstance {
     /// 运行步骤
     async fn run_step(&self, step_id: &str, node: &StepNode) -> Result<StepExecutorOutput, Error> {
         // 获取状态
-        let mut state_guard = self.state.lock().unwrap();
+        let mut state_guard = self.state.lock().await;
         
         // 增加尝试次数
         let attempts = {
@@ -410,17 +415,13 @@ impl WorkflowInstance {
             step_path: vec![step_id.to_string()],
         });
         
-        // 释放锁，准备执行步骤
-        drop(state_guard);
-        
         // 构建步骤上下文
         let context = {
-            let state = self.state.lock().unwrap();
             StepContext {
                 run_id: self.run_id.clone(),
                 input_data: node.data.clone(),
                 trigger_data: self.trigger_data.clone(),
-                steps: state.steps.iter().map(|(k, v)| {
+                steps: state_guard.steps.iter().map(|(k, v)| {
                     let result = match v.status {
                         StepStatus::Success => StepResult::Success { 
                             output: v.payload.clone().unwrap_or(serde_json::Value::Null) 
@@ -438,15 +439,18 @@ impl WorkflowInstance {
                     };
                     (k.clone(), result)
                 }).collect(),
-                attempts: state.attempts.clone(),
+                attempts: state_guard.attempts.clone(),
             }
         };
+        
+        // 释放锁，以便执行步骤时避免死锁
+        drop(state_guard);
         
         // 执行步骤
         match node.step.execute(context).await {
             Ok(output) => {
                 // 更新状态为成功
-                let mut state = self.state.lock().unwrap();
+                let mut state = self.state.lock().await;
                 state.steps.insert(step_id.to_string(), StepStatusInfo {
                     status: StepStatus::Success,
                     payload: Some(output.clone()),
@@ -460,7 +464,7 @@ impl WorkflowInstance {
             },
             Err(err) => {
                 // 更新状态为失败
-                let mut state = self.state.lock().unwrap();
+                let mut state = self.state.lock().await;
                 state.steps.insert(step_id.to_string(), StepStatusInfo {
                     status: StepStatus::Failed,
                     payload: None,
@@ -475,27 +479,9 @@ impl WorkflowInstance {
         }
     }
     
-    /// 触发后续步骤
-    async fn trigger_next_steps(&self, step_id: &str) -> Result<(), Error> {
-        if let Some(next_steps) = self.graph.edges.get(step_id) {
-            for next_step_id in next_steps {
-                // 异步执行下一步
-                let next_step_id = next_step_id.clone();
-                let this = self.clone();
-                tokio::spawn(async move {
-                    if let Err(e) = this.execute_step(&next_step_id).await {
-                        eprintln!("执行步骤 {} 失败: {}", next_step_id, e);
-                    }
-                });
-            }
-        }
-        
-        Ok(())
-    }
-    
     /// 更新步骤结果
-    fn update_step_result(&self, step_id: &str, result: StepResult) {
-        let mut state = self.state.lock().unwrap();
+    async fn update_step_result(&self, step_id: &str, result: StepResult) {
+        let mut state = self.state.lock().await;
         
         let status_info = match &result {
             StepResult::Success { output } => StepStatusInfo {
@@ -529,8 +515,8 @@ impl WorkflowInstance {
     }
     
     /// 获取工作流结果
-    fn get_result(&self) -> WorkflowRunResult {
-        let state = self.state.lock().unwrap();
+    async fn get_result(&self) -> WorkflowRunResult {
+        let state = self.state.lock().await;
         
         // 转换结果
         let results = state.steps.iter().map(|(step_id, status_info)| {
@@ -571,18 +557,6 @@ impl WorkflowInstance {
             results,
             active_paths,
             timestamp: state.timestamp,
-        }
-    }
-    
-    /// 克隆工作流实例（只克隆引用）
-    fn clone(&self) -> Self {
-        Self {
-            id: self.id.clone(),
-            run_id: self.run_id.clone(),
-            graph: Arc::clone(&self.graph),
-            trigger_data: self.trigger_data.clone(),
-            state: Arc::clone(&self.state),
-            retry_config: self.retry_config.clone(),
         }
     }
 }
@@ -767,9 +741,9 @@ impl Workflow {
 /// 恢复工作流
 pub async fn resume_workflow(
     workflow: &Workflow,
-    run_id: &str,
-    step_id: &str,
-    context: Option<serde_json::Value>,
+    _run_id: &str,
+    _step_id: &str,
+    _context: Option<serde_json::Value>,
 ) -> Result<WorkflowRunResult, Error> {
     // 这里应该有一个存储工作流状态的地方
     // 简化实现，实际上需要从存储中恢复工作流状态

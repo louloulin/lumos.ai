@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::{ChunkingConfig, Document, Metadata};
+use crate::types::{ChunkingConfig, Document};
 
 /// Trait for document chunkers that split documents into smaller pieces
 #[async_trait]
@@ -114,7 +114,7 @@ impl DocumentChunker for TextChunker {
             // Create metadata for the chunk
             let mut chunk_metadata = document.metadata.clone();
             chunk_metadata.add("chunk_index", i);
-            chunk_metadata.add("parent_document_id", &document.id);
+            chunk_metadata.add("parent_document_id", document.id.clone());
             
             // Create the chunk document
             let chunk_doc = Document {
@@ -134,6 +134,7 @@ impl DocumentChunker for TextChunker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::Metadata;
 
     #[tokio::test]
     async fn test_text_chunker_by_chars() {

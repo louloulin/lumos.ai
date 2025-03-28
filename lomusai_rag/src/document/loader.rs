@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use std::path::{Path, PathBuf};
 use tokio::fs;
+use std::time::SystemTime;
+use chrono::{DateTime, Utc};
 
 use crate::error::{RagError, Result};
 use crate::types::Metadata;
@@ -59,7 +61,8 @@ impl DocumentLoader for FileLoader {
         
         if let Ok(metadata_result) = fs::metadata(&path).await {
             if let Ok(modified) = metadata_result.modified() {
-                if let Ok(dt) = modified.into_std().try_into() {
+                // Convert SystemTime to DateTime<Utc>
+                if let Ok(dt) = system_time_to_date_time(modified) {
                     metadata.created_at = Some(dt);
                 }
             }
@@ -67,6 +70,23 @@ impl DocumentLoader for FileLoader {
         
         Ok((content, metadata))
     }
+}
+
+/// Convert SystemTime to DateTime<Utc>
+fn system_time_to_date_time(time: SystemTime) -> Result<DateTime<Utc>> {
+    // First convert to duration since UNIX_EPOCH
+    let duration_since_epoch = time.duration_since(SystemTime::UNIX_EPOCH)
+        .map_err(|e| RagError::DocumentLoading(format!("Failed to convert time: {}", e)))?;
+    
+    // Convert to seconds and nanoseconds
+    let secs = duration_since_epoch.as_secs();
+    let nsecs = duration_since_epoch.subsec_nanos();
+    
+    // Create DateTime<Utc> from timestamp
+    let dt = DateTime::from_timestamp(secs as i64, nsecs)
+        .ok_or_else(|| RagError::DocumentLoading("Failed to create DateTime from timestamp".to_string()))?;
+    
+    Ok(dt)
 }
 
 impl Default for FileLoader {

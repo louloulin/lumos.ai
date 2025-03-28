@@ -4,7 +4,7 @@ use std::sync::RwLock;
 
 use crate::error::{RagError, Result};
 use crate::types::{Document, RetrievalOptions, RetrievalResult};
-use crate::embedding::EmbeddingProvider;
+use crate::embedding::{EmbeddingProvider, utils};
 use crate::retriever::vector_store::VectorStore;
 
 /// A simple in-memory vector store implementation
@@ -36,7 +36,7 @@ impl InMemoryVectorStore {
             // Skip documents that don't have embeddings
             if let Some(doc_embedding) = &doc.embedding {
                 // Calculate similarity score
-                let similarity = EmbeddingProvider::cosine_similarity(embedding, doc_embedding);
+                let similarity = utils::compute_cosine_similarity(embedding, doc_embedding);
                 
                 // Apply threshold filter if specified
                 if let Some(threshold) = options.threshold {
@@ -190,10 +190,47 @@ impl VectorStore for InMemoryVectorStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mockall::predicate::*;
-    use mockall::*;
     use crate::types::Metadata;
-    use crate::embedding::provider::MockEmbeddingProvider;
+    
+    // A simple mock embedding provider for testing
+    #[derive(Default)]
+    struct MockEmbeddingProvider {
+        // Pre-defined embedding to return
+        return_embedding: Vec<f32>,
+    }
+    
+    impl MockEmbeddingProvider {
+        fn new() -> Self {
+            Self {
+                return_embedding: vec![0.4, 0.8, 1.2], // Default embedding for tests
+            }
+        }
+        
+        // Configure the embedding to return
+        fn with_embedding(mut self, embedding: Vec<f32>) -> Self {
+            self.return_embedding = embedding;
+            self
+        }
+    }
+    
+    #[async_trait]
+    impl EmbeddingProvider for MockEmbeddingProvider {
+        async fn embed_text(&self, _text: &str) -> Result<Vec<f32>> {
+            Ok(self.return_embedding.clone())
+        }
+        
+        async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
+            let mut results = Vec::with_capacity(texts.len());
+            for _ in texts {
+                results.push(self.return_embedding.clone());
+            }
+            Ok(results)
+        }
+        
+        fn cosine_similarity(&self, vec_a: &[f32], vec_b: &[f32]) -> f32 {
+            utils::compute_cosine_similarity(vec_a, vec_b)
+        }
+    }
     
     #[tokio::test]
     async fn test_add_and_get_document() {
@@ -249,12 +286,7 @@ mod tests {
     #[tokio::test]
     async fn test_query_by_text() {
         let mut store = InMemoryVectorStore::new();
-        let mut mock_provider = MockEmbeddingProvider::new();
-        
-        // Configure mock to return a specific embedding for the query
-        mock_provider.expect_embed_text()
-            .with(eq("test query"))
-            .returning(|_| Ok(vec![0.4, 0.8, 1.2]));
+        let mock_provider = MockEmbeddingProvider::new();
         
         // Add documents with different embeddings
         for i in 0..3 {

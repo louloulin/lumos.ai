@@ -6,6 +6,9 @@ authors = ["Lomusai Team"]
 description = "Retrieval Augmented Generation (RAG) module for Lomusai AI framework"
 license = "MIT"
 
+[lib]
+path = "src/lib.rs"
+
 [features]
 default = ["openai-embeddings"]
 openai-embeddings = ["reqwest"]
@@ -36,4 +39,6 @@ url = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }
-mockall = { workspace = true } 
+mockall = { workspace = true }
+mockito = { workspace = true }
+tempfile = { workspace = true } 

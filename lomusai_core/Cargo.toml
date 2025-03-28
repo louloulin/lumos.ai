@@ -6,6 +6,9 @@ authors = ["Lomusai Team"]
 description = "Core functionality for the Lomusai framework"
 license = "MIT"
 
+[lib]
+path = "src/lib.rs"
+
 [dependencies]
 tokio = { workspace = true }
 serde = { workspace = true }

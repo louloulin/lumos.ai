@@ -17,6 +17,7 @@ pub use llm::LlmProvider;
 pub use agent::Agent;
 pub use tool::Tool;
 pub use workflow::Workflow;
+pub use memory::{Memory, MemoryConfig};
 
 /// Result type used throughout the library
 pub type Result<T> = std::result::Result<T, Error>; 

@@ -1,13 +1,7 @@
 [workspace]
 members = [
-    "src",
     "lomusai_core",
     "lomusai_rag",
-    "lomusai_memory",
-    "lomusai_evals",
-    "lomusai_cli",
-    "lomusai_integrations",
-    "lomusai_deployer",
 ]
 
 [workspace.package]
@@ -40,6 +34,8 @@ url = "2.5"
 # 测试工具
 tokio-test = "0.4"
 mockall = "0.11"
+mockito = "1.2"
+tempfile = "3.8"
 
 [profile.dev]
 opt-level = 0

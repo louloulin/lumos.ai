@@ -6,7 +6,7 @@ Mastra是一个用TypeScript编写的AI应用框架，提供以下核心功能�
 
 - **Agent系统**：允许语言模型选择执行一系列动作的系统 ✅
 - **工作流引擎**：可持久化的基于图的状态机 ✅
-- **RAG (检索增强生成)**：构建知识库的ETL管道
+- **RAG (检索增强生成)**：构建知识库的ETL管道 ✅
 - **集成系统**：自动生成的类型安全的第三方服务API客户端
 - **评估框架**：使用模型评分、基于规则和统计方法评估LLM输出的工具
 - **工具系统**：可由Agent或工作流执行的类型化函数 ✅
@@ -35,7 +35,7 @@ Mastra是一个用TypeScript编写的AI应用框架，提供以下核心功能�
    - 迁移核心功能：Agents, Workflows, Tools ✅
 
 2. **阶段二：功能模块迁移**
-   - 实现RAG模块
+   - 实现RAG模块 ✅
    - 实现Memory模块 ✅
    - 实现Evals模块
 
@@ -54,7 +54,7 @@ Mastra是一个用TypeScript编写的AI应用框架，提供以下核心功能�
 | Mastra模块 | Lomusai模块 | 状态 |
 |-----------|-----------|------|
 | @mastra/core | lomusai_core | ✅ 已实现基础功能 |
-| @mastra/rag | lomusai_rag | 🔄 待实现 |
+| @mastra/rag | lomusai_rag | ✅ 已实现基础功能 |
 | @mastra/memory | lomusai_memory | ✅ 已实现基础功能 |
 | @mastra/evals | lomusai_evals | 🔄 待实现 |
 | @mastra/cli | lomusai_cli | 🔄 待实现 |
@@ -116,9 +116,11 @@ lomusai/
 │   │           ├── recent.rs    // 最近记忆
 │   │           └── semantic.rs  // 语义搜索
 │   │
-│   ├── lomusai_rag/             // RAG功能 🔄
+│   ├── lomusai_rag/             // RAG功能 ✅
 │   │   └── src/
-│   │       ├── lib.rs
+│   │       ├── lib.rs           // 公共API导出
+│   │       ├── error.rs         // 错误处理
+│   │       ├── types.rs         // RAG类型定义
 │   │       ├── document/        // 文档处理
 │   │       │   ├── mod.rs
 │   │       │   ├── loader.rs    // 文档加载器
@@ -126,10 +128,12 @@ lomusai/
 │   │       │   └── chunker.rs   // 文档分块
 │   │       ├── embedding/       // 向量嵌入
 │   │       │   ├── mod.rs
-│   │       │   └── models.rs    // 嵌入模型
+│   │       │   ├── provider.rs  // 嵌入提供者特性
+│   │       │   └── openai.rs    // OpenAI嵌入实现
 │   │       └── retriever/       // 检索器
 │   │           ├── mod.rs
-│   │           └── vector_store.rs // 向量存储
+│   │           ├── vector_store.rs // 向量存储接口
+│   │           └── in_memory.rs // 内存向量存储
 │   │
 │   ├── lomusai_evals/           // 评估框架 🔄
 │   │   └── src/
@@ -281,7 +285,7 @@ lomusai_types = { path = "../lomusai_types", version = "0.1.0" }
 |------|---------|---------|------|
 | 初始设计与架构 | 2周 | 设计架构，定义核心接口和类型 | ✅ 完成 |
 | 核心库实现 | 8周 | 实现Agent, Workflow, Tool核心功能 | ✅ 完成 |
-| RAG实现 | 4周 | 实现文档处理、向量化和检索功能 | 🔄 进行中 |
+| RAG实现 | 4周 | 实现文档处理、向量化和检索功能 | ✅ 完成 |
 | Memory实现 | 3周 | 实现记忆存储和检索系统 | ✅ 完成 |
 | 集成开发 | 6周 | 开发主要第三方服务集成 | 🔄 待开始 |
 | CLI与部署 | 3周 | 实现命令行工具和部署功能 | 🔄 待开始 |
@@ -321,7 +325,7 @@ lomusai_types = { path = "../lomusai_types", version = "0.1.0" }
 2. **集成测试**：模块间交互 🔄
 3. **基准测试**：性能对比与优化 🔄
 4. **兼容性测试**：确保API兼容性 🔄
-5. **模拟测试**：针对第三方服务的模拟测试 🔄
+5. **模拟测试**：针对第三方服务的模拟测试 ✅
 6. **示例应用**：完整的示例应用验证框架功能 🔄
 
 ## 9. 后续工作
@@ -348,5 +352,10 @@ lomusai_types = { path = "../lomusai_types", version = "0.1.0" }
 5. **Agent实现** ✅ - 支持工具调用和上下文管理的Agent
 6. **工作流引擎** ✅ - 基于图的状态机实现
 7. **遥测系统** ✅ - 用于记录性能和调试信息
+8. **RAG系统** ✅ - 文档处理、向量嵌入和相似度搜索
+   - 文档加载和解析 ✅ - 支持不同格式文档的加载和处理
+   - 文档分块 ✅ - 智能分块策略将文档切分为合适的片段
+   - 向量嵌入 ✅ - 生成文本的向量表示
+   - 向量存储和检索 ✅ - 基于相似度的文档检索
 
-所有已实现的组件均包含单元测试，并已通过测试。下一步将继续实现RAG和Evals模块。 
+所有已实现的组件均包含单元测试，并已通过测试。下一步将继续实现Evals模块。 

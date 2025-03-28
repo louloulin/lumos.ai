@@ -5,5 +5,5 @@
 mod provider;
 mod openai;
 
-pub use provider::EmbeddingProvider;
+pub use provider::{EmbeddingProvider, utils};
 pub use openai::OpenAIEmbeddingProvider; 

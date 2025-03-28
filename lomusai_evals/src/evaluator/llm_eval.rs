@@ -7,8 +7,6 @@ use chrono::Utc;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use futures::stream::{self, BoxStream};
-use std::sync::Mutex;
 
 use crate::error::{Error, Result};
 use crate::types::{EvalOptions, EvalResult, TestInfo};
@@ -126,9 +124,9 @@ impl Evaluator for LlmEvaluator {
         let system_prompt = self.config.system_prompt_template.clone();
         let user_prompt_template = self.config.user_prompt_template.clone();
         let llm = self.llm.clone();
-        let score_pattern = self.config.score_pattern.clone();
-        let normalize_score = self.config.normalize_score;
-        let decimal_places = self.config.decimal_places;
+        let _score_pattern = self.config.score_pattern.clone();
+        let _normalize_score = self.config.normalize_score;
+        let _decimal_places = self.config.decimal_places;
         
         // 准备评估提示
         let user_prompt = user_prompt_template

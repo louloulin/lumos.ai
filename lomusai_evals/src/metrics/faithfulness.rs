@@ -7,7 +7,7 @@ use crate::metrics::{Metric, MetricResult};
 use lomusai_core::llm::{LlmProvider, LlmOptions, Message, Role};
 
 /// 忠实度评估指标，用于评估输出内容是否忠实于输入信息，不包含虚构或错误内容
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct FaithfulnessMetric {
     /// 指标名称
     pub name: String,
@@ -21,6 +21,18 @@ pub struct FaithfulnessMetric {
     
     /// 用于评估的提示模板
     pub prompt_template: String,
+}
+
+// 手动实现Clone，避免需要为dyn LlmProvider实现Clone
+impl Clone for FaithfulnessMetric {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            description: self.description.clone(),
+            llm: None, // LLM不能克隆，所以设为None
+            prompt_template: self.prompt_template.clone(),
+        }
+    }
 }
 
 impl Default for FaithfulnessMetric {
@@ -153,35 +165,50 @@ impl Metric for FaithfulnessMetric {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mockall::predicate::*;
-    use mockall::mock;
-    use futures::stream::BoxStream;
+    use futures::stream::{self, BoxStream};
+    use std::sync::Mutex;
     
-    mock! {
-        LlmProviderMock {}
+    // 简单的mock LLM提供者
+    struct TestLlmProvider {
+        response: Mutex<String>,
+    }
+    
+    impl TestLlmProvider {
+        fn new(response: String) -> Self {
+            Self { response: Mutex::new(response) }
+        }
+    }
+    
+    #[async_trait]
+    impl LlmProvider for TestLlmProvider {
+        async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> lomusai_core::Result<String> {
+            Ok(self.response.lock().unwrap().clone())
+        }
         
-        #[async_trait]
-        impl LlmProvider for LlmProviderMock {
-            async fn generate(&self, prompt: &str, options: &LlmOptions) -> lomusai_core::Result<String>;
-            async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> lomusai_core::Result<String>;
-            async fn generate_stream<'a>(&'a self, prompt: &'a str, options: &'a LlmOptions) -> lomusai_core::Result<BoxStream<'a, lomusai_core::Result<String>>>;
-            async fn get_embedding(&self, text: &str) -> lomusai_core::Result<Vec<f32>>;
+        async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> lomusai_core::Result<String> {
+            Ok(self.response.lock().unwrap().clone())
+        }
+        
+        async fn generate_stream<'a>(&'a self, _prompt: &'a str, _options: &'a LlmOptions) -> lomusai_core::Result<BoxStream<'a, lomusai_core::Result<String>>> {
+            let response = self.response.lock().unwrap().clone();
+            let stream = stream::once(async move { Ok(response) });
+            Ok(Box::pin(stream))
+        }
+        
+        async fn get_embedding(&self, _text: &str) -> lomusai_core::Result<Vec<f32>> {
+            Ok(vec![0.1, 0.2, 0.3])
         }
     }
     
     #[tokio::test]
     async fn test_faithfulness_metric() {
-        let mut mock_llm = MockLlmProviderMock::new();
-        
-        // 设置模拟LLM的行为
-        mock_llm.expect_generate_with_messages()
-            .returning(|_, _| {
-                Ok("分析：回答完全基于输入信息，没有添加任何未在输入中提及的内容。\n分数：0.92".to_string())
-            });
+        // 创建测试LLM提供者
+        let test_llm = Box::new(TestLlmProvider::new(
+            "分析：回答完全基于输入信息，没有添加任何未在输入中提及的内容。\n分数：0.92".to_string()
+        ));
             
         // 创建忠实度指标
-        let metric = FaithfulnessMetric::default()
-            .with_llm(Box::new(mock_llm));
+        let metric = FaithfulnessMetric::default().with_llm(test_llm);
             
         // 测试评估
         let input = "Rust语言创建于2010年，最初由Mozilla赞助。它的设计目标是安全、并发和性能。";

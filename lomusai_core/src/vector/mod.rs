@@ -150,10 +150,6 @@ pub fn create_vector_storage(config: VectorStorageConfig) -> Result<Box<dyn Vect
             } else {
                 Ok(Box::new(self::sqlite::create_sqlite_vector_storage(db_path)?))
             }
-        },
-        #[cfg(not(feature = "vector_sqlite"))]
-        _ => {
-            Err(Error::Storage("SQLite feature is not enabled".into()))
         }
     }
 }

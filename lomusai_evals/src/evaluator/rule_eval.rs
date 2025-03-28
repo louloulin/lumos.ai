@@ -373,7 +373,7 @@ mod tests {
                 name: "question_answer".to_string(),
                 description: "回答应该针对问题".to_string(),
                 weight: 1.0,
-                rule_type: RuleType::Custom(Box::new(|input, output| {
+                rule_type: RuleType::Custom(Box::new(|_input, output| {
                     // 修改为单独提取关键词，不再使用简单分割
                     let keywords = vec!["Rust", "特点", "语言"];
                     println!("Keywords to search: {:?}", keywords);

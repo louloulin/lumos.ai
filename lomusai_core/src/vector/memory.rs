@@ -3,7 +3,7 @@ use std::sync::RwLock;
 use async_trait::async_trait;
 use uuid::Uuid;
 use serde_json::Value;
-use float_cmp::approx_eq;
+use float_cmp::{approx_eq, ApproxEq};
 
 use super::{VectorStorage, IndexStats, QueryResult, SimilarityMetric};
 use super::filter::{FilterCondition, FilterInterpreter};

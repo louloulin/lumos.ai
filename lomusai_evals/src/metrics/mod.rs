@@ -11,6 +11,10 @@ use crate::error::Result;
 pub mod accuracy;
 pub mod relevance;
 pub mod coherence;
+pub mod llm_eval;
+pub mod faithfulness;
+pub mod summarization;
+pub mod bias;
 
 /// 指标计算结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,4 +51,8 @@ pub trait Metric: Send + Sync {
 // 重导出主要的指标实现，方便使用
 pub use accuracy::AccuracyMetric;
 pub use relevance::RelevanceMetric;
-pub use coherence::CoherenceMetric; 
+pub use coherence::CoherenceMetric;
+pub use faithfulness::FaithfulnessMetric;
+pub use summarization::SummarizationMetric;
+pub use bias::BiasMetric;
+pub use llm_eval::LlmEvalMetric; 

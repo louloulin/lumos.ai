@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "lomusai_core",
-    "lomusai_rag"
+    "lomusai_rag",
+    "lomusai_evals",
 ]
 resolver = "2"
 

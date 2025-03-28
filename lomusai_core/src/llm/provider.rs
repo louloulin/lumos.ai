@@ -2,13 +2,16 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 
 use crate::Result;
-use super::types::LlmOptions;
+use super::types::{LlmOptions, Message};
 
 /// Trait representing an LLM provider
 #[async_trait]
 pub trait LlmProvider: Send + Sync {
     /// Generate text from a prompt
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String>;
+    
+    /// Generate text from a sequence of messages
+    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String>;
     
     /// Generate a stream of text from a prompt
     async fn generate_stream<'a>(

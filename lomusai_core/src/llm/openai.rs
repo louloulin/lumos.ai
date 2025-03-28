@@ -135,64 +135,132 @@ impl OpenAiProvider {
 #[async_trait]
 impl LlmProvider for OpenAiProvider {
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String> {
+        // 准备请求数据
         let url = format!("{}/chat/completions", self.base_url);
         
-        // 准备消息
-        let messages = if let Some(messages) = &options.messages {
-            self.convert_messages(messages)
-        } else {
-            vec![OpenAIRequestMessage {
-                role: "user".to_string(),
-                content: prompt.to_string(),
-            }]
-        };
+        let mut messages = vec![
+            serde_json::json!({
+                "role": "user",
+                "content": prompt
+            })
+        ];
         
-        // 创建请求
-        let request = OpenAIRequest {
-            model: self.model.clone(),
-            messages,
-            temperature: options.temperature,
-            max_tokens: options.max_tokens,
-            top_p: None,
-            stream: None,
-        };
+        // 构建请求正文
+        let mut body = serde_json::json!({
+            "model": self.model.clone(),
+            "messages": messages,
+        });
+        
+        // 添加选项参数
+        if let Some(temperature) = options.temperature {
+            body["temperature"] = serde_json::json!(temperature);
+        }
+        
+        if let Some(max_tokens) = options.max_tokens {
+            body["max_tokens"] = serde_json::json!(max_tokens);
+        }
+        
+        if let Some(stop) = &options.stop {
+            body["stop"] = serde_json::json!(stop);
+        }
         
         // 发送请求
-        let response = self.client
+        let res = self.client
             .post(&url)
             .headers(self.create_headers())
-            .json(&request)
+            .json(&body)
             .send()
             .await
-            .map_err(|e| Error::LlmError(format!("OpenAI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {}", e)))?;
             
-        // 检查响应状态
-        let status = response.status();
-        
-        // 处理响应
+        let status = res.status();
+        let text = res.text().await
+            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {}", e)))?;
+            
         if !status.is_success() {
-            // 如果响应不成功，获取错误文本
-            let error_text = response.text().await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-                
-            return Err(Error::LlmError(format!(
-                "OpenAI API error: {}, details: {}",
-                status,
-                error_text
+            return Err(Error::Llm(format!(
+                "OpenAI API returned error status {}: {}",
+                status, text
             )));
-        } else {
-            // 如果响应成功，解析JSON
-            let response_data: OpenAIResponse = response.json().await
-                .map_err(|e| Error::LlmError(format!("Failed to parse OpenAI response: {}", e)))?;
-                
-            // 提取生成的文本
-            let generated_text = response_data.choices
-                .first()
-                .and_then(|choice| choice.message.content.clone())
-                .unwrap_or_default();
-                
-            Ok(generated_text)
         }
+        
+        // 解析响应
+        let response: serde_json::Value = serde_json::from_str(&text)
+            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {}", e)))?;
+            
+        // 提取生成的文本
+        let content = response["choices"][0]["message"]["content"]
+            .as_str()
+            .ok_or_else(|| Error::Llm("Invalid response format from OpenAI".to_string()))?;
+            
+        Ok(content.to_string())
+    }
+    
+    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+        // 准备请求数据
+        let url = format!("{}/chat/completions", self.base_url);
+        
+        // 转换消息格式
+        let api_messages: Vec<serde_json::Value> = messages
+            .iter()
+            .map(|msg| {
+                serde_json::json!({
+                    "role": String::from(msg.role.clone()),
+                    "content": msg.content.clone(),
+                    "name": msg.name.clone(),
+                })
+            })
+            .collect();
+        
+        // 构建请求正文
+        let mut body = serde_json::json!({
+            "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
+            "messages": api_messages,
+        });
+        
+        // 添加选项参数
+        if let Some(temperature) = options.temperature {
+            body["temperature"] = serde_json::json!(temperature);
+        }
+        
+        if let Some(max_tokens) = options.max_tokens {
+            body["max_tokens"] = serde_json::json!(max_tokens);
+        }
+        
+        if let Some(stop) = &options.stop {
+            body["stop"] = serde_json::json!(stop);
+        }
+        
+        // 发送请求
+        let res = self.client
+            .post(&url)
+            .headers(self.create_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {}", e)))?;
+            
+        let status = res.status();
+        let text = res.text().await
+            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {}", e)))?;
+            
+        if !status.is_success() {
+            return Err(Error::Llm(format!(
+                "OpenAI API returned error status {}: {}",
+                status, text
+            )));
+        }
+        
+        // 解析响应
+        let response: serde_json::Value = serde_json::from_str(&text)
+            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {}", e)))?;
+            
+        // 提取生成的文本
+        let content = response["choices"][0]["message"]["content"]
+            .as_str()
+            .ok_or_else(|| Error::Llm("Invalid response format from OpenAI".to_string()))?;
+            
+        Ok(content.to_string())
     }
     
     async fn generate_stream<'a>(
@@ -210,49 +278,48 @@ impl LlmProvider for OpenAiProvider {
     }
     
     async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
+        // 准备请求数据
         let url = format!("{}/embeddings", self.base_url);
         
-        // 创建请求
-        let request = OpenAIEmbeddingRequest {
-            model: "text-embedding-ada-002".to_string(), // 使用默认嵌入模型
-            input: vec![text.to_string()],
-        };
+        let body = serde_json::json!({
+            "model": "text-embedding-ada-002",
+            "input": text
+        });
         
         // 发送请求
-        let response = self.client
+        let res = self.client
             .post(&url)
             .headers(self.create_headers())
-            .json(&request)
+            .json(&body)
             .send()
             .await
-            .map_err(|e| Error::LlmError(format!("OpenAI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {}", e)))?;
             
-        // 检查响应状态
-        let status = response.status();
-        
-        // 处理响应
+        let status = res.status();
+        let text = res.text().await
+            .map_err(|e| Error::Llm(format!("Failed to read OpenAI embedding response: {}", e)))?;
+            
         if !status.is_success() {
-            // 如果响应不成功，获取错误文本
-            let error_text = response.text().await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-                
-            return Err(Error::LlmError(format!(
-                "OpenAI API error: {}, details: {}",
-                status,
-                error_text
+            return Err(Error::Llm(format!(
+                "OpenAI API returned error status {}: {}",
+                status, text
             )));
-        } else {
-            // 如果响应成功，解析JSON
-            let response_data: OpenAIEmbeddingResponse = response.json().await
-                .map_err(|e| Error::LlmError(format!("Failed to parse OpenAI embedding response: {}", e)))?;
-                
-            // 提取嵌入
-            let embedding = response_data.data
-                .first()
-                .map(|data| data.embedding.clone())
-                .ok_or_else(|| Error::LlmError("No embedding returned from OpenAI".to_string()))?;
-                
-            Ok(embedding)
         }
+        
+        // 解析响应
+        let response: serde_json::Value = serde_json::from_str(&text)
+            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI embedding response: {}", e)))?;
+            
+        // 提取嵌入向量
+        let embedding = response["data"][0]["embedding"]
+            .as_array()
+            .ok_or_else(|| Error::Llm("No embedding returned from OpenAI".to_string()))?;
+            
+        let embedding: Vec<f32> = embedding
+            .iter()
+            .filter_map(|v| v.as_f64().map(|f| f as f32))
+            .collect();
+            
+        Ok(embedding)
     }
 } 

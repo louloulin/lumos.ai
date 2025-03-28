@@ -1,1 +1,1 @@
-@lomusai.md 按照整个方案  阅读mastra目录下相关代码，同时参考 @mastra ，基于rust实现  实现lumosai，实现后，增加单元测试，测试通过 更新 @lomusai.md 标记实现的功能
+@lomusai.md 按照整个方案  阅读  @mastra   目录下相关代码，同时参考 @mastra  文档，基于rust实现  实现mastra功能迁移到 lumosai，实现后，增加单元测试，测试通过 更新 @lomusai.md 标记实现的功能

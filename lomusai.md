@@ -8,7 +8,7 @@ Mastra是一个用TypeScript编写的AI应用框架，提供以下核心功能�
 - **工作流引擎**：可持久化的基于图的状态机 ✅
 - **RAG (检索增强生成)**：构建知识库的ETL管道 ✅
 - **集成系统**：自动生成的类型安全的第三方服务API客户端
-- **评估框架**：使用模型评分、基于规则和统计方法评估LLM输出的工具
+- **评估框架**：使用模型评分、基于规则和统计方法评估LLM输出的工具 ✅
 - **工具系统**：可由Agent或工作流执行的类型化函数 ✅
 - **记忆系统**：帮助存储和检索上下文信息的组件 ✅
 
@@ -34,10 +34,10 @@ Mastra是一个用TypeScript编写的AI应用框架，提供以下核心功能�
    - 实现基础类型和接口 ✅
    - 迁移核心功能：Agents, Workflows, Tools ✅
 
-2. **阶段二：功能模块迁移**
+2. **阶段二：功能模块迁移** ✅
    - 实现RAG模块 ✅
    - 实现Memory模块 ✅
-   - 实现Evals模块
+   - 实现Evals模块 ✅
 
 3. **阶段三：集成和部署**
    - 实现第三方服务集成
@@ -56,7 +56,7 @@ Mastra是一个用TypeScript编写的AI应用框架，提供以下核心功能�
 | @mastra/core | lomusai_core | ✅ 已实现基础功能 |
 | @mastra/rag | lomusai_rag | ✅ 已实现基础功能 |
 | @mastra/memory | lomusai_memory | ✅ 已实现基础功能 |
-| @mastra/evals | lomusai_evals | 🔄 待实现 |
+| @mastra/evals | lomusai_evals | ✅ 已实现基础功能 |
 | @mastra/cli | lomusai_cli | 🔄 待实现 |
 | @mastra/deployer | lomusai_deployer | 🔄 待实现 |
 | integrations/* | lomusai_integrations | 🔄 待实现 |
@@ -135,12 +135,15 @@ lomusai/
 │   │           ├── vector_store.rs // 向量存储接口
 │   │           └── in_memory.rs // 内存向量存储
 │   │
-│   ├── lomusai_evals/           // 评估框架 🔄
+│   ├── lomusai_evals/           // 评估框架 ✅
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── metrics/         // 评估指标
 │   │       │   ├── mod.rs
-│   │       │   └── accuracy.rs  // 准确性指标
+│   │       │   ├── accuracy.rs  // 准确性指标
+│   │       │   ├── relevance.rs // 相关性指标
+│   │       │   ├── coherence.rs // 连贯性指标
+│   │       │   └── llm_eval.rs  // LLM评估指标
 │   │       └── evaluator/       // 评估器
 │   │           ├── mod.rs
 │   │           ├── llm_eval.rs  // LLM评估
@@ -362,9 +365,15 @@ lomusai_types = { path = "../lomusai_types", version = "0.1.0" }
    - 文档分块 ✅ - 智能分块策略将文档切分为合适的片段
    - 向量嵌入 ✅ - 生成文本的向量表示
    - 向量存储和检索 ✅ - 基于相似度的文档检索
-9. **项目结构优化** ✅
+9. **评估框架** ✅ - 用于评估LLM输出的系统
+   - 基于LLM的评估 ✅ - 使用语言模型评估生成内容的质量 
+   - 基于规则的评估 ✅ - 支持正则表达式、关键词、长度限制和自定义评估规则
+   - 通用评估接口 ✅ - 抽象化的Evaluator和Metric接口，支持扩展
+   - 评估指标 ✅ - 包含准确性、相关性、连贯性等指标
+   - 异步评估支持 ✅ - 全面使用async/await优化评估流程
+10. **项目结构优化** ✅
    - 更新了工作区配置 ✅ - 使用Rust 2021版本推荐的resolver = "2"设置
    - 优化了模块结构 ✅ - 提高了代码可维护性和可扩展性
    - 实现了更加清晰的模块边界 ✅ - 减少了不必要的依赖
 
-所有已实现的组件均包含单元测试，并已通过测试。下一步将继续实现Evals模块。 
+所有已实现的组件均包含单元测试，并已通过测试。下一步将开始实现CLI和部署工具模块。 

@@ -429,6 +429,7 @@ The following provides a list of features and modules that we need to implement 
 - [ ] RAG (Retrieval Augmented Generation)
   - [ ] Document processing
   - [ ] Embedding generation
+  - [x] Vector storage
   - [ ] Retrieval
   - [ ] Generation
 - [ ] Deployment

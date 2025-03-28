@@ -28,8 +28,16 @@ pub use vector::{
     create_vector_storage, 
     create_memory_vector_storage,
     EmbeddingService,
-    create_random_embedding
+    create_random_embedding,
+    Vector,
+    IndexStats,
+    QueryResult,
+    FilterCondition
 }; 
 
 #[cfg(feature = "vector_sqlite")]
-pub use vector::SqliteVectorStorage; 
+pub use vector::{
+    SqliteVectorStorage,
+    sqlite::create_sqlite_vector_storage,
+    sqlite::create_sqlite_vector_storage_in_memory
+}; 

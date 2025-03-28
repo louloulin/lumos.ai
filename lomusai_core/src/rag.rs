@@ -2,18 +2,45 @@ use std::path::Path;
 use std::sync::Arc;
 use async_trait::async_trait;
 use serde_json::Value;
+use serde::{Serialize, Deserialize};
 
 use crate::error::Result;
 use crate::vector::Document;
 
-/// RAG管道接口，支持文档加载、处理和查询
+/// 文档来源类型
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DocumentSource {
+    /// 从目录加载文档
+    Directory(String),
+    /// 从URL加载文档
+    Url(String),
+    /// 从文本字符串加载文档
+    Text(String),
+}
+
+/// 查询结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueryResult {
+    /// 原始查询文本
+    pub query: String,
+    /// 检索到的文档
+    pub documents: Vec<Document>,
+    /// 相似度分数
+    pub scores: Option<Vec<f32>>,
+    /// 上下文
+    pub context: String,
+    /// 额外元数据
+    pub metadata: Value,
+}
+
+/// RAG管道接口
 #[async_trait]
 pub trait RagPipeline: Send + Sync {
-    /// 处理文档并存储向量
-    async fn process_documents(&self, documents: Vec<Document>) -> Result<usize>;
+    /// 处理并索引文档
+    async fn process_documents(&mut self, source: DocumentSource) -> Result<usize>;
     
-    /// 根据查询获取相关文档
-    async fn query(&self, query: &str, top_k: usize) -> Result<Vec<Document>>;
+    /// 基于字符串查询检索内容
+    async fn query(&self, query: &str, top_k: usize) -> Result<QueryResult>;
     
     /// 获取管道名称
     fn name(&self) -> &str;
@@ -22,59 +49,29 @@ pub trait RagPipeline: Send + Sync {
     fn description(&self) -> Option<&str>;
 }
 
-/// 文档源类型
-pub enum DocumentSource {
-    /// 来自目录的文档
-    Directory(String),
-    /// 来自URL的文档
-    Url(String),
-    /// 来自内存字符串的文档
-    Text(String),
-}
-
-impl DocumentSource {
-    /// 从目录创建文档源
-    pub fn from_directory<P: AsRef<Path>>(path: P) -> Self {
-        DocumentSource::Directory(path.as_ref().to_string_lossy().to_string())
-    }
-    
-    /// 从URL创建文档源
-    pub fn from_url(url: &str) -> Self {
-        DocumentSource::Url(url.to_string())
-    }
-    
-    /// 从文本创建文档源
-    pub fn from_text(text: &str) -> Self {
-        DocumentSource::Text(text.to_string())
-    }
-}
-
-/// RAG查询结果
-pub struct QueryResult {
-    /// 查询的原始文本
-    pub query: String,
-    /// 检索到的相关文档
-    pub documents: Vec<Document>,
-    /// 相关性分数
-    pub scores: Vec<f32>,
-    /// 额外的元数据
-    pub metadata: Value,
-}
-
-/// 基本的RAG管道实现
+/// 基本RAG管道实现
 pub struct BasicRagPipeline {
+    /// 管道名称
     name: String,
+    /// 管道描述
     description: Option<String>,
-    documents: Vec<Document>,
+    /// 向量存储
+    vector_store: Arc<tokio::sync::Mutex<crate::vector::MemoryVectorStore>>,
+    /// 嵌入生成器
+    embedding_fn: Arc<dyn Fn(&str) -> Result<Vec<f32>> + Send + Sync>,
 }
 
 impl BasicRagPipeline {
     /// 创建新的基本RAG管道
-    pub fn new(name: impl Into<String>) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        embedding_fn: impl Fn(&str) -> Result<Vec<f32>> + Send + Sync + 'static,
+    ) -> Self {
         Self {
             name: name.into(),
             description: None,
-            documents: Vec::new(),
+            vector_store: Arc::new(tokio::sync::Mutex::new(crate::vector::MemoryVectorStore::new())),
+            embedding_fn: Arc::new(embedding_fn),
         }
     }
     
@@ -84,24 +81,91 @@ impl BasicRagPipeline {
         self
     }
     
-    /// 添加文档
-    pub fn add_document(&mut self, document: Document) {
-        self.documents.push(document);
+    /// 处理文本文档
+    async fn process_text(&mut self, text: &str) -> Result<usize> {
+        let documents = split_text_into_documents(text);
+        let mut count = 0;
+        
+        let mut store = self.vector_store.lock().await;
+        
+        for mut doc in documents {
+            // 生成嵌入
+            let embedding = (self.embedding_fn)(&doc.content)?;
+            doc.add_embedding(embedding);
+            
+            // 添加到向量存储
+            store.add_document(doc);
+            count += 1;
+        }
+        
+        Ok(count)
     }
 }
 
 #[async_trait]
 impl RagPipeline for BasicRagPipeline {
-    async fn process_documents(&self, documents: Vec<Document>) -> Result<usize> {
-        // 简单实现，实际应用中会处理文档并生成嵌入
-        Ok(documents.len())
+    async fn process_documents(&mut self, source: DocumentSource) -> Result<usize> {
+        match source {
+            DocumentSource::Text(text) => {
+                self.process_text(&text).await
+            },
+            DocumentSource::Directory(dir_path) => {
+                let path = Path::new(&dir_path);
+                if !path.exists() || !path.is_dir() {
+                    return Err(crate::error::Error::InvalidInput(format!("Directory not found: {}", dir_path)));
+                }
+                
+                let mut total_count = 0;
+                
+                // 遍历目录，只处理文本文件
+                for entry in std::fs::read_dir(path)? {
+                    let entry = entry?;
+                    let path = entry.path();
+                    
+                    if path.is_file() {
+                        if let Some(ext) = path.extension() {
+                            if ext == "txt" || ext == "md" || ext == "rst" {
+                                let content = std::fs::read_to_string(&path)?;
+                                total_count += self.process_text(&content).await?;
+                            }
+                        }
+                    }
+                }
+                
+                Ok(total_count)
+            },
+            DocumentSource::Url(url) => {
+                // 简单实现，实际项目中可能需要使用reqwest等库
+                Err(crate::error::Error::Other(format!("URL document source not implemented yet: {}", url)))
+            }
+        }
     }
     
-    async fn query(&self, query: &str, top_k: usize) -> Result<Vec<Document>> {
-        // 简单实现，实际应用中会基于相似度排序
-        let mut results = self.documents.clone();
-        results.truncate(top_k);
-        Ok(results)
+    async fn query(&self, query: &str, top_k: usize) -> Result<QueryResult> {
+        // 生成查询嵌入
+        let query_embedding = (self.embedding_fn)(query)?;
+        
+        // 使用向量存储搜索
+        let store = self.vector_store.lock().await;
+        let results = store.search_by_vector(&query_embedding, top_k);
+        
+        // 提取文档和分数
+        let documents: Vec<Document> = results.iter().map(|(doc, _)| doc.clone()).collect();
+        let scores: Vec<f32> = results.iter().map(|(_, score)| *score).collect();
+        
+        // 构建上下文
+        let context = documents.iter()
+            .map(|doc| doc.content.clone())
+            .collect::<Vec<String>>()
+            .join("\n\n");
+        
+        Ok(QueryResult {
+            query: query.to_string(),
+            documents,
+            scores: Some(scores),
+            context,
+            metadata: serde_json::json!({}),
+        })
     }
     
     fn name(&self) -> &str {
@@ -113,7 +177,26 @@ impl RagPipeline for BasicRagPipeline {
     }
 }
 
+/// 将文本分割成多个文档
+fn split_text_into_documents(text: &str) -> Vec<Document> {
+    // 简单实现，按段落分割
+    let paragraphs: Vec<&str> = text.split("\n\n").collect();
+    
+    paragraphs.iter().enumerate()
+        .filter(|(_, p)| !p.trim().is_empty())
+        .map(|(i, p)| {
+            Document::new(
+                format!("doc_{}", i),
+                p.trim().to_string()
+            )
+        })
+        .collect()
+}
+
 /// 创建基本的RAG管道
-pub fn create_basic_rag_pipeline(name: impl Into<String>) -> impl RagPipeline {
-    BasicRagPipeline::new(name)
+pub fn create_basic_rag_pipeline(
+    name: impl Into<String>,
+    embedding_fn: impl Fn(&str) -> Result<Vec<f32>> + Send + Sync + 'static,
+) -> impl RagPipeline {
+    BasicRagPipeline::new(name, embedding_fn)
 } 

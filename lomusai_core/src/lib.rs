@@ -39,8 +39,9 @@ pub use vector::{
     create_random_embedding,
     Vector,
     IndexStats,
-    QueryResult,
-    FilterCondition
+    QueryResult as VectorQueryResult,
+    FilterCondition,
+    Document
 }; 
 
 #[cfg(feature = "vector_sqlite")]
@@ -50,9 +51,15 @@ pub use vector::{
     sqlite::create_sqlite_vector_storage_in_memory
 }; 
 
-pub use crate::agent::{Message, MessageRole};
-pub use crate::tool::{Tool, ToolParameter, ToolResult};
 pub use crate::app::LumosApp;
-pub use crate::rag::{RagPipeline, QueryResult, DocumentSource, create_basic_rag_pipeline};
-pub use crate::vector::{Document, MemoryVectorStore};
-pub use crate::workflow::{Workflow, StepResult, StepCondition, WorkflowStep, BasicWorkflow, create_basic_workflow}; 
+pub use crate::rag::{RagPipeline, QueryResult as RagQueryResult, DocumentSource};
+
+// 导出工作流模块但不重命名
+// pub use crate::workflow;
+
+// 工作流类型的便捷访问
+pub mod workflow_types {
+    pub use crate::workflow::basic::{
+        Workflow, StepResult, StepCondition, WorkflowStep, BasicWorkflow, create_basic_workflow
+    };
+} 

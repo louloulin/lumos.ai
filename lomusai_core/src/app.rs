@@ -4,7 +4,7 @@ use crate::tool::Tool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::rag::RagPipeline;
-use crate::workflow::Workflow;
+use crate::workflow::basic::Workflow;
 
 /// Lomusai应用主类，用于整合代理、工具、RAG和MCP等组件
 pub struct LumosApp {
@@ -98,7 +98,19 @@ impl LumosApp {
         // 简单实现：将请求转发给第一个可用的代理
         if let Some((agent_name, agent)) = self.agents.iter().next() {
             println!("Routing request to agent: {}", agent_name);
-            agent.generate(&request_str).await
+            
+            // 创建用户消息
+            let user_message = crate::llm::Message {
+                role: crate::llm::Role::User,
+                content: request_str,
+                name: None,
+                metadata: None,
+            };
+            
+            // 调用代理
+            let result = agent.generate(&[user_message], &crate::agent::AgentGenerateOptions::default()).await?;
+            
+            Ok(result.response)
         } else {
             Ok("No agents available to process the request".to_string())
         }

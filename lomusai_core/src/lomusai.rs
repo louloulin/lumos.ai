@@ -14,7 +14,7 @@ use crate::storage::Storage;
 use crate::telemetry::{Event, TelemetrySink};
 use crate::tool::Tool;
 use crate::vector::VectorStorage;
-use crate::workflow::Workflow;
+use crate::workflow::basic::Workflow;
 
 /// Lomusai配置
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

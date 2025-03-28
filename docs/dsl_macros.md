@@ -12,7 +12,7 @@ DSL宏系统包含七个主要的宏：
 4. `mcp_client!`：配置MCP（Mastra Compatible Protocol）客户端
 5. `agent!`：定义和配置代理
 6. `tools!`：一次性定义多个工具
-7. `lumos!`：应用配置，类似Mastra的应用初始化方式
+7. `lumos!`：应用级配置，整合所有组件
 
 ## 工作流DSL (workflow!)
 
@@ -650,41 +650,130 @@ let weather_info = weather().execute(weather_params, &options).await?;
 
 ## Lumos应用配置 (lumos!)
 
-Lumos应用DSL提供了一种声明式方式来一次性配置整个应用，类似于Mastra的应用初始化方式。
+`lumos!`宏是Lomusai框架中最高层次的DSL，提供了一种声明式方式来配置整个应用程序。它允许开发者在一个地方整合所有组件，包括代理、工具、RAG系统、工作流和MCP端点，从而简化应用开发和配置过程。
 
 ### 语法结构
 
 ```rust
 let app = lumos! {
+    name: "应用名称",
+    description: "应用描述",
+    
+    // 定义或引用应用中使用的代理
     agents: {
-        agent_name: agent_instance,
+        agent_name1,
+        agent_name2: agent_expression2,
+        // 或使用agent!宏内联定义
+        agent_name3: agent! {
+            name: "内联代理",
+            instructions: "代理指令",
+            // ...代理配置
+        },
         // 更多代理...
     },
     
+    // 定义或引用应用中使用的工具
     tools: {
-        tool_name: tool_instance,
+        tool_name1,
+        tool_name2: tool_expression2,
         // 更多工具...
     },
     
-    workflows: workflow_collection,
+    // 定义或引用应用中使用的RAG系统
+    rags: {
+        rag_name1,
+        rag_name2: rag_expression2,
+        // 或使用rag_pipeline!宏内联定义
+        rag_name3: rag_pipeline! {
+            name: "内联RAG",
+            // ...RAG配置
+        },
+        // 更多RAG...
+    },
     
-    rag: rag_instance,
+    // 定义或引用应用中使用的工作流
+    workflows: {
+        workflow_name1,
+        workflow_name2: workflow_expression2,
+        // 更多工作流...
+    },
     
-    mcp: mcp_client_instance
+    // 定义MCP端点
+    mcp_endpoints: ["端点URL1", "端点URL2"],
+    
+    // 全局选项和配置
+    options: {
+        // 日志配置
+        logging: {
+            level: "info", // "debug", "info", "warn", "error"
+            format: "json", // "text", "json"
+            destination: "stdout" // "stdout", "file", "both"
+        },
+        
+        // 安全配置
+        security: {
+            auth_required: true,
+            auth_provider: auth_provider_instance,
+            rate_limiting: {
+                requests_per_minute: 100,
+                burst: 20
+            }
+        },
+        
+        // 性能配置
+        performance: {
+            concurrent_requests: 10,
+            timeout: 30000, // 毫秒
+            cache: {
+                enabled: true,
+                ttl: 3600 // 秒
+            }
+        },
+        
+        // 观测性配置
+        observability: {
+            metrics: true,
+            tracing: true,
+            exporters: ["prometheus", "jaeger"]
+        }
+    }
 };
+
+// 启动应用
+app.start().await?;
+
+// 或处理单个请求
+let response = app.run("用户请求").await?;
 ```
 
-### 示例
+### 关键功能
+
+1. **组件整合**：在一个地方管理所有应用组件
+2. **依赖管理**：自动处理组件之间的依赖关系
+3. **资源优化**：共享LLM提供者和内存系统等资源
+4. **配置验证**：在编译时验证配置的完整性和一致性
+5. **启动管理**：提供统一的接口来启动和停止应用
+6. **请求路由**：自动将请求路由到适当的代理或工作流
+7. **健康检查**：内置应用组件的健康监控
+
+### 完整示例
+
+以下是一个完整的股票助手应用示例，展示如何使用`lumos!`宏整合多个组件：
 
 ```rust
-use lomusai_core::llm::OpenAiAdapter;
-use lumos_macro::{agent, tools, lumos};
+use lomusai_core::{
+    llm::OpenAiAdapter,
+    rag::DocumentSource,
+    memory::BufferMemory
+};
+use lumos_macro::{agent, tools, rag_pipeline, workflow, lumos};
+use serde_json::json;
 
 // 定义工具
 tools! {
     {
-        name: "stock_checker",
-        description: "查询股票信息",
+        name: "stock_price",
+        description: "获取股票价格信息",
         parameters: {
             {
                 name: "symbol",
@@ -695,86 +784,253 @@ tools! {
         },
         handler: |params| async move {
             let symbol = params.get("symbol").unwrap().as_str().unwrap();
-            
-            // 获取股票数据的实现
-            Ok(json!({ "price": 175.42, "change": "+2.3%" }))
+            // 实际应用中，这里会调用真实的股票API
+            let price = match symbol {
+                "AAPL" => 175.25,
+                "MSFT" => 320.15,
+                "GOOG" => 140.50,
+                _ => 100.00
+            };
+            Ok(json!({ "price": price, "currency": "USD", "symbol": symbol }))
         }
     },
     {
-        name: "weather_checker",
-        description: "查询天气信息",
+        name: "stock_news",
+        description: "获取股票相关新闻",
         parameters: {
             {
-                name: "city",
-                description: "城市名称",
+                name: "symbol",
+                description: "股票代码",
+                type: "string",
+                required: true
+            },
+            {
+                name: "limit",
+                description: "返回的新闻数量",
+                type: "number",
+                required: false,
+                default: 3
+            }
+        },
+        handler: |params| async move {
+            let symbol = params.get("symbol").unwrap().as_str().unwrap();
+            // 实际应用中，这里会调用真实的新闻API
+            Ok(json!([
+                { "title": format!("{} 季度收益超预期", symbol), "date": "2023-07-20" },
+                { "title": format!("{} 宣布新产品线", symbol), "date": "2023-07-15" },
+                { "title": format!("分析师上调 {} 目标价", symbol), "date": "2023-07-10" }
+            ]))
+        }
+    },
+    {
+        name: "financial_analysis",
+        description: "分析公司财务状况",
+        parameters: {
+            {
+                name: "symbol",
+                description: "股票代码",
                 type: "string",
                 required: true
             }
         },
         handler: |params| async move {
-            let city = params.get("city").unwrap().as_str().unwrap();
-            
-            // 获取天气数据的实现
-            Ok(json!({ "temperature": 25, "condition": "晴朗" }))
+            let symbol = params.get("symbol").unwrap().as_str().unwrap();
+            // 实际应用中，这里会分析真实的财务数据
+            Ok(json!({
+                "pe_ratio": 25.4,
+                "market_cap": "2.1T",
+                "dividend_yield": 0.5,
+                "revenue_growth": 15.3,
+                "recommendation": "买入"
+            }))
         }
     }
 }
 
-// 定义代理
-let stock_agent = agent! {
+// 定义RAG知识库
+let stock_knowledge = rag_pipeline! {
+    name: "stock_knowledge",
+    
+    source: DocumentSource::from_directory("./docs/stocks"),
+    
+    pipeline: {
+        chunk: {
+            chunk_size: 1000,
+            chunk_overlap: 200
+        },
+        
+        embed: {
+            model: "text-embedding-3-small"
+        },
+        
+        store: {
+            db: "memory",
+            collection: "stock_data"
+        }
+    },
+    
+    query_pipeline: {
+        top_k: 3
+    }
+};
+
+// 定义分析师代理
+let analyst_agent = agent! {
+    name: "financial_analyst",
+    instructions: "你是一个专业的金融分析师，擅长分析股票数据和公司财务状况。请根据工具提供的数据和知识库中的信息，给出专业、深入的分析。",
+    
+    llm: {
+        provider: OpenAiAdapter::default(),
+        model: "gpt-4"
+    },
+    
+    memory: {
+        store_type: "buffer",
+        capacity: 10
+    },
+    
+    tools: {
+        stock_price,
+        financial_analysis
+    }
+};
+
+// 定义新闻代理
+let news_agent = agent! {
+    name: "news_reporter",
+    instructions: "你是一个财经新闻记者，擅长总结和报道股票相关新闻。请根据工具提供的新闻数据，给出简明、客观的新闻摘要。",
+    
+    llm: {
+        provider: OpenAiAdapter::default(),
+        model: "gpt-3.5-turbo"
+    },
+    
+    tools: {
+        stock_news
+    }
+};
+
+// 定义股票分析工作流
+let stock_analysis_workflow = workflow! {
+    name: "stock_analysis",
+    description: "分析股票价格、新闻和财务状况",
+    
+    steps: {
+        {
+            name: "get_price",
+            agent: analyst_agent,
+            instructions: "获取股票价格信息",
+            input: { "request": "{user_input}" }
+        },
+        {
+            name: "get_news",
+            agent: news_agent,
+            instructions: "获取并总结相关新闻",
+            when: { completed("get_price") }
+        },
+        {
+            name: "analyze",
+            agent: analyst_agent,
+            instructions: "根据价格和新闻，结合财务数据进行全面分析",
+            when: { completed("get_news") }
+        }
+    }
+};
+
+// 使用lumos!宏整合所有组件，配置完整应用
+let stock_app = lumos! {
     name: "stock_assistant",
-    instructions: "你是一个股票助手，可以提供股票市场信息。",
+    description: "一个专业的股票分析助手，能够提供股票价格、新闻和分析",
     
-    llm: {
-        provider: OpenAiAdapter::new("api-key"),
-        model: "gpt-4"
-    },
-    
-    tools: {
-        stock_checker
-    }
-};
-
-let weather_agent = agent! {
-    name: "weather_assistant",
-    instructions: "你是一个天气助手，可以提供天气预报信息。",
-    
-    llm: {
-        provider: OpenAiAdapter::new("api-key"),
-        model: "gpt-4"
-    },
-    
-    tools: {
-        weather_checker
-    }
-};
-
-// 使用lumos!宏一次性配置整个应用
-let app = lumos! {
     agents: {
-        stockAgent: stock_agent,
-        weatherAgent: weather_agent
+        analyst_agent,
+        news_agent
     },
+    
     tools: {
-        stockChecker: stock_checker(),
-        weatherChecker: weather_checker()
+        stock_price,
+        stock_news,
+        financial_analysis
     },
-    rag: kb,
-    mcp: mcp_client
+    
+    rags: {
+        stock_knowledge
+    },
+    
+    workflows: {
+        stock_analysis_workflow
+    },
+    
+    options: {
+        logging: {
+            level: "info",
+            format: "json"
+        },
+        
+        performance: {
+            concurrent_requests: 5,
+            timeout: 60000,
+            cache: {
+                enabled: true,
+                ttl: 1800
+            }
+        }
+    }
 };
 
-// 使用应用处理请求
-let result = app.run("查询苹果公司的股票价格").await?;
+// 启动应用
+stock_app.start().await?;
+
+// 处理用户请求
+let response = stock_app.run("分析苹果公司(AAPL)的股票").await?;
+println!("应用回答: {}", response);
 ```
 
-这种方式的配置与JavaScript中的Mastra应用初始化非常相似:
+### 与其他宏的集成
 
-```javascript
-export const mastra = new Mastra({
-  agents: { stockAgent, weatherAgent },
-  tools: { stockChecker, weatherChecker },
-  workflows: [contentWorkflow],
-  rag: knowledgeBase,
-  mcp: mcpClient
-});
+`lumos!`宏可以与其他DSL宏无缝集成，允许开发者在应用定义中内联使用其他宏：
+
+```rust
+let app = lumos! {
+    name: "my_app",
+    
+    agents: {
+        // 内联使用agent!宏
+        main_agent: agent! {
+            name: "内联代理",
+            // ...配置
+        }
+    },
+    
+    tools: {
+        // 内联使用tools!宏
+        custom_tools: tools! {
+            // ...工具定义
+        }
+    },
+    
+    rags: {
+        // 内联使用rag_pipeline!宏
+        knowledge_base: rag_pipeline! {
+            // ...RAG配置
+        }
+    },
+    
+    workflows: {
+        // 内联使用workflow!宏
+        main_workflow: workflow! {
+            // ...工作流配置
+        }
+    }
+};
 ```
+
+### 最佳实践
+
+1. **模块化设计**：将大型应用拆分为多个组件，使用`lumos!`宏整合
+2. **环境变量**：使用环境变量存储敏感信息，如API密钥
+3. **错误处理**：为每个组件实现适当的错误处理逻辑
+4. **测试**：使用`eval_suite!`宏为应用创建测试套件
+5. **可观测性**：启用日志和指标收集，监控应用性能
+6. **缓存策略**：为频繁使用的组件配置适当的缓存
+7. **资源限制**：设置合理的超时和并发限制，避免资源耗尽

@@ -17,7 +17,7 @@ Lumos Macro是Lomusai框架的一部分，提供了一系列过程宏，用于�
 - `mcp_client!`：MCP客户端配置DSL，简化外部工具集成
 - `agent!`：代理定义DSL，简化代理创建和配置
 - `tools!`：工具集合DSL，一次性定义多个工具
-- `lumos!`：应用配置DSL，类似Mastra的应用初始化方式
+- `lumos!`：应用级配置DSL，一次性配置整个应用
 
 ## 安装
 
@@ -395,27 +395,37 @@ let result = calculator().execute(params, &options).await?;
 let weather = weather().execute(params, &options).await?;
 ```
 
-### Lumos应用配置 (使用lumos!宏)
+### 应用级配置 (使用lumos!宏)
 
 ```rust
 use lumos_macro::lumos;
 
 let app = lumos! {
+    name: "stock_assistant",
+    description: "一个能够提供股票信息的AI助手",
+    
     agents: {
-        stockAgent: stock_agent,
-        weatherAgent: weather_agent
+        stockAgent
     },
+    
     tools: {
-        stockChecker: stock_checker(),
-        weatherChecker: weather_checker()
+        stockPriceTool,
+        stockInfoTool
     },
-    workflows: vec![content_workflow, research_workflow],
-    rag: knowledge_base,
-    mcp: mcp_client
+    
+    rags: {
+        stockKnowledgeBase
+    },
+    
+    workflows: {
+        stockAnalysisWorkflow
+    },
+    
+    mcp_endpoints: vec!["https://api.example.com/mcp"]
 };
 
 // 使用应用处理请求
-let result = app.run("查询苹果公司的股票").await?;
+let response = app.run("查询苹果公司股票价格").await?;
 ```
 
 ## 与Mastra API的比较

@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::workflow::{Workflow, BasicStep, StepCondition, StepResult};
     use crate::error::Error;
-    use crate::workflow::step::BasicStep;
     use serde_json::json;
     use tokio::test;
 
@@ -12,7 +11,7 @@ mod tests {
         let step1 = BasicStep::create_simple(
             "step1".to_string(),
             "第一步".to_string(),
-            |input| {
+            |_input| {
                 println!("执行步骤1");
                 Ok(json!({ "result": "Step 1 output" }))
             },
@@ -21,7 +20,7 @@ mod tests {
         let step2 = BasicStep::create_simple(
             "step2".to_string(),
             "第二步".to_string(),
-            |input| {
+            |_input| {
                 println!("执行步骤2");
                 Ok(json!({ "result": "Step 2 output" }))
             },
@@ -113,7 +112,7 @@ mod tests {
         // 步骤3应该被跳过，因为条件不满足
         assert!(matches!(
             result.results.get("step3").unwrap(),
-            StepResult::Skipped { .. }
+            StepResult::Skipped
         ));
     }
 
@@ -174,7 +173,7 @@ mod tests {
         // 步骤3应该被跳过，因为依赖的步骤2失败了
         assert!(matches!(
             result.results.get("step3").unwrap(),
-            StepResult::Skipped { .. }
+            StepResult::Skipped
         ));
     }
 

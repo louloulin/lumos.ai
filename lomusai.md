@@ -383,4 +383,65 @@ lomusai_types = { path = "../lomusai_types", version = "0.1.0" }
    - 优化了模块结构 ✅ - 提高了代码可维护性和可扩展性
    - 实现了更加清晰的模块边界 ✅ - 减少了不必要的依赖
 
-所有已实现的组件均包含单元测试，并已通过测试。下一步将开始实现CLI和部署工具模块。 
+所有已实现的组件均包含单元测试，并已通过测试。下一步将开始实现CLI和部署工具模块。
+
+## Lomusai
+
+Lomusai is a platform for building and running AI applications. It provides a set of tools and services for developers to build, test, and deploy AI applications.
+
+## Implementation Plan
+
+The following provides a list of features and modules that we need to implement for the Lomusai platform.
+
+### Core Modules
+
+- [x] Error handling 
+- [x] General utilities
+- [x] Logging and telemetry
+- [x] Workflow execution engine
+  - [x] Workflow definition and execution
+  - [x] Step dependencies and conditional execution
+  - [x] Success and failure states
+  - [x] Parallel execution of independent steps
+  - [x] Skipping steps that do not meet conditions
+- [ ] Memory storage (K/V and Vector)
+- [ ] LLM providers
+  - [ ] OpenAI
+  - [ ] Anthropic
+  - [ ] Local models
+  - [ ] Multi-provider support
+- [ ] Tools integration
+  - [ ] Function calling
+  - [ ] Tool definitions
+  - [ ] Tool execution
+- [ ] Agent implementation
+  - [ ] Simple agent
+  - [ ] Agent with tools
+  - [ ] Agent with memory
+  - [ ] Agent with workflow
+- [ ] RAG (Retrieval Augmented Generation)
+  - [ ] Document processing
+  - [ ] Embedding generation
+  - [ ] Retrieval
+  - [ ] Generation
+- [ ] Deployment
+  - [ ] Local deployment
+  - [ ] Cloud deployment
+  - [ ] Environment configuration
+
+### CLI
+
+- [ ] Project initialization
+- [ ] Local development
+- [ ] Deployment
+- [ ] Project management
+- [ ] Extensions and plugins
+
+### Integration APIs
+
+- [ ] REST API
+- [ ] WebSocket API
+- [ ] SDK for different languages
+  - [ ] TypeScript
+  - [ ] Python
+  - [ ] Rust 

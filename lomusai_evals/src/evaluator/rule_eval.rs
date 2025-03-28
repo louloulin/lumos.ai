@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::Utc;
+use async_trait;
 
 use crate::error::{Error, Result};
 use crate::types::{EvalOptions, EvalResult};
@@ -232,12 +233,13 @@ impl RuleEvaluator {
     }
 }
 
+#[async_trait::async_trait]
 impl Evaluator for RuleEvaluator {
     fn name(&self) -> &str {
         &self.name
     }
     
-    fn evaluate(&self, input: &str, output: &str, options: &EvalOptions) -> Result<EvalResult> {
+    async fn evaluate(&self, input: &str, output: &str, options: &EvalOptions) -> Result<EvalResult> {
         // 评估所有规则
         let mut rule_results = Vec::new();
         let mut total_weight = 0.0;
@@ -294,8 +296,8 @@ impl Evaluator for RuleEvaluator {
 mod tests {
     use super::*;
     
-    #[test]
-    fn test_regex_rule() {
+    #[tokio::test]
+    async fn test_regex_rule() {
         // 创建规则评估器
         let evaluator = RuleEvaluator::new("regex_evaluator")
             .add_rule(Rule {
@@ -307,16 +309,16 @@ mod tests {
             
         // 测试匹配的情况
         let options = EvalOptions::default();
-        let result1 = evaluator.evaluate("", "回答中包含数字123", &options).unwrap();
+        let result1 = evaluator.evaluate("", "回答中包含数字123", &options).await.unwrap();
         assert_eq!(result1.score, 1.0);
         
         // 测试不匹配的情况
-        let result2 = evaluator.evaluate("", "回答中不包含数字", &options).unwrap();
+        let result2 = evaluator.evaluate("", "回答中不包含数字", &options).await.unwrap();
         assert_eq!(result2.score, 0.0);
     }
     
-    #[test]
-    fn test_keywords_rule() {
+    #[tokio::test]
+    async fn test_keywords_rule() {
         // 创建规则评估器
         let evaluator = RuleEvaluator::new("keywords_evaluator")
             .add_rule(Rule {
@@ -336,14 +338,14 @@ mod tests {
             "", 
             "Rust的所有权系统保证了内存安全", 
             &options
-        ).unwrap();
+        ).await.unwrap();
         
         // 包含了2/3的关键词，得分应该是2/3
         assert_eq!(result.score, 2.0/3.0);
     }
     
-    #[test]
-    fn test_length_rule() {
+    #[tokio::test]
+    async fn test_length_rule() {
         // 创建规则评估器
         let evaluator = RuleEvaluator::new("length_evaluator")
             .add_rule(Rule {
@@ -355,16 +357,16 @@ mod tests {
             
         // 测试长度在范围内的情况
         let options = EvalOptions::default();
-        let result1 = evaluator.evaluate("", "这个回答长度适中，在允许范围内", &options).unwrap();
+        let result1 = evaluator.evaluate("", "这个回答长度适中，在允许范围内", &options).await.unwrap();
         assert_eq!(result1.score, 1.0);
         
         // 测试长度太短的情况
-        let result2 = evaluator.evaluate("", "太短了", &options).unwrap();
+        let result2 = evaluator.evaluate("", "太短了", &options).await.unwrap();
         assert_eq!(result2.score, 0.0);
     }
     
-    #[test]
-    fn test_custom_rule() {
+    #[tokio::test]
+    async fn test_custom_rule() {
         // 创建规则评估器
         let evaluator = RuleEvaluator::new("custom_evaluator")
             .add_rule(Rule {
@@ -397,13 +399,13 @@ mod tests {
             "Rust语言的特点是什么？", 
             "Rust语言的特点包括内存安全、并发安全和零成本抽象", 
             &options
-        ).unwrap();
+        ).await.unwrap();
         
         assert_eq!(result.score, 1.0);
     }
     
-    #[test]
-    fn test_multiple_rules() {
+    #[tokio::test]
+    async fn test_multiple_rules() {
         // 创建有多个规则的评估器
         let evaluator = RuleEvaluator::new("multi_rule_evaluator")
             .add_rule(Rule {
@@ -425,7 +427,7 @@ mod tests {
             "", 
             "这是一个超过20个字符的回答，但不包含数字", 
             &options
-        ).unwrap();
+        ).await.unwrap();
         
         // 规则1未通过(0分)，规则2通过(1分)，权重比为1:2，所以加权平均分为2/3
         assert_eq!(result.score, 2.0/3.0);

@@ -164,35 +164,50 @@ impl Metric for AccuracyMetric {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mockall::predicate::*;
-    use mockall::mock;
-    use futures::stream::BoxStream;
+    use futures::stream::{self, BoxStream};
+    use std::sync::Mutex;
     
-    mock! {
-        LlmProviderMock {}
+    // 简单的mock LLM提供者，避免使用mockall
+    struct TestLlmProvider {
+        response: Mutex<String>,
+    }
+    
+    impl TestLlmProvider {
+        fn new(response: String) -> Self {
+            Self { response: Mutex::new(response) }
+        }
+    }
+    
+    #[async_trait]
+    impl LlmProvider for TestLlmProvider {
+        async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> lomusai_core::Result<String> {
+            Ok(self.response.lock().unwrap().clone())
+        }
         
-        #[async_trait]
-        impl LlmProvider for LlmProviderMock {
-            async fn generate(&self, prompt: &str, options: &LlmOptions) -> lomusai_core::Result<String>;
-            async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> lomusai_core::Result<String>;
-            async fn generate_stream<'a>(&'a self, prompt: &'a str, options: &'a LlmOptions) -> lomusai_core::Result<BoxStream<'a, lomusai_core::Result<String>>>;
-            async fn get_embedding(&self, text: &str) -> lomusai_core::Result<Vec<f32>>;
+        async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> lomusai_core::Result<String> {
+            Ok(self.response.lock().unwrap().clone())
+        }
+        
+        async fn generate_stream<'a>(&'a self, _prompt: &'a str, _options: &'a LlmOptions) -> lomusai_core::Result<BoxStream<'a, lomusai_core::Result<String>>> {
+            let response = self.response.lock().unwrap().clone();
+            let stream = stream::once(async move { Ok(response) });
+            Ok(Box::pin(stream))
+        }
+        
+        async fn get_embedding(&self, _text: &str) -> lomusai_core::Result<Vec<f32>> {
+            Ok(vec![0.1, 0.2, 0.3])
         }
     }
     
     #[tokio::test]
     async fn test_accuracy_metric() {
-        let mut mock_llm = MockLlmProviderMock::new();
-        
-        // 设置模拟LLM的行为
-        mock_llm.expect_generate_with_messages()
-            .returning(|_, _| {
-                Ok("分析: 回答提供的信息是准确的，没有明显的事实错误。\n分数: 0.95".to_string())
-            });
+        let test_llm = TestLlmProvider::new(
+            "分析: 回答提供的信息是准确的，没有明显的事实错误。\n分数: 0.95".to_string()
+        );
             
         // 创建准确性指标
         let metric = AccuracyMetric::default()
-            .with_llm(Box::new(mock_llm));
+            .with_llm(Box::new(test_llm));
             
         // 测试评估
         let result = metric.measure(

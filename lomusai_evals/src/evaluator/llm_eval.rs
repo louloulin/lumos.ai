@@ -7,6 +7,8 @@ use chrono::Utc;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use futures::stream::{self, BoxStream};
+use std::sync::Mutex;
 
 use crate::error::{Error, Result};
 use crate::types::{EvalOptions, EvalResult, TestInfo};
@@ -117,7 +119,7 @@ impl Evaluator for LlmEvaluator {
         &self.name
     }
     
-    fn evaluate(&self, input: &str, output: &str, options: &EvalOptions) -> Result<EvalResult> {
+    async fn evaluate(&self, input: &str, output: &str, options: &EvalOptions) -> Result<EvalResult> {
         // 将内部操作封装到一个异步块中，可以简化异步到同步的转换
         // 提前克隆必要的数据，避免生命周期问题
         let name = self.name.clone();
@@ -128,122 +130,103 @@ impl Evaluator for LlmEvaluator {
         let normalize_score = self.config.normalize_score;
         let decimal_places = self.config.decimal_places;
         
-        // 将提取分数的函数定义为局部函数
-        let extract_score = move |response: &str| -> Result<f64> {
-            // 使用正则表达式提取分数
-            let re = Regex::new(&score_pattern)
-                .map_err(|e| Error::MetricCalculation(format!("正则表达式错误: {}", e)))?;
+        // 准备评估提示
+        let user_prompt = user_prompt_template
+            .replace("{{input}}", input)
+            .replace("{{output}}", output);
+                
+        // 构建消息
+        let messages = vec![
+            Message::new(Role::System, system_prompt),
+            Message::new(Role::User, user_prompt),
+        ];
             
-            if let Some(caps) = re.captures(response) {
-                if let Some(score_match) = caps.get(1) {
-                    let score_str = score_match.as_str();
-                    let mut score: f64 = score_str.parse()
-                        .map_err(|_| Error::MetricCalculation(format!("无法解析分数: {}", score_str)))?;
-                    
-                    // 规范化分数到0-1范围（如果配置为true）
-                    if normalize_score && score > 1.0 {
-                        // 假设分数是1-10范围内，规范化到0-1
-                        score = score / 10.0;
-                    }
-                    
-                    // 四舍五入到指定小数位
-                    if let Some(places) = decimal_places {
-                        let factor = 10.0_f64.powi(places as i32);
-                        score = (score * factor).round() / factor;
-                    }
-                    
-                    return Ok(score);
-                }
-            }
+        // 向LLM发送评估请求
+        let llm_options = LlmOptions::default();
+        let response = llm.generate_with_messages(&messages, &llm_options).await
+            .map_err(|e| Error::Llm(e))?;
+                
+        // 提取分数
+        let score = self.extract_score(&response)?;
             
-            // 如果无法提取分数，返回错误
-            Err(Error::MetricCalculation("无法从LLM响应中提取分数".to_string()))
+        // 创建分数详情
+        let mut score_details = HashMap::new();
+        score_details.insert("full_response".to_string(), serde_json::Value::String(response));
+            
+        // 创建评估结果
+        let global_run_id = options.global_run_id.clone()
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
+                
+        let run_id = options.run_id.clone()
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
+                
+        let result = EvalResult {
+            id: Uuid::new_v4().to_string(),
+            global_run_id,
+            run_id,
+            input: input.to_string(),
+            output: output.to_string(),
+            score,
+            score_details,
+            created_at: Utc::now(),
+            evaluator_name: name,
+            metric_name: "llm".to_string(), // 使用LLM作为指标名称
+            target_name: options.target_name.clone(),
+            test_info: options.test_info.clone(),
+            instructions: options.instructions.clone(),
         };
-        
-        futures::executor::block_on(async move {
-            // 准备评估提示
-            let user_prompt = user_prompt_template
-                .replace("{{input}}", input)
-                .replace("{{output}}", output);
-                
-            // 构建消息
-            let messages = vec![
-                Message::new(Role::System, system_prompt),
-                Message::new(Role::User, user_prompt),
-            ];
             
-            // 向LLM发送评估请求
-            let llm_options = LlmOptions::default();
-            let response = llm.generate_with_messages(&messages, &llm_options).await
-                .map_err(|e| Error::Llm(e))?;
-                
-            // 提取分数
-            let score = extract_score(&response)?;
-            
-            // 创建分数详情
-            let mut score_details = HashMap::new();
-            score_details.insert("full_response".to_string(), serde_json::Value::String(response));
-            
-            // 创建评估结果
-            let global_run_id = options.global_run_id.clone()
-                .unwrap_or_else(|| Uuid::new_v4().to_string());
-                
-            let run_id = options.run_id.clone()
-                .unwrap_or_else(|| Uuid::new_v4().to_string());
-                
-            let result = EvalResult {
-                id: Uuid::new_v4().to_string(),
-                global_run_id,
-                run_id,
-                input: input.to_string(),
-                output: output.to_string(),
-                score,
-                score_details,
-                created_at: Utc::now(),
-                evaluator_name: name,
-                metric_name: "llm".to_string(), // 使用LLM作为指标名称
-                target_name: options.target_name.clone(),
-                test_info: options.test_info.clone(),
-                instructions: options.instructions.clone(),
-            };
-            
-            Ok(result)
-        })
+        Ok(result)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mockall::predicate::*;
-    use mockall::mock;
-    use futures::stream::BoxStream;
+    use futures::stream::{self, BoxStream};
+    use std::sync::Mutex;
     
-    mock! {
-        LlmProviderMock {}
+    // 简单的mock LLM提供者
+    struct TestLlmProvider {
+        response: Mutex<String>,
+    }
+    
+    impl TestLlmProvider {
+        fn new(response: String) -> Self {
+            Self { response: Mutex::new(response) }
+        }
+    }
+    
+    #[async_trait]
+    impl LlmProvider for TestLlmProvider {
+        async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> lomusai_core::Result<String> {
+            Ok(self.response.lock().unwrap().clone())
+        }
         
-        #[async_trait]
-        impl LlmProvider for LlmProviderMock {
-            async fn generate(&self, prompt: &str, options: &LlmOptions) -> lomusai_core::Result<String>;
-            async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> lomusai_core::Result<String>;
-            async fn generate_stream<'a>(&'a self, prompt: &'a str, options: &'a LlmOptions) -> lomusai_core::Result<BoxStream<'a, lomusai_core::Result<String>>>;
-            async fn get_embedding(&self, text: &str) -> lomusai_core::Result<Vec<f32>>;
+        async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> lomusai_core::Result<String> {
+            Ok(self.response.lock().unwrap().clone())
+        }
+        
+        async fn generate_stream<'a>(&'a self, _prompt: &'a str, _options: &'a LlmOptions) -> lomusai_core::Result<BoxStream<'a, lomusai_core::Result<String>>> {
+            let response = self.response.lock().unwrap().clone();
+            let stream = stream::once(async move { Ok(response) });
+            Ok(Box::pin(stream))
+        }
+        
+        async fn get_embedding(&self, _text: &str) -> lomusai_core::Result<Vec<f32>> {
+            Ok(vec![0.1, 0.2, 0.3])
         }
     }
     
     #[tokio::test]
     async fn test_llm_evaluator() {
-        // 创建模拟LLM提供者
-        let mut mock_llm = MockLlmProviderMock::new();
-        
-        // 设置模拟行为
-        mock_llm.expect_generate_with_messages()
-            .returning(|_, _| {
-                Ok("这个回答非常准确，提供了相关信息，且组织良好。分数:8.5".to_string())
-            });
+        // 创建测试LLM提供者
+        let test_llm = TestLlmProvider::new(
+            "这个回答非常准确，提供了相关信息，且组织良好。分数:8.5".to_string()
+        );
             
         // 创建LLM评估器
-        let evaluator = LlmEvaluator::new("llm_eval", Arc::new(mock_llm));
+        let evaluator = LlmEvaluator::new("llm_eval", Arc::new(test_llm));
         
         // 测试评估
         let test_info = TestInfo {
@@ -262,7 +245,7 @@ mod tests {
             "如何在Rust中处理错误？",
             "Rust提供了Result和Option类型来处理错误。Result用于可恢复错误，而Option用于可能为空的值。",
             &options
-        );
+        ).await;
         
         assert!(result.is_ok());
         let eval_result = result.unwrap();
@@ -273,8 +256,8 @@ mod tests {
     
     #[test]
     fn test_extract_score() {
-        let llm = MockLlmProviderMock::new();
-        let evaluator = LlmEvaluator::new("test", Arc::new(llm));
+        let test_llm = TestLlmProvider::new("".to_string());
+        let evaluator = LlmEvaluator::new("test", Arc::new(test_llm));
         
         // 测试标准格式
         let result = evaluator.extract_score("分析结果很好。分数:7.5");

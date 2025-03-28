@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::llm::{AnthropicProvider, LlmOptions, LlmProvider, Message, OpenAiProvider};
+    use crate::llm::{AnthropicProvider, LlmOptions, LlmProvider, Message, OpenAiProvider, Role};
 
     // 这些测试使用内联的测试数据，不依赖于外部HTTP模拟库
     
@@ -8,25 +8,23 @@ mod tests {
     #[test]
     fn test_llm_options_default() {
         let options = LlmOptions::default();
-        assert!(options.temperature.is_none());
-        assert!(options.max_tokens.is_none());
+        assert_eq!(options.temperature, Some(0.7));
+        assert_eq!(options.max_tokens, Some(1000));
+        assert_eq!(options.stream, false);
         assert!(options.stop.is_none());
-        assert!(options.messages.is_none());
-        assert!(options.params.is_none());
+        assert!(options.model.is_none());
+        assert!(options.extra.is_empty());
     }
     
     // 测试消息结构
     #[test]
     fn test_message_creation() {
-        let message = Message {
-            role: "user".to_string(),
-            content: "Hello".to_string(),
-            metadata: None,
-        };
+        let message = Message::new(Role::User, "Hello");
         
-        assert_eq!(message.role, "user");
+        assert_eq!(message.role, Role::User);
         assert_eq!(message.content, "Hello");
         assert!(message.metadata.is_none());
+        assert!(message.name.is_none());
     }
     
     // 测试Anthropic嵌入错误
@@ -61,19 +59,9 @@ mod tests {
         );
         
         // 创建请求选项
-        let options = LlmOptions {
-            temperature: Some(0.7),
-            max_tokens: Some(50),
-            stop: None,
-            messages: Some(vec![
-                Message {
-                    role: "user".to_string(),
-                    content: "Say hello".to_string(),
-                    metadata: None,
-                }
-            ]),
-            params: None,
-        };
+        let options = LlmOptions::default()
+            .with_temperature(0.7)
+            .with_max_tokens(50);
         
         // 调用生成方法
         let response = provider.generate("Say hello", &options).await;
@@ -116,22 +104,16 @@ mod tests {
         );
         
         // 创建请求选项
-        let options = LlmOptions {
-            temperature: Some(0.7),
-            max_tokens: Some(50),
-            stop: None,
-            messages: Some(vec![
-                Message {
-                    role: "user".to_string(),
-                    content: "Say hello".to_string(),
-                    metadata: None,
-                }
-            ]),
-            params: None,
-        };
+        let options = LlmOptions::default()
+            .with_temperature(0.7)
+            .with_max_tokens(50);
+            
+        let messages = vec![
+            Message::new(Role::User, "Say hello"),
+        ];
         
         // 调用生成方法
-        let response = provider.generate("Say hello", &options).await;
+        let response = provider.generate_with_messages(&messages, &options).await;
         
         // 验证响应成功
         assert!(response.is_ok());

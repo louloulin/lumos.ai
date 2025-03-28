@@ -2,16 +2,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use lomusai_core::{
-    AgentConfig, 
-    BasicAgent, 
-    AgentGenerateOptions, 
-    Message, 
-    Role, 
-    Tool, 
-    create_basic_agent,
+    Agent, AgentConfig, AgentGenerateOptions, BasicAgent,
+    Message, Role, Tool, 
+    Error, Result as LomusaiResult,
+    create_basic_agent
 };
-use lomusai_core::llm::{MockLlmProvider, LlmOptions};
 use lomusai_core::tool::{FunctionTool, ParameterSchema, ToolSchema, ToolExecutionOptions};
+use lomusai_core::llm::LlmOptions;
 
 // 创建一个简单的计算器工具
 fn create_calculator_tool() -> Box<dyn Tool> {
@@ -59,11 +56,11 @@ fn create_calculator_tool() -> Box<dyn Tool> {
                 "multiply" => a * b,
                 "divide" => {
                     if b == 0.0 {
-                        return Err(lomusai_core::Error::InvalidInput("除数不能为零".to_string()));
+                        return Err(Error::InvalidInput("除数不能为零".to_string()));
                     }
                     a / b
                 },
-                _ => return Err(lomusai_core::Error::InvalidInput(format!("未知操作: {}", operation))),
+                _ => return Err(Error::InvalidInput(format!("未知操作: {}", operation))),
             };
             
             Ok(serde_json::json!({ "result": result }))
@@ -141,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "根据我的计算，12 乘以 5 等于 60。另外，北京今天的天气是晴朗，温度为22°C，湿度为45%。".to_string(),
     ];
     
-    let llm = Arc::new(MockLlmProvider::new(mock_responses));
+    let llm = Arc::new(tests::MockLlmProvider::new(mock_responses));
     
     // 创建智能体
     let config = AgentConfig {
@@ -160,6 +157,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let user_message = Message {
         role: Role::User,
         content: "请计算12乘以5，然后告诉我北京的天气。".to_string(),
+        metadata: None,
+        name: None,
     };
     
     // 生成响应
@@ -194,58 +193,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // 创建一个简单的MockLlmProvider实现，用于测试
-mod lomusai_core {
-    pub mod llm {
-        use std::sync::Arc;
-        use async_trait::async_trait;
-        use futures::stream::BoxStream;
-        
-        use lomusai_core::{Result, Error, Message, LlmProvider, LlmOptions};
-        
-        pub struct MockLlmProvider {
-            responses: Vec<String>,
-            current_response: std::sync::Mutex<usize>,
-        }
-        
-        impl MockLlmProvider {
-            pub fn new(responses: Vec<String>) -> Self {
-                Self {
-                    responses,
-                    current_response: std::sync::Mutex::new(0),
-                }
+pub mod tests {
+    use std::sync::{Arc, Mutex};
+    use async_trait::async_trait;
+    use futures::stream::BoxStream;
+    
+    use lomusai_core::{Error, Message};
+    use lomusai_core::error::Result;
+    use lomusai_core::llm::{LlmProvider, LlmOptions};
+    
+    pub struct MockLlmProvider {
+        responses: Vec<String>,
+        current_response: Mutex<usize>,
+    }
+    
+    impl MockLlmProvider {
+        pub fn new(responses: Vec<String>) -> Self {
+            Self {
+                responses,
+                current_response: Mutex::new(0),
             }
         }
+    }
+    
+    #[async_trait]
+    impl LlmProvider for MockLlmProvider {
+        async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
+            let mut current = self.current_response.lock().map_err(|_| Error::Lock("Could not lock current_response".to_string()))?;
+            
+            if *current >= self.responses.len() {
+                return Err(Error::InvalidInput("No more mock responses".to_string()));
+            }
+            
+            let response = self.responses[*current].clone();
+            *current += 1;
+            
+            Ok(response)
+        }
         
-        #[async_trait]
-        impl LlmProvider for MockLlmProvider {
-            async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
-                let mut current = self.current_response.lock().map_err(|_| Error::Lock("Could not lock current_response".to_string()))?;
-                
-                if *current >= self.responses.len() {
-                    return Err(Error::InvalidInput("No more mock responses".to_string()));
-                }
-                
-                let response = self.responses[*current].clone();
-                *current += 1;
-                
-                Ok(response)
-            }
-            
-            async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> Result<String> {
-                self.generate("", _options).await
-            }
-            
-            async fn generate_stream<'a>(
-                &'a self,
-                _prompt: &'a str,
-                _options: &'a LlmOptions,
-            ) -> Result<BoxStream<'a, Result<String>>> {
-                unimplemented!("Streaming not implemented for mock provider")
-            }
-            
-            async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
-                unimplemented!("Embeddings not implemented for mock provider")
-            }
+        async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> Result<String> {
+            self.generate("", _options).await
+        }
+        
+        async fn generate_stream<'a>(
+            &'a self,
+            _prompt: &'a str,
+            _options: &'a LlmOptions,
+        ) -> Result<BoxStream<'a, Result<String>>> {
+            unimplemented!("Streaming not implemented for mock provider")
+        }
+        
+        async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
+            unimplemented!("Embeddings not implemented for mock provider")
         }
     }
 } 

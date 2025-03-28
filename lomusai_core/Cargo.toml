@@ -1,0 +1,24 @@
+[package]
+name = "lomusai_core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lomusai Team"]
+description = "Core functionality for the Lomusai framework"
+license = "MIT"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.11" 

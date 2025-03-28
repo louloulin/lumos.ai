@@ -1,0 +1,51 @@
+[workspace]
+members = [
+    "src",
+    "lomusai_core",
+    "lomusai_rag",
+    "lomusai_memory",
+    "lomusai_evals",
+    "lomusai_cli",
+    "lomusai_integrations",
+    "lomusai_deployer",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Lomusai Team"]
+description = "Rust版本的Mastra AI应用框架"
+license = "MIT"
+repository = "https://github.com/lomusai/lomusai"
+
+[workspace.dependencies]
+# 核心依赖
+tokio = { version = "1.34", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures = "0.3"
+async-trait = "0.1"
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+reqwest = { version = "0.11", features = ["json"] }
+axum = "0.7"
+
+# 工具库
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
+url = "2.5"
+
+# 测试工具
+tokio-test = "0.4"
+mockall = "0.11"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

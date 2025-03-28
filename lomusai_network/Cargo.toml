@@ -1,0 +1,22 @@
+[package]
+name = "lomusai_network"
+version = "0.1.0"
+edition = "2021"
+description = "Agent network implementation for Lomusai"
+
+[dependencies]
+lomusai_core = { path = "../lomusai_core" }
+tokio = { version = "1.28", features = ["full"] }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.3", features = ["v4", "serde"] }
+tracing = "0.1"
+futures = "0.3"
+petgraph = "0.6"     # 用于表示和分析网络拓扑
+dashmap = "5.4"      # 并发哈希表
+parking_lot = "0.12" # 高性能锁
+
+[dev-dependencies]
+tokio-test = "0.4" 

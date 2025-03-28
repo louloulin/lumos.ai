@@ -3,8 +3,11 @@
 //! 提供了Agent、工作流、工具、LLM接口等核心功能
 
 pub mod agent;
+pub mod base;
 pub mod error;
 pub mod llm;
+pub mod logger;
+pub mod lomusai;
 pub mod memory;
 pub mod storage;
 pub mod telemetry;
@@ -17,6 +20,9 @@ pub mod workflow;
 pub use error::{Error, Result};
 pub use llm::{LlmProvider, LlmOptions, Message, Role};
 pub use agent::AgentConfig;
+pub use base::{Base, ComponentConfig};
+pub use logger::{Logger, LogLevel, Component as LogComponent, create_logger, create_noop_logger};
+pub use lomusai::{Lomusai, LomusaiConfig};
 pub use memory::Memory;
 pub use storage::{Storage, create_memory_storage};
 pub use tool::Tool;

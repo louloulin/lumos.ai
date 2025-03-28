@@ -4,6 +4,8 @@ mod types;
 mod provider;
 mod openai;
 mod anthropic;
+#[cfg(test)]
+mod tests;
 
 pub use types::{Message, LlmOptions};
 pub use provider::LlmProvider;

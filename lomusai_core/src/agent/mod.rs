@@ -10,10 +10,8 @@ pub use executor::{Agent, ToolCall};
 mod tests {
     use std::sync::Arc;
     use async_trait::async_trait;
-    use std::collections::HashMap;
-    use serde_json::Value;
     
-    use crate::llm::{LlmOptions, LlmProvider, Message};
+    use crate::llm::{LlmOptions, LlmProvider};
     use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
     use crate::Result;
     use super::*;
@@ -32,9 +30,13 @@ mod tests {
     impl LlmProvider for MockLlmProvider {
         async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
             // Get the appropriate response based on the current state
-            let messages = _options.messages.as_ref().unwrap_or(&vec![]);
-            let index = messages.len().saturating_sub(2).min(self.responses.len() - 1);
-            Ok(self.responses[index].clone())
+            let messages = _options
+                .messages
+                .as_ref()
+                .map(|msgs| msgs.len().saturating_sub(2).min(self.responses.len() - 1))
+                .unwrap_or(0);
+            
+            Ok(self.responses[messages].clone())
         }
         
         async fn generate_stream<'a>(
@@ -78,7 +80,7 @@ mod tests {
             schema,
             |params| {
                 let message = params.get("message").and_then(|v| v.as_str()).unwrap_or("No message");
-                Ok(Value::String(format!("Echo: {}", message)))
+                Ok(serde_json::json!(format!("Echo: {}", message)))
             },
         );
         

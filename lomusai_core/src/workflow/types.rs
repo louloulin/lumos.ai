@@ -159,6 +159,21 @@ pub struct WorkflowState {
     pub suspended_steps: Option<HashMap<String, String>>,
 }
 
+impl Default for WorkflowState {
+    fn default() -> Self {
+        Self {
+            steps: HashMap::new(),
+            trigger_data: serde_json::Value::Null,
+            attempts: HashMap::new(),
+            active_paths: Vec::new(),
+            run_id: String::new(),
+            timestamp: 0,
+            child_states: None,
+            suspended_steps: None,
+        }
+    }
+}
+
 /// 步骤状态信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StepStatusInfo {

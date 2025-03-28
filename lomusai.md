@@ -404,7 +404,14 @@ The following provides a list of features and modules that we need to implement 
   - [x] Success and failure states
   - [x] Parallel execution of independent steps
   - [x] Skipping steps that do not meet conditions
-- [ ] Memory storage (K/V and Vector)
+- [x] Memory storage (K/V and Vector)
+  - [x] Thread storage
+  - [x] Message storage
+  - [x] Workflow snapshot storage
+  - [x] Evaluation results storage
+  - [x] Trace data storage
+  - [x] In-memory implementation
+  - [x] SQLite implementation (optional feature)
 - [ ] LLM providers
   - [ ] OpenAI
   - [ ] Anthropic

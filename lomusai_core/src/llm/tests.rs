@@ -19,7 +19,7 @@ mod tests {
     // 测试消息结构
     #[test]
     fn test_message_creation() {
-        let message = Message::new(Role::User, "Hello");
+        let message = Message::new(Role::User, "Hello".to_string(), None, None);
         
         assert_eq!(message.role, Role::User);
         assert_eq!(message.content, "Hello");
@@ -109,7 +109,7 @@ mod tests {
             .with_max_tokens(50);
             
         let messages = vec![
-            Message::new(Role::User, "Say hello"),
+            Message::new(Role::User, "Say hello".to_string(), None, None),
         ];
         
         // 调用生成方法

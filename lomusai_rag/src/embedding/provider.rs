@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use std::collections::HashMap;
 
 use crate::error::Result;
 use crate::types::Document;
@@ -47,54 +46,67 @@ pub trait EmbeddingProvider: Send + Sync {
     }
     
     /// Calculate the cosine similarity between two embeddings
-    fn cosine_similarity(&self, vec_a: &[f32], vec_b: &[f32]) -> f32 {
-        utils::compute_cosine_similarity(vec_a, vec_b)
+    fn cosine_similarity(&self, vec1: &[f32], vec2: &[f32]) -> f32 {
+        utils::compute_cosine_similarity(vec1, vec2)
     }
 }
 
 /// Utility functions for embeddings
 pub mod utils {
     /// Compute cosine similarity between two vectors
-    pub fn compute_cosine_similarity(vec_a: &[f32], vec_b: &[f32]) -> f32 {
-        if vec_a.len() != vec_b.len() || vec_a.is_empty() {
+    pub fn compute_cosine_similarity(vec1: &[f32], vec2: &[f32]) -> f32 {
+        if vec1.len() != vec2.len() || vec1.is_empty() {
             return 0.0;
         }
         
-        let dot_product: f32 = vec_a.iter().zip(vec_b.iter())
-            .map(|(a, b)| a * b)
-            .sum();
-            
-        let mag_a: f32 = vec_a.iter().map(|x| x * x).sum::<f32>().sqrt();
-        let mag_b: f32 = vec_b.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let mut dot_product = 0.0;
+        let mut norm1 = 0.0;
+        let mut norm2 = 0.0;
         
-        if mag_a == 0.0 || mag_b == 0.0 {
+        for i in 0..vec1.len() {
+            dot_product += vec1[i] * vec2[i];
+            norm1 += vec1[i] * vec1[i];
+            norm2 += vec2[i] * vec2[i];
+        }
+        
+        if norm1 == 0.0 || norm2 == 0.0 {
             return 0.0;
         }
         
-        dot_product / (mag_a * mag_b)
+        dot_product / (norm1.sqrt() * norm2.sqrt())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::Metadata;
     
-    #[tokio::test]
-    async fn test_cosine_similarity() {
-        // Test the basic utility function
-        let vec_a = vec![1.0, 0.0, 0.0];
-        let vec_b = vec![0.0, 1.0, 0.0]; 
-        let vec_c = vec![1.0, 1.0, 0.0];
+    #[test]
+    fn test_cosine_similarity() {
+        // 测试余弦相似度计算
+        let vec1 = vec![1.0, 2.0, 3.0];
+        let vec2 = vec![4.0, 5.0, 6.0];
         
-        let sim_aa = utils::compute_cosine_similarity(&vec_a, &vec_a);
-        assert!((sim_aa - 1.0).abs() < 1e-6);
+        let similarity = utils::compute_cosine_similarity(&vec1, &vec2);
+        let expected = 0.9746318;
         
-        let sim_ab = utils::compute_cosine_similarity(&vec_a, &vec_b);
-        assert!(sim_ab.abs() < 1e-6);
+        assert!((similarity - expected).abs() < 1e-6);
+    }
+    
+    #[test]
+    fn test_cosine_similarity_edge_cases() {
+        // 测试长度不同的向量
+        let vec1 = vec![1.0, 2.0, 3.0];
+        let vec2 = vec![1.0, 2.0];
+        assert_eq!(utils::compute_cosine_similarity(&vec1, &vec2), 0.0);
         
-        let sim_ac = utils::compute_cosine_similarity(&vec_a, &vec_c);
-        assert!((sim_ac - 0.7071).abs() < 1e-3);
+        // 测试空向量
+        let empty: Vec<f32> = vec![];
+        assert_eq!(utils::compute_cosine_similarity(&empty, &vec1), 0.0);
+        
+        // 测试零向量
+        let zeros = vec![0.0, 0.0, 0.0];
+        assert_eq!(utils::compute_cosine_similarity(&zeros, &vec1), 0.0);
     }
     
     // Note: The following tests require a mock implementation

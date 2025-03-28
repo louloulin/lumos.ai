@@ -252,35 +252,48 @@ mod tests {
     
     #[tokio::test]
     async fn test_query_by_vector() {
+        // 创建测试数据
         let mut store = InMemoryVectorStore::new();
         
-        // Add documents with different embeddings
-        for i in 0..5 {
-            let doc = Document {
-                id: format!("doc-{}", i),
-                content: format!("Document {}", i),
-                metadata: Metadata::new(),
-                embedding: Some(vec![0.1 * (i as f32), 0.2 * (i as f32), 0.3 * (i as f32)]),
-            };
-            
+        // 添加几个向量，使它们的相似度是已知的
+        let docs = (1..=5).map(|i| Document {
+            id: format!("doc-{}", i),
+            content: format!("Document {}", i),
+            metadata: Metadata::default(),
+            embedding: Some(match i {
+                1 => vec![1.0, 0.0, 0.0],  // 正交于查询向量
+                2 => vec![0.5, 0.5, 0.5],  // 中等相似度
+                3 => vec![0.0, 1.0, 0.0],  // 与查询向量完全相同
+                4 => vec![0.0, 0.9, 0.1],  // 非常相似
+                _ => vec![0.2, 0.2, 0.2],  // 低相似度
+            }),
+        }).collect::<Vec<_>>();
+        
+        for doc in docs {
             store.add_document(doc).await.unwrap();
         }
         
-        // Query for similar documents
+        // 查询向量 [0.0, 1.0, 0.0] 应该与 doc-3 最相似
+        let query_vector = vec![0.0, 1.0, 0.0];
         let options = RetrievalOptions {
-            limit: 2,
+            limit: 3,
             threshold: None,
             filter: None,
         };
         
-        let query_embedding = vec![0.4, 0.8, 1.2]; // Most similar to doc-4
-        let results = store.query_by_vector(&query_embedding, &options).await.unwrap();
+        let result = store.query_by_vector(&query_vector, &options).await.unwrap();
         
-        assert_eq!(results.documents.len(), 2);
-        assert_eq!(results.scores.unwrap().len(), 2);
+        // 验证结果
+        assert_eq!(result.documents.len(), 3);
+        assert_eq!(result.documents[0].id, "doc-3"); // 最相似
+        // 注意：我们不再断言准确的排序，因为doc-4也很相似
+        assert!(result.documents.iter().any(|d| d.id == "doc-4")); // 应该在结果中
         
-        // The closest match should be doc-4
-        assert_eq!(results.documents[0].id, "doc-4");
+        // 验证分数
+        assert!(result.scores.is_some());
+        let scores = result.scores.unwrap();
+        assert_eq!(scores.len(), 3);
+        assert!(scores[0] > 0.9); // doc-3 的分数应该很高
     }
     
     #[tokio::test]

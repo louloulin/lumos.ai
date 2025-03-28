@@ -1,10 +1,9 @@
 extern crate proc_macro;
-
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
-use syn::{parse_macro_input, DeriveInput, Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}, punctuated::Punctuated};
-use syn::{Attribute, Data, DataStruct, Fields};
+use quote::{quote, format_ident};
+use syn::{parse_macro_input, Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
 use syn::spanned::Spanned;
+use proc_macro2;
 
 mod tool_macro;
 mod agent_macro;

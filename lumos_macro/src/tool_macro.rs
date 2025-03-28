@@ -5,10 +5,11 @@ use syn::{
     parse_macro_input, parse_quote,
     punctuated::Punctuated,
     token, Arm, Attribute, Expr, ExprClosure, ExprLit, FnArg, Ident, ItemFn, LitBool, LitStr, 
-    Meta, MetaList, MetaNameValue, NestedMeta, Pat, PatIdent, PatType, Result, Token, Type
+    Meta, MetaList, MetaNameValue, Pat, PatIdent, PatType, Result, Token, Type
 };
 use syn::spanned::Spanned;
 use proc_macro2::Span;
+use std::str::FromStr;
 
 // 工具属性解析
 pub struct ToolAttributes {
@@ -113,7 +114,52 @@ impl Parse for ParameterAttributes {
     }
 }
 
-pub fn tool_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
+// ToolExecuteArgs结构体定义
+pub struct ToolExecuteArgs {
+    pub tool: Expr,
+    pub params: Expr,
+}
+
+impl Parse for ToolExecuteArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let content;
+        let _ = syn::braced!(content in input);
+        
+        let mut tool = None;
+        let mut params = None;
+        
+        while !content.is_empty() {
+            let key: Ident = content.parse()?;
+            let _: Token![:] = content.parse()?;
+            
+            match key.to_string().as_str() {
+                "tool" => {
+                    tool = Some(content.parse()?);
+                    let _: Option<Token![,]> = content.parse()?;
+                },
+                "params" => {
+                    let params_str: LitStr;
+                    let inner_content;
+                    let _ = syn::braced!(inner_content in content);
+                    
+                    // 直接创建一个表达式
+                    let inner_content_str = inner_content.to_string();
+                    params = Some(Expr::Verbatim(proc_macro2::TokenStream::from_str(&format!("{{{}}}", inner_content_str)).unwrap()));
+                    
+                    let _: Option<Token![,]> = content.parse()?;
+                },
+                _ => return Err(syn::Error::new_spanned(&key, "Unknown key in tool execution, expected 'tool' or 'params'")),
+            }
+        }
+        
+        let tool = tool.ok_or_else(|| syn::Error::new(Span::call_site(), "Missing 'tool' in tool execution"))?;
+        let params = params.ok_or_else(|| syn::Error::new(Span::call_site(), "Missing 'params' in tool execution"))?;
+        
+        Ok(ToolExecuteArgs { tool, params })
+    }
+}
+
+pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemFn);
     let attrs = parse_macro_input!(attr as ToolAttributes);
     

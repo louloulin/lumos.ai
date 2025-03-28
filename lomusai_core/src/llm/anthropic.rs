@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::{Error, Result};
 use super::provider::LlmProvider;
@@ -150,6 +149,7 @@ impl LlmProvider for AnthropicProvider {
         // 检查响应状态
         let status = response.status();
         
+        // 处理响应
         if !status.is_success() {
             // 如果响应不成功，获取错误文本
             let error_text = response.text().await
@@ -160,21 +160,21 @@ impl LlmProvider for AnthropicProvider {
                 status,
                 error_text
             )));
+        } else {
+            // 如果响应成功，解析JSON
+            let response_data: AnthropicResponse = response.json().await
+                .map_err(|e| Error::LlmError(format!("Failed to parse Anthropic response: {}", e)))?;
+                
+            // 提取生成的文本
+            let generated_text = response_data.content
+                .iter()
+                .filter(|content| content.content_type == "text")
+                .map(|content| content.text.clone())
+                .collect::<Vec<String>>()
+                .join("");
+                
+            Ok(generated_text)
         }
-        
-        // 如果响应成功，解析JSON
-        let response_data: AnthropicResponse = response.json().await
-            .map_err(|e| Error::LlmError(format!("Failed to parse Anthropic response: {}", e)))?;
-            
-        // 提取生成的文本
-        let generated_text = response_data.content
-            .iter()
-            .filter(|content| content.content_type == "text")
-            .map(|content| content.text.clone())
-            .collect::<Vec<String>>()
-            .join("");
-            
-        Ok(generated_text)
     }
     
     async fn generate_stream<'a>(
@@ -191,7 +191,7 @@ impl LlmProvider for AnthropicProvider {
         Ok(Box::pin(stream))
     }
     
-    async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
+    async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
         // Anthropic目前不提供官方的嵌入API，我们返回一个错误
         Err(Error::LlmError("Anthropic does not provide an embedding API".to_string()))
     }

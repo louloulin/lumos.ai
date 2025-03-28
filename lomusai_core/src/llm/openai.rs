@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
 
 use crate::{Error, Result};
 use super::provider::LlmProvider;
@@ -169,27 +168,31 @@ impl LlmProvider for OpenAiProvider {
             
         // 检查响应状态
         let status = response.status();
+        
+        // 处理响应
         if !status.is_success() {
+            // 如果响应不成功，获取错误文本
             let error_text = response.text().await
                 .unwrap_or_else(|_| "Unknown error".to_string());
+                
             return Err(Error::LlmError(format!(
                 "OpenAI API error: {}, details: {}",
                 status,
                 error_text
             )));
+        } else {
+            // 如果响应成功，解析JSON
+            let response_data: OpenAIResponse = response.json().await
+                .map_err(|e| Error::LlmError(format!("Failed to parse OpenAI response: {}", e)))?;
+                
+            // 提取生成的文本
+            let generated_text = response_data.choices
+                .first()
+                .and_then(|choice| choice.message.content.clone())
+                .unwrap_or_default();
+                
+            Ok(generated_text)
         }
-        
-        // 解析响应
-        let response_data: OpenAIResponse = response.json().await
-            .map_err(|e| Error::LlmError(format!("Failed to parse OpenAI response: {}", e)))?;
-            
-        // 提取生成的文本
-        let generated_text = response_data.choices
-            .first()
-            .and_then(|choice| choice.message.content.clone())
-            .unwrap_or_default();
-            
-        Ok(generated_text)
     }
     
     async fn generate_stream<'a>(
@@ -226,26 +229,30 @@ impl LlmProvider for OpenAiProvider {
             
         // 检查响应状态
         let status = response.status();
+        
+        // 处理响应
         if !status.is_success() {
+            // 如果响应不成功，获取错误文本
             let error_text = response.text().await
                 .unwrap_or_else(|_| "Unknown error".to_string());
+                
             return Err(Error::LlmError(format!(
                 "OpenAI API error: {}, details: {}",
                 status,
                 error_text
             )));
+        } else {
+            // 如果响应成功，解析JSON
+            let response_data: OpenAIEmbeddingResponse = response.json().await
+                .map_err(|e| Error::LlmError(format!("Failed to parse OpenAI embedding response: {}", e)))?;
+                
+            // 提取嵌入
+            let embedding = response_data.data
+                .first()
+                .map(|data| data.embedding.clone())
+                .ok_or_else(|| Error::LlmError("No embedding returned from OpenAI".to_string()))?;
+                
+            Ok(embedding)
         }
-        
-        // 解析响应
-        let response_data: OpenAIEmbeddingResponse = response.json().await
-            .map_err(|e| Error::LlmError(format!("Failed to parse OpenAI embedding response: {}", e)))?;
-            
-        // 提取嵌入
-        let embedding = response_data.data
-            .first()
-            .map(|data| data.embedding.clone())
-            .ok_or_else(|| Error::LlmError("No embedding returned from OpenAI".to_string()))?;
-            
-        Ok(embedding)
     }
 } 

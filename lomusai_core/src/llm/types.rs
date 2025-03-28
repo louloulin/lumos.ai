@@ -15,6 +15,8 @@ pub enum Role {
     Function,
     /// Custom role (for future extensions)
     Custom(String),
+    /// Tool message role
+    Tool,
 }
 
 impl Role {
@@ -26,6 +28,7 @@ impl Role {
             "user" => Role::User,
             "assistant" => Role::Assistant,
             "function" => Role::Function,
+            "tool" => Role::Tool,
             _ => Role::Custom(role_str),
         }
     }
@@ -37,6 +40,7 @@ impl Role {
             Role::User => "user",
             Role::Assistant => "assistant",
             Role::Function => "function",
+            Role::Tool => "tool",
             Role::Custom(s) => s.as_str(),
         }
     }
@@ -49,6 +53,7 @@ impl From<Role> for String {
             Role::User => "user".to_string(),
             Role::Assistant => "assistant".to_string(),
             Role::Function => "function".to_string(),
+            Role::Tool => "tool".to_string(),
             Role::Custom(s) => s,
         }
     }
@@ -78,6 +83,12 @@ impl fmt::Display for Role {
     }
 }
 
+impl Default for Role {
+    fn default() -> Self {
+        Self::User
+    }
+}
+
 /// Represents a message in a conversation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
@@ -86,38 +97,32 @@ pub struct Message {
     /// The content of the message
     pub content: String,
     /// Additional metadata for the message
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<HashMap<String, serde_json::Value>>,
     /// Optional name for the message, used in function calls
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 }
 
 impl Message {
     /// Create a new message
-    pub fn new(role: Role, content: impl Into<String>) -> Self {
+    pub fn new(role: Role, content: String, metadata: Option<HashMap<String, serde_json::Value>>, name: Option<String>) -> Self {
         Self {
             role,
-            content: content.into(),
-            metadata: None,
-            name: None,
+            content,
+            metadata,
+            name,
         }
     }
     
     /// Create a new message with a name
-    pub fn with_name(role: Role, content: impl Into<String>, name: impl Into<String>) -> Self {
-        Self {
-            role,
-            content: content.into(),
-            metadata: None,
-            name: Some(name.into()),
-        }
+    pub fn with_name(mut self, name: &str) -> Self {
+        self.name = Some(name.to_string());
+        self
     }
     
     /// Add metadata to the message
-    pub fn with_metadata(mut self, key: impl Into<String>, value: impl Into<serde_json::Value>) -> Self {
+    pub fn with_metadata(mut self, key: &str, value: serde_json::Value) -> Self {
         let metadata = self.metadata.get_or_insert_with(HashMap::new);
-        metadata.insert(key.into(), value.into());
+        metadata.insert(key.to_string(), value);
         self
     }
 }
@@ -193,5 +198,45 @@ impl LlmOptions {
     pub fn with_extra(mut self, key: impl Into<String>, value: impl Into<serde_json::Value>) -> Self {
         self.extra.insert(key.into(), value.into());
         self
+    }
+}
+
+/// Create system message
+pub fn system_message(content: &str) -> Message {
+    Message {
+        role: Role::System,
+        content: content.to_string(),
+        metadata: None,
+        name: None,
+    }
+}
+
+/// Create user message
+pub fn user_message(content: &str) -> Message {
+    Message {
+        role: Role::User,
+        content: content.to_string(),
+        metadata: None,
+        name: None,
+    }
+}
+
+/// Create assistant message
+pub fn assistant_message(content: &str) -> Message {
+    Message {
+        role: Role::Assistant,
+        content: content.to_string(),
+        metadata: None,
+        name: None,
+    }
+}
+
+/// Create tool message
+pub fn tool_message(content: &str) -> Message {
+    Message {
+        role: Role::Tool,
+        content: content.to_string(),
+        metadata: None,
+        name: None,
     }
 } 

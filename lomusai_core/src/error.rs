@@ -47,4 +47,20 @@ pub enum Error {
     /// Generic errors
     #[error("{0}")]
     Other(String),
+
+    /// Lock errors
+    #[error("Lock error: {0}")]
+    Lock(String),
+
+    /// Already exists errors
+    #[error("Already exists error: {0}")]
+    AlreadyExists(String),
+
+    /// Not found errors
+    #[error("Not found error: {0}")]
+    NotFound(String),
+
+    /// Invalid input errors
+    #[error("Invalid input error: {0}")]
+    InvalidInput(String),
 } 

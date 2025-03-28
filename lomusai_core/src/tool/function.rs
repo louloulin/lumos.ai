@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::sync::Arc;
 
-use crate::Result;
+use crate::error::Result;
 use super::tool::Tool;
 use super::schema::{ToolSchema, ToolExecutionOptions};
 
@@ -17,6 +18,17 @@ pub struct FunctionTool {
     schema: ToolSchema,
     /// The function to execute
     function: Arc<dyn Fn(HashMap<String, Value>) -> Result<Value> + Send + Sync>,
+}
+
+// Implement Debug for FunctionTool
+impl Debug for FunctionTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FunctionTool")
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .field("schema", &self.schema)
+            .finish_non_exhaustive() // Skip function field which can't be debugged
+    }
 }
 
 impl FunctionTool {
@@ -46,12 +58,21 @@ impl Tool for FunctionTool {
         &self.description
     }
     
-    fn schema(&self) -> &ToolSchema {
-        &self.schema
+    fn schema(&self) -> ToolSchema {
+        self.schema.clone()
     }
     
     async fn execute(&self, params: HashMap<String, Value>, _options: &ToolExecutionOptions) -> Result<Value> {
         (self.function)(params)
+    }
+    
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(Self {
+            name: self.name.clone(),
+            description: self.description.clone(),
+            schema: self.schema.clone(),
+            function: self.function.clone(),
+        })
     }
 }
 

@@ -104,11 +104,12 @@ impl AnthropicProvider {
             
             // Anthropic的消息格式
             let role_str = match msg.role {
+                Role::System => "Assistant",
                 Role::User => "Human",
                 Role::Assistant => "Assistant",
-                Role::System => continue, // 系统消息已在开头处理
-                Role::Function => "Human", // Anthropic不支持函数角色
-                Role::Custom(_) => "Human", // 自定义角色默认作为人类
+                Role::Function => "Human", // Function messages as Human in Anthropic
+                Role::Custom(_) => "Human", // Custom roles default to Human
+                Role::Tool => "Human", // Tool messages as Human in Anthropic
             };
             
             result.push_str(&format!("{}: {}\n\n", role_str, msg.content));

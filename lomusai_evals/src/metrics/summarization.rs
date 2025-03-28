@@ -149,8 +149,18 @@ impl Metric for SummarizationMetric {
             
         // 发送到LLM进行评估
         let messages = vec![
-            Message::new(Role::System, "你是一个专业的摘要评估专家，负责评估摘要的质量。"),
-            Message::new(Role::User, prompt),
+            Message {
+                role: Role::System,
+                content: "你是一个专业的摘要评估专家，负责评估摘要的质量。".to_string(),
+                metadata: None,
+                name: None,
+            },
+            Message {
+                role: Role::User,
+                content: prompt,
+                metadata: None,
+                name: None,
+            },
         ];
         
         let options = LlmOptions::default();

@@ -135,8 +135,18 @@ impl Evaluator for LlmEvaluator {
                 
         // 构建消息
         let messages = vec![
-            Message::new(Role::System, system_prompt),
-            Message::new(Role::User, user_prompt),
+            Message {
+                role: Role::System,
+                content: system_prompt,
+                metadata: None,
+                name: None,
+            },
+            Message {
+                role: Role::User,
+                content: user_prompt,
+                metadata: None,
+                name: None,
+            },
         ];
             
         // 向LLM发送评估请求

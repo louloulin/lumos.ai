@@ -923,6 +923,7 @@ dependencies = [
  "futures",
  "mockall",
  "rand 0.8.5",
+ "regex",
  "reqwest",
  "rusqlite",
  "serde",
@@ -949,6 +950,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-test",
+ "tracing",
  "uuid",
 ]
 

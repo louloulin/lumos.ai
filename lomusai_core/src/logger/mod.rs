@@ -3,18 +3,21 @@
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use crate::types::Metadata;
+use async_trait::async_trait;
 
 /// Log level enumeration
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum LogLevel {
+    /// Trace level - detailed information for debugging
+    Trace = 0,
     /// Debug level - detailed information for debugging
-    Debug,
+    Debug = 1,
     /// Info level - general information about program execution
-    Info,
+    Info = 2,
     /// Warn level - potentially harmful situations
-    Warn,
+    Warn = 3,
     /// Error level - error events that might still allow the application to continue running
-    Error,
+    Error = 4,
 }
 
 impl Default for LogLevel {

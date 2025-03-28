@@ -1,20 +1,42 @@
 //! 智能体模块，负责处理用户请求并调用工具
+//!
+//! 智能体（Agent）是Lomusai的核心组件之一，用于响应用户查询、调用工具，并提供智能化的交互体验。
+//! 智能体利用大语言模型和工具功能完成复杂任务。
 
 mod config;
-// mod executor;
-// mod tools;
+mod types;
+mod trait_def;
+mod executor;
 
 pub use config::AgentConfig;
-// pub use executor::Agent;
-// pub use tools::{Tool, ToolExecutionContext, ToolInfo};
+pub use trait_def::Agent;
+pub use executor::BasicAgent;
+pub use types::*;
+
+/// 创建基本智能体
+/// 
+/// # Arguments
+/// 
+/// * `config` - 智能体配置
+/// * `llm` - LLM提供者
+/// 
+/// # Returns
+/// 
+/// 返回一个新的BasicAgent实例
+pub fn create_basic_agent<P: crate::llm::LlmProvider + 'static>(
+    config: AgentConfig, 
+    llm: std::sync::Arc<P>
+) -> BasicAgent {
+    BasicAgent::new(config, llm)
+}
 
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
     use async_trait::async_trait;
     
-    use crate::llm::{LlmOptions, LlmProvider, Message};
-    use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
+    use crate::llm::{LlmOptions, LlmProvider, Message, Role};
+    use crate::tool::{FunctionTool, ParameterSchema, ToolSchema, ToolExecutionOptions};
     use crate::Result;
     use super::*;
     
@@ -61,7 +83,6 @@ mod tests {
         }
     }
     
-    /* 
     #[tokio::test]
     async fn test_agent_with_tool() {
         // Create a mock LLM provider that first calls a tool, then provides a final response
@@ -101,13 +122,19 @@ mod tests {
             memory_config: None,
         };
         
-        let mut agent = Agent::new(config, mock_llm);
-        agent.add_tool(Arc::new(echo_tool));
+        let mut agent = create_basic_agent(config, mock_llm);
+        agent.add_tool(Box::new(echo_tool)).unwrap();
         
         // Generate a response
-        let response = agent.generate("Hello", &AgentGenerateOptions::default()).await.unwrap();
+        let user_message = Message {
+            role: Role::User,
+            content: "Hello".to_string(),
+            metadata: None,
+            name: None,
+        };
         
-        assert_eq!(response, "The tool returned: Echo: Hello from tool!");
+        let result = agent.generate(&[user_message], &AgentGenerateOptions::default()).await.unwrap();
+        
+        assert_eq!(result.response, "The tool returned: Echo: Hello from tool!");
     }
-    */
 } 

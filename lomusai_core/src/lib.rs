@@ -19,7 +19,7 @@ pub mod workflow;
 /// Re-export common types and traits
 pub use error::{Error, Result};
 pub use llm::{LlmProvider, LlmOptions, Message, Role};
-pub use agent::AgentConfig;
+pub use agent::{Agent, AgentConfig, BasicAgent, create_basic_agent, AgentGenerateOptions, AgentStreamOptions};
 pub use base::{Base, ComponentConfig};
 pub use logger::{Logger, LogLevel, Component as LogComponent, create_logger, create_noop_logger};
 pub use lomusai::{Lomusai, LomusaiConfig};

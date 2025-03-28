@@ -144,8 +144,18 @@ impl Metric for FaithfulnessMetric {
             
         // 发送到LLM进行评估
         let messages = vec![
-            Message::new(Role::System, "你是一个专业的AI回答评估专家，负责评估回答内容的忠实度。"),
-            Message::new(Role::User, prompt),
+            Message {
+                role: Role::System,
+                content: "你是一个专业的AI回答评估专家，负责评估回答内容的忠实度。".to_string(),
+                metadata: None,
+                name: None,
+            },
+            Message {
+                role: Role::User,
+                content: prompt,
+                metadata: None,
+                name: None,
+            },
         ];
         
         let options = LlmOptions::default();

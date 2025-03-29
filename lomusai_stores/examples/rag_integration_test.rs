@@ -2,16 +2,19 @@ use std::sync::Arc;
 use std::error::Error;
 
 // 为了简单起见，我们只使用内存实现进行测试，避免外部依赖
-struct MockVectorStore;
-struct MockEmbedder;
+use lomusai_rag::types::{Document, Metadata, RetrievalOptions, RetrievalResult};
+use lomusai_stores::rag::VectorStoreRetriever;
+use lomusai_stores::vector::{VectorStore as StoreVectorStore, CreateIndexParams, UpsertParams, QueryParams, QueryResult, IndexStats};
+use lomusai_stores::error::StoreError;
 
 use async_trait::async_trait;
 use lomusai_rag::error::Result as RagResult;
 use lomusai_rag::embedding::EmbeddingProvider;
-use lomusai_rag::types::{Document, Metadata, RetrievalOptions, RetrievalResult};
-use lomusai_stores::rag::VectorStoreRetriever;
-use lomusai_stores::vector::{VectorStore, CreateIndexParams, UpsertParams, QueryParams, QueryResult, IndexStats};
-use lomusai_stores::error::StoreError;
+use lomusai_rag::retriever::VectorStore as RagVectorStore;
+
+#[derive(Debug)]
+struct MockVectorStore;
+struct MockEmbedder;
 
 // 简单的嵌入提供者实现
 #[async_trait]
@@ -24,7 +27,7 @@ impl EmbeddingProvider for MockEmbedder {
 
 // 模拟向量存储实现
 #[async_trait]
-impl VectorStore for MockVectorStore {
+impl StoreVectorStore for MockVectorStore {
     async fn create_index(&self, params: CreateIndexParams) -> Result<(), StoreError> {
         println!("创建索引: {}", params.index_name);
         Ok(())
@@ -87,69 +90,62 @@ impl VectorStore for MockVectorStore {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    println!("开始测试 RAG 集成...");
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("开始RAG集成测试...");
     
-    // 创建嵌入提供者
-    let embedder = Arc::new(MockEmbedder);
-    
-    // 创建向量存储
+    // 初始化
     let store = MockVectorStore;
+    let embedder = MockEmbedder;
     
-    // 创建 RAG 适配器
+    // 创建文档
+    let mut metadata = Metadata::new();
+    metadata = metadata.with_source("test_source");
+    
+    let doc = Document {
+        id: "test1".to_string(),
+        content: "这是一个测试文档内容。".to_string(),
+        metadata,
+        embedding: Some(vec![0.1, 0.2, 0.3, 0.4]),
+    };
+    
+    // 创建检索器
     let mut retriever = VectorStoreRetriever::new(store, "test_index", 4, "cosine");
     
     // 确保索引存在
     retriever.ensure_index().await?;
     
-    // 创建测试文档
-    let mut doc = Document {
-        id: "test1".to_string(),
-        content: "这是一个关于向量搜索的测试文档".to_string(),
-        metadata: Metadata::new().with_source("test"),
-        embedding: None,
-    };
-    
-    // 嵌入文档
-    embedder.embed_document(&mut doc).await?;
-    
-    // 添加文档到检索器
+    // 添加文档
     retriever.add_document(doc.clone()).await?;
     
-    // 查询文档
+    // 验证添加成功
+    println!("文档添加成功");
+    
+    // 配置检索选项
     let options = RetrievalOptions {
-        limit: 2,
+        limit: 5,
         threshold: None,
         filter: None,
     };
     
-    // 使用相同的嵌入查询（因为我们的MockEmbedder总是返回相同的嵌入）
-    let results = retriever.query_by_text("测试查询", &options, &*embedder).await?;
-    
-    // 验证结果
-    println!("查询结果数量: {}", results.documents.len());
-    for (i, doc) in results.documents.iter().enumerate() {
-        println!("文档 {}: ID={}, 内容={}", i+1, doc.id, doc.content);
-        if let Some(scores) = &results.scores {
-            println!("相似度: {:.2}", scores[i]);
-        }
-    }
+    // 查询
+    let results = retriever.query_by_text("测试查询", &options, &embedder).await?;
+    println!("查询结果数: {}", results.documents.len());
     
     // 按ID获取文档
     let doc_result = retriever.get_document("test1").await?;
-    match doc_result {
-        Some(d) => println!("获取文档: {}", d.content),
-        None => println!("文档未找到"),
+    if let Some(doc) = doc_result {
+        println!("获取到文档: {}", doc.id);
     }
     
-    // 获取文档数量
+    // 计数文档
     let count = retriever.count_documents().await?;
     println!("文档总数: {}", count);
     
-    // 清除所有文档
+    // 清空
     retriever.clear().await?;
+    println!("清空完成");
     
-    println!("RAG 集成测试完成!");
+    println!("RAG集成测试完成!");
     
     Ok(())
 } 

@@ -132,6 +132,21 @@ where
         }
     }
     
+    /// Convert a RAG filter to a vector store filter
+    fn convert_filter(filter: &HashMap<String, serde_json::Value>) -> Option<crate::vector::VectorFilter> {
+        if filter.is_empty() {
+            return None;
+        }
+        
+        // 将每个 serde_json::Value 转换为 FieldCondition::Value
+        let mut field_conditions = HashMap::new();
+        for (key, value) in filter {
+            field_conditions.insert(key.clone(), crate::vector::FieldCondition::Value(value.clone()));
+        }
+        
+        Some(crate::vector::VectorFilter::Field(field_conditions))
+    }
+    
     /// Convert RetrievalOptions to vector store filter
     fn options_to_filter(options: &RetrievalOptions) -> Option<crate::vector::VectorFilter> {
         options.filter.as_ref().and_then(|filter| Self::convert_filter(filter))

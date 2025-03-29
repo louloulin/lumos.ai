@@ -1,0 +1,38 @@
+[package]
+name = "lomusai_stores"
+version = "0.1.0"
+edition = "2021"
+description = "Vector and data storage implementations for Lomusai"
+license = "MIT"
+
+[features]
+default = []
+qdrant = ["dep:qdrant-client"]
+postgres = ["dep:sqlx", "sqlx/postgres", "sqlx/runtime-tokio-rustls"]
+vectorize = ["dep:cloudflare"]
+all = ["qdrant", "postgres", "vectorize"]
+
+[dependencies]
+# Core dependencies
+lomusai_core = { path = "../lomusai_core" }
+lomusai_rag = { path = "../lomusai_rag" }
+async-trait = "0.1.77"
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.113"
+thiserror = "1.0.57"
+tracing = "0.1"
+futures = "0.3"
+tokio = { version = "1.36.0", features = ["full"] }
+
+# Provider-specific dependencies (optional)
+qdrant-client = { version = "1.7.0", optional = true }
+sqlx = { version = "0.7.3", features = ["runtime-tokio", "postgres", "macros", "json"], optional = true }
+cloudflare = { version = "0.11", optional = true }
+chrono = { version = "0.4.34", features = ["serde"] }
+reqwest = { version = "0.11.23", features = ["json"], optional = true }
+
+[dev-dependencies]
+tokio = { version = "1.36", features = ["rt", "macros", "rt-multi-thread"] }
+mockall = "0.12"
+tempfile = "3.8"
+uuid = { version = "1.6", features = ["v4"] } 

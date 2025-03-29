@@ -4,6 +4,7 @@ members = [
     "lomusai_rag",
     "lomusai_evals",
     "lomusai_examples",
+    "lomusai_mcp",
 ]
 resolver = "2"
 

@@ -1,132 +1,81 @@
-use lomusai_core::Result;
-use lomusai_core::mcp::{McpClient, McpTool};
-use lumos_macro::mcp_client;
+use lomusai_core::{Result, Error};
+use lomusai_core::agent::{Agent, SimpleAgent};
+use lomusai_core::llm::{LlmProvider, OpenAiAdapter};
+use lomusai_mcp::{MCPConfiguration, ServerDefinition};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    println!("MCP客户端DSL示例");
+    // Create an LLM adapter for the agent
+    let llm = Arc::new(OpenAiAdapter::new(
+        "your-api-key",  // Replace with your actual API key
+        "gpt-4",         // Or another suitable model
+    ));
     
-    // 使用mcp_client!宏定义一个MCP客户端配置
-    let client = mcp_client! {
-        discovery: {
-            endpoints: ["https://api.mcp.example.com", "https://tools.mcp.run"],
-            auto_register: true,
-            interval: 60  // 秒
+    // Define server configurations
+    let mut servers = HashMap::new();
+    
+    // Stock price MCP server (using stdio)
+    servers.insert(
+        "stockPrice".to_string(),
+        ServerDefinition::Stdio {
+            command: "npx".to_string(),
+            args: vec!["-y".to_string(), "tsx".to_string(), "./tools/stock-price.ts".to_string()],
+            env: Some(HashMap::from([
+                ("FAKE_CREDS".to_string(), "let me in!".to_string()),
+            ])),
         },
-        
-        tools: {
-            data_analysis: {
-                enabled: true,
-                auth: {
-                    type: "api_key",
-                    key_env: "DATA_ANALYSIS_API_KEY"
-                }
-            },
-            image_generation: {
-                enabled: true,
-                rate_limit: 100,
-                models: ["stable-diffusion", "dalle"]
-            },
-            translate: {
-                enabled: false
-            }
+    );
+    
+    // Weather MCP server (using SSE)
+    servers.insert(
+        "weather".to_string(),
+        ServerDefinition::SSE {
+            url: "http://localhost:8080/sse".to_string(),
+            request_init: None,
         },
-        
-        cache: {
-            enabled: true,
-            ttl: 3600,  // 秒
-            max_size: 100  // MB
-        },
-        
-        defaults: {
-            timeout: 30000,  // 毫秒
-            retry: {
-                count: 3,
-                backoff: "exponential"
+    );
+    
+    println!("Creating MCP configuration...");
+    
+    // Create the MCP configuration
+    let mcp = MCPConfiguration::new(servers, Some("example_config".to_string()));
+    
+    println!("Creating agent...");
+    
+    // Create an agent that can use the tools
+    let mut agent = SimpleAgent::new(
+        "stock_weather_agent",
+        "You are a helpful assistant that provides current stock prices and weather information. When asked about a stock, use the stockPrice_getStockPrice tool. When asked about weather, use the weather_getWeather tool.",
+        llm,
+    );
+    
+    println!("Getting MCP tools...");
+    
+    // Add MCP tools to the agent
+    match mcp.get_tools().await {
+        Ok(tools) => {
+            for (name, tool) in tools {
+                println!("Adding tool: {}", name);
+                agent.add_tool(tool);
             }
         }
-    };
-
-    // 获取可用的MCP工具
-    println!("获取可用的MCP工具...");
-    let tools = client.get_available_tools().await?;
-    
-    println!("找到 {} 个可用工具:", tools.len());
-    for tool in &tools {
-        println!("- {}: {}", tool.name, tool.description);
-        println!("  参数: {}", tool.parameters.len());
+        Err(e) => {
+            println!("Error getting tools: {:?}", e);
+            return Err(Error::Other(format!("Failed to get tools: {:?}", e)));
+        }
     }
     
-    // 使用MCP工具执行任务
-    println!("\n使用数据分析工具分析数据...");
-    let data_analysis_result = client.execute_tool("data_analysis", serde_json::json!({
-        "data": [1, 2, 3, 4, 5],
-        "operation": "mean"
-    })).await?;
+    println!("Running agent...");
     
-    println!("数据分析结果: {}", serde_json::to_string_pretty(&data_analysis_result)?);
+    // Run the agent with a query
+    let response = agent.run("What is the current stock price of Apple (AAPL) and what is the weather in Seattle?").await?;
     
-    // 定义一个更复杂的MCP客户端配置
-    let advanced_client = mcp_client! {
-        discovery: {
-            endpoints: ["https://api.mcp.example.com"],
-            registry: {
-                url: "https://registry.mcp.example.com",
-                auth: {
-                    type: "bearer",
-                    token_env: "MCP_REGISTRY_TOKEN"
-                }
-            }
-        },
-        
-        tools: {
-            document_ocr: {
-                enabled: true,
-                version: "2.0",
-                options: {
-                    "enhance": true,
-                    "languages": ["zh", "en", "ja"]
-                }
-            },
-            sentiment_analysis: {
-                enabled: true,
-                provider: "custom",
-                endpoint: "https://nlp.company.com/sentiment",
-                headers: {
-                    "X-Api-Version": "3"
-                }
-            }
-        },
-        
-        logging: {
-            level: "info",
-            format: "json",
-            destination: "file",
-            path: "./logs/mcp.log"
-        },
-        
-        proxy: {
-            url: "http://proxy.company.com:8080",
-            auth: {
-                username_env: "PROXY_USER",
-                password_env: "PROXY_PASS"
-            },
-            bypass: ["localhost", "127.0.0.1"]
-        }
-    };
+    println!("Agent response: {}", response);
     
-    println!("\n高级MCP客户端配置已创建，准备连接自定义端点");
-    
-    // 展示MCP工具链式调用
-    let workflow_result = client.pipeline()
-        .add_step("extract_data", "data_analysis", serde_json::json!({"operation": "extract"}))
-        .add_step("process_image", "image_generation", serde_json::json!({"prompt": "data visualization"}))
-        .add_step("translate_result", "translate", serde_json::json!({"target_lang": "zh"}))
-        .execute(serde_json::json!({"input": "raw data"}))
-        .await?;
-    
-    println!("\nMCP工具链式调用结果:");
-    println!("{}", serde_json::to_string_pretty(&workflow_result)?);
+    // Disconnect from the MCP servers
+    mcp.disconnect().await.map_err(|e| Error::Other(format!("Failed to disconnect: {:?}", e)))?;
     
     Ok(())
 } 

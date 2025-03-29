@@ -9,6 +9,16 @@ members = [
 ]
 resolver = "2"
 
+# 解决 sqlx 和 rusqlite 冲突
+[workspace.metadata.workspaces]
+direct-packages = ["lomusai_stores"]
+
+[workspace.metadata.resolver]
+# 指定 lomusai_stores 中的 sqlx 应该使用不同于其他包的 libsqlite3-sys
+version_conflicts = [
+    { name = "libsqlite3-sys", versions = ["0.26.0", "0.27.0"] }
+]
+
 [workspace.package]
 version = "0.1.0"
 edition = "2021"

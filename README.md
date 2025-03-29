@@ -23,13 +23,25 @@ Lomusai是一个用Rust实现的AI Agent框架，专注于性能、安全性和�
   - `eval`：评估和测试框架
   - `rag`：检索增强生成支持
   - `mcp`：MCP（Mastra Compatible Protocol）支持
+- `lomusai_rag`：检索增强生成库，提供扩展的RAG功能
+  - `embedding`：向量嵌入支持
+  - `chunking`：文档分块策略
+  - `retrieval`：检索算法和优化
+  - `reranking`：结果重排序
+- `lomusai_evals`：评估和测试框架，提供全面的评估工具
+  - `metrics`：预定义和自定义评估指标
+  - `evaluators`：评估器实现
+  - `reporting`：结果报告和可视化
+- `lomusai_examples`：示例代码，展示框架使用方法
+  - 基础示例：代理创建、工具使用等
+  - 工作流示例：多代理协作和流程编排
+  - DSL示例：各种DSL的使用方法
 - `lumos_macro`：宏库，提供简化API使用的过程宏
   - 基础宏：`#[tool]`、`#[agent]`、`#[derive(LlmAdapter)]`等
   - DSL宏：`workflow!`、`rag_pipeline!`、`eval_suite!`、`mcp_client!`等
-- `examples`：示例代码
 - `docs`：文档
 
-## 快速开始
+## 安装
 
 添加依赖到你的`Cargo.toml`：
 
@@ -43,7 +55,19 @@ lomusai_core = "0.1.0"
 ```toml
 [dependencies]
 lomusai_core = { version = "0.1.0", features = ["macros"] }
+lumos_macro = "0.1.0"
 ```
+
+若要使用RAG或评估功能：
+
+```toml
+[dependencies]
+lomusai_core = "0.1.0"
+lomusai_rag = "0.1.0"
+lomusai_evals = "0.1.0"
+```
+
+## 快速开始
 
 ### 基础使用示例
 
@@ -215,14 +239,198 @@ async fn main() -> Result<()> {
 }
 ```
 
-## 文档
+## 示例
 
-查看[完整文档](docs/index.md)了解更多详情。
+请参阅 `lomusai_examples` 目录中的示例程序，了解更多使用方法。可以通过以下命令运行示例：
 
-## 贡献
+```bash
+cargo run --example basic_usage
+cargo run --example agent_usage
+cargo run --example workflow_example
+```
 
-欢迎贡献代码、报告问题或提出新功能建议。在提交PR前，请确保通过所有测试并遵循项目的代码风格。
+示例包括：
+
+- `basic_usage` - 基础框架使用
+- `agent_usage` - 代理创建和使用
+- `agent_tools` - 代理工具实现
+- `workflow_example` - 工作流示例
+- `workflow_dsl` - 工作流DSL使用
+- `rag_dsl` - RAG功能示例
+- `eval_dsl` - 评估框架示例
+- `mcp_dsl` - MCP集成示例
+- `lumos_app` - 应用程序框架
+- `lumos_macro_usage` - 宏使用示例
+- `macro_tool_example` - 工具宏示例
+
+## 核心功能
+
+### Agent
+
+Agent是框架的核心概念，代表一个能够执行任务的智能体：
+
+```rust
+pub trait Agent: Send + Sync {
+    fn name(&self) -> &str;
+    fn instructions(&self) -> &str;
+    fn add_tool(&mut self, tool: Box<dyn Tool>);
+    async fn run(&self, input: &str) -> Result<String>;
+    async fn run_with_memory(&self, input: &str, memory: Box<dyn Memory>) -> Result<String>;
+}
+```
+
+### Tool
+
+Tool代表代理可以使用的工具或功能：
+
+```rust
+pub trait Tool: Send + Sync {
+    fn name(&self) -> &str;
+    fn description(&self) -> &str;
+    fn parameters(&self) -> &[Parameter];
+    async fn execute(&self, params: serde_json::Value) -> Result<serde_json::Value>;
+}
+```
+
+### Memory
+
+Memory提供状态管理和持久化能力：
+
+```rust
+pub trait Memory: Send + Sync {
+    async fn get(&self, key: &str) -> Result<Option<String>>;
+    async fn set(&self, key: &str, value: &str) -> Result<()>;
+    async fn delete(&self, key: &str) -> Result<()>;
+    async fn append(&self, key: &str, value: &str) -> Result<()>;
+}
+```
+
+### LlmProvider
+
+LlmProvider抽象了与大语言模型的交互：
+
+```rust
+pub trait LlmProvider: Send + Sync {
+    async fn generate(&self, messages: &[Message], options: &GenerateOptions) -> Result<String>;
+    async fn embed(&self, text: &str) -> Result<Vec<f32>>;
+}
+```
+
+## 扩展功能
+
+### RAG (检索增强生成)
+
+Lomusai提供了完整的RAG支持，包括：
+
+- 文档加载和处理
+- 向量嵌入生成
+- 向量存储和检索
+- 结果重排序和优化
+
+```rust
+let rag_pipeline = rag_pipeline! {
+    name: "knowledge_base",
+    source: {
+        type: "directory",
+        path: "./docs",
+        pattern: "**/*.md"
+    },
+    pipeline: {
+        chunk: {
+            size: 1000,
+            overlap: 200
+        },
+        embed: {
+            model: "text-embedding-3-small"
+        },
+        store: {
+            type: "memory"
+        }
+    }
+};
+
+let results = rag_pipeline.query("如何使用Rust的所有权系统？", 5).await?;
+```
+
+### 评估框架
+
+Lomusai提供了评估代理性能的工具：
+
+```rust
+let eval_suite = eval_suite! {
+    name: "agent_performance",
+    metrics: {
+        accuracy: AccuracyMetric,
+        relevance: RelevanceMetric,
+        completeness: CompletenessMetric
+    },
+    test_cases: [
+        {
+            query: "Rust的特点是什么？",
+            expected: "内存安全,并发,性能",
+            weight: 1.0
+        }
+    ],
+    thresholds: {
+        accuracy: 0.8,
+        relevance: 0.7,
+        completeness: 0.6
+    }
+};
+
+let results = eval_suite.run(agent).await?;
+```
+
+### 工作流
+
+Lomusai支持定义复杂的多代理工作流：
+
+```rust
+let workflow = workflow! {
+    name: "content_creation",
+    description: "创建高质量的内容",
+    steps: {
+        {
+            name: "research",
+            agent: researcher,
+            instructions: "进行主题研究"
+        },
+        {
+            name: "writing",
+            agent: writer,
+            instructions: "撰写内容",
+            when: { completed("research") }
+        }
+    }
+};
+
+let result = workflow.execute(input_data).await?;
+```
+
+## 贡献指南
+
+我们欢迎各种形式的贡献，包括但不限于：
+
+- 代码贡献
+- 文档改进
+- 错误报告
+- 功能建议
+
+### 贡献流程
+
+1. Fork 项目仓库
+2. 创建您的特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 开启一个Pull Request
+
+### 代码规范
+
+- 遵循Rust标准编码风格
+- 所有代码必须通过 `cargo clippy` 和 `cargo fmt` 检查
+- 添加适当的测试覆盖率
+- 保持代码文档的完整性
 
 ## 许可证
 
-MIT 
+本项目采用MIT许可证 - 详见 [LICENSE](LICENSE) 文件 

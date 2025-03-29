@@ -1029,6 +1029,7 @@ dependencies = [
  "lomusai_core",
  "lomusai_evals",
  "lomusai_rag",
+ "lumos_macro",
  "regex",
  "reqwest",
  "serde",

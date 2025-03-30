@@ -1,5 +1,4 @@
 use std::path::{Path, PathBuf};
-use std::collections::HashMap;
 use std::fs;
 use crate::error::{CliError, CliResult};
 use crate::template::{TemplateManager, TemplateType};
@@ -20,10 +19,15 @@ pub async fn run(
     // 获取项目名称
     let project_name = match name {
         Some(n) => n,
-        None => Input::<String>::new()
-            .with_prompt("项目名称")
-            .default("my_lomusai_project".to_string())
-            .interact()?
+        None => {
+            match Input::<String>::new()
+                .with_prompt("项目名称")
+                .default("my_lomusai_project".to_string())
+                .interact() {
+                    Ok(input) => input,
+                    Err(e) => return Err(CliError::Interaction(e.to_string()))
+                }
+        }
     };
     
     // 创建模板管理器
@@ -77,11 +81,15 @@ pub async fn run(
         None => {
             // 修复：确保有效的选项索引范围
             let choices = &["agent", "workflow", "rag", "custom"];
-            let selection = Select::new()
+            
+            let selection = match Select::new()
                 .with_prompt("选择模板类型")
                 .items(choices)
                 .default(0)
-                .interact()?;
+                .interact() {
+                    Ok(sel) => sel,
+                    Err(e) => return Err(CliError::Interaction(e.to_string()))
+                };
                 
             // 这里不再使用match避免可能的越界问题
             if selection < choices.len() {
@@ -90,9 +98,12 @@ pub async fn run(
                     "workflow" => TemplateType::Workflow,
                     "rag" => TemplateType::Rag,
                     "custom" => {
-                        let custom_type = Input::<String>::new()
+                        let custom_type = match Input::<String>::new()
                             .with_prompt("输入自定义模板名称")
-                            .interact()?;
+                            .interact() {
+                                Ok(input) => input,
+                                Err(e) => return Err(CliError::Interaction(e.to_string()))
+                            };
                         TemplateType::Custom(custom_type)
                     },
                     _ => TemplateType::Agent, // 默认情况
@@ -126,10 +137,13 @@ fn get_output_directory(output: Option<PathBuf>, project_name: &str) -> CliResul
             let current_dir = std::env::current_dir()
                 .map_err(|e| CliError::Io(e))?;
                 
-            let dir_input = Input::<String>::new()
+            let dir_input = match Input::<String>::new()
                 .with_prompt("输出目录")
                 .default(current_dir.join(project_name).to_string_lossy().to_string())
-                .interact()?;
+                .interact() {
+                    Ok(input) => input,
+                    Err(e) => return Err(CliError::Interaction(e.to_string()))
+                };
                 
             let output_dir = PathBuf::from(dir_input);
             
@@ -142,10 +156,13 @@ fn get_output_directory(output: Option<PathBuf>, project_name: &str) -> CliResul
                 };
                 
                 if !is_empty {
-                    let confirm = Confirm::new()
+                    let confirm = match Confirm::new()
                         .with_prompt(format!("目录 {} 不为空，是否继续? 这可能会覆盖现有文件", output_dir.display()))
                         .default(false)
-                        .interact()?;
+                        .interact() {
+                            Ok(result) => result,
+                            Err(e) => return Err(CliError::Interaction(e.to_string()))
+                        };
                         
                     if !confirm {
                         return Err(CliError::canceled("初始化已取消"));

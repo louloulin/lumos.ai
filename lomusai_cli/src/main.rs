@@ -7,7 +7,7 @@ mod template;
 use clap::{Parser, Subcommand, Args};
 use colored::Colorize;
 use std::path::PathBuf;
-use error::CliResult;
+use error::{CliResult, CliError};
 
 /// Lomus AI 命令行工具
 ///
@@ -68,7 +68,7 @@ struct InitArgs {
 #[derive(Args, Debug)]
 struct DevArgs {
     /// 项目目录
-    #[clap(short, long)]
+    #[clap(short = 'd', long)]
     project_dir: Option<PathBuf>,
     
     /// 端口号
@@ -83,14 +83,14 @@ struct DevArgs {
 #[derive(Args, Debug)]
 struct RunArgs {
     /// 项目目录
-    #[clap(short, long)]
+    #[clap(short = 'd', long)]
     project_dir: Option<PathBuf>,
 }
 
 #[derive(Args, Debug)]
 struct BuildArgs {
     /// 项目目录
-    #[clap(short, long)]
+    #[clap(short = 'd', long)]
     project_dir: Option<PathBuf>,
     
     /// 输出目录
@@ -101,7 +101,7 @@ struct BuildArgs {
 #[derive(Args, Debug)]
 struct DeployArgs {
     /// 项目目录
-    #[clap(short, long)]
+    #[clap(short = 'd', long)]
     project_dir: Option<PathBuf>,
     
     /// 部署目标（local, docker, aws, azure, gcp）
@@ -250,16 +250,17 @@ async fn download_template(url: String, name: Option<String>) -> CliResult<()> {
 
 /// 删除模板
 async fn remove_template(name: String, force: bool) -> CliResult<()> {
-    use dialoguer::Confirm;
-    
     let template_manager = template::TemplateManager::new()?;
     
     // 如果不是强制删除，先确认
     if !force {
-        let confirm = Confirm::new()
+        let confirm = match dialoguer::Confirm::new()
             .with_prompt(format!("确定要删除模板 {}?", name))
             .default(false)
-            .interact()?;
+            .interact() {
+                Ok(result) => result,
+                Err(e) => return Err(CliError::Interaction(e.to_string()))
+            };
             
         if !confirm {
             println!("{}", "操作已取消".bright_yellow());

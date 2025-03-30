@@ -107,14 +107,12 @@ fn test_validate_cli_flags() {
         ("run", "--help"),
         ("build", "--help"),
         ("deploy", "--help"),
-        ("template", "list", "--help"),
+        ("template", "--help"),
     ];
     
     for cmd in &commands {
-        let args = match cmd.len() {
-            2 => vec!["run", "--", cmd[0], cmd[1]],
-            3 => vec!["run", "--", cmd[0], cmd[1], cmd[2]],
-            _ => unreachable!(),
+        let args = match cmd {
+            (command, help) => vec!["run", "--", command, help],
         };
         
         let output = Command::new("cargo")

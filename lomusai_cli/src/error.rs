@@ -96,12 +96,6 @@ impl From<serde_json::Error> for CliError {
     }
 }
 
-impl From<dialoguer::Error> for CliError {
-    fn from(err: dialoguer::Error) -> Self {
-        CliError::Interaction(err.to_string())
-    }
-}
-
 impl From<String> for CliError {
     fn from(err: String) -> Self {
         CliError::Other(err)

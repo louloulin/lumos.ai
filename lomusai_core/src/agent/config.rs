@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::memory::MemoryConfig;
 use crate::llm::{LlmOptions, Message};
+use crate::agent::types::{VoiceConfig, TelemetrySettings};
 
 /// Configuration for an agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,6 +13,15 @@ pub struct AgentConfig {
     /// Memory configuration for the agent
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory_config: Option<MemoryConfig>,
+    /// Model configuration for the agent
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_id: Option<String>,
+    /// Voice configuration for the agent
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice_config: Option<VoiceConfig>,
+    /// Telemetry settings for the agent
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<TelemetrySettings>,
 }
 
 impl Default for AgentConfig {
@@ -20,6 +30,9 @@ impl Default for AgentConfig {
             name: "Agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
             memory_config: None,
+            model_id: None,
+            voice_config: None,
+            telemetry: None,
         }
     }
 }
@@ -36,12 +49,33 @@ pub struct AgentGenerateOptions {
     /// Memory configuration options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory_options: Option<MemoryConfig>,
+    /// Thread ID for conversation tracking
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thread_id: Option<String>,
+    /// Resource ID for tracking
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_id: Option<String>,
     /// Unique ID for this generation run
     #[serde(skip_serializing_if = "Option::is_none")]
     pub run_id: Option<String>,
     /// Maximum number of steps allowed for generation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_steps: Option<u32>,
+    /// Temperature for generation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f32>,
+    /// Abort signal to cancel ongoing operations
+    #[serde(skip)]
+    pub abort_signal: Option<tokio::sync::watch::Receiver<bool>>,
+    /// Structured output schema (either JSON schema or serialized Zod schema)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_schema: Option<serde_json::Value>,
+    /// Experimental structured output alongside text generation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub experimental_output: Option<serde_json::Value>,
+    /// Telemetry settings for this run
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<TelemetrySettings>,
     /// LLM options
     #[serde(flatten)]
     pub llm_options: LlmOptions,
@@ -53,8 +87,15 @@ impl Default for AgentGenerateOptions {
             instructions: None,
             context: None,
             memory_options: None,
+            thread_id: None,
+            resource_id: None,
             run_id: None,
-            max_steps: None,
+            max_steps: Some(5),
+            temperature: None,
+            abort_signal: None,
+            output_schema: None,
+            experimental_output: None,
+            telemetry: None,
             llm_options: LlmOptions::default(),
         }
     }

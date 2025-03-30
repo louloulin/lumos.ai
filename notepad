@@ -1,3 +1,6 @@
 @lomusai.md 按照整个方案  阅读  @mastra   目录下相关代码，同时参考 @mastra  文档，基于rust实现  实现mastra功能迁移到 lumosai，实现后，增加单元测试，测试通过 更新 @lomusai.md 标记实现的功能
 
 @plan1.md     按照整个方案  阅读  @mastra   目录下相关代码，同时参考 @mastra  文档，基于rust实现  实现mastra功能迁移到 lumosai，实现后，增加单元测试，测试通过 更新  @plan1.md    标记实现的功能
+
+
+@agent_enhancement_plan.md 继续按照这个实现相关功能，增加相关测试验证，验证通过后 更新 @agent_enhancement_plan.md 标记实现的功能

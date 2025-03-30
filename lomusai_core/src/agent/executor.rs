@@ -7,6 +7,8 @@ use futures::stream::{self, BoxStream, StreamExt};
 use regex::Regex;
 use serde_json::{Value, json};
 use uuid::Uuid;
+use serde::de::DeserializeOwned;
+use tokio::sync::watch;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
@@ -32,6 +34,7 @@ use crate::agent::{
 use crate::agent::trait_def::Agent;
 use crate::agent::types::*;
 use crate::logger::LogEntry;
+use crate::voice::{VoiceProvider, VoiceOptions, ListenOptions};
 
 /// Basic agent implementation
 pub struct BasicAgent {
@@ -47,6 +50,8 @@ pub struct BasicAgent {
     memory: Option<Arc<dyn Memory>>,
     /// Tools available to the agent
     tools: Mutex<HashMap<String, Box<dyn Tool>>>,
+    /// 语音提供者
+    voice: Option<Arc<dyn VoiceProvider>>,
 }
 
 impl BasicAgent {
@@ -65,6 +70,7 @@ impl BasicAgent {
             llm,
             memory: config.memory_config.and_then(|_| None), // This will be implemented later
             tools: Mutex::new(HashMap::new()),
+            voice: config.voice_config.and_then(|_| None),
         }
     }
     
@@ -468,6 +474,103 @@ impl Agent for BasicAgent {
         
         Ok(stream)
     }
+
+    /// 生成结构化输出
+    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
+        &self, 
+        messages: &[Message], 
+        options: &AgentGenerateOptions
+    ) -> Result<T> {
+        // 获取生成结果
+        let result = self.generate(messages, options).await?;
+        
+        // 尝试解析为结构化输出
+        match serde_json::from_str::<T>(&result.response) {
+            Ok(structured) => Ok(structured),
+            Err(e) => Err(Error::Parsing(format!("Failed to parse structured output: {}", e)))
+        }
+    }
+
+    /// 流式输出带回调
+    async fn stream_with_callbacks<'a>(
+        &'a self, 
+        messages: &'a [Message], 
+        options: &'a AgentStreamOptions,
+        on_step_finish: Option<Box<dyn FnMut(AgentStep) + Send + 'a>>,
+        on_finish: Option<Box<dyn FnOnce(AgentGenerateResult) + Send + 'a>>
+    ) -> Result<BoxStream<'a, Result<String>>> {
+        // 创建一个通道来传递步骤信息
+        let (step_tx, mut step_rx) = tokio::sync::mpsc::channel(10);
+        // 创建一个通道来传递最终结果
+        let (result_tx, result_rx) = tokio::sync::oneshot::channel();
+        
+        // 复制选项并添加自定义步骤和完成回调
+        let mut custom_options = options.clone();
+        
+        // 在后台任务中执行生成并触发回调
+        tokio::spawn(async move {
+            match self.generate(messages, &AgentGenerateOptions {
+                instructions: custom_options.instructions.clone(),
+                context: custom_options.context.clone(),
+                memory_options: custom_options.memory_options.clone(),
+                thread_id: custom_options.thread_id.clone(),
+                resource_id: custom_options.resource_id.clone(),
+                run_id: custom_options.run_id.clone(),
+                max_steps: custom_options.max_steps,
+                llm_options: custom_options.llm_options.clone(),
+                ..Default::default()
+            }).await {
+                Ok(result) => {
+                    // 为每个步骤触发回调
+                    if let Some(mut on_step) = on_step_finish {
+                        for step in &result.steps {
+                            on_step(step.clone());
+                            let _ = step_tx.send(()).await;
+                        }
+                    }
+                    
+                    // 触发完成回调
+                    if let Some(on_finish_cb) = on_finish {
+                        on_finish_cb(result.clone());
+                    }
+                    
+                    // 发送最终结果
+                    let _ = result_tx.send(Ok(result));
+                },
+                Err(e) => {
+                    let _ = result_tx.send(Err(e));
+                }
+            }
+        });
+        
+        // 返回一个流，简单地将结果作为一个字符串块返回
+        let stream = async_stream::stream! {
+            // 等待最终结果
+            match result_rx.await {
+                Ok(Ok(result)) => {
+                    yield Ok(result.response);
+                },
+                Ok(Err(e)) => {
+                    yield Err(e);
+                },
+                Err(_) => {
+                    yield Err(Error::Internal("Channel closed unexpectedly".to_string()));
+                }
+            }
+        };
+        
+        Ok(Box::pin(stream))
+    }
+
+    /// 获取语音提供者
+    fn get_voice(&self) -> Option<Arc<dyn VoiceProvider>> {
+        self.voice.clone()
+    }
+
+    /// 设置语音提供者
+    fn set_voice(&mut self, voice: Arc<dyn VoiceProvider>) {
+        self.voice = Some(voice);
+    }
 }
 
 impl Base for BasicAgent {
@@ -493,5 +596,115 @@ impl Base for BasicAgent {
     
     fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
         self.base.set_telemetry(telemetry);
+    }
+}
+
+#[cfg(test)]
+mod voice_tests {
+    use std::sync::Arc;
+    use super::*;
+    use crate::voice::{MockVoice, VoiceOptions};
+    use serde::{Deserialize, Serialize};
+    
+    // 用于结构化输出的测试结构
+    #[derive(Debug, Serialize, Deserialize, PartialEq)]
+    struct TestOutput {
+        message: String,
+        value: i32,
+    }
+    
+    // 扩展MockLlmProvider以返回结构化输出
+    struct StructuredMockLlm;
+    
+    #[async_trait]
+    impl LlmProvider for StructuredMockLlm {
+        async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
+            // 返回JSON格式的结构化输出
+            Ok(r#"{"message": "Hello, world!", "value": 42}"#.to_string())
+        }
+        
+        async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> Result<String> {
+            // 返回JSON格式的结构化输出
+            Ok(r#"{"message": "Hello, world!", "value": 42}"#.to_string())
+        }
+        
+        async fn generate_stream<'a>(
+            &'a self,
+            _prompt: &'a str,
+            _options: &'a LlmOptions,
+        ) -> Result<futures::stream::BoxStream<'a, Result<String>>> {
+            unimplemented!("Streaming not implemented for mock provider")
+        }
+        
+        async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
+            unimplemented!("Embeddings not implemented for mock provider")
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_agent_structured_output() {
+        // 创建一个结构化输出的LLM提供者
+        let mock_llm = Arc::new(StructuredMockLlm);
+        
+        // 创建Agent
+        let config = AgentConfig {
+            name: "TestAgent".to_string(),
+            instructions: "You are a test agent.".to_string(),
+            memory_config: None,
+            ..Default::default()
+        };
+        
+        let mut agent = BasicAgent::new(config, mock_llm);
+        
+        // 测试结构化输出
+        let user_message = Message {
+            role: Role::User,
+            content: "Hello".to_string(),
+            metadata: None,
+            name: None,
+        };
+        
+        let result: TestOutput = agent.generate_structured(&[user_message], &AgentGenerateOptions::default()).await.unwrap();
+        
+        assert_eq!(result.message, "Hello, world!");
+        assert_eq!(result.value, 42);
+    }
+    
+    #[tokio::test]
+    async fn test_agent_voice() {
+        // 创建一个模拟LLM提供者
+        let mock_llm = Arc::new(MockLlmProvider::new(vec![
+            "Hello, this is a voice test".to_string(),
+        ]));
+        
+        // 创建Agent
+        let config = AgentConfig {
+            name: "TestAgent".to_string(),
+            instructions: "You are a test agent.".to_string(),
+            memory_config: None,
+            ..Default::default()
+        };
+        
+        let mut agent = BasicAgent::new(config, mock_llm);
+        
+        // 添加语音提供者
+        let voice = Arc::new(MockVoice::new());
+        agent.set_voice(voice);
+        
+        // 测试语音功能
+        let audio_stream = agent.speak(
+            "Test voice functionality", 
+            &VoiceOptions::default()
+        ).await.unwrap();
+        
+        // 收集音频数据
+        let mut audio_data = Vec::new();
+        futures::pin_mut!(audio_stream);
+        while let Some(result) = futures::StreamExt::next(&mut audio_stream).await {
+            audio_data.push(result.unwrap());
+        }
+        
+        // 验证有数据返回
+        assert!(!audio_data.is_empty());
     }
 } 

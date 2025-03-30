@@ -17,6 +17,7 @@ pub mod vector;
 pub mod workflow;
 pub mod app;
 pub mod rag;
+pub mod voice;
 
 /// Re-export common types and traits
 pub use error::{Error, Result};
@@ -53,6 +54,7 @@ pub use vector::{
 
 pub use crate::app::LumosApp;
 pub use crate::rag::{RagPipeline, QueryResult as RagQueryResult, DocumentSource};
+pub use voice::{VoiceProvider, VoiceOptions, ListenOptions, CompositeVoice, providers::{MockVoice, OpenAIVoice}};
 
 // 导出工作流模块但不重命名
 // pub use crate::workflow;

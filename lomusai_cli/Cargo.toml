@@ -2,11 +2,9 @@
 name = "lomusai_cli"
 version = "0.1.0"
 edition = "2021"
+description = "CLI for Lomusai AI framework"
 authors = ["Your Name <your.email@example.com>"]
-description = "Lomus AI CLI 工具"
 license = "MIT"
-
-[workspace]
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }

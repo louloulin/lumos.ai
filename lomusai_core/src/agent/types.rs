@@ -9,6 +9,44 @@ use crate::llm::{LlmOptions, Message, Role};
 use crate::memory::MemoryConfig;
 use crate::tool::Tool;
 
+/// Voice configuration for an agent
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoiceConfig {
+    /// Voice provider to use
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    /// Voice ID or name to use
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice_id: Option<String>,
+    /// Voice settings
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settings: Option<Value>,
+}
+
+/// Telemetry settings for monitoring agent behavior
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TelemetrySettings {
+    /// Whether telemetry is enabled
+    #[serde(default)]
+    pub is_enabled: bool,
+    /// Whether to record inputs
+    #[serde(default = "default_true")]
+    pub record_inputs: bool,
+    /// Whether to record outputs
+    #[serde(default = "default_true")]
+    pub record_outputs: bool,
+    /// Function ID for telemetry grouping
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub function_id: Option<String>,
+    /// Additional metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<HashMap<String, Value>>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
 /// Types of agent tool choices
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

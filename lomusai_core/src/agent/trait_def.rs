@@ -5,6 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use serde_json::Value;
+use serde::de::DeserializeOwned;
 
 use crate::base::Base;
 use crate::error::Result;
@@ -17,6 +18,7 @@ use crate::agent::types::{
     AgentStreamOptions,
     ToolCall,
 };
+use crate::voice::{VoiceProvider, VoiceOptions, ListenOptions};
 
 /// Trait defining the core functionality of an agent
 #[async_trait]
@@ -74,4 +76,42 @@ pub trait Agent: Base + Send + Sync {
         messages: &'a [Message], 
         options: &'a AgentStreamOptions
     ) -> Result<BoxStream<'a, Result<String>>>;
+
+    /// Generate structured output based on a schema
+    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
+        &self, 
+        messages: &[Message], 
+        options: &AgentGenerateOptions
+    ) -> Result<T>;
+
+    /// Stream with callbacks for advanced control
+    async fn stream_with_callbacks<'a>(
+        &'a self, 
+        messages: &'a [Message], 
+        options: &'a AgentStreamOptions,
+        on_step_finish: Option<Box<dyn FnMut(AgentStep) + Send + 'a>>,
+        on_finish: Option<Box<dyn FnOnce(AgentGenerateResult) + Send + 'a>>
+    ) -> Result<BoxStream<'a, Result<String>>>;
+
+    /// Get the agent's voice provider if configured
+    fn get_voice(&self) -> Option<Arc<dyn VoiceProvider>>;
+
+    /// Set a voice provider for the agent
+    fn set_voice(&mut self, voice: Arc<dyn VoiceProvider>);
+
+    /// Convert text to speech using the agent's voice provider
+    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>> {
+        match self.get_voice() {
+            Some(voice) => voice.speak(text, options).await,
+            None => Err(Error::Unsupported("No voice provider configured for this agent".to_string()))
+        }
+    }
+
+    /// Convert speech to text using the agent's voice provider
+    async fn listen(&self, audio: impl AsyncRead + Send + 'static, options: &ListenOptions) -> Result<String> {
+        match self.get_voice() {
+            Some(voice) => voice.listen(audio, options).await,
+            None => Err(Error::Unsupported("No voice provider configured for this agent".to_string()))
+        }
+    }
 } 

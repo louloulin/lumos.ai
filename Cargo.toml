@@ -6,6 +6,8 @@ members = [
     "lomusai_examples",
     "lomusai_mcp",
     "lomusai_stores",
+    "lomusai_network",
+    "lomusai_cli",
 ]
 resolver = "2"
 
@@ -45,6 +47,14 @@ uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 regex = "1.10"
 url = "2.5"
+
+# CLI工具
+clap = { version = "4.4", features = ["derive"] }
+dialoguer = "0.11"
+indicatif = "0.17"
+console = "0.15"
+notify = "6.1"
+colored = "2.0"
 
 # 测试工具
 tokio-test = "0.4"

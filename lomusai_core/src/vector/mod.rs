@@ -105,7 +105,7 @@ pub use memory::MemoryVectorStorage;
 
 /// Create a new memory vector storage instance
 pub fn create_memory_vector_storage() -> MemoryVectorStorage {
-    MemoryVectorStorage::new()
+    MemoryVectorStorage::new(1536, None)
 }
 
 /// Simple embedding module
@@ -121,7 +121,12 @@ pub use self::sqlite::SqliteVectorStorage;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VectorStorageConfig {
     /// In-memory vector storage
-    Memory,
+    Memory {
+        /// 维度
+        dimensions: usize,
+        /// 内存容量
+        capacity: Option<usize>,
+    },
     /// SQLite vector storage
     #[cfg(feature = "vector_sqlite")]
     Sqlite {
@@ -130,19 +135,27 @@ pub enum VectorStorageConfig {
         /// Whether to use in-memory SQLite database
         in_memory: bool,
     },
+    /// Other type
+    Other(Value),
 }
 
 impl Default for VectorStorageConfig {
     fn default() -> Self {
-        Self::Memory
+        Self::Memory {
+            dimensions: 1536,
+            capacity: None,
+        }
     }
 }
 
 /// Create a vector storage instance from configuration
-pub fn create_vector_storage(config: VectorStorageConfig) -> Result<Box<dyn VectorStorage>> {
+pub fn create_vector_storage(config: Option<VectorStorageConfig>) -> Result<Box<dyn VectorStorage>> {
+    let config = config.unwrap_or_else(|| VectorStorageConfig::default());
+    
     match config {
-        VectorStorageConfig::Memory => {
-            Ok(Box::new(create_memory_vector_storage()))
+        VectorStorageConfig::Memory { dimensions, capacity } => {
+            let storage = memory::MemoryVectorStorage::new(dimensions, capacity);
+            Ok(Box::new(storage))
         },
         #[cfg(feature = "vector_sqlite")]
         VectorStorageConfig::Sqlite { db_path, in_memory } => {
@@ -152,6 +165,7 @@ pub fn create_vector_storage(config: VectorStorageConfig) -> Result<Box<dyn Vect
                 Ok(Box::new(self::sqlite::create_sqlite_vector_storage(db_path)?))
             }
         }
+        _ => Err(Error::InvalidInput("Unsupported vector storage configuration".to_string())),
     }
 }
 
@@ -168,7 +182,7 @@ pub struct Document {
     /// 文档元数据
     pub metadata: HashMap<String, Value>,
     /// 文档的向量表示（嵌入）
-    pub embedding: Option<Vec<f32>>,
+    pub embedding: Vec<f32>,
 }
 
 impl Document {
@@ -178,7 +192,7 @@ impl Document {
             id: id.into(),
             content: content.into(),
             metadata: HashMap::new(),
-            embedding: None,
+            embedding: Vec::new(),
         }
     }
     
@@ -189,115 +203,33 @@ impl Document {
     
     /// 添加向量表示
     pub fn add_embedding(&mut self, embedding: Vec<f32>) {
-        self.embedding = Some(embedding);
+        self.embedding = embedding;
     }
     
     /// 计算与另一文档的余弦相似度
     pub fn cosine_similarity(&self, other: &Document) -> Option<f32> {
-        match (&self.embedding, &other.embedding) {
-            (Some(vec1), Some(vec2)) => {
-                if vec1.len() != vec2.len() {
-                    return None;
-                }
-                
-                let mut dot_product = 0.0;
-                let mut magnitude1 = 0.0;
-                let mut magnitude2 = 0.0;
-                
-                for (v1, v2) in vec1.iter().zip(vec2.iter()) {
-                    dot_product += v1 * v2;
-                    magnitude1 += v1 * v1;
-                    magnitude2 += v2 * v2;
-                }
-                
-                magnitude1 = magnitude1.sqrt();
-                magnitude2 = magnitude2.sqrt();
-                
-                if magnitude1 == 0.0 || magnitude2 == 0.0 {
-                    return None;
-                }
-                
-                Some(dot_product / (magnitude1 * magnitude2))
-            },
-            _ => None,
-        }
-    }
-}
-
-/// 内存向量存储
-pub struct MemoryVectorStore {
-    documents: HashMap<String, Document>,
-}
-
-impl MemoryVectorStore {
-    /// 创建新的内存向量存储
-    pub fn new() -> Self {
-        Self {
-            documents: HashMap::new(),
-        }
-    }
-    
-    /// 添加文档
-    pub fn add_document(&mut self, document: Document) {
-        self.documents.insert(document.id.clone(), document);
-    }
-    
-    /// 根据向量相似度搜索文档
-    pub fn search_by_vector(&self, query_vector: &[f32], top_k: usize) -> Vec<(Document, f32)> {
-        let mut results: Vec<(Document, f32)> = Vec::new();
-        
-        // 创建一个查询文档
-        let query_doc = Document {
-            id: "query".to_string(),
-            content: "".to_string(),
-            metadata: HashMap::new(),
-            embedding: Some(query_vector.to_vec()),
-        };
-        
-        // 计算所有文档的相似度
-        for doc in self.documents.values() {
-            if let Some(similarity) = query_doc.cosine_similarity(doc) {
-                results.push((doc.clone(), similarity));
-            }
+        if self.embedding.len() != other.embedding.len() {
+            return None;
         }
         
-        // 排序并取前K个
-        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        results.truncate(top_k);
+        let mut dot_product = 0.0;
+        let mut magnitude1 = 0.0;
+        let mut magnitude2 = 0.0;
         
-        results
-    }
-    
-    /// 根据文本搜索文档（简单实现）
-    pub fn search_by_text(&self, text: &str, top_k: usize) -> Vec<Document> {
-        let mut results: Vec<(Document, usize)> = Vec::new();
-        
-        for doc in self.documents.values() {
-            // 简单计数文本中单词在文档中出现的次数
-            let count = text.split_whitespace()
-                .filter(|word| doc.content.contains(word))
-                .count();
-            
-            if count > 0 {
-                results.push((doc.clone(), count));
-            }
+        for (v1, v2) in self.embedding.iter().zip(other.embedding.iter()) {
+            dot_product += v1 * v2;
+            magnitude1 += v1 * v1;
+            magnitude2 += v2 * v2;
         }
         
-        // 按相关性排序
-        results.sort_by(|a, b| b.1.cmp(&a.1));
-        results.truncate(top_k);
+        magnitude1 = magnitude1.sqrt();
+        magnitude2 = magnitude2.sqrt();
         
-        results.into_iter().map(|(doc, _)| doc).collect()
-    }
-    
-    /// 获取所有文档
-    pub fn get_all_documents(&self) -> Vec<Document> {
-        self.documents.values().cloned().collect()
-    }
-    
-    /// 根据ID获取文档
-    pub fn get_document(&self, id: &str) -> Option<Document> {
-        self.documents.get(id).cloned()
+        if magnitude1 == 0.0 || magnitude2 == 0.0 {
+            return None;
+        }
+        
+        Some(dot_product / (magnitude1 * magnitude2))
     }
 }
 

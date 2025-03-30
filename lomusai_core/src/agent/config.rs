@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
 use crate::memory::MemoryConfig;
+use crate::memory::WorkingMemoryConfig;
 use crate::llm::{LlmOptions, Message};
 use crate::agent::types::{VoiceConfig, TelemetrySettings};
 
@@ -22,6 +25,9 @@ pub struct AgentConfig {
     /// Telemetry settings for the agent
     #[serde(skip_serializing_if = "Option::is_none")]
     pub telemetry: Option<TelemetrySettings>,
+    /// Working memory configuration for the agent
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_memory: Option<WorkingMemoryConfig>,
 }
 
 impl Default for AgentConfig {
@@ -33,6 +39,7 @@ impl Default for AgentConfig {
             model_id: None,
             voice_config: None,
             telemetry: None,
+            working_memory: None,
         }
     }
 }

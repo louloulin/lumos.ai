@@ -5,9 +5,13 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
+use std::io::BufReader;
+use std::sync::Arc;
 
-use crate::base::Base;
+use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
+use crate::logger::{Logger, Component};
+use crate::telemetry::TelemetrySink;
 
 /// 语音事件类型
 pub trait VoiceEvent: Send + 'static {}
@@ -92,90 +96,104 @@ impl Default for ListenOptions {
     }
 }
 
-/// 用于实现具有泛型参数的方法的扩展trait
+/// 语音事件处理器接口
+pub trait VoiceEventHandler<E: VoiceEvent>: Send + Sync {
+    /// 处理事件
+    fn handle(&self, event: E);
+}
+
+/// 语音监听接口
 #[async_trait]
-pub trait VoiceProviderExt: Send + Sync {
-    /// 将语音转换为文本
-    async fn listen_impl(&self, audio: impl AsyncRead + Send + 'static, options: &ListenOptions) -> Result<String>;
-    
-    /// 发送语音数据
-    async fn send_impl(&self, audio: impl AsyncRead + Send + 'static) -> Result<()>;
-    
-    /// 注册事件回调
-    fn on_impl<E: VoiceEvent>(&self, callback: Box<dyn FnMut(E) + Send + 'static>) -> Result<()>;
+pub trait VoiceListener: Send + Sync {
+    /// 将语音转换为文本 (非泛型方法版本)
+    async fn listen(&self, audio: Vec<u8>, options: &ListenOptions) -> Result<String>;
+}
+
+/// 语音发送接口
+#[async_trait]
+pub trait VoiceSender: Send + Sync {
+    /// 发送语音数据 (非泛型方法版本)
+    async fn send(&self, audio: Vec<u8>) -> Result<()>;
+}
+
+/// 语音监听接口扩展 (不对象安全)
+#[async_trait]
+pub trait VoiceListenerExt: VoiceListener {
+    /// 将语音转换为文本 (泛型方法版本)
+    async fn listen_impl(&self, audio: impl AsyncRead + Send + Unpin + 'static, options: &ListenOptions) -> Result<String>;
+}
+
+/// 语音发送接口扩展 (不对象安全)
+#[async_trait]
+pub trait VoiceSenderExt: VoiceSender {
+    /// 发送语音数据 (泛型方法版本)
+    async fn send_impl(&self, audio: impl AsyncRead + Send + Unpin + 'static) -> Result<()>;
+}
+
+/// 语音事件处理扩展 (不对象安全)
+pub trait VoiceEventHandlerExt: Send + Sync {
+    /// 获取事件处理器
+    fn as_event_handler<E: VoiceEvent>(&self) -> Option<&dyn VoiceEventHandler<E>>;
 }
 
 /// 语音提供者接口
 #[async_trait]
 pub trait VoiceProvider: Base + Send + Sync {
-    /// 将文本转换为语音
-    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'static, Result<Vec<u8>>>>;
+    /// 连接语音服务
+    async fn connect(&self) -> Result<()>;
     
-    /// 将语音转换为文本的包装方法
+    /// 关闭语音服务连接
+    async fn close(&self) -> Result<()>;
+    
+    /// 文本转语音
+    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>>;
+    
+    /// 语音转文本
     async fn listen(&self, audio: Vec<u8>, options: &ListenOptions) -> Result<String>;
     
-    /// 建立实时语音连接
-    async fn connect(&self) -> Result<()> {
-        Ok(()) // 默认实现，不做任何事
-    }
-    
-    /// 发送语音数据的包装方法
+    /// 发送音频数据 (用于实时交互)
     async fn send(&self, audio: Vec<u8>) -> Result<()>;
     
-    /// 关闭连接
-    async fn close(&self) -> Result<()> {
-        Ok(()) // 默认实现，不做任何事
-    }
+    /// 获取语音监听器
+    fn as_listener(&self) -> Option<&dyn VoiceListener>;
     
-    /// 获取扩展接口
-    fn as_ext(&self) -> &dyn VoiceProviderExt;
+    /// 获取语音发送器
+    fn as_sender(&self) -> Option<&dyn VoiceSender>;
 }
 
-/// 组合式语音提供者，可以使用不同的提供者进行语音合成和识别
+/// 复合语音提供者，支持独立的TTS和STT提供者
 pub struct CompositeVoice {
     /// 基础组件
-    base: crate::base::BaseComponent,
-    /// 语音识别提供者
-    listen_provider: Box<dyn VoiceProvider>,
+    base: BaseComponent,
     /// 语音合成提供者
-    speak_provider: Box<dyn VoiceProvider>,
+    speak_provider: Arc<dyn VoiceProvider>,
+    /// 语音识别提供者
+    listen_provider: Arc<dyn VoiceProvider>,
 }
 
 impl CompositeVoice {
-    /// 创建新的组合式语音提供者
-    pub fn new(
-        listen_provider: Box<dyn VoiceProvider>,
-        speak_provider: Box<dyn VoiceProvider>,
-    ) -> Self {
+    /// 创建新的复合语音提供者
+    pub fn new(speak_provider: Arc<dyn VoiceProvider>, listen_provider: Arc<dyn VoiceProvider>) -> Self {
+        let component_config = ComponentConfig {
+            name: Some("CompositeVoice".to_string()),
+            component: Component::Voice,
+            log_level: None,
+        };
+        
         Self {
-            base: crate::base::BaseComponent::new(Some("CompositeVoice"), crate::logger::Component::Voice),
-            listen_provider,
+            base: BaseComponent::new(component_config),
             speak_provider,
+            listen_provider,
         }
     }
 }
 
 #[async_trait]
 impl VoiceProvider for CompositeVoice {
-    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'static, Result<Vec<u8>>>> {
-        self.speak_provider.speak(text, options).await
-    }
-    
-    async fn listen(&self, audio: Vec<u8>, options: &ListenOptions) -> Result<String> {
-        // 使用内存读取器将Vec<u8>转换为可读流
-        let cursor = std::io::Cursor::new(audio);
-        self.listen_provider.as_ext().listen_impl(cursor, options).await
-    }
-    
     async fn connect(&self) -> Result<()> {
         self.speak_provider.connect().await?;
         self.listen_provider.connect().await?;
         Ok(())
-    }
-    
-    async fn send(&self, audio: Vec<u8>) -> Result<()> {
-        let cursor = std::io::Cursor::new(audio);
-        self.listen_provider.as_ext().send_impl(cursor).await
     }
     
     async fn close(&self) -> Result<()> {
@@ -184,28 +202,24 @@ impl VoiceProvider for CompositeVoice {
         Ok(())
     }
     
-    fn as_ext(&self) -> &dyn VoiceProviderExt {
-        self.listen_provider.as_ext()
-    }
-}
-
-// CompositeVoice的VoiceProviderExt实现，将调用转发到适当的提供者
-#[async_trait]
-impl VoiceProviderExt for CompositeVoice {
-    async fn listen_impl(&self, audio: impl AsyncRead + Send + 'static, options: &ListenOptions) -> Result<String> {
-        self.listen_provider.as_ext().listen_impl(audio, options).await
+    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>> {
+        self.speak_provider.speak(text, options).await
     }
     
-    async fn send_impl(&self, audio: impl AsyncRead + Send + 'static) -> Result<()> {
-        self.listen_provider.as_ext().send_impl(audio).await
+    async fn listen(&self, audio: Vec<u8>, options: &ListenOptions) -> Result<String> {
+        self.listen_provider.listen(audio, options).await
     }
     
-    fn on_impl<E: VoiceEvent>(&self, callback: Box<dyn FnMut(E) + Send + 'static>) -> Result<()> {
-        // 尝试在speak_provider上注册回调，如果失败则尝试在listen_provider上注册
-        match self.speak_provider.as_ext().on_impl(callback.clone()) {
-            Ok(_) => Ok(()),
-            Err(_) => self.listen_provider.as_ext().on_impl(callback),
-        }
+    async fn send(&self, audio: Vec<u8>) -> Result<()> {
+        self.listen_provider.send(audio).await
+    }
+    
+    fn as_listener(&self) -> Option<&dyn VoiceListener> {
+        self.listen_provider.as_listener()
+    }
+    
+    fn as_sender(&self) -> Option<&dyn VoiceSender> {
+        self.listen_provider.as_sender()
     }
 }
 
@@ -214,23 +228,23 @@ impl Base for CompositeVoice {
         self.base.name()
     }
     
-    fn component(&self) -> crate::logger::Component {
+    fn component(&self) -> Component {
         self.base.component()
     }
     
-    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+    fn logger(&self) -> Arc<dyn Logger> {
         self.base.logger()
     }
     
-    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::logger::Logger>) {
+    fn set_logger(&mut self, logger: Arc<dyn Logger>) {
         self.base.set_logger(logger);
     }
     
-    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+    fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
         self.base.telemetry()
     }
     
-    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+    fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
 }
@@ -239,4 +253,13 @@ impl Base for CompositeVoice {
 pub mod providers;
 
 // 重新导出主要类型
-pub use providers::*; 
+pub use providers::*;
+
+/// 获取音频数据辅助函数
+pub async fn get_audio_data(audio: impl AsyncRead + Send + Unpin + 'static) -> Result<Vec<u8>> {
+    use tokio::io::AsyncReadExt;
+    let mut buffer = Vec::new();
+    let mut reader = tokio::io::BufReader::new(audio);
+    reader.read_to_end(&mut buffer).await?;
+    Ok(buffer)
+} 

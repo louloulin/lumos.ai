@@ -63,4 +63,28 @@ pub enum Error {
     /// Invalid input errors
     #[error("Invalid input error: {0}")]
     InvalidInput(String),
+    
+    /// Configuration errors
+    #[error("Configuration error: {0}")]
+    Configuration(String),
+    
+    /// Internal errors
+    #[error("Internal error: {0}")]
+    Internal(String),
+    
+    /// Unavailable resource errors
+    #[error("Unavailable resource: {0}")]
+    Unavailable(String),
+    
+    /// Unsupported feature or operation
+    #[error("Unsupported operation: {0}")]
+    Unsupported(String),
+    
+    /// Parsing errors
+    #[error("Parsing error: {0}")]
+    Parsing(String),
+    
+    /// Constraint violations
+    #[error("Constraint violation: {0}")]
+    Constraint(String),
 } 

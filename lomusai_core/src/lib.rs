@@ -23,12 +23,12 @@ pub mod voice;
 pub use error::{Error, Result};
 pub use llm::{LlmProvider, LlmOptions, Message, Role};
 pub use agent::{Agent, AgentConfig, BasicAgent, create_basic_agent, AgentGenerateOptions, AgentStreamOptions};
-pub use base::{Base, ComponentConfig};
+pub use base::{Base, ComponentConfig, BaseComponent};
 pub use logger::{Logger, LogLevel, Component as LogComponent, create_logger, create_noop_logger};
 pub use lomusai::{Lomusai, LomusaiConfig};
-pub use memory::Memory;
+pub use memory::{Memory, WorkingMemory, WorkingMemoryContent};
 pub use storage::{Storage, create_memory_storage};
-pub use tool::Tool;
+pub use tool::{Tool, ToolContext};
 pub use vector::{
     VectorStorage, 
     MemoryVectorStorage, 

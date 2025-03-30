@@ -1,32 +1,43 @@
-//! 智能体模块，负责处理用户请求并调用工具
-//!
-//! 智能体（Agent）是Lomusai的核心组件之一，用于响应用户查询、调用工具，并提供智能化的交互体验。
-//! 智能体利用大语言模型和工具功能完成复杂任务。
+//! Agent module for LLM-based agents
 
-mod config;
-mod types;
-mod trait_def;
-mod executor;
+pub mod config;
+pub mod trait_def;
+pub mod executor;
+pub mod message_utils;
+pub mod types;
 
 pub use config::AgentConfig;
 pub use trait_def::Agent;
 pub use executor::BasicAgent;
-pub use types::*;
+pub use message_utils::{system_message, user_message, assistant_message, tool_message};
 
-/// 创建基本智能体
-/// 
-/// # Arguments
-/// 
-/// * `config` - 智能体配置
-/// * `llm` - LLM提供者
-/// 
-/// # Returns
-/// 
-/// 返回一个新的BasicAgent实例
-pub fn create_basic_agent<P: crate::llm::LlmProvider + 'static>(
-    config: AgentConfig, 
-    llm: std::sync::Arc<P>
+// Re-export agent types
+pub use types::{
+    AgentGenerateOptions, 
+    AgentStreamOptions, 
+    AgentGenerateResult, 
+    AgentStep, 
+    AgentToolCall,
+    VoiceConfig,
+    TelemetrySettings,
+};
+
+/// Create a basic agent with default configuration
+pub fn create_basic_agent(
+    name: impl Into<String>,
+    instructions: impl Into<String>,
+    llm: std::sync::Arc<dyn crate::llm::LlmProvider>,
 ) -> BasicAgent {
+    let config = AgentConfig {
+        name: name.into(),
+        instructions: instructions.into(),
+        memory_config: None,
+        model_id: None,
+        voice_config: None,
+        telemetry: None,
+        working_memory: None,
+    };
+    
     BasicAgent::new(config, llm)
 }
 

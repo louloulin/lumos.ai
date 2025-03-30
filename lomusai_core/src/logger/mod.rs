@@ -47,6 +47,8 @@ pub enum Component {
     Telemetry,
     /// Network component
     Network,
+    /// Voice component
+    Voice,
 }
 
 impl Default for Component {
@@ -67,6 +69,7 @@ impl std::fmt::Display for Component {
             Component::Workflow => write!(f, "WORKFLOW"),
             Component::Telemetry => write!(f, "TELEMETRY"),
             Component::Network => write!(f, "NETWORK"),
+            Component::Voice => write!(f, "VOICE"),
         }
     }
 }

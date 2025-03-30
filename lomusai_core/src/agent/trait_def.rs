@@ -8,17 +8,45 @@ use serde_json::Value;
 use serde::de::DeserializeOwned;
 
 use crate::base::Base;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::llm::{LlmProvider, Message};
 use crate::memory::Memory;
+use crate::memory::working::WorkingMemory;
 use crate::tool::Tool;
 use crate::agent::types::{
     AgentGenerateResult, 
     AgentGenerateOptions, 
     AgentStreamOptions,
+    AgentStep,
     ToolCall,
 };
 use crate::voice::{VoiceProvider, VoiceOptions, ListenOptions};
+use tokio::io::AsyncRead;
+
+/// Trait for agents that support structured output generation
+#[async_trait]
+pub trait AgentStructuredOutput: Send + Sync {
+    /// Generate structured output based on a schema
+    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
+        &self, 
+        messages: &[Message], 
+        options: &AgentGenerateOptions
+    ) -> Result<T>;
+}
+
+/// Trait for agents that support voice input (speech-to-text)
+#[async_trait]
+pub trait AgentVoiceListener: Send + Sync {
+    /// Convert speech to text using the agent's voice provider
+    async fn listen(&self, audio: impl AsyncRead + Send + Unpin + 'static, options: &ListenOptions) -> Result<String>;
+}
+
+/// Trait for agents that support voice output (text-to-speech)
+#[async_trait]
+pub trait AgentVoiceSender: Send + Sync {
+    /// Convert text to speech using the agent's voice provider
+    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>>;
+}
 
 /// Trait defining the core functionality of an agent
 #[async_trait]
@@ -40,6 +68,11 @@ pub trait Agent: Base + Send + Sync {
     
     /// Check if the agent has its own memory
     fn has_own_memory(&self) -> bool;
+
+    /// Get the working memory for the agent, if configured
+    fn get_working_memory(&self) -> Option<Arc<dyn WorkingMemory>> {
+        None
+    }
     
     /// Get all tools available to the agent
     fn get_tools(&self) -> HashMap<String, Box<dyn Tool>>;
@@ -77,13 +110,6 @@ pub trait Agent: Base + Send + Sync {
         options: &'a AgentStreamOptions
     ) -> Result<BoxStream<'a, Result<String>>>;
 
-    /// Generate structured output based on a schema
-    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
-        &self, 
-        messages: &[Message], 
-        options: &AgentGenerateOptions
-    ) -> Result<T>;
-
     /// Stream with callbacks for advanced control
     async fn stream_with_callbacks<'a>(
         &'a self, 
@@ -98,20 +124,40 @@ pub trait Agent: Base + Send + Sync {
 
     /// Set a voice provider for the agent
     fn set_voice(&mut self, voice: Arc<dyn VoiceProvider>);
-
-    /// Convert text to speech using the agent's voice provider
-    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>> {
-        match self.get_voice() {
-            Some(voice) => voice.speak(text, options).await,
-            None => Err(Error::Unsupported("No voice provider configured for this agent".to_string()))
+    
+    /// Get a value from working memory
+    async fn get_memory_value(&self, key: &str) -> Result<Option<Value>> {
+        if let Some(memory) = self.get_working_memory() {
+            memory.get_value(key).await
+        } else {
+            Err(Error::Unsupported("Working memory not enabled for this agent".to_string()))
         }
     }
-
-    /// Convert speech to text using the agent's voice provider
-    async fn listen(&self, audio: impl AsyncRead + Send + 'static, options: &ListenOptions) -> Result<String> {
-        match self.get_voice() {
-            Some(voice) => voice.listen(audio, options).await,
-            None => Err(Error::Unsupported("No voice provider configured for this agent".to_string()))
+    
+    /// Set a value in working memory
+    async fn set_memory_value(&self, key: &str, value: Value) -> Result<()> {
+        if let Some(memory) = self.get_working_memory() {
+            memory.set_value(key, value).await
+        } else {
+            Err(Error::Unsupported("Working memory not enabled for this agent".to_string()))
+        }
+    }
+    
+    /// Delete a value from working memory
+    async fn delete_memory_value(&self, key: &str) -> Result<()> {
+        if let Some(memory) = self.get_working_memory() {
+            memory.delete_value(key).await
+        } else {
+            Err(Error::Unsupported("Working memory not enabled for this agent".to_string()))
+        }
+    }
+    
+    /// Clear the working memory
+    async fn clear_memory(&self) -> Result<()> {
+        if let Some(memory) = self.get_working_memory() {
+            memory.clear().await
+        } else {
+            Err(Error::Unsupported("Working memory not enabled for this agent".to_string()))
         }
     }
 } 

@@ -32,11 +32,29 @@ pub struct MemoryVectorStorage {
 
 impl MemoryVectorStorage {
     /// Create a new in-memory vector storage
-    pub fn new() -> Self {
-        Self {
-            indexes: RwLock::new(HashMap::new()),
+    pub fn new(dimensions: usize, capacity: Option<usize>) -> Self {
+        let indexes = if let Some(cap) = capacity {
+            RwLock::new(HashMap::with_capacity(cap))
+        } else {
+            RwLock::new(HashMap::new())
+        };
+        
+        let result = Self {
+            indexes,
             filter_interpreter: FilterInterpreter::new(),
+        };
+        
+        // Create a default index
+        if let Ok(mut indexes) = result.indexes.write() {
+            indexes.insert("default".to_string(), VectorIndex {
+                dimension: dimensions,
+                metric: SimilarityMetric::Cosine,
+                vectors: HashMap::new(),
+                metadata: HashMap::new(),
+            });
         }
+        
+        result
     }
 
     /// Calculate cosine similarity between two vectors
@@ -275,7 +293,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_vector_operations() {
-        let storage = MemoryVectorStorage::new();
+        let storage = MemoryVectorStorage::new(3, None);
         
         // Create index with default metric (Cosine)
         storage.create_index("test_index", 3, None).await.unwrap();
@@ -332,7 +350,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_similarity_metrics() {
-        let storage = MemoryVectorStorage::new();
+        let storage = MemoryVectorStorage::new(3, None);
         let test_vectors = vec![
             vec![1.0, 0.0, 0.0],  // Vector A
             vec![0.0, 1.0, 0.0],  // Vector B

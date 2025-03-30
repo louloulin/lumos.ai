@@ -1,81 +1,128 @@
 //! 模拟语音提供者，用于测试和开发
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
-use futures::stream::{self, BoxStream};
+use futures::{stream, StreamExt};
+use futures::stream::BoxStream;
 use tokio::io::AsyncRead;
+use serde_json::Value;
 
-use crate::base::{Base, BaseComponent};
-use crate::error::Result;
+use crate::base::{Base, BaseComponent, ComponentConfig};
+use crate::error::{Error, Result};
 use crate::logger::{Component, Logger};
 use crate::telemetry::TelemetrySink;
-use crate::voice::{VoiceProvider, VoiceProviderExt, VoiceOptions, ListenOptions, VoiceEvent};
+use crate::voice::{
+    VoiceProvider, VoiceListener, VoiceSender, VoiceListenerExt, VoiceSenderExt, 
+    VoiceOptions, ListenOptions, VoiceEvent
+};
 
-/// 模拟语音提供者
+/// 模拟语音提供者，用于测试
 pub struct MockVoice {
+    /// 基础组件
     base: BaseComponent,
+    /// 模拟回复
+    responses: Mutex<Vec<String>>,
 }
 
 impl MockVoice {
-    /// 创建一个新的模拟语音提供者
+    /// 创建新的模拟语音提供者
     pub fn new() -> Self {
+        let component_config = ComponentConfig {
+            name: Some("MockVoice".to_string()),
+            component: Component::Voice,
+            log_level: None,
+        };
+        
         Self {
-            base: BaseComponent::new(Some("MockVoice"), Component::Voice),
+            base: BaseComponent::new(component_config),
+            responses: Mutex::new(vec!["这是一个模拟的语音回复".to_string()]),
         }
     }
-}
-
-impl Default for MockVoice {
-    fn default() -> Self {
-        Self::new()
+    
+    /// 设置模拟回复
+    pub fn set_responses(&self, responses: Vec<String>) {
+        let mut guard = self.responses.lock().unwrap();
+        *guard = responses;
     }
 }
 
 #[async_trait]
-impl VoiceProviderExt for MockVoice {
-    async fn listen_impl(&self, _audio: impl AsyncRead + Send + 'static, _options: &ListenOptions) -> Result<String> {
-        self.logger().debug("MockVoice: 将语音转换为文本");
+impl VoiceListener for MockVoice {
+    async fn listen(&self, _audio: Vec<u8>, _options: &ListenOptions) -> Result<String> {
+        self.logger().debug("MockVoice: 将语音转换为文本", None);
         
-        // 返回一些模拟的文本
-        Ok("这是由MockVoice生成的文本".to_string())
+        let guard = self.responses.lock().unwrap();
+        Ok(guard.first().unwrap_or(&"默认模拟回复".to_string()).clone())
     }
-    
-    async fn send_impl(&self, _audio: impl AsyncRead + Send + 'static) -> Result<()> {
-        self.logger().debug("MockVoice: 发送音频数据");
+}
+
+#[async_trait]
+impl VoiceListenerExt for MockVoice {
+    async fn listen_impl(&self, audio: impl AsyncRead + Send + Unpin + 'static, options: &ListenOptions) -> Result<String> {
+        // Convert the AsyncRead to Vec<u8>
+        let audio_data = crate::voice::get_audio_data(audio).await?;
+        VoiceListener::listen(self, audio_data, options).await
+    }
+}
+
+#[async_trait]
+impl VoiceSender for MockVoice {
+    async fn send(&self, _audio: Vec<u8>) -> Result<()> {
+        self.logger().debug("MockVoice: 发送音频数据", None);
         Ok(())
     }
-    
-    fn on_impl<E: VoiceEvent>(&self, _callback: Box<dyn FnMut(E) + Send + 'static>) -> Result<()> {
-        self.logger().debug("MockVoice: 注册回调函数");
-        Ok(())
+}
+
+#[async_trait]
+impl VoiceSenderExt for MockVoice {
+    async fn send_impl(&self, audio: impl AsyncRead + Send + Unpin + 'static) -> Result<()> {
+        // 读取音频数据
+        let audio_data = crate::voice::get_audio_data(audio).await?;
+        VoiceSender::send(self, audio_data).await
     }
 }
 
 #[async_trait]
 impl VoiceProvider for MockVoice {
-    async fn speak(&self, text: &str, _options: &VoiceOptions) -> Result<BoxStream<'static, Result<Vec<u8>>>> {
-        self.logger().debug(&format!("MockVoice: 将文本转换为语音: {}", text));
+    async fn connect(&self) -> Result<()> {
+        self.logger().debug("MockVoice: 连接服务", None);
+        Ok(())
+    }
+    
+    async fn close(&self) -> Result<()> {
+        self.logger().debug("MockVoice: 关闭连接", None);
+        Ok(())
+    }
+    
+    async fn speak(&self, text: &str, _options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>> {
+        self.logger().debug(&format!("MockVoice: 将文本转换为语音: {}", text), None);
         
-        // 生成一些模拟的音频数据
-        let data = text.as_bytes().to_vec();
-        let chunks = vec![Ok(data)];
+        // 创建模拟的音频数据
+        let chunks = vec![
+            Ok(vec![1, 2, 3, 4]), 
+            Ok(vec![5, 6, 7, 8]),
+            Ok(vec![9, 10, 11, 12])
+        ];
         
-        Ok(stream::iter(chunks).boxed())
+        let stream = stream::iter(chunks).boxed();
+        Ok(stream)
     }
     
     async fn listen(&self, audio: Vec<u8>, options: &ListenOptions) -> Result<String> {
-        // 使用内存读取器转换Vec<u8>为AsyncRead
-        let cursor = std::io::Cursor::new(audio);
-        self.listen_impl(cursor, options).await
+        VoiceListener::listen(self, audio, options).await
     }
     
     async fn send(&self, audio: Vec<u8>) -> Result<()> {
-        let cursor = std::io::Cursor::new(audio);
-        self.send_impl(cursor).await
+        VoiceSender::send(self, audio).await
     }
     
-    fn as_ext(&self) -> &dyn VoiceProviderExt {
-        self
+    fn as_listener(&self) -> Option<&dyn VoiceListener> {
+        Some(self as &dyn VoiceListener)
+    }
+    
+    fn as_sender(&self) -> Option<&dyn VoiceSender> {
+        Some(self as &dyn VoiceSender)
     }
 }
 

@@ -9,6 +9,7 @@ use serde_json::{Value, json};
 use uuid::Uuid;
 use serde::de::DeserializeOwned;
 use tokio::sync::watch;
+use tokio::io::AsyncRead;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
@@ -17,24 +18,23 @@ use crate::llm::{LlmProvider, LlmOptions, Message, Role};
 use crate::memory::Memory;
 use crate::telemetry::TelemetrySink;
 use crate::tool::{Tool, ToolExecutionOptions};
-use crate::agent::{
-    AgentConfig,
-    AgentGenerateOptions,
-    AgentGenerateResult,
+use crate::agent::types::{
+    AgentGenerateResult, 
+    AgentGenerateOptions, 
     AgentStreamOptions,
-    AgentStep,
     StepType,
     ToolCall,
     ToolResult,
     ToolResultStatus,
     TokenUsage,
-    system_message,
-    tool_message,
+    AgentStep,
 };
-use crate::agent::trait_def::Agent;
-use crate::agent::types::*;
+use crate::agent::trait_def::{Agent, AgentStructuredOutput, AgentVoiceListener, AgentVoiceSender};
 use crate::logger::LogEntry;
 use crate::voice::{VoiceProvider, VoiceOptions, ListenOptions};
+use crate::memory::{WorkingMemory, create_working_memory};
+use crate::agent::AgentConfig;
+use crate::agent::types::{system_message, tool_message};
 
 /// Basic agent implementation
 pub struct BasicAgent {
@@ -46,12 +46,24 @@ pub struct BasicAgent {
     instructions: String,
     /// LLM provider
     llm: Arc<dyn LlmProvider>,
-    /// Memory
-    memory: Option<Arc<dyn Memory>>,
     /// Tools available to the agent
     tools: Mutex<HashMap<String, Box<dyn Tool>>>,
+    /// Memory
+    memory: Option<Arc<dyn Memory>>,
+    /// Working memory
+    working_memory: Option<Box<dyn WorkingMemory>>,
     /// 语音提供者
     voice: Option<Arc<dyn VoiceProvider>>,
+    /// Temperature for LLM calls
+    temperature: Option<f32>,
+    /// Abort signal
+    abort_signal: Option<watch::Receiver<bool>>,
+    /// Output schema for structured outputs
+    output_schema: Option<Value>,
+    /// Experimental features flag
+    experimental_output: bool,
+    /// Telemetry settings
+    telemetry: Option<Box<dyn TelemetrySink>>,
 }
 
 impl BasicAgent {
@@ -63,14 +75,36 @@ impl BasicAgent {
             log_level: None,
         };
         
+        // Initialize working memory (if configured)
+        let working_memory = if let Some(wm_config) = &config.working_memory {
+            match create_working_memory(wm_config) {
+                Ok(wm) => {
+                    let wm_name = wm.name().unwrap_or("unknown").to_string();
+                    Some(wm)
+                },
+                Err(e) => {
+                    eprintln!("Failed to initialize working memory: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        
         Self {
             base: BaseComponent::new(component_config),
             name: config.name,
             instructions: config.instructions,
             llm,
-            memory: config.memory_config.and_then(|_| None), // This will be implemented later
             tools: Mutex::new(HashMap::new()),
+            memory: config.memory_config.and_then(|_| None), // This will be implemented later
+            working_memory,
             voice: config.voice_config.and_then(|_| None),
+            temperature: None,
+            abort_signal: None,
+            output_schema: None,
+            experimental_output: false,
+            telemetry: None,
         }
     }
     
@@ -475,22 +509,6 @@ impl Agent for BasicAgent {
         Ok(stream)
     }
 
-    /// 生成结构化输出
-    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
-        &self, 
-        messages: &[Message], 
-        options: &AgentGenerateOptions
-    ) -> Result<T> {
-        // 获取生成结果
-        let result = self.generate(messages, options).await?;
-        
-        // 尝试解析为结构化输出
-        match serde_json::from_str::<T>(&result.response) {
-            Ok(structured) => Ok(structured),
-            Err(e) => Err(Error::Parsing(format!("Failed to parse structured output: {}", e)))
-        }
-    }
-
     /// 流式输出带回调
     async fn stream_with_callbacks<'a>(
         &'a self, 
@@ -499,67 +517,46 @@ impl Agent for BasicAgent {
         on_step_finish: Option<Box<dyn FnMut(AgentStep) + Send + 'a>>,
         on_finish: Option<Box<dyn FnOnce(AgentGenerateResult) + Send + 'a>>
     ) -> Result<BoxStream<'a, Result<String>>> {
-        // 创建一个通道来传递步骤信息
-        let (step_tx, mut step_rx) = tokio::sync::mpsc::channel(10);
-        // 创建一个通道来传递最终结果
-        let (result_tx, result_rx) = tokio::sync::oneshot::channel();
+        // 直接生成结果，而不是在后台任务中
+        let generate_result = self.generate(messages, &AgentGenerateOptions {
+            instructions: options.instructions.clone(),
+            context: options.context.clone(),
+            memory_options: options.memory_options.clone(),
+            thread_id: options.thread_id.clone(),
+            resource_id: options.resource_id.clone(),
+            run_id: options.run_id.clone(),
+            max_steps: options.max_steps,
+            tool_choice: options.tool_choice.clone(),
+            llm_options: options.llm_options.clone(),
+            ..Default::default()
+        }).await?;
         
-        // 复制选项并添加自定义步骤和完成回调
-        let mut custom_options = options.clone();
-        
-        // 在后台任务中执行生成并触发回调
-        tokio::spawn(async move {
-            match self.generate(messages, &AgentGenerateOptions {
-                instructions: custom_options.instructions.clone(),
-                context: custom_options.context.clone(),
-                memory_options: custom_options.memory_options.clone(),
-                thread_id: custom_options.thread_id.clone(),
-                resource_id: custom_options.resource_id.clone(),
-                run_id: custom_options.run_id.clone(),
-                max_steps: custom_options.max_steps,
-                llm_options: custom_options.llm_options.clone(),
-                ..Default::default()
-            }).await {
-                Ok(result) => {
-                    // 为每个步骤触发回调
-                    if let Some(mut on_step) = on_step_finish {
-                        for step in &result.steps {
-                            on_step(step.clone());
-                            let _ = step_tx.send(()).await;
-                        }
-                    }
-                    
-                    // 触发完成回调
-                    if let Some(on_finish_cb) = on_finish {
-                        on_finish_cb(result.clone());
-                    }
-                    
-                    // 发送最终结果
-                    let _ = result_tx.send(Ok(result));
-                },
-                Err(e) => {
-                    let _ = result_tx.send(Err(e));
-                }
+        // 为每个步骤触发回调
+        if let Some(mut on_step) = on_step_finish {
+            for step in &generate_result.steps {
+                on_step(step.clone());
             }
-        });
+        }
         
-        // 返回一个流，简单地将结果作为一个字符串块返回
-        let stream = async_stream::stream! {
-            // 等待最终结果
-            match result_rx.await {
-                Ok(Ok(result)) => {
-                    yield Ok(result.response);
-                },
-                Ok(Err(e)) => {
-                    yield Err(e);
-                },
-                Err(_) => {
-                    yield Err(Error::Internal("Channel closed unexpectedly".to_string()));
-                }
-            }
-        };
+        // 触发完成回调
+        if let Some(on_finish_cb) = on_finish {
+            on_finish_cb(generate_result.clone());
+        }
         
-        Ok(Box::pin(stream))
+        // 将回复分成块返回
+        let response = generate_result.response;
+        let chunks = response
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(20)
+            .map(|c| c.iter().collect::<String>())
+            .collect::<Vec<_>>();
+        
+        let stream = stream::iter(chunks)
+            .map(|chunk| Ok(chunk))
+            .boxed();
+        
+        Ok(stream)
     }
 
     /// 获取语音提供者
@@ -570,6 +567,34 @@ impl Agent for BasicAgent {
     /// 设置语音提供者
     fn set_voice(&mut self, voice: Arc<dyn VoiceProvider>) {
         self.voice = Some(voice);
+    }
+
+    async fn get_memory_value(&self, key: &str) -> Result<Option<Value>> {
+        match &self.working_memory {
+            Some(wm) => wm.get_value(key).await,
+            None => Err(Error::Memory("Working memory not initialized".to_string())),
+        }
+    }
+    
+    async fn set_memory_value(&self, key: &str, value: Value) -> Result<()> {
+        match &self.working_memory {
+            Some(wm) => wm.set_value(key, value).await,
+            None => Err(Error::Memory("Working memory not initialized".to_string())),
+        }
+    }
+    
+    async fn delete_memory_value(&self, key: &str) -> Result<()> {
+        match &self.working_memory {
+            Some(wm) => wm.delete_value(key).await,
+            None => Err(Error::Memory("Working memory not initialized".to_string())),
+        }
+    }
+    
+    async fn clear_memory(&self) -> Result<()> {
+        match &self.working_memory {
+            Some(wm) => wm.clear().await,
+            None => Err(Error::Memory("Working memory not initialized".to_string())),
+        }
     }
 }
 
@@ -599,12 +624,139 @@ impl Base for BasicAgent {
     }
 }
 
+#[async_trait]
+impl AgentVoiceListener for BasicAgent {
+    async fn listen(&self, audio: impl AsyncRead + Send + Unpin + 'static, options: &ListenOptions) -> Result<String> {
+        match self.get_voice() {
+            Some(voice) => {
+                if let Some(listener) = voice.as_listener() {
+                    // 使用非泛型方法
+                    // 先将 AsyncRead 转换为 Vec<u8>
+                    use tokio::io::AsyncReadExt;
+                    let mut buffer = Vec::new();
+                    let mut reader = tokio::io::BufReader::new(audio);
+                    reader.read_to_end(&mut buffer).await?;
+                    
+                    // 然后调用非泛型的方法
+                    listener.listen(buffer, options).await
+                } else {
+                    Err(Error::Unsupported("The voice provider does not support speech recognition".to_string()))
+                }
+            },
+            None => Err(Error::Unsupported("No voice provider configured for this agent".to_string()))
+        }
+    }
+}
+
+#[async_trait]
+impl AgentStructuredOutput for BasicAgent {
+    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
+        &self, 
+        messages: &[Message], 
+        options: &AgentGenerateOptions
+    ) -> Result<T> {
+        // Use the schema to generate structured output
+        let formatted_messages = self.format_messages(messages, options);
+        
+        // Add schema instruction if schema is available
+        let schema_messages = if let Some(schema) = &self.output_schema {
+            let schema_str = serde_json::to_string_pretty(schema)
+                .map_err(|e| Error::Parsing(format!("Failed to serialize schema: {}", e)))?;
+            
+            let mut new_messages = formatted_messages.clone();
+            let schema_instruction = format!(
+                "Your response must be valid JSON that conforms to this schema:\n\n```json\n{}\n```\n\nDo not include any explanation or additional text, just the JSON object.",
+                schema_str
+            );
+            
+            // Add schema instruction at the end of system message or create a new one
+            if let Some(pos) = new_messages.iter().position(|m| m.role == Role::System) {
+                let mut system_msg = new_messages[pos].clone();
+                system_msg.content = format!("{}\n\n{}", system_msg.content, schema_instruction);
+                new_messages[pos] = system_msg;
+            } else {
+                new_messages.insert(0, system_message(schema_instruction));
+            }
+            
+            new_messages
+        } else {
+            formatted_messages
+        };
+        
+        let json_response = self.llm.generate_with_messages(&schema_messages, &options.llm_options).await?;
+        
+        // Parse the JSON response
+        serde_json::from_str::<T>(&json_response)
+            .map_err(|e| Error::Parsing(format!("Failed to parse structured output: {}", e)))
+    }
+}
+
+#[async_trait]
+impl AgentVoiceSender for BasicAgent {
+    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>> {
+        // Get the voice provider
+        let voice = self.get_voice().ok_or_else(|| {
+            Error::Unsupported("No voice provider configured for this agent".to_string())
+        })?;
+        
+        // Use the provider to speak
+        voice.speak(text, options).await
+    }
+}
+
+// 用于包装Agent引用的辅助结构体，使其可以在spawn的任务中使用
+struct AgentRef<'a>(&'a BasicAgent);
+
+// 实现Send和Sync，使AgentRef可以跨线程传递
+unsafe impl<'a> Send for AgentRef<'a> {}
+unsafe impl<'a> Sync for AgentRef<'a> {}
+
 #[cfg(test)]
 mod voice_tests {
     use std::sync::Arc;
     use super::*;
     use crate::voice::{MockVoice, VoiceOptions};
     use serde::{Deserialize, Serialize};
+    
+    /// 模拟的LLM提供者，用于测试
+    struct MockLlmProvider {
+        responses: Vec<String>,
+        index: std::sync::atomic::AtomicUsize,
+    }
+    
+    impl MockLlmProvider {
+        fn new(responses: Vec<String>) -> Self {
+            Self {
+                responses,
+                index: std::sync::atomic::AtomicUsize::new(0),
+            }
+        }
+    }
+    
+    #[async_trait]
+    impl LlmProvider for MockLlmProvider {
+        async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
+            let index = self.index.fetch_add(1, std::sync::atomic::Ordering::SeqCst) % self.responses.len();
+            Ok(self.responses[index].clone())
+        }
+        
+        async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> Result<String> {
+            let index = self.index.fetch_add(1, std::sync::atomic::Ordering::SeqCst) % self.responses.len();
+            Ok(self.responses[index].clone())
+        }
+        
+        async fn generate_stream<'a>(
+            &'a self,
+            _prompt: &'a str,
+            _options: &'a LlmOptions,
+        ) -> Result<futures::stream::BoxStream<'a, Result<String>>> {
+            unimplemented!("Streaming not implemented for mock provider")
+        }
+        
+        async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
+            unimplemented!("Embeddings not implemented for mock provider")
+        }
+    }
     
     // 用于结构化输出的测试结构
     #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -691,8 +843,9 @@ mod voice_tests {
         let voice = Arc::new(MockVoice::new());
         agent.set_voice(voice);
         
-        // 测试语音功能
-        let audio_stream = agent.speak(
+        // 测试语音功能 - 使用AgentVoiceSender trait
+        let agent_voice_sender: &dyn AgentVoiceSender = &agent;
+        let audio_stream = agent_voice_sender.speak(
             "Test voice functionality", 
             &VoiceOptions::default()
         ).await.unwrap();

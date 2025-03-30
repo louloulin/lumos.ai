@@ -86,6 +86,17 @@ impl BaseComponent {
             telemetry: None,
         }
     }
+    
+    /// 从名称和组件类型创建BaseComponent的便捷方法
+    pub fn new_with_name(name: impl Into<String>, component: Component) -> Self {
+        let name = name.into();
+        Self {
+            name: Some(name.clone()),
+            component,
+            logger: create_logger(name, component, LogLevel::Info),
+            telemetry: None,
+        }
+    }
 }
 
 impl Base for BaseComponent {

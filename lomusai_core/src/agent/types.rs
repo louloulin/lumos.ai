@@ -203,7 +203,7 @@ pub struct AgentStep {
     /// Output messages from this step
     pub output: Option<Message>,
     /// Tool calls from this step
-    pub tool_calls: Vec<ToolCall>,
+    pub tool_calls: Vec<AgentToolCall>,
     /// Tool results from this step
     pub tool_results: Vec<ToolResult>,
     /// Step metadata
@@ -221,6 +221,9 @@ pub enum StepType {
     /// Final response step
     Final,
 }
+
+/// Tool call structure (Alias for backward compatibility)
+pub type AgentToolCall = ToolCall;
 
 /// Tool call structure
 #[derive(Debug, Clone, Serialize, Deserialize)]

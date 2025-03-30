@@ -22,7 +22,8 @@ notify = "6.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3.8"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "blocking"], optional = true }
+zip = { version = "0.6", optional = true }
 axum = "0.7"
 futures = "0.3"
 async-trait = "0.1"
@@ -35,6 +36,10 @@ colored = "2.0"
 # Lomusai 依赖
 # 取消注释以下行并替换为实际路径
 # lomusai_core = { path = "../lomusai_core" }
+
+[features]
+default = ["network"]
+network = ["reqwest", "zip"]
 
 [dev-dependencies]
 assert_cmd = "2.0"

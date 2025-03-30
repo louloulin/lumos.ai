@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use crate::error::{CliError, CliResult};
 use console::style;
-use colored::Colorize;
 
 /// 打印带颜色的信息
 pub fn print_info(message: &str) {

@@ -124,7 +124,7 @@ CMD ["/app/start.sh"]
 }
 
 // AWS部署
-async fn deploy_aws(build_dir: &Path) -> CliResult<()> {
+async fn deploy_aws(_build_dir: &Path) -> CliResult<()> {
     println!("{}", "执行AWS部署...".bright_blue());
     println!("{}", "AWS部署功能尚未完全实现，这是一个占位实现".bright_yellow());
     
@@ -142,7 +142,7 @@ async fn deploy_aws(build_dir: &Path) -> CliResult<()> {
 }
 
 // Azure部署
-async fn deploy_azure(build_dir: &Path) -> CliResult<()> {
+async fn deploy_azure(_build_dir: &Path) -> CliResult<()> {
     println!("{}", "执行Azure部署...".bright_blue());
     println!("{}", "Azure部署功能尚未完全实现，这是一个占位实现".bright_yellow());
     
@@ -160,7 +160,7 @@ async fn deploy_azure(build_dir: &Path) -> CliResult<()> {
 }
 
 // GCP部署
-async fn deploy_gcp(build_dir: &Path) -> CliResult<()> {
+async fn deploy_gcp(_build_dir: &Path) -> CliResult<()> {
     println!("{}", "执行GCP部署...".bright_blue());
     println!("{}", "GCP部署功能尚未完全实现，这是一个占位实现".bright_yellow());
     

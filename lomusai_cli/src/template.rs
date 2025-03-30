@@ -71,6 +71,11 @@ impl TemplateManager {
         Ok(template_dir)
     }
     
+    /// 获取模板目录
+    pub fn template_directory(&self) -> &PathBuf {
+        &self.template_dir
+    }
+    
     /// 创建基础项目结构
     pub fn create_project(
         &self,
@@ -408,5 +413,128 @@ lomus deploy --target docker
         
         fs::write(output_dir.join("README.md"), content)
             .map_err(|e| CliError::Io(e))
+    }
+    
+    /// 从远程仓库下载模板
+    pub fn download_template(&self, template_url: &str, template_name: &str) -> CliResult<()> {
+        println!("正在从 {} 下载模板...", template_url);
+        
+        // 创建临时目录
+        let temp_dir = tempfile::tempdir()
+            .map_err(|e| CliError::template(format!("创建临时目录失败: {}", e)))?;
+            
+        // 确定模板目录
+        let template_dir = self.template_dir.join(template_name);
+        
+        // 确保模板目录存在
+        if !template_dir.exists() {
+            util::create_dir_all(&template_dir)?;
+        }
+        
+        // 检查URL类型，支持git或http下载
+        if template_url.starts_with("https://github.com") || template_url.starts_with("git@github.com") {
+            // 使用git克隆仓库
+            let status = std::process::Command::new("git")
+                .args(["clone", "--depth", "1", template_url, temp_dir.path().to_str().unwrap()])
+                .status()
+                .map_err(|e| CliError::template(format!("Git克隆失败: {}", e)))?;
+                
+            if !status.success() {
+                return Err(CliError::template("Git克隆失败"));
+            }
+            
+            // 复制模板文件到模板目录
+            util::copy_dir_all(temp_dir.path(), &template_dir)?;
+            
+            println!("模板下载成功，已保存到: {}", template_dir.display());
+            
+            return Ok(());
+        } else if template_url.starts_with("http://") || template_url.starts_with("https://") {
+            // 从HTTP URL下载ZIP文件
+            #[cfg(feature = "reqwest")]
+            {
+                use std::io::Write;
+                
+                // 下载ZIP文件
+                let response = reqwest::blocking::get(template_url)
+                    .map_err(|e| CliError::template(format!("下载模板失败: {}", e)))?;
+                    
+                let zip_data = response.bytes()
+                    .map_err(|e| CliError::template(format!("读取下载内容失败: {}", e)))?;
+                    
+                // 保存到临时文件
+                let zip_path = temp_dir.path().join("template.zip");
+                let mut file = std::fs::File::create(&zip_path)
+                    .map_err(|e| CliError::Io(e))?;
+                    
+                file.write_all(&zip_data)
+                    .map_err(|e| CliError::Io(e))?;
+                    
+                // 解压缩
+                let file = std::fs::File::open(&zip_path)
+                    .map_err(|e| CliError::Io(e))?;
+                    
+                let mut archive = zip::ZipArchive::new(file)
+                    .map_err(|e| CliError::template(format!("解压缩失败: {}", e)))?;
+                    
+                for i in 0..archive.len() {
+                    let mut file = archive.by_index(i)
+                        .map_err(|e| CliError::template(format!("读取ZIP文件失败: {}", e)))?;
+                        
+                    let outpath = template_dir.join(file.name());
+                    
+                    if file.name().ends_with('/') {
+                        util::create_dir_all(&outpath)?;
+                    } else {
+                        if let Some(p) = outpath.parent() {
+                            if !p.exists() {
+                                util::create_dir_all(p)?;
+                            }
+                        }
+                        
+                        let mut outfile = std::fs::File::create(&outpath)
+                            .map_err(|e| CliError::Io(e))?;
+                            
+                        std::io::copy(&mut file, &mut outfile)
+                            .map_err(|e| CliError::Io(e))?;
+                    }
+                }
+                
+                println!("模板下载并解压成功，已保存到: {}", template_dir.display());
+                
+                return Ok(());
+            }
+            
+            #[cfg(not(feature = "reqwest"))]
+            {
+                return Err(CliError::template("不支持HTTP下载。请启用reqwest特性，或使用git仓库URL"));
+            }
+        }
+        
+        Err(CliError::template(format!("不支持的模板URL: {}", template_url)))
+    }
+    
+    /// 列出可用的模板
+    pub fn list_templates(&self) -> CliResult<Vec<String>> {
+        if !self.template_dir.exists() {
+            return Ok(vec![]);
+        }
+        
+        let mut templates = Vec::new();
+        
+        for entry in fs::read_dir(&self.template_dir)
+            .map_err(|e| CliError::Io(e))?
+        {
+            let entry = entry.map_err(|e| CliError::Io(e))?;
+            let path = entry.path();
+            
+            if path.is_dir() {
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    templates.push(name.to_string());
+                }
+            }
+        }
+        
+        Ok(templates)
     }
 }

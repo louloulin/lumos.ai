@@ -26,6 +26,20 @@ pub struct SemanticRecallConfig {
     pub top_k: usize,
     /// 消息范围
     pub message_range: Option<MessageRange>,
+    /// 是否生成摘要
+    #[serde(default)]
+    pub generate_summaries: bool,
+    /// 是否使用嵌入向量
+    #[serde(default = "default_use_embeddings")]
+    pub use_embeddings: bool,
+    /// 最大容量
+    pub max_capacity: Option<usize>,
+    /// 最大结果数
+    pub max_results: Option<usize>,
+    /// 相关性阈值
+    pub relevance_threshold: Option<f32>,
+    /// 模板
+    pub template: Option<String>,
 }
 
 /// 消息范围配置
@@ -53,9 +67,16 @@ pub struct MemoryConfig {
     pub semantic_recall: Option<SemanticRecallConfig>,
     /// 每次获取的最后消息数量
     pub last_messages: Option<usize>,
+    /// 查询内容
+    pub query: Option<String>,
 }
 
 fn default_memory_enabled() -> bool {
+    true
+}
+
+/// 默认嵌入向量设置
+fn default_use_embeddings() -> bool {
     true
 }
 
@@ -68,6 +89,7 @@ impl Default for MemoryConfig {
             working_memory: None,
             semantic_recall: None,
             last_messages: None,
+            query: None,
         }
     }
 }

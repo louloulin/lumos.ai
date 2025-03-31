@@ -414,6 +414,12 @@ impl SemanticMemoryTrait for SemanticMemoryAdapter {
                 } else {
                     None
                 },
+                generate_summaries: true,
+                use_embeddings: true,
+                max_capacity: None,
+                max_results: Some(options.limit),
+                relevance_threshold: options.threshold,
+                template: None,
             }),
             ..Default::default()
         };
@@ -473,8 +479,15 @@ mod tests {
                     before: 1,
                     after: 1,
                 }),
+                generate_summaries: true,
+                use_embeddings: true,
+                max_capacity: None,
+                max_results: Some(5),
+                relevance_threshold: None,
+                template: None,
             }),
             last_messages: None,
+            query: Some("语义搜索是什么".to_string()),
         };
         
         // 创建Mock LLM

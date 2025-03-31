@@ -28,7 +28,7 @@ pub use logger::{Logger, LogLevel, Component as LogComponent, create_logger, cre
 pub use lomusai::{Lomusai, LomusaiConfig};
 pub use memory::{Memory, WorkingMemory, WorkingMemoryContent};
 pub use storage::{Storage, create_memory_storage};
-pub use tool::{Tool, ToolContext};
+pub use tool::{Tool};
 pub use vector::{
     VectorStorage, 
     MemoryVectorStorage, 

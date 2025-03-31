@@ -3,7 +3,8 @@ mod tests {
     use crate::workflow::basic::{Workflow, StepCondition, WorkflowStep, BasicWorkflow, StepResult};
     use crate::workflow::step::{BasicStep, StepBuilder, StepConfig};
     use crate::error::{Error, Result};
-    use crate::agent::{Agent, AgentGenerateResult, AgentStep, StepType, TokenUsage, assistant_message};
+    use crate::agent::{Agent, AgentGenerateResult, AgentStep, assistant_message};
+    use crate::agent::types::{StepType, TokenUsage, ToolCall};
     use crate::llm::{Message, Role};
     use serde_json::{json, Value};
     use std::collections::HashMap;
@@ -103,11 +104,11 @@ mod tests {
             None
         }
         
-        fn parse_tool_calls(&self, _response: &str) -> Result<Vec<crate::agent::ToolCall>> {
+        fn parse_tool_calls(&self, _response: &str) -> Result<Vec<ToolCall>> {
             Ok(Vec::new())
         }
         
-        async fn execute_tool_call(&self, _tool_call: &crate::agent::ToolCall) -> Result<Value> {
+        async fn execute_tool_call(&self, _tool_call: &ToolCall) -> Result<Value> {
             Ok(json!({}))
         }
         
@@ -121,6 +122,24 @@ mod tests {
         
         async fn stream<'a>(&'a self, _messages: &'a [Message], _options: &'a crate::agent::AgentStreamOptions) -> Result<futures::stream::BoxStream<'a, Result<String>>> {
             unimplemented!("Stream not implemented for MockAgent")
+        }
+
+        async fn stream_with_callbacks<'a>(
+            &'a self,
+            _messages: &'a [Message],
+            _options: &'a crate::agent::AgentStreamOptions,
+            _on_step_finish: Option<Box<dyn FnMut(AgentStep) + Send + 'a>>,
+            _on_finish: Option<Box<dyn FnOnce(AgentGenerateResult) + Send + 'a>>
+        ) -> Result<futures::stream::BoxStream<'a, Result<String>>> {
+            unimplemented!("Stream with callbacks not implemented for MockAgent")
+        }
+
+        fn get_voice(&self) -> Option<Arc<dyn crate::voice::VoiceProvider>> {
+            None
+        }
+
+        fn set_voice(&mut self, _voice: Arc<dyn crate::voice::VoiceProvider>) {
+            // Do nothing
         }
     }
 

@@ -3,6 +3,7 @@
 use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
+use futures::StreamExt;
 
 use crate::error::{Error, Result};
 use crate::llm::{LlmProvider, LlmOptions, Message};

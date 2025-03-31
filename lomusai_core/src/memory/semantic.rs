@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
+use chrono;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
@@ -23,7 +24,7 @@ pub struct SemanticMemory {
     /// LLM提供者，用于生成嵌入向量
     llm: Arc<dyn LlmProvider>,
     /// 向量存储
-    vector_storage: Arc<dyn VectorStorage>,
+    vector_storage: Arc<crate::vector::MemoryVectorStorage>,
     /// 消息存储（ID -> 消息）
     messages: Mutex<HashMap<String, Message>>,
     /// 命名空间
@@ -33,7 +34,8 @@ pub struct SemanticMemory {
 impl SemanticMemory {
     /// 创建新的语义搜索内存
     pub fn new(config: &MemoryConfig, llm: Arc<dyn LlmProvider>) -> Result<Self> {
-        let vector_storage = create_vector_storage(None)?;
+        // 直接创建MemoryVectorStorage实例而非通过函数获取Box<dyn VectorStorage>
+        let vector_storage = crate::vector::MemoryVectorStorage::new(1536, None);
         let namespace = config.namespace.clone().unwrap_or_else(|| "default".to_string());
         
         let component_config = ComponentConfig {
@@ -88,14 +90,22 @@ impl Memory for SemanticMemory {
             chrono::Utc::now().timestamp()
         )));
 
+        // 创建文档
         let doc = Document {
             id: message_id.clone(),
-            text: message_text,
+            content: message_text,
             metadata,
             embedding,
         };
         
-        self.vector_storage.store(&[doc]).await?;
+        // 使用VectorStorage特征方法调用upsert
+        crate::vector::VectorStorage::upsert(
+            &*self.vector_storage,
+            "default", 
+            vec![doc.embedding.clone()],
+            Some(vec![doc.id.clone()]), 
+            Some(vec![doc.metadata.clone()])
+        ).await?;
         
         // 保存消息
         let mut messages = self.messages.lock().unwrap();
@@ -129,15 +139,18 @@ impl Memory for SemanticMemory {
             
             // 创建过滤条件
             let filter = FilterCondition::Eq {
-                field: "namespace".to_string(),
+                field_name: "namespace".to_string(),
                 value: Value::String(self.namespace.clone()),
             };
             
-            // 执行语义搜索
-            let results = self.vector_storage.search(
-                &embedding,
+            // 使用VectorStorage特征方法调用query
+            let results = crate::vector::VectorStorage::query(
+                &*self.vector_storage,
+                "default",
+                embedding,
                 semantic_config.top_k,
-                Some(filter)
+                Some(filter),
+                false
             ).await?;
             
             // 收集消息ID
@@ -233,8 +246,15 @@ mod tests {
                     before: 1,
                     after: 1,
                 }),
+                generate_summaries: true,
+                use_embeddings: true,
+                max_capacity: None,
+                max_results: Some(5),
+                relevance_threshold: None,
+                template: None,
             }),
             last_messages: None,
+            query: None,
         };
         
         // 创建Mock LLM
@@ -284,8 +304,15 @@ mod tests {
                     before: 1,
                     after: 1,
                 }),
+                generate_summaries: true,
+                use_embeddings: true,
+                max_capacity: None,
+                max_results: Some(5),
+                relevance_threshold: None,
+                template: None,
             }),
             last_messages: None,
+            query: None,
         };
         
         // 创建Mock LLM

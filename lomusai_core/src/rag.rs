@@ -3,9 +3,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde_json::Value;
 use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
 
 use crate::error::Result;
-use crate::vector::Document;
+use crate::vector::VectorStorage;
 
 /// 文档来源类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,7 +25,7 @@ pub struct QueryResult {
     /// 原始查询文本
     pub query: String,
     /// 检索到的文档
-    pub documents: Vec<Document>,
+    pub documents: Vec<crate::vector::Document>,
     /// 相似度分数
     pub scores: Option<Vec<f32>>,
     /// 上下文
@@ -56,7 +57,7 @@ pub struct BasicRagPipeline {
     /// 管道描述
     description: Option<String>,
     /// 向量存储
-    vector_store: Arc<tokio::sync::Mutex<crate::vector::MemoryVectorStore>>,
+    vector_store: Arc<tokio::sync::Mutex<crate::vector::MemoryVectorStorage>>,
     /// 嵌入生成器
     embedding_fn: Arc<dyn Fn(&str) -> Result<Vec<f32>> + Send + Sync>,
 }
@@ -70,7 +71,7 @@ impl BasicRagPipeline {
         Self {
             name: name.into(),
             description: None,
-            vector_store: Arc::new(tokio::sync::Mutex::new(crate::vector::MemoryVectorStore::new())),
+            vector_store: Arc::new(tokio::sync::Mutex::new(crate::vector::MemoryVectorStorage::new(1536, None))),
             embedding_fn: Arc::new(embedding_fn),
         }
     }
@@ -86,15 +87,29 @@ impl BasicRagPipeline {
         let documents = split_text_into_documents(text);
         let mut count = 0;
         
-        let mut store = self.vector_store.lock().await;
-        
         for mut doc in documents {
             // 生成嵌入
             let embedding = (self.embedding_fn)(&doc.content)?;
-            doc.add_embedding(embedding);
+            doc.embedding = embedding;
             
-            // 添加到向量存储
-            store.add_document(doc);
+            // 准备元数据
+            let metadata = vec![HashMap::from([
+                ("content".to_string(), Value::String(doc.content.clone()))
+            ])];
+            
+            // 获取锁后调用upsert
+            {
+                let store = self.vector_store.lock().await;
+                // 使用完全限定路径
+                <dyn VectorStorage>::upsert(
+                    &*store,
+                    "default", 
+                    vec![doc.embedding.clone()],
+                    Some(vec![doc.id.clone()]), 
+                    Some(metadata)
+                ).await?;
+            }
+            
             count += 1;
         }
         
@@ -145,13 +160,35 @@ impl RagPipeline for BasicRagPipeline {
         // 生成查询嵌入
         let query_embedding = (self.embedding_fn)(query)?;
         
-        // 使用向量存储搜索
-        let store = self.vector_store.lock().await;
-        let results = store.search_by_vector(&query_embedding, top_k);
+        // 使用向量存储搜索 - 从锁中获取数据
+        let vector_results = {
+            let store = self.vector_store.lock().await;
+            // 使用完全限定路径
+            <dyn VectorStorage>::query(
+                &*store,
+                "default", 
+                query_embedding, 
+                top_k, 
+                None, 
+                true
+            ).await?
+        };
         
         // 提取文档和分数
-        let documents: Vec<Document> = results.iter().map(|(doc, _)| doc.clone()).collect();
-        let scores: Vec<f32> = results.iter().map(|(_, score)| *score).collect();
+        let documents: Vec<crate::vector::Document> = vector_results.iter().map(|result| {
+            let mut doc = crate::vector::Document::new(result.id.clone(), "");
+            if let Some(metadata) = &result.metadata {
+                if let Some(content) = metadata.get("content").and_then(|v| v.as_str()) {
+                    doc.content = content.to_string();
+                }
+            }
+            if let Some(vec) = &result.vector {
+                doc.embedding = vec.clone();
+            }
+            doc
+        }).collect();
+        
+        let scores = vector_results.iter().map(|result| result.score).collect();
         
         // 构建上下文
         let context = documents.iter()
@@ -178,14 +215,14 @@ impl RagPipeline for BasicRagPipeline {
 }
 
 /// 将文本分割成多个文档
-fn split_text_into_documents(text: &str) -> Vec<Document> {
+fn split_text_into_documents(text: &str) -> Vec<crate::vector::Document> {
     // 简单实现，按段落分割
     let paragraphs: Vec<&str> = text.split("\n\n").collect();
     
     paragraphs.iter().enumerate()
         .filter(|(_, p)| !p.trim().is_empty())
         .map(|(i, p)| {
-            Document::new(
+            crate::vector::Document::new(
                 format!("doc_{}", i),
                 p.trim().to_string()
             )

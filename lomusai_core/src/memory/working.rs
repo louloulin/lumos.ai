@@ -115,15 +115,19 @@ impl BasicWorkingMemory {
     
     /// 从模板创建工作内存
     pub fn from_template(config: WorkingMemoryConfig, template: &str) -> Result<Self> {
-        let mut memory = Self::new(config);
+        let memory = Self::new(config);
         
         // 尝试解析模板
         match serde_json::from_str::<Value>(template) {
             Ok(template_value) => {
                 if let Value::Object(_) = &template_value {
-                    let mut content = memory.content.write().unwrap();
-                    content.content = template_value;
-                    content.updated_at = chrono::Utc::now();
+                    // 在独立的作用域内使用锁，确保锁在返回memory前被释放
+                    {
+                        let mut content = memory.content.write().unwrap();
+                        content.content = template_value;
+                        content.updated_at = chrono::Utc::now();
+                    } // 锁在这里被释放
+                    
                     Ok(memory)
                 } else {
                     Err(Error::Parsing("模板必须是有效的JSON对象".to_string()))
@@ -145,7 +149,7 @@ impl WorkingMemory for BasicWorkingMemory {
         // 检查容量限制
         if let Some(max_capacity) = self.config.max_capacity {
             let size = serde_json::to_string(&content.content)
-                .map_err(|e| Error::Serialization(format!("无法序列化内容: {}", e)))?
+                .map_err(|e| Error::Json(e))?
                 .len();
             
             if size > max_capacity {

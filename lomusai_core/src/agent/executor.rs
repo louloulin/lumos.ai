@@ -694,13 +694,30 @@ impl AgentStructuredOutput for BasicAgent {
 #[async_trait]
 impl AgentVoiceSender for BasicAgent {
     async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>> {
-        // Get the voice provider
-        let voice = self.get_voice().ok_or_else(|| {
+        // 获取声音提供者
+        let voice_provider = self.get_voice().ok_or_else(|| {
             Error::Unsupported("No voice provider configured for this agent".to_string())
         })?;
         
-        // Use the provider to speak
-        voice.speak(text, options).await
+        // 使用声音提供者生成语音数据
+        let mut buffer = Vec::new();
+        
+        // 先生成完整的语音数据
+        let stream = voice_provider.speak(text, options).await?;
+        futures::pin_mut!(stream);
+        while let Some(chunk) = stream.next().await {
+            if let Ok(data) = chunk {
+                buffer.push(data);
+            }
+        }
+        
+        // 创建一个新的流，包含所有语音数据
+        // 这个流不依赖于voice_provider的生命周期
+        let output_stream = stream::iter(buffer)
+            .map(Ok)
+            .boxed();
+        
+        Ok(output_stream)
     }
 }
 
@@ -859,5 +876,50 @@ mod voice_tests {
         
         // 验证有数据返回
         assert!(!audio_data.is_empty());
+    }
+    
+    #[tokio::test]
+    async fn test_agent_voice_sender_speak() {
+        // 创建一个模拟LLM提供者
+        let mock_llm = Arc::new(MockLlmProvider::new(vec![
+            "Hello, this is a voice test".to_string(),
+        ]));
+        
+        // 创建Agent
+        let config = AgentConfig {
+            name: "TestAgent".to_string(),
+            instructions: "You are a test agent.".to_string(),
+            memory_config: None,
+            ..Default::default()
+        };
+        
+        let mut agent = BasicAgent::new(config, mock_llm);
+        
+        // 添加语音提供者
+        let voice = Arc::new(MockVoice::new());
+        agent.set_voice(voice);
+        
+        // 直接调用speak方法
+        let agent_voice_sender = &agent as &dyn AgentVoiceSender;
+        let result = agent_voice_sender.speak("Test direct voice call", &VoiceOptions::default()).await;
+        
+        // 验证返回结果
+        assert!(result.is_ok(), "speak方法应该返回Ok结果");
+        
+        if let Ok(stream) = result {
+            // 收集所有音频数据
+            let mut audio_data = Vec::new();
+            futures::pin_mut!(stream);
+            
+            while let Some(chunk_result) = stream.next().await {
+                if let Ok(chunk) = chunk_result {
+                    audio_data.push(chunk);
+                }
+            }
+            
+            // 验证有音频数据返回
+            assert!(!audio_data.is_empty(), "应该有音频数据返回");
+            println!("成功收集了 {} 段音频数据", audio_data.len());
+        }
     }
 } 

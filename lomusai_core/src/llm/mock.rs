@@ -96,16 +96,15 @@ impl LlmProvider for MockLlmProvider {
     }
     
     async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
-        let embeddings = self.embeddings.lock().unwrap();
+        let mut embeddings = self.embeddings.lock().unwrap();
         
         if embeddings.is_empty() {
             Err(Error::Unavailable("No embeddings available".to_string()))
         } else if embeddings.len() == 1 {
-            // If there's only one embedding, return it
+            // 如果只有一个嵌入向量，返回它但不删除
             Ok(embeddings[0].clone())
         } else {
-            // Return the first embedding and remove it
-            let mut embeddings = self.embeddings.lock().unwrap();
+            // 否则，删除并返回第一个嵌入向量
             Ok(embeddings.remove(0))
         }
     }

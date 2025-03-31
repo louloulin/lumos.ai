@@ -464,6 +464,12 @@ impl SemanticMemoryTrait for SemanticMemoryAdapter {
 mod tests {
     use super::*;
     use crate::llm::{Role, MockLlmProvider};
+    use tokio::time::{timeout, Duration};
+    
+    // 生成指定长度的测试向量
+    fn create_test_vector(seed: f32, length: usize) -> Vec<f32> {
+        (0..length).map(|i| seed + (i as f32 * 0.01)).collect()
+    }
     
     #[tokio::test]
     async fn test_semantic_memory_search() {
@@ -490,11 +496,11 @@ mod tests {
             query: Some("语义搜索是什么".to_string()),
         };
         
-        // 创建Mock LLM
+        // 创建Mock LLM - 提供足够的嵌入向量，维度为1536
         let mock_llm = Arc::new(MockLlmProvider::new_with_embeddings(vec![
-            vec![0.1, 0.2, 0.3], // 第一条消息的嵌入
-            vec![0.4, 0.5, 0.6], // 第二条消息的嵌入
-            vec![0.7, 0.8, 0.9], // 查询的嵌入
+            create_test_vector(0.1, 1536), // 第一条消息的嵌入
+            create_test_vector(0.4, 1536), // 第二条消息的嵌入
+            create_test_vector(0.7, 1536), // 查询的嵌入
         ]));
         
         // 创建语义内存
@@ -515,14 +521,21 @@ mod tests {
             name: None,
         };
         
-        semantic_memory.add(&message1).await.unwrap();
-        semantic_memory.add(&message2).await.unwrap();
+        // 使用超时机制执行异步操作
+        let result = timeout(Duration::from_secs(5), async {
+            semantic_memory.add(&message1).await.unwrap();
+            semantic_memory.add(&message2).await.unwrap();
+            
+            // 执行搜索
+            let options = SemanticSearchOptions::default();
+            let results = semantic_memory.search("语义搜索是什么", &options).await.unwrap();
+            
+            // 验证结果
+            assert!(!results.is_empty());
+            results
+        }).await;
         
-        // 执行搜索
-        let options = SemanticSearchOptions::default();
-        let results = semantic_memory.search("语义搜索是什么", &options).await.unwrap();
-        
-        // 验证结果
-        assert!(!results.is_empty());
+        // 确保测试在超时内完成
+        assert!(result.is_ok(), "测试超时");
     }
 } 

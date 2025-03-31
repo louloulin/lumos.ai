@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 use chrono;
+use tokio::time::{timeout, Duration};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
@@ -36,6 +37,8 @@ impl SemanticMemory {
     pub fn new(config: &MemoryConfig, llm: Arc<dyn LlmProvider>) -> Result<Self> {
         // 直接创建MemoryVectorStorage实例而非通过函数获取Box<dyn VectorStorage>
         let vector_storage = crate::vector::MemoryVectorStorage::new(1536, None);
+        let vector_storage = Arc::new(vector_storage);
+        
         let namespace = config.namespace.clone().unwrap_or_else(|| "default".to_string());
         
         let component_config = ComponentConfig {
@@ -47,10 +50,20 @@ impl SemanticMemory {
         Ok(Self {
             base: BaseComponent::new(component_config),
             llm,
-            vector_storage: Arc::new(vector_storage),
+            vector_storage,
             messages: Mutex::new(HashMap::new()),
             namespace,
         })
+    }
+    
+    /// 初始化向量存储索引
+    async fn init_vector_storage(&self) -> Result<()> {
+        // 检查索引是否存在，如果不存在则创建
+        let indexes = self.vector_storage.list_indexes().await.unwrap_or_default();
+        if !indexes.contains(&"default".to_string()) {
+            self.vector_storage.create_index("default", 1536, None).await?;
+        }
+        Ok(())
     }
     
     /// 转换消息为文本
@@ -76,6 +89,9 @@ impl SemanticMemory {
 #[async_trait]
 impl Memory for SemanticMemory {
     async fn store(&self, message: &Message) -> Result<()> {
+        // 确保索引已初始化
+        self.init_vector_storage().await?;
+        
         let message_id = Uuid::new_v4().to_string();
         let message_text = Self::message_to_text(message);
         
@@ -98,9 +114,8 @@ impl Memory for SemanticMemory {
             embedding,
         };
         
-        // 使用VectorStorage特征方法调用upsert
-        crate::vector::VectorStorage::upsert(
-            &*self.vector_storage,
+        // 直接调用实例方法，而不是通过trait
+        self.vector_storage.upsert(
             "default", 
             vec![doc.embedding.clone()],
             Some(vec![doc.id.clone()]), 
@@ -115,6 +130,9 @@ impl Memory for SemanticMemory {
     }
     
     async fn retrieve(&self, config: &MemoryConfig) -> Result<Vec<Message>> {
+        // 确保索引已初始化
+        self.init_vector_storage().await?;
+        
         // 使用最后消息
         if let Some(limit) = config.last_messages {
             let messages = self.messages.lock().unwrap();
@@ -134,7 +152,8 @@ impl Memory for SemanticMemory {
         
         // 使用语义回忆
         if let Some(semantic_config) = &config.semantic_recall {
-            let query = "最近的对话"; // 默认查询，实际使用时应从外部传入
+            // 使用config中的query或默认值
+            let query = config.query.as_deref().unwrap_or("最近的对话");
             let embedding = self.llm.get_embedding(query).await?;
             
             // 创建过滤条件
@@ -143,9 +162,8 @@ impl Memory for SemanticMemory {
                 value: Value::String(self.namespace.clone()),
             };
             
-            // 使用VectorStorage特征方法调用query
-            let results = crate::vector::VectorStorage::query(
-                &*self.vector_storage,
+            // 直接调用实例方法，而不是通过trait
+            let results = self.vector_storage.query(
                 "default",
                 embedding,
                 semantic_config.top_k,
@@ -230,7 +248,13 @@ pub fn create_semantic_memory<P: LlmProvider + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::MockLlmProvider;
+    use crate::llm::{Message, Role, MockLlmProvider};
+    use tokio::time::{timeout, Duration};
+    
+    // 生成指定长度的测试向量
+    fn create_test_vector(seed: f32, length: usize) -> Vec<f32> {
+        (0..length).map(|i| seed + (i as f32 * 0.01)).collect()
+    }
     
     #[tokio::test]
     async fn test_semantic_memory_store() {
@@ -257,17 +281,17 @@ mod tests {
             query: None,
         };
         
-        // 创建Mock LLM
+        // 创建Mock LLM，确保提供足够的嵌入向量，维度为1536
         let mock_llm = Arc::new(MockLlmProvider::new_with_embeddings(vec![
-            vec![0.1, 0.2, 0.3], // 第一条消息的嵌入
-            vec![0.4, 0.5, 0.6], // 第二条消息的嵌入
-            vec![0.7, 0.8, 0.9], // 查询的嵌入
+            create_test_vector(0.1, 1536), // 第一条消息的嵌入
+            create_test_vector(0.4, 1536), // 第二条消息的嵌入
+            create_test_vector(0.7, 1536), // 预留一个嵌入向量
         ]));
         
         // 创建语义内存
         let semantic_memory = SemanticMemory::new(&config, mock_llm).unwrap();
         
-        // 存储消息
+        // 创建测试消息
         let message1 = Message {
             role: Role::User,
             content: "你好，我想了解一下语义搜索".to_string(),
@@ -282,12 +306,18 @@ mod tests {
             name: None,
         };
         
-        semantic_memory.store(&message1).await.unwrap();
-        semantic_memory.store(&message2).await.unwrap();
+        // 使用超时机制执行测试
+        let result = timeout(Duration::from_secs(5), async {
+            semantic_memory.store(&message1).await.unwrap();
+            semantic_memory.store(&message2).await.unwrap();
+            
+            // 验证存储
+            let messages = semantic_memory.messages.lock().unwrap();
+            assert_eq!(messages.len(), 2);
+        }).await;
         
-        // 验证存储
-        let messages = semantic_memory.messages.lock().unwrap();
-        assert_eq!(messages.len(), 2);
+        // 确保测试在超时内完成
+        assert!(result.is_ok(), "测试超时");
     }
     
     #[tokio::test]
@@ -312,14 +342,15 @@ mod tests {
                 template: None,
             }),
             last_messages: None,
-            query: None,
+            query: Some("语义搜索是什么".to_string()), // 添加查询
         };
         
-        // 创建Mock LLM
+        // 创建Mock LLM，确保提供足够的嵌入向量，维度为1536
         let mock_llm = Arc::new(MockLlmProvider::new_with_embeddings(vec![
-            vec![0.1, 0.2, 0.3], // 第一条消息的嵌入
-            vec![0.4, 0.5, 0.6], // 第二条消息的嵌入
-            vec![0.7, 0.8, 0.9], // 查询的嵌入
+            create_test_vector(0.1, 1536), // 第一条消息的嵌入
+            create_test_vector(0.4, 1536), // 第二条消息的嵌入
+            create_test_vector(0.7, 1536), // 查询的嵌入
+            create_test_vector(0.9, 1536), // 额外预备的嵌入向量
         ]));
         
         // 创建语义内存
@@ -340,13 +371,20 @@ mod tests {
             name: None,
         };
         
-        semantic_memory.store(&message1).await.unwrap();
-        semantic_memory.store(&message2).await.unwrap();
+        // 使用超时机制执行测试
+        let result = timeout(Duration::from_secs(5), async {
+            semantic_memory.store(&message1).await.unwrap();
+            semantic_memory.store(&message2).await.unwrap();
+            
+            // 执行检索
+            let retrieved = semantic_memory.retrieve(&config).await.unwrap();
+            
+            // 验证结果
+            assert!(!retrieved.is_empty());
+            retrieved
+        }).await;
         
-        // 执行检索
-        let retrieved = semantic_memory.retrieve(&config).await.unwrap();
-        
-        // 验证结果
-        assert!(!retrieved.is_empty());
+        // 确保测试在超时内完成
+        assert!(result.is_ok(), "测试超时");
     }
 } 

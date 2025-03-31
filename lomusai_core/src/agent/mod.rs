@@ -28,7 +28,7 @@ pub fn create_basic_agent(
     instructions: impl Into<String>,
     llm: std::sync::Arc<dyn crate::llm::LlmProvider>,
 ) -> BasicAgent {
-    let config = AgentConfig {
+    let _config = AgentConfig {
         name: name.into(),
         instructions: instructions.into(),
         memory_config: None,
@@ -38,7 +38,7 @@ pub fn create_basic_agent(
         working_memory: None,
     };
     
-    BasicAgent::new(config, llm)
+    BasicAgent::new(_config, llm)
 }
 
 #[cfg(test)]

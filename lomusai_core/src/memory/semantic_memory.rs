@@ -399,7 +399,7 @@ impl SemanticMemoryTrait for SemanticMemoryAdapter {
         self.inner.store(message).await
     }
     
-    async fn search(&self, query: &str, options: &SemanticSearchOptions) -> Result<Vec<SemanticSearchResult>> {
+    async fn search(&self, _query: &str, options: &SemanticSearchOptions) -> Result<Vec<SemanticSearchResult>> {
         // 构建内存查询配置
         let config = crate::memory::MemoryConfig {
             enabled: true,

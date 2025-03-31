@@ -2,10 +2,15 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use lomusai_core::{
+    llm::{LlmOptions, LlmProvider},
+    Message, Role,
+};
+use std::sync::Mutex;
+use futures::stream::{self, BoxStream};
 
 use crate::error::{Error, Result};
 use crate::metrics::{Metric, MetricResult};
-use lomusai_core::llm::{LlmProvider, LlmOptions, Message, Role};
 
 /// LLM评估指标配置
 #[derive(Serialize, Deserialize)]

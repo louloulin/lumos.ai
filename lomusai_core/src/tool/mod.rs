@@ -3,7 +3,12 @@
 mod schema;
 mod tool;
 mod function;
+mod context;
 
-pub use schema::{ParameterSchema, ToolSchema, ToolExecutionOptions};
-pub use tool::Tool;
-pub use function::FunctionTool; 
+#[cfg(test)]
+mod tests;
+
+pub use schema::{ParameterSchema, ToolSchema, ToolExecutionOptions, SchemaFormat};
+pub use tool::{Tool, GenericTool};
+pub use function::FunctionTool;
+pub use context::ToolExecutionContext; 

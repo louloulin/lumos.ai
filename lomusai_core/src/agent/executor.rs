@@ -17,7 +17,7 @@ use crate::logger::{Component, Logger};
 use crate::llm::{LlmProvider, LlmOptions, Message, Role};
 use crate::memory::Memory;
 use crate::telemetry::TelemetrySink;
-use crate::tool::{Tool, ToolExecutionOptions};
+use crate::tool::{Tool, ToolExecutionOptions, ToolExecutionContext};
 use crate::agent::types::{
     AgentGenerateResult, 
     AgentGenerateOptions, 
@@ -120,7 +120,7 @@ impl BasicAgent {
         let mut descriptions = String::new();
         
         for tool in tools.values() {
-            descriptions.push_str(&format!("工具名称: {}\n", tool.name()));
+            descriptions.push_str(&format!("工具ID: {}\n", tool.id()));
             descriptions.push_str(&format!("描述: {}\n", tool.description()));
             
             // 添加工具参数描述
@@ -207,19 +207,19 @@ impl Agent for BasicAgent {
     }
     
     fn add_tool(&mut self, tool: Box<dyn Tool>) -> Result<()> {
-        let tool_name = tool.name().to_string();
+        let tool_id = tool.id().to_string();
         
         let mut tools = match self.tools.lock() {
             Ok(guard) => guard,
             Err(_) => return Err(Error::Lock("Could not lock tools".to_string())),
         };
         
-        if tools.contains_key(&tool_name) {
-            return Err(Error::AlreadyExists(format!("Tool '{}' already exists", tool_name)));
+        if tools.contains_key(&tool_id) {
+            return Err(Error::AlreadyExists(format!("Tool '{}' already exists", tool_id)));
         }
         
-        tools.insert(tool_name.clone(), tool);
-        self.logger().debug(&format!("Tool '{}' added to agent '{}'", tool_name, self.name), None);
+        tools.insert(tool_id.clone(), tool);
+        self.logger().debug(&format!("Tool '{}' added to agent '{}'", tool_id, self.name), None);
         
         Ok(())
     }
@@ -288,10 +288,18 @@ impl Agent for BasicAgent {
             tool // This will be moved out as tools guard is dropped at the end of this block
         }; // MutexGuard is dropped here
         
+        // Convert HashMap to JSON Value
+        let args_value = serde_json::to_value(&tool_call.arguments)
+            .map_err(|e| Error::Json(e))?;
+        
+        // Create execution context and options
+        let context = ToolExecutionContext::new()
+            .with_tool_call_id(tool_call.id.clone());
+        
         let options = ToolExecutionOptions::default();
         
         // Now we can safely await without holding the lock
-        tool_clone.execute(tool_call.arguments.clone(), &options).await
+        tool_clone.execute(args_value, context, &options).await
     }
     
     fn format_messages(&self, messages: &[Message], options: &AgentGenerateOptions) -> Vec<Message> {

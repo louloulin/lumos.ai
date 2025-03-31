@@ -97,22 +97,20 @@ mod tests {
     #[tokio::test]
     async fn test_agent_with_tool() {
         // Create an echo tool
-        let schema = ToolSchema {
-            parameters: vec![
-                ParameterSchema {
-                    name: "message".to_string(),
-                    description: "The message to echo".to_string(),
-                    r#type: "string".to_string(),
-                    required: true,
-                    properties: None,
-                    default: None,
-                },
-            ],
-        };
+        let schema = ToolSchema::new(vec![
+            ParameterSchema {
+                name: "message".to_string(),
+                description: "The message to echo".to_string(),
+                r#type: "string".to_string(),
+                required: true,
+                properties: None,
+                default: None,
+            },
+        ]);
         
         let echo_tool = FunctionTool::new(
-            "echo".to_string(),
-            "Echoes the input message".to_string(),
+            "echo",
+            "Echoes the input message",
             schema,
             |params| {
                 let message = params.get("message").and_then(|v| v.as_str()).unwrap_or("No message");

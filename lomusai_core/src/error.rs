@@ -87,4 +87,16 @@ pub enum Error {
     /// Constraint violations
     #[error("Constraint violation: {0}")]
     Constraint(String),
+    
+    /// Schema errors
+    #[error("Schema error: {0}")]
+    SchemaError(String),
+    
+    /// Validation errors
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+    
+    /// Invalid parameters
+    #[error("Invalid parameters: {0}")]
+    InvalidParams(String),
 } 

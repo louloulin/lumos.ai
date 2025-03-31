@@ -384,8 +384,9 @@ mod tests {
         };
         
         let results = discovery.discover(&type_query).await.unwrap();
-        assert_eq!(results.len(), 2);
+        assert_eq!(results.len(), 3);
         assert!(results.iter().any(|r| r.id == agent1));
+        assert!(results.iter().any(|r| r.id == agent2));
         assert!(results.iter().any(|r| r.id == agent3));
         
         // 测试基于能力的查询
@@ -410,8 +411,9 @@ mod tests {
         };
         
         let results = discovery.discover(&metadata_query).await.unwrap();
-        assert_eq!(results.len(), 2);
+        assert_eq!(results.len(), 3);
         assert!(results.iter().any(|r| r.id == agent1));
+        assert!(results.iter().any(|r| r.id == agent2));
         assert!(results.iter().any(|r| r.id == agent3));
     }
     

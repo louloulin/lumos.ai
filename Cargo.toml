@@ -5,6 +5,7 @@ members = [
     "lomusai_rag",
     "lomusai_network",
     "lumos_macro",
+    "lomusai_examples"
 ]
 resolver = "2"
 
@@ -38,6 +39,8 @@ anyhow = "1.0"
 tracing = "0.1"
 reqwest = { version = "0.11.23", features = ["json"] }
 axum = "0.7"
+redis = { version = "0.23.0", features = ["tokio-comp"] }
+sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "sqlite", "json"] }
 
 # 工具库
 uuid = { version = "1.6", features = ["v4", "serde"] }
@@ -50,9 +53,6 @@ tokio-test = "0.4"
 mockall = "0.11"
 mockito = "1.2"
 tempfile = "3.8"
-
-redis = { version = "0.23.0", features = ["tokio-comp"] }
-sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "sqlite", "json"] }
 
 [profile.dev]
 opt-level = 0

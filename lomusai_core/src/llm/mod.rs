@@ -15,4 +15,4 @@ pub use provider::LlmProvider;
 pub use mock::MockLlmProvider;
 pub use openai::OpenAiProvider;
 pub use anthropic::AnthropicProvider;
-pub use qwen::QwenProvider; 
+pub use qwen::{QwenProvider, QwenApiType}; 

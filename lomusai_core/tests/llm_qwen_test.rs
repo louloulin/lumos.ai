@@ -1,5 +1,5 @@
 use std::env;
-use lomusai_core::llm::{LlmOptions, QwenProvider, LlmProvider};
+use lomusai_core::llm::{LlmOptions, QwenProvider, LlmProvider, QwenApiType};
 use lomusai_core::llm::types::{user_message, system_message, assistant_message};
 use serde_json::json;
 
@@ -70,7 +70,12 @@ async fn test_qwen_openai_compatible() {
     let api_key = env::var("QWEN_OPENAI_KEY").unwrap_or_else(|_| "EMPTY".to_string());
 
     // Create provider with OpenAI-compatible API
-    let provider = QwenProvider::new_openai_compatible(api_key, "qwen2.5-7b-instruct", server_url);
+    let provider = QwenProvider::new_with_api_type(
+        api_key,
+        "qwen2.5-7b-instruct",
+        server_url,
+        QwenApiType::OpenAICompatible,
+    );
     
     // Test basic prompt
     let options = LlmOptions::default()
@@ -175,7 +180,12 @@ async fn test_qwen_function_calling_openai() {
     let api_key = env::var("QWEN_OPENAI_KEY").unwrap_or_else(|_| "EMPTY".to_string());
 
     // Create provider with OpenAI-compatible API
-    let provider = QwenProvider::new_openai_compatible(api_key, "qwen2.5-7b-instruct", server_url);
+    let provider = QwenProvider::new_with_api_type(
+        api_key,
+        "qwen2.5-7b-instruct",
+        server_url,
+        QwenApiType::OpenAICompatible,
+    );
     
     // Define a weather tool (OpenAI-compatible format)
     let tools = json!([

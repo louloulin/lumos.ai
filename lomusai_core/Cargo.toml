@@ -19,7 +19,7 @@ macros = ["lumos_macro"]
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-futures = { workspace = true }
+futures = { workspace = true, features = ["std"] }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
@@ -32,6 +32,7 @@ float-cmp = "0.9"
 rand = "0.8"
 regex = "1.10.2"
 lumos_macro = { path = "../lumos_macro", optional = true }
+async-openai = "0.18.3"
 
 [dev-dependencies]
 tokio-test = "0.4"

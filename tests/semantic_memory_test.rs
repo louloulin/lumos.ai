@@ -2,7 +2,7 @@ use std::sync::Arc;
 use lomusai_core::{
     memory::{
         MemoryConfig, MessageRange, SemanticRecallConfig,
-        semantic_memory::{SemanticMemory, SemanticSearchOptions, SemanticMemoryTrait, create_semantic_memory}
+        semantic_memory::{SemanticSearchOptions, create_semantic_memory}
     },
     llm::{Message, Role, MockLlmProvider},
     Result
@@ -15,6 +15,7 @@ async fn test_semantic_memory() -> Result<()> {
         enabled: true,
         namespace: Some("test_semantic".to_string()),
         store_id: None,
+        query: None,
         working_memory: None,
         semantic_recall: Some(SemanticRecallConfig {
             top_k: 5,
@@ -22,17 +23,30 @@ async fn test_semantic_memory() -> Result<()> {
                 before: 1,
                 after: 1,
             }),
+            generate_summaries: false,
+            use_embeddings: true,
+            max_capacity: Some(1000),
+            max_results: Some(10),
+            relevance_threshold: Some(0.5),
+            template: None,
         }),
         last_messages: None,
     };
     
-    // 创建测试嵌入向量集
-    let embeddings = vec![
-        vec![0.1, 0.2, 0.3],  // 第一条消息嵌入
-        vec![0.4, 0.5, 0.6],  // 第二条消息嵌入
-        vec![0.7, 0.8, 0.9],  // 第三条消息嵌入
-        vec![0.9, 0.8, 0.7],  // 查询嵌入
-    ];
+    // 创建大小为1536维的向量测试集
+    // OpenAI的嵌入向量通常是1536维的
+    let dimension = 1536;
+    let mut embeddings = Vec::new();
+    
+    // 生成四个向量
+    for i in 0..4 {
+        let mut vec = Vec::with_capacity(dimension);
+        for j in 0..dimension {
+            // 生成一些简单的向量值作为测试
+            vec.push(((i * dimension + j) as f32) / (dimension as f32 * 4.0));
+        }
+        embeddings.push(vec);
+    }
     
     // 创建Mock LLM Provider
     let mock_llm = Arc::new(MockLlmProvider::new_with_embeddings(embeddings));

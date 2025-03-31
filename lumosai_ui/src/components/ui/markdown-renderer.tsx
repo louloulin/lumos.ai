@@ -3,7 +3,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
 
-import { CopyButton } from '../../components/ui/copy-button';
+import { CopyButton } from './copy-button';
 import { cn } from '../../lib/utils';
 
 import { highlight } from './syntax-highlighter';

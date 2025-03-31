@@ -78,7 +78,7 @@ pub trait MessageRouter: Send + Sync {
     async fn get_rules(&self) -> Result<Vec<RoutingRule>>;
     
     /// 设置网络拓扑
-    fn set_topology(&self, topology: Arc<dyn NetworkTopology>);
+    async fn set_topology(&self, topology: Arc<dyn NetworkTopology>);
     
     /// 获取已注册的Agent数量
     async fn agent_count(&self) -> usize;
@@ -214,8 +214,8 @@ impl MessageRouter for DefaultMessageRouter {
         Ok(rules.clone())
     }
     
-    fn set_topology(&self, topology: Arc<dyn NetworkTopology>) {
-        let mut topo = self.topology.blocking_write();
+    async fn set_topology(&self, topology: Arc<dyn NetworkTopology>) {
+        let mut topo = self.topology.write().await;
         *topo = Some(topology);
     }
     

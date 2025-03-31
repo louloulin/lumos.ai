@@ -15,7 +15,7 @@ use crate::error::{Error, Result};
 use crate::types::{AgentId, AgentLocation};
 
 /// 网络拓扑类型
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TopologyType {
     /// 全连接网络
     FullyConnected,
@@ -151,11 +151,10 @@ impl GraphTopology {
 impl NetworkTopology for GraphTopology {
     async fn add_node(&self, id: AgentId, attrs: Option<NodeAttributes>) -> Result<()> {
         // 创建节点属性
-        let id_copy = id.clone(); // Clone the ID first
         let node_attrs = match attrs {
             Some(a) => a,
             None => NodeAttributes {
-                id: id_copy, // Use the clone
+                id: id.clone(),
                 location: None,
                 label: None,
             },
@@ -163,7 +162,7 @@ impl NetworkTopology for GraphTopology {
         
         // 添加节点到图
         let mut graph = self.graph.write();
-        let node_idx = graph.add_node(node_attrs);
+        let node_idx = graph.add_node(node_attrs.clone());
         
         // 更新索引映射
         let mut indices = self.node_indices.write();
@@ -295,7 +294,8 @@ impl NetworkTopology for GraphTopology {
         
         // 使用Dijkstra算法计算最短路径
         let path = dijkstra(&*graph, from_idx, Some(to_idx), |e| {
-            graph.edge_weight(e).unwrap().weight
+            let edge_idx = graph.find_edge(e.source(), e.target()).unwrap();
+            graph.edge_weight(edge_idx).unwrap().weight
         });
         
         // 没有找到路径

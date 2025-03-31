@@ -1470,6 +1470,7 @@ dependencies = [
  "async-trait",
  "dashmap",
  "futures",
+ "log",
  "lomusai_core",
  "parking_lot",
  "petgraph",

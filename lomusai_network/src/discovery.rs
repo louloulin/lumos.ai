@@ -8,6 +8,8 @@ use dashmap::DashMap;
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use tokio::time::interval;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use futures::future::{ready, FutureExt};
 
 use crate::error::{Error, Result};
 use crate::types::{AgentId, AgentCapability, AgentType, AgentLocation};
@@ -134,7 +136,7 @@ pub trait ServiceDiscovery: Send + Sync {
     async fn get_all(&self) -> Result<Vec<ServiceRegistration>>;
     
     /// 设置服务变化的监听函数
-    fn set_listener(&self, listener: Box<dyn Fn(ServiceEvent) + Send + Sync>);
+    async fn set_listener(&self, listener: Box<dyn Fn(ServiceEvent) + Send + Sync>);
 }
 
 /// 内存中的服务发现实现
@@ -143,6 +145,12 @@ pub struct InMemoryServiceDiscovery {
     registrations: DashMap<AgentId, ServiceRegistration>,
     /// 事件监听器
     listeners: RwLock<Vec<Box<dyn Fn(ServiceEvent) + Send + Sync>>>,
+    /// 注册回调
+    register_callbacks: RwLock<Vec<Box<dyn Fn(ServiceEvent) + Send + Sync>>>,
+    /// 更新回调
+    update_callbacks: RwLock<Vec<Box<dyn Fn(ServiceEvent) + Send + Sync>>>,
+    /// 注销回调
+    deregister_callbacks: RwLock<Vec<Box<dyn Fn(ServiceEvent) + Send + Sync>>>,
 }
 
 impl InMemoryServiceDiscovery {
@@ -151,6 +159,9 @@ impl InMemoryServiceDiscovery {
         let discovery = Arc::new(Self {
             registrations: DashMap::new(),
             listeners: RwLock::new(Vec::new()),
+            register_callbacks: RwLock::new(Vec::new()),
+            update_callbacks: RwLock::new(Vec::new()),
+            deregister_callbacks: RwLock::new(Vec::new()),
         });
         
         // 启动过期检查
@@ -185,7 +196,7 @@ impl InMemoryServiceDiscovery {
         });
     }
     
-    /// 触发事件通知
+    /// 通知所有监听器
     async fn notify_listeners(&self, event: ServiceEvent) {
         let listeners = self.listeners.read().await;
         for listener in listeners.iter() {
@@ -301,8 +312,8 @@ impl ServiceDiscovery for InMemoryServiceDiscovery {
         Ok(results)
     }
     
-    fn set_listener(&self, listener: Box<dyn Fn(ServiceEvent) + Send + Sync>) {
-        let mut listeners = self.listeners.blocking_write();
+    async fn set_listener(&self, listener: Box<dyn Fn(ServiceEvent) + Send + Sync>) {
+        let mut listeners = self.listeners.write().await;
         listeners.push(listener);
     }
 }
@@ -349,9 +360,11 @@ mod tests {
             .with_metadata("region", "us-west");
         
         let agent2 = AgentId::from_str("agent2");
-        let reg2 = ServiceRegistration::new(agent2.clone(), AgentType::Expert)
-            .with_capability(AgentCapability::new("analytics", "Analytics capability"))
-            .with_metadata("region", "us-east");
+        let reg2 = ServiceRegistration::new(agent2.clone(), AgentType::Regular)
+            .with_capability(AgentCapability::new("search", "Search capability"))
+            .with_capability(AgentCapability::new("compute", "Compute capability"))
+            .with_metadata("region", "us-west")
+            .with_ttl(60);
         
         let agent3 = AgentId::from_str("agent3");
         let reg3 = ServiceRegistration::new(agent3.clone(), AgentType::Regular)
@@ -402,6 +415,7 @@ mod tests {
         assert!(results.iter().any(|r| r.id == agent3));
     }
     
+    /// 测试服务事件
     #[tokio::test]
     async fn test_service_events() {
         let discovery = InMemoryServiceDiscovery::new();
@@ -430,7 +444,7 @@ mod tests {
                     },
                     _ => {}
                 }
-            }));
+            })).await;
         }
         
         // 测试注册事件
@@ -441,7 +455,7 @@ mod tests {
         assert_eq!(registered_count.load(Ordering::SeqCst), 1);
         
         // 测试更新事件
-        let updated_registration = ServiceRegistration::new(agent_id.clone(), AgentType::Expert);
+        let updated_registration = ServiceRegistration::new(agent_id.clone(), AgentType::Regular);
         discovery.register(updated_registration).await.unwrap();
         assert_eq!(updated_count.load(Ordering::SeqCst), 1);
         

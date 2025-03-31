@@ -25,9 +25,9 @@ pub use router::MessageRouter;
 pub use topology::{NetworkTopology, TopologyType};
 pub use discovery::ServiceDiscovery;
 
-/// 创建新的Agent网络，配置默认路由器
-pub fn create_agent_network() -> AgentNetwork {
-    network::AgentNetwork::new()
+/// 创建Agent网络
+pub async fn create_agent_network() -> AgentNetwork {
+    network::AgentNetwork::new().await
 }
 
 /// 库版本

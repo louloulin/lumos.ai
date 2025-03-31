@@ -1,14 +1,13 @@
 use lomusai_core::Result;
-use lomusai_core::llm::{LlmAdapter, LlmOptions, LlmProvider};
+use lomusai_core::llm::{LlmOptions, LlmProvider};
 use lomusai_core::{Message, Role};
-use lumos_macro::{tools, agent, LlmAdapter};
+use lumos_macro::tools;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use async_trait::async_trait;
 
 // 定义一个简单的LLM适配器用于示例
-#[derive(LlmAdapter)]
 struct MockLlmAdapter {
     responses: HashMap<String, String>,
 }
@@ -54,7 +53,7 @@ impl LlmProvider for MockLlmAdapter {
         Ok(Box::new(std::iter::once(Ok("模拟流式响应".to_string()))))
     }
     
-    async fn get_embedding(&self, _text: &str, _options: &LlmOptions) -> Result<Vec<f32>> {
+    async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
         Ok(vec![0.1, 0.2, 0.3])
     }
 }
@@ -148,8 +147,11 @@ async fn main() -> Result<()> {
         }
     }
     
+    // 使用tools!宏生成的calculator和weather工具
+    let llm_provider = Arc::new(MockLlmAdapter::new());
+    
     // 使用agent!宏定义代理
-    let agent = agent! {
+    let agent = lumos_macro::agent! {
         name: "assistant",
         instructions: "你是一个通用助手，可以进行数学计算和查询天气信息。",
         
@@ -186,7 +188,8 @@ async fn main() -> Result<()> {
         "b": 7.2
     });
     
-    let tool_result: Value = calculator().execute(calc_params, &Default::default()).await?;
+    let calculator_tool = calculator();
+    let tool_result: Value = calculator_tool.execute(calc_params, &Default::default()).await?;
     println!("计算结果: {}", tool_result["result"]);
     
     Ok(())

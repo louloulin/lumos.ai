@@ -7,9 +7,9 @@ use async_trait::async_trait;
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
 use crate::logger::{Component, LogLevel};
-use crate::memory::{SemanticRecallConfig, Memory, MessageRange};
+use crate::memory::{SemanticRecallConfig, Memory};
 use crate::llm::{Message, LlmProvider, LlmOptions, Role};
-use crate::vector::{Document, FilterCondition};
+use crate::vector::FilterCondition;
 
 /// 语义记忆条目
 #[derive(Debug, Clone, Serialize, Deserialize)]

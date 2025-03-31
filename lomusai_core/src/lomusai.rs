@@ -5,13 +5,13 @@ use std::sync::{Arc, Mutex};
 
 use serde::{Serialize, Deserialize};
 
-use crate::agent::{Agent, AgentConfig};
-use crate::base::{Base, ComponentConfig};
+use crate::agent::Agent;
+use crate::base::Base;
 use crate::error::{Error, Result};
 use crate::logger::{Component, Logger, LogLevel, create_logger, create_noop_logger};
 use crate::memory::Memory;
 use crate::storage::Storage;
-use crate::telemetry::{Event, TelemetrySink};
+use crate::telemetry::TelemetrySink;
 use crate::tool::Tool;
 use crate::vector::VectorStorage;
 use crate::workflow::basic::Workflow;

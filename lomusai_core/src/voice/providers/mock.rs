@@ -1,20 +1,18 @@
 //! 模拟语音提供者，用于测试和开发
 
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use futures::{stream, StreamExt};
 use futures::stream::BoxStream;
 use tokio::io::AsyncRead;
-use serde_json::Value;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::logger::{Component, Logger};
 use crate::telemetry::TelemetrySink;
 use crate::voice::{
     VoiceProvider, VoiceListener, VoiceSender, VoiceListenerExt, VoiceSenderExt, 
-    VoiceOptions, ListenOptions, VoiceEvent
+    VoiceOptions, ListenOptions
 };
 
 /// 模拟语音提供者，用于测试
@@ -23,6 +21,12 @@ pub struct MockVoice {
     base: BaseComponent,
     /// 模拟回复
     responses: Mutex<Vec<String>>,
+}
+
+impl Default for MockVoice {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MockVoice {

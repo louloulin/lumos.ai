@@ -60,10 +60,10 @@ impl StepCondition {
     pub fn is_satisfied(&self, results: &HashMap<String, StepResult>) -> bool {
         match self {
             StepCondition::StepCompleted(step) => {
-                results.get(step).map_or(false, |result| result.success)
+                results.get(step).is_some_and(|result| result.success)
             },
             StepCondition::StepFailed(step) => {
-                results.get(step).map_or(false, |result| !result.success)
+                results.get(step).is_some_and(|result| !result.success)
             },
             StepCondition::OutputContains { step, key, value } => {
                 if let Some(result) = results.get(step) {

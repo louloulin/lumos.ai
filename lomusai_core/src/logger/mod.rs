@@ -3,16 +3,17 @@
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use crate::types::Metadata;
-use async_trait::async_trait;
 
 /// Log level enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum LogLevel {
     /// Trace level - detailed information for debugging
     Trace = 0,
     /// Debug level - detailed information for debugging
     Debug = 1,
     /// Info level - general information about program execution
+    #[default]
     Info = 2,
     /// Warn level - potentially harmful situations
     Warn = 3,
@@ -20,16 +21,13 @@ pub enum LogLevel {
     Error = 4,
 }
 
-impl Default for LogLevel {
-    fn default() -> Self {
-        LogLevel::Info
-    }
-}
 
 /// Component identifiers for logging
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum Component {
     /// LLM component
+    #[default]
     Llm,
     /// Agent component
     Agent,
@@ -51,11 +49,6 @@ pub enum Component {
     Voice,
 }
 
-impl Default for Component {
-    fn default() -> Self {
-        Component::Llm
-    }
-}
 
 impl std::fmt::Display for Component {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

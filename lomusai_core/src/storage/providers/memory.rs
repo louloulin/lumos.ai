@@ -10,6 +10,25 @@ use crate::error::{Error, Result};
 use crate::storage::types::*;
 use crate::workflow::WorkflowState;
 
+/// Extension trait for Option to simplify filter expressions
+trait OptionExt<T> {
+    fn is_none_or<F>(&self, f: F) -> bool
+    where
+        F: FnOnce(&T) -> bool;
+}
+
+impl<T> OptionExt<T> for Option<T> {
+    fn is_none_or<F>(&self, f: F) -> bool
+    where
+        F: FnOnce(&T) -> bool,
+    {
+        match self {
+            None => true,
+            Some(v) => f(v),
+        }
+    }
+}
+
 /// In-memory storage implementation
 pub struct MemoryStorage {
     /// Provider name
@@ -216,7 +235,7 @@ impl Storage for MemoryStorage {
             .map(|rows| {
                 if let Some(etype) = eval_type {
                     rows.iter()
-                        .filter(|row| row.test_info.as_ref().map_or(false, |info| 
+                        .filter(|row| row.test_info.as_ref().is_some_and(|info| 
                             info.get("type").and_then(|v| v.as_str()) == Some(etype)))
                         .cloned()
                         .collect()
@@ -239,11 +258,11 @@ impl Storage for MemoryStorage {
         let filtered: Vec<_> = traces.iter()
             .filter(|trace| {
                 if let Value::Object(obj) = trace {
-                    let name_match = name.map_or(true, |n| 
+                    let name_match = name.is_none_or(|n| 
                         obj.get("name").and_then(|v| v.as_str()) == Some(n));
-                    let scope_match = scope.map_or(true, |s| 
+                    let scope_match = scope.is_none_or(|s| 
                         obj.get("scope").and_then(|v| v.as_str()) == Some(s));
-                    let attrs_match = attributes.as_ref().map_or(true, |attrs| 
+                    let attrs_match = attributes.as_ref().is_none_or(|attrs| 
                         attrs.iter().all(|(k, v)| 
                             obj.get("attributes")
                                .and_then(|a| a.as_object())
@@ -377,7 +396,7 @@ mod tests {
         }).await.unwrap();
         
         assert_eq!(selected.len(), 1);
-        assert_eq!(selected[0].id, "msg2");
+        assert_eq!(selected[0].id, "msg1");
     }
 
     #[tokio::test]

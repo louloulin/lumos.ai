@@ -150,7 +150,7 @@ impl Default for VectorStorageConfig {
 
 /// Create a vector storage instance from configuration
 pub fn create_vector_storage(config: Option<VectorStorageConfig>) -> Result<Box<dyn VectorStorage>> {
-    let config = config.unwrap_or_else(|| VectorStorageConfig::default());
+    let config = config.unwrap_or_else(VectorStorageConfig::default);
     
     match config {
         VectorStorageConfig::Memory { dimensions, capacity } => {

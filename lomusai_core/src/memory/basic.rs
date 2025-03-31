@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use std::sync::Arc;
-use serde_json::Value;
 
 use crate::error::Result;
 use crate::llm::Message;
@@ -35,7 +34,7 @@ impl Memory for BasicMemory {
         if let Some(ref working_memory) = self.working_memory {
             // 将消息序列化为JSON值
             let message_value = serde_json::to_value(message)
-                .map_err(|e| crate::error::Error::Json(e))?;
+                .map_err(crate::error::Error::Json)?;
                 
             working_memory.set_value("last_message", message_value).await?;
         }

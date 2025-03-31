@@ -1,4 +1,4 @@
-use crate::{Result, Error};
+use crate::Result;
 use crate::agent::Agent;
 use crate::tool::Tool;
 use std::collections::HashMap;

@@ -639,7 +639,7 @@ impl WorkflowBuilder {
     pub fn add_dependency(mut self, from_step_id: &str, to_step_id: &str) -> Self {
         self.dependencies
             .entry(from_step_id.to_string())
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(to_step_id.to_string());
         self
     }

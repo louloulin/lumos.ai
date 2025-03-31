@@ -5,18 +5,16 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 use chrono;
-use tokio::time::{timeout, Duration};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
 use crate::logger::{Component, LogLevel};
-use crate::llm::{Message, LlmProvider, Role};
-use crate::memory::{Memory, SemanticRecallConfig, MemoryConfig, MessageRange};
-use crate::vector::{VectorStorage, Document, QueryResult, FilterCondition, create_vector_storage};
+use crate::llm::{Message, LlmProvider};
+use crate::memory::{Memory, MemoryConfig, MessageRange};
+use crate::vector::{VectorStorage, Document, FilterCondition};
 
 /// 语义搜索内存实现
 pub struct SemanticMemory {
@@ -68,7 +66,7 @@ impl SemanticMemory {
     
     /// 转换消息为文本
     fn message_to_text(message: &Message) -> String {
-        format!("{}: {}", message.role.to_string(), message.content)
+        format!("{}: {}", message.role, message.content)
     }
     
     /// 获取上下文窗口消息
@@ -83,6 +81,29 @@ impl SemanticMemory {
         let end = std::cmp::min(target_index + window.after + 1, message_ids.len());
         
         message_ids[start..end].to_vec()
+    }
+    
+    /// 获取语义内存统计信息
+    pub async fn get_stats(&self) -> Result<HashMap<String, serde_json::Value>> {
+        let mut stats = HashMap::new();
+        
+        // 获取索引统计信息
+        if let Ok(index_stats) = self.vector_storage.describe_index("default").await {
+            stats.insert("vector_dimension".to_string(), serde_json::json!(index_stats.dimension));
+            stats.insert("vector_count".to_string(), serde_json::json!(index_stats.count));
+            stats.insert("similarity_metric".to_string(), serde_json::json!(format!("{:?}", index_stats.metric)));
+        }
+        
+        // 获取内存中消息数量
+        let message_count = self.messages.lock()
+            .map(|messages| messages.len())
+            .unwrap_or(0);
+        stats.insert("message_count".to_string(), serde_json::json!(message_count));
+        
+        // 获取命名空间
+        stats.insert("namespace".to_string(), serde_json::json!(self.namespace));
+        
+        Ok(stats)
     }
 }
 
@@ -137,8 +158,11 @@ impl Memory for SemanticMemory {
         if let Some(limit) = config.last_messages {
             let messages = self.messages.lock().unwrap();
             let mut ids: Vec<String> = messages.keys().cloned().collect();
-            ids.sort(); // 假设ID包含时间戳或按序插入
             
+            // 按时间戳排序（假设ID包含时间戳或按序插入）
+            ids.sort(); 
+            
+            // 取最后的limit条消息
             let ids = if ids.len() > limit {
                 ids[ids.len() - limit..].to_vec()
             } else {
@@ -154,7 +178,10 @@ impl Memory for SemanticMemory {
         if let Some(semantic_config) = &config.semantic_recall {
             // 使用config中的query或默认值
             let query = config.query.as_deref().unwrap_or("最近的对话");
-            let embedding = self.llm.get_embedding(query).await?;
+            let embedding = match self.llm.get_embedding(query).await {
+                Ok(embedding) => embedding,
+                Err(_) => return Err(Error::Unavailable(format!("获取嵌入向量失败: {}", query))),
+            };
             
             // 创建过滤条件
             let filter = FilterCondition::Eq {
@@ -162,41 +189,94 @@ impl Memory for SemanticMemory {
                 value: Value::String(self.namespace.clone()),
             };
             
-            // 直接调用实例方法，而不是通过trait
-            let results = self.vector_storage.query(
+            // 查询向量数据库
+            let results = match self.vector_storage.query(
                 "default",
                 embedding,
                 semantic_config.top_k,
                 Some(filter),
                 false
-            ).await?;
+            ).await {
+                Ok(results) => results,
+                Err(_) => return Err(Error::Storage("查询语义向量失败".to_string())),
+            };
             
             // 收集消息ID
             let message_ids: Vec<String> = results.iter()
                 .map(|result| result.id.clone())
                 .collect();
             
+            if message_ids.is_empty() {
+                return Ok(Vec::new());
+            }
+            
             // 获取消息
             let messages = self.messages.lock().unwrap();
+            
+            // 使用集合进行去重，避免返回重复消息
+            let mut retrieved_message_ids = std::collections::HashSet::new();
             let mut retrieved_messages = Vec::new();
             
             // 应用消息窗口
             if let Some(window) = &semantic_config.message_range {
-                for (i, id) in message_ids.iter().enumerate() {
+                for (i, _) in message_ids.iter().enumerate() {
                     let window_ids = self.get_window_messages(&message_ids, i, window);
-                    for window_id in window_ids {
-                        if let Some(msg) = messages.get(&window_id) {
-                            retrieved_messages.push(msg.clone());
+                    for window_id in &window_ids {
+                        // 避免重复添加相同ID的消息
+                        if !retrieved_message_ids.contains(window_id) {
+                            retrieved_message_ids.insert(window_id.clone());
+                            if let Some(msg) = messages.get(window_id) {
+                                retrieved_messages.push(msg.clone());
+                            }
                         }
                     }
                 }
             } else {
                 // 不使用窗口，直接返回匹配的消息
                 for id in &message_ids {
-                    if let Some(msg) = messages.get(id) {
-                        retrieved_messages.push(msg.clone());
+                    if !retrieved_message_ids.contains(id) {
+                        retrieved_message_ids.insert(id.clone());
+                        if let Some(msg) = messages.get(id) {
+                            retrieved_messages.push(msg.clone());
+                        }
                     }
                 }
+            }
+            
+            // 根据检索结果排序
+            if !retrieved_messages.is_empty() {
+                // 创建ID到分数的映射，用于排序
+                let mut id_to_score = HashMap::new();
+                for (idx, result) in results.iter().enumerate() {
+                    id_to_score.insert(result.id.clone(), (results.len() - idx) as f32);
+                }
+                
+                // 按相关性排序
+                retrieved_messages.sort_by(|a, b| {
+                    // Clone message data for comparisons to avoid borrowing issues
+                    let a_content = a.content.clone();
+                    let a_role = a.role.clone();
+                    let b_content = b.content.clone();
+                    let b_role = b.role.clone();
+                    
+                    // Create longer-lived values
+                    let empty_string = String::new();
+                    
+                    let a_id = messages.iter()
+                        .find(|(_, msg)| msg.content == a_content && msg.role == a_role)
+                        .map(|(id, _)| id)
+                        .unwrap_or(&empty_string);
+                    
+                    let b_id = messages.iter()
+                        .find(|(_, msg)| msg.content == b_content && msg.role == b_role)
+                        .map(|(id, _)| id)
+                        .unwrap_or(&empty_string);
+                    
+                    let a_score = id_to_score.get(a_id).unwrap_or(&0.0);
+                    let b_score = id_to_score.get(b_id).unwrap_or(&0.0);
+                    
+                    b_score.partial_cmp(a_score).unwrap_or(std::cmp::Ordering::Equal)
+                });
             }
             
             return Ok(retrieved_messages);
@@ -250,17 +330,11 @@ mod tests {
     use super::*;
     use crate::llm::{MockLlmProvider, Role};
     
-    // 生成指定长度的测试向量
-    fn create_test_vector(seed: f32, length: usize) -> Vec<f32> {
-        (0..length).map(|i| seed + (i as f32 * 0.01)).collect()
-    }
-    
-    #[tokio::test]
-    async fn test_semantic_memory_store() {
-        // 创建配置
-        let config = MemoryConfig {
+    // 测试用例辅助函数 - 创建符合特定嵌入向量维度的配置
+    fn create_test_config(namespace: &str, query: Option<&str>) -> MemoryConfig {
+        MemoryConfig {
             enabled: true,
-            namespace: Some("test".to_string()),
+            namespace: Some(namespace.to_string()),
             store_id: None,
             working_memory: None,
             semantic_recall: Some(SemanticRecallConfig {
@@ -277,13 +351,19 @@ mod tests {
                 template: None,
             }),
             last_messages: None,
-            query: None,
-        };
+            query: query.map(|q| q.to_string()),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_semantic_memory_store() {
+        // 创建配置
+        let config = create_test_config("test_store", None);
         
         // 创建Mock LLM，提供1536维的嵌入向量
-        let mock_llm = Arc::new(MockLlmProvider::new_with_embeddings(vec![
-            create_test_vector(0.1, 1536), // 第一条消息的嵌入
-        ]));
+        let mock_llm = Arc::new(MockLlmProvider::new_with_sequential_embeddings(
+            0.1, 0.05, 1536, 1 // 只需要一个向量用于存储测试
+        ));
         
         // 创建语义内存
         let semantic_memory = SemanticMemory::new(&config, Arc::clone(&mock_llm) as Arc<dyn LlmProvider>).unwrap();
@@ -298,60 +378,97 @@ mod tests {
         
         // 存储消息
         let result = semantic_memory.store(&message).await;
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "存储消息失败: {:?}", result);
+        
+        // 验证内存统计
+        let stats = semantic_memory.get_stats().await.unwrap();
+        assert_eq!(stats.get("message_count").and_then(|v| v.as_u64()), Some(1));
     }
     
     #[tokio::test]
     async fn test_semantic_memory_retrieve() {
         // 创建配置
-        let config = MemoryConfig {
-            enabled: true,
-            namespace: Some("test".to_string()),
-            store_id: None,
-            working_memory: None,
-            semantic_recall: Some(SemanticRecallConfig {
-                top_k: 5,
-                message_range: Some(MessageRange {
-                    before: 1,
-                    after: 1,
-                }),
-                generate_summaries: true,
-                use_embeddings: true,
-                max_capacity: None,
-                max_results: Some(5),
-                relevance_threshold: None,
-                template: None,
-            }),
-            last_messages: None,
-            query: Some("语义搜索是什么".to_string()),
-        };
+        let config = create_test_config("test_retrieve", Some("语义搜索是什么"));
         
-        // 创建Mock LLM，提供1536维的嵌入向量
-        let mock_llm = Arc::new(MockLlmProvider::new_with_embeddings(vec![
-            create_test_vector(0.1, 1536), // 第一条消息的嵌入
-            create_test_vector(0.4, 1536), // 查询的嵌入
-        ]));
+        // 创建Mock LLM，提供1536维的嵌入向量: 两个用于存储消息，一个用于查询
+        let mock_llm = Arc::new(MockLlmProvider::new_with_sequential_embeddings(
+            0.1, 0.1, 1536, 3
+        ));
         
         // 创建语义内存
         let semantic_memory = SemanticMemory::new(&config, Arc::clone(&mock_llm) as Arc<dyn LlmProvider>).unwrap();
         
-        // 创建消息
-        let message = Message {
+        // 创建测试消息
+        let message1 = Message {
             role: Role::User,
             content: "你好，我想了解一下语义搜索".to_string(),
             metadata: None,
             name: None,
         };
         
+        let message2 = Message {
+            role: Role::Assistant,
+            content: "语义搜索是一种基于语义理解的搜索技术".to_string(),
+            metadata: None,
+            name: None,
+        };
+        
         // 存储消息
-        let store_result = semantic_memory.store(&message).await;
-        assert!(store_result.is_ok());
+        let store_result1 = semantic_memory.store(&message1).await;
+        assert!(store_result1.is_ok(), "存储第一条消息失败: {:?}", store_result1);
+        
+        let store_result2 = semantic_memory.store(&message2).await;
+        assert!(store_result2.is_ok(), "存储第二条消息失败: {:?}", store_result2);
         
         // 检索消息
         let results = semantic_memory.retrieve(&config).await;
-        assert!(results.is_ok());
+        assert!(results.is_ok(), "检索消息失败: {:?}", results);
         
-        let results = results.unwrap();
-        assert!(!results.is_empty());
+        let messages = results.unwrap();
+        assert!(!messages.is_empty(), "检索结果不应为空");
+        
+        // 验证检索结果内容
+        let contains_message1 = messages.iter().any(|msg| 
+            msg.role == Role::User && msg.content.contains("语义搜索"));
+        assert!(contains_message1, "检索结果应包含用户询问的消息");
+        
+        let contains_message2 = messages.iter().any(|msg| 
+            msg.role == Role::Assistant && msg.content.contains("语义理解"));
+        assert!(contains_message2, "检索结果应包含助手回复的消息");
+    }
+    
+    #[tokio::test]
+    async fn test_semantic_memory_stats() {
+        // 创建配置
+        let config = create_test_config("test_stats", None);
+        
+        // 创建Mock LLM
+        let mock_llm = Arc::new(MockLlmProvider::new_with_sequential_embeddings(
+            0.1, 0.1, 1536, 1
+        ));
+        
+        // 创建语义内存
+        let semantic_memory = SemanticMemory::new(&config, Arc::clone(&mock_llm) as Arc<dyn LlmProvider>).unwrap();
+        
+        // 存储一条消息
+        let message = Message {
+            role: Role::User,
+            content: "测试统计信息".to_string(),
+            metadata: None,
+            name: None,
+        };
+        
+        let store_result = semantic_memory.store(&message).await;
+        assert!(store_result.is_ok());
+        
+        // 获取统计信息
+        let stats = semantic_memory.get_stats().await;
+        assert!(stats.is_ok());
+        
+        let stats = stats.unwrap();
+        assert_eq!(stats.get("namespace").and_then(|v| v.as_str()), Some("test_stats"));
+        assert_eq!(stats.get("message_count").and_then(|v| v.as_u64()), Some(1));
+        assert_eq!(stats.get("vector_dimension").and_then(|v| v.as_u64()), Some(1536));
+        assert_eq!(stats.get("vector_count").and_then(|v| v.as_u64()), Some(1));
     }
 } 

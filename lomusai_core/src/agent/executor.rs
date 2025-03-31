@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream, StreamExt};
 use regex::Regex;
-use serde_json::{Value, json};
+use serde_json::Value;
 use uuid::Uuid;
 use serde::de::DeserializeOwned;
 use tokio::sync::watch;
@@ -30,7 +30,6 @@ use crate::agent::types::{
     AgentStep,
 };
 use crate::agent::trait_def::{Agent, AgentStructuredOutput, AgentVoiceListener, AgentVoiceSender};
-use crate::logger::LogEntry;
 use crate::voice::{VoiceProvider, VoiceOptions, ListenOptions};
 use crate::memory::{WorkingMemory, create_working_memory};
 use crate::agent::AgentConfig;
@@ -136,7 +135,7 @@ impl BasicAgent {
                 }
             }
             
-            descriptions.push_str("\n");
+            descriptions.push('\n');
         }
         
         descriptions
@@ -345,7 +344,7 @@ impl Agent for BasicAgent {
         let run_id = options.run_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
         let max_steps = options.max_steps.unwrap_or(5);
         let mut current_step = 0;
-        let mut metadata = HashMap::new();
+        let metadata = HashMap::new();
         
         // Log the generation start
         self.logger().debug(&format!("Starting generation for agent '{}' (run_id: {})", self.name, run_id), None);
@@ -521,7 +520,7 @@ impl Agent for BasicAgent {
             .collect::<Vec<_>>();
         
         let stream = stream::iter(chunks)
-            .map(|chunk| Ok(chunk))
+            .map(Ok)
             .boxed();
         
         Ok(stream)
@@ -571,7 +570,7 @@ impl Agent for BasicAgent {
             .collect::<Vec<_>>();
         
         let stream = stream::iter(chunks)
-            .map(|chunk| Ok(chunk))
+            .map(Ok)
             .boxed();
         
         Ok(stream)
@@ -744,8 +743,8 @@ impl AgentVoiceSender for BasicAgent {
 struct AgentRef<'a>(&'a BasicAgent);
 
 // 实现Send和Sync，使AgentRef可以跨线程传递
-unsafe impl<'a> Send for AgentRef<'a> {}
-unsafe impl<'a> Sync for AgentRef<'a> {}
+unsafe impl Send for AgentRef<'_> {}
+unsafe impl Sync for AgentRef<'_> {}
 
 #[cfg(test)]
 mod voice_tests {

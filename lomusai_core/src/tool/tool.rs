@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 
 use crate::error::Result;

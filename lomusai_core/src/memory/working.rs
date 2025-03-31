@@ -161,7 +161,7 @@ impl WorkingMemory for BasicWorkingMemory {
         // 检查容量限制
         if let Some(max_capacity) = self.config.max_capacity {
             let size = serde_json::to_string(&content.content)
-                .map_err(|e| Error::Json(e))?
+                .map_err(Error::Json)?
                 .len();
             
             if size > max_capacity {

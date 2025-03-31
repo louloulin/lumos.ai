@@ -1,15 +1,13 @@
 //! 语音模块，提供文本到语音和语音到文本的功能
 
-use std::pin::Pin;
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
-use std::io::BufReader;
 use std::sync::Arc;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::logger::{Logger, Component};
 use crate::telemetry::TelemetrySink;
 

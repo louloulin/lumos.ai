@@ -8,6 +8,7 @@ use crate::types::Metadata;
 
 /// Component configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ComponentConfig {
     /// Component name
     pub name: Option<String>,
@@ -17,15 +18,6 @@ pub struct ComponentConfig {
     pub log_level: Option<LogLevel>,
 }
 
-impl Default for ComponentConfig {
-    fn default() -> Self {
-        Self {
-            name: None,
-            component: Component::default(),
-            log_level: None,
-        }
-    }
-}
 
 /// Base trait for all components
 pub trait Base: Send + Sync {

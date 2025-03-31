@@ -1,8 +1,6 @@
 //! Memory module for storing and retrieving context information
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::llm::Message;
 use crate::Result;
 

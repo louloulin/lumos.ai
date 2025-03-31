@@ -53,6 +53,12 @@ pub enum FilterCondition {
 #[derive(Debug)]
 pub struct FilterInterpreter;
 
+impl Default for FilterInterpreter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FilterInterpreter {
     /// 创建新的过滤器解释器
     pub fn new() -> Self {

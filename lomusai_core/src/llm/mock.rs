@@ -1,6 +1,6 @@
 //! Mock LLM Provider for testing
 
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
 use futures::StreamExt;
@@ -27,6 +27,25 @@ impl MockLlmProvider {
     
     /// Create a mock LLM provider with predefined embeddings
     pub fn new_with_embeddings(embeddings: Vec<Vec<f32>>) -> Self {
+        Self {
+            responses: Mutex::new(vec!["This is a mock response".to_string()]),
+            embeddings: Mutex::new(embeddings),
+        }
+    }
+    
+    /// Create a mock LLM provider with embeddings that increase in value based on input index
+    /// 
+    /// This is useful for creating a sequence of test embeddings where each has a specific pattern
+    /// for example: [[0.1, 0.2, 0.3], [0.2, 0.3, 0.4], [0.3, 0.4, 0.5]]
+    pub fn new_with_sequential_embeddings(start_value: f32, step: f32, dims: usize, count: usize) -> Self {
+        let mut embeddings = Vec::with_capacity(count);
+        
+        for i in 0..count {
+            let base_value = start_value + (i as f32 * step);
+            let embedding = (0..dims).map(|j| base_value + (j as f32 * 0.01)).collect();
+            embeddings.push(embedding);
+        }
+        
         Self {
             responses: Mutex::new(vec!["This is a mock response".to_string()]),
             embeddings: Mutex::new(embeddings),
@@ -148,6 +167,28 @@ mod tests {
         assert_eq!(embedding2, vec![0.4, 0.5, 0.6]);
         
         // 第三次调用，没有更多嵌入向量，应返回错误
+        let result = mock.get_embedding("test").await;
+        assert!(result.is_err());
+    }
+    
+    #[tokio::test]
+    async fn test_sequential_embeddings() {
+        // 创建3个顺序增加的嵌入向量，每个有4个维度
+        let mock = MockLlmProvider::new_with_sequential_embeddings(0.1, 0.2, 4, 3);
+        
+        // 获取并验证第一个嵌入向量
+        let embedding1 = mock.get_embedding("test").await.unwrap();
+        assert_eq!(embedding1, vec![0.1, 0.11, 0.12, 0.13]);
+        
+        // 获取并验证第二个嵌入向量
+        let embedding2 = mock.get_embedding("test").await.unwrap();
+        assert_eq!(embedding2, vec![0.3, 0.31, 0.32, 0.33]);
+        
+        // 获取并验证第三个嵌入向量
+        let embedding3 = mock.get_embedding("test").await.unwrap();
+        assert_eq!(embedding3, vec![0.5, 0.51, 0.52, 0.53]);
+        
+        // 确认没有更多的嵌入向量
         let result = mock.get_embedding("test").await;
         assert!(result.is_err());
     }

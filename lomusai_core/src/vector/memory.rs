@@ -3,7 +3,7 @@ use std::sync::RwLock;
 use async_trait::async_trait;
 use uuid::Uuid;
 use serde_json::Value;
-use float_cmp::{approx_eq, ApproxEq};
+use float_cmp::approx_eq;
 
 use super::{VectorStorage, IndexStats, QueryResult, SimilarityMetric};
 use super::filter::{FilterCondition, FilterInterpreter};
@@ -57,8 +57,19 @@ impl MemoryVectorStorage {
         result
     }
 
+    /// Normalize a vector to unit length
+    fn normalize_vector(vector: &[f32]) -> Vec<f32> {
+        let norm: f32 = vector.iter().map(|x| x * x).sum::<f32>().sqrt();
+        if norm == 0.0 {
+            return vector.to_vec(); // Return original if norm is zero
+        }
+        vector.iter().map(|x| x / norm).collect()
+    }
+
     /// Calculate cosine similarity between two vectors
     fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+        // For performance, we could pre-normalize vectors and just use dot product
+        // But this implementation handles the general case
         let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
         let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
         let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
@@ -87,7 +98,12 @@ impl MemoryVectorStorage {
     /// Calculate similarity score based on metric
     fn calculate_similarity(&self, a: &[f32], b: &[f32], metric: SimilarityMetric) -> f32 {
         match metric {
-            SimilarityMetric::Cosine => Self::cosine_similarity(a, b),
+            SimilarityMetric::Cosine => {
+                // Option to use pre-normalized vectors for better performance
+                let a_norm = Self::normalize_vector(a);
+                let b_norm = Self::normalize_vector(b);
+                Self::dot_product(&a_norm, &b_norm)
+            },
             SimilarityMetric::Euclidean => {
                 let dist = Self::euclidean_distance(a, b);
                 1.0 / (1.0 + dist) // Convert distance to similarity score
@@ -145,6 +161,9 @@ impl VectorStorage for MemoryVectorStorage {
         Ok(())
     }
 
+    /// Insert or update vectors and their metadata
+    /// 
+    /// Returns a list of vector IDs
     async fn upsert(
         &self,
         index_name: &str,
@@ -188,6 +207,9 @@ impl VectorStorage for MemoryVectorStorage {
         Ok(vector_ids)
     }
 
+    /// Query the index for vectors similar to the query vector
+    /// 
+    /// Returns a list of results sorted by similarity score in descending order
     async fn query(
         &self,
         index_name: &str,
@@ -238,6 +260,7 @@ impl VectorStorage for MemoryVectorStorage {
         Ok(results)
     }
 
+    /// Update a vector and/or its metadata by ID
     async fn update_by_id(
         &self,
         index_name: &str,

@@ -227,8 +227,6 @@ pub struct QwenProvider {
     embedding_model: String,
     /// API type
     api_type: QwenApiType,
-    /// API key
-    api_key: String,
 }
 
 impl QwenProvider {
@@ -239,9 +237,8 @@ impl QwenProvider {
         base_url: impl Into<String>, 
         api_type: QwenApiType
     ) -> Self {
-        let api_key = api_key.into();
         let mut config = OpenAIConfig::new()
-            .with_api_key(api_key.clone())
+            .with_api_key(api_key.into())
             .with_api_base(base_url.into());
 
         Self {
@@ -252,7 +249,6 @@ impl QwenProvider {
                 QwenApiType::OpenAICompatible => "text-embedding-ada-002".to_string(),
             },
             api_type,
-            api_key,
         }
     }
 
@@ -399,7 +395,7 @@ impl LlmProvider for QwenProvider {
                 let client = reqwest::Client::new();
                 let response = client
                     .post("https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation")
-                    .header("Authorization", format!("Bearer {}", self.api_key))
+                    .header("Authorization", format!("Bearer {}", self.client.config().api_key.expose_secret()))
                     .header("Content-Type", "application/json")
                     .json(&request)
                     .send()
@@ -456,56 +452,20 @@ impl LlmProvider for QwenProvider {
     }
 
     async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
-        match self.api_type {
-            QwenApiType::OpenAICompatible => {
-                let request = CreateEmbeddingRequest {
-                    model: self.embedding_model.clone(),
-                    input: EmbeddingInput::String(text.to_string()),
-                    encoding_format: None,
-                    user: None,
-                    dimensions: None,
-                };
+        let request = CreateEmbeddingRequest {
+            model: self.embedding_model.clone(),
+            input: EmbeddingInput::String(text.to_string()),
+            encoding_format: None,
+            user: None,
+            dimensions: None,
+        };
 
-                let response = self.client.embeddings().create(request).await?;
-                
-                if let Some(embedding) = response.data.first() {
-                    Ok(embedding.embedding.clone())
-                } else {
-                    Err(Error::Llm("No embedding in response".into()))
-                }
-            }
-            QwenApiType::DashScope => {
-                // Build DashScope embedding request
-                let request = json!({
-                    "model": self.embedding_model,
-                    "input": {
-                        "texts": [text]
-                    }
-                });
-
-                // Send request using reqwest directly
-                let client = reqwest::Client::new();
-                let response = client
-                    .post("https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding")
-                    .header("Authorization", format!("Bearer {}", self.api_key))
-                    .header("Content-Type", "application/json")
-                    .json(&request)
-                    .send()
-                    .await
-                    .map_err(|e| Error::Llm(e.to_string()))?;
-
-                let response_text = response.text().await
-                    .map_err(|e| Error::Llm(e.to_string()))?;
-
-                let response_json: DashScopeEmbeddingResponse = serde_json::from_str(&response_text)
-                    .map_err(|e| Error::Llm(format!("Failed to parse embedding response: {}\nResponse text: {}", e, response_text)))?;
-
-                if let Some(embedding) = response_json.output.embeddings.first() {
-                    Ok(embedding.embedding.clone())
-                } else {
-                    Err(Error::Llm("No embedding in response".into()))
-                }
-            }
+        let response = self.client.embeddings().create(request).await?;
+        
+        if let Some(embedding) = response.data.first() {
+            Ok(embedding.embedding.clone())
+        } else {
+            Err(Error::Llm("No embedding in response".into()))
         }
     }
 }

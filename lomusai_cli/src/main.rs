@@ -3,6 +3,7 @@ mod error;
 mod config;
 mod util;
 mod template;
+mod swagger;
 
 use clap::{Parser, Subcommand, Args};
 use colored::Colorize;
@@ -78,6 +79,22 @@ struct DevArgs {
     /// 启用热重载（使用-r而不是-h避免与帮助选项冲突）
     #[clap(short = 'r', long)]
     hot_reload: bool,
+    
+    /// 日志级别 (trace, debug, info, warn, error)
+    #[clap(short = 'l', long, default_value = "info")]
+    log_level: Option<String>,
+    
+    /// 启用调试模式，显示更详细的信息
+    #[clap(long)]
+    debug: bool,
+    
+    /// 额外监视的目录，以逗号分隔
+    #[clap(short = 'w', long)]
+    watch: Option<String>,
+    
+    /// 生成API文档
+    #[clap(long, default_value = "true")]
+    docs: bool,
 }
 
 #[derive(Args, Debug)]
@@ -157,10 +174,22 @@ async fn main() -> CliResult<()> {
             ).await
         },
         Commands::Dev(args) => {
+            // 将 watch 字符串分割为 Vec<String>
+            let watch_dirs = args.watch.map(|w| {
+                w.split(',')
+                 .map(|s| s.trim().to_string())
+                 .filter(|s| !s.is_empty())
+                 .collect()
+            });
+            
             commands::dev::run(
                 args.project_dir,
                 args.port,
                 args.hot_reload,
+                args.log_level,
+                args.debug,
+                watch_dirs,
+                args.docs,
             ).await
         },
         Commands::Run(args) => {

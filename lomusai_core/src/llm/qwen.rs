@@ -21,7 +21,7 @@ use async_openai::{
 use futures::{Stream, StreamExt, TryStreamExt};
 use reqwest;
 use serde::{Deserialize, Serialize};
-use serde_json;
+use serde_json::{self, json};
 use std::collections::HashMap;
 
 use crate::Result;
@@ -227,6 +227,8 @@ pub struct QwenProvider {
     embedding_model: String,
     /// API type
     api_type: QwenApiType,
+    /// API key
+    api_key: String,
 }
 
 impl QwenProvider {
@@ -237,8 +239,9 @@ impl QwenProvider {
         base_url: impl Into<String>, 
         api_type: QwenApiType
     ) -> Self {
+        let api_key = api_key.into();
         let mut config = OpenAIConfig::new()
-            .with_api_key(api_key.into())
+            .with_api_key(api_key.clone())
             .with_api_base(base_url.into());
 
         Self {
@@ -249,6 +252,7 @@ impl QwenProvider {
                 QwenApiType::OpenAICompatible => "text-embedding-ada-002".to_string(),
             },
             api_type,
+            api_key,
         }
     }
 
@@ -262,7 +266,7 @@ impl QwenProvider {
         Self::new_with_api_type(
             api_key,
             model,
-            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "https://dashscope.aliyuncs.com/api/v1",
             QwenApiType::DashScope
         )
     }
@@ -272,8 +276,23 @@ impl QwenProvider {
         Self::new_with_api_type(
             api_key,
             model,
-            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "https://dashscope.aliyuncs.com/api/v1",
             QwenApiType::DashScope
+        )
+    }
+
+    /// Create a new Qwen provider with OpenAI-compatible API
+    pub fn new_openai_compatible(
+        api_key: impl Into<String>, 
+        model: impl Into<String>,
+        base_url: Option<impl Into<String>>,
+    ) -> Self {
+        Self::new_with_api_type(
+            api_key,
+            model,
+            base_url.map(|url| url.into())
+                .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1".to_string()),
+            QwenApiType::OpenAICompatible
         )
     }
 
@@ -329,21 +348,82 @@ impl LlmProvider for QwenProvider {
     }
 
     async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
-        let request = CreateChatCompletionRequestArgs::default()
-            .model(&self.model)
-            .messages(self.convert_messages(messages))
-            .build()?;
+        match self.api_type {
+            QwenApiType::OpenAICompatible => {
+                let request = CreateChatCompletionRequestArgs::default()
+                    .model(&self.model)
+                    .messages(self.convert_messages(messages))
+                    .build()?;
 
-        let response = self.client.chat().create(request).await?;
-        
-        if let Some(choice) = response.choices.first() {
-            if let Some(content) = &choice.message.content {
-                Ok(content.clone())
-            } else {
-                Err(Error::Llm("No content in response".into()))
+                let response = self.client.chat().create(request).await?;
+                
+                if let Some(choice) = response.choices.first() {
+                    if let Some(content) = &choice.message.content {
+                        Ok(content.clone())
+                    } else {
+                        Err(Error::Llm("No content in response".into()))
+                    }
+                } else {
+                    Err(Error::Llm("No choices in response".into()))
+                }
             }
-        } else {
-            Err(Error::Llm("No choices in response".into()))
+            QwenApiType::DashScope => {
+                // Convert messages to DashScope format
+                let messages_json: Vec<serde_json::Value> = messages.iter().map(|msg| {
+                    json!({
+                        "role": match msg.role {
+                            Role::System => "system",
+                            Role::User => "user",
+                            Role::Assistant => "assistant",
+                            _ => "user"
+                        },
+                        "content": msg.content
+                    })
+                }).collect();
+
+                // Build DashScope request
+                let request = json!({
+                    "model": self.model,
+                    "input": {
+                        "messages": messages_json
+                    },
+                    "parameters": {
+                        "temperature": options.temperature.unwrap_or(0.7),
+                        "max_tokens": options.max_tokens.unwrap_or(1024),
+                        "top_p": options.extra.get("top_p").and_then(|v| v.as_f64()).unwrap_or(0.8),
+                        "result_format": "message"
+                    }
+                });
+
+                // Send request using reqwest directly
+                let client = reqwest::Client::new();
+                let response = client
+                    .post("https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation")
+                    .header("Authorization", format!("Bearer {}", self.api_key))
+                    .header("Content-Type", "application/json")
+                    .json(&request)
+                    .send()
+                    .await
+                    .map_err(|e| Error::Llm(e.to_string()))?;
+
+                let response_text = response.text().await
+                    .map_err(|e| Error::Llm(e.to_string()))?;
+
+                let response_json: DashScopeResponse = serde_json::from_str(&response_text)
+                    .map_err(|e| Error::Llm(format!("Failed to parse response: {}\nResponse text: {}", e, response_text)))?;
+
+                if let Some(text) = response_json.output.text {
+                    Ok(text)
+                } else if let Some(choices) = response_json.output.choices {
+                    if let Some(choice) = choices.first() {
+                        Ok(choice.message.content.clone())
+                    } else {
+                        Err(Error::Llm("No choices in response".into()))
+                    }
+                } else {
+                    Err(Error::Llm("No text or choices in response".into()))
+                }
+            }
         }
     }
 
@@ -376,20 +456,56 @@ impl LlmProvider for QwenProvider {
     }
 
     async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
-        let request = CreateEmbeddingRequest {
-            model: self.embedding_model.clone(),
-            input: EmbeddingInput::String(text.to_string()),
-            encoding_format: None,
-            user: None,
-            dimensions: None,
-        };
+        match self.api_type {
+            QwenApiType::OpenAICompatible => {
+                let request = CreateEmbeddingRequest {
+                    model: self.embedding_model.clone(),
+                    input: EmbeddingInput::String(text.to_string()),
+                    encoding_format: None,
+                    user: None,
+                    dimensions: None,
+                };
 
-        let response = self.client.embeddings().create(request).await?;
-        
-        if let Some(embedding) = response.data.first() {
-            Ok(embedding.embedding.clone())
-        } else {
-            Err(Error::Llm("No embedding in response".into()))
+                let response = self.client.embeddings().create(request).await?;
+                
+                if let Some(embedding) = response.data.first() {
+                    Ok(embedding.embedding.clone())
+                } else {
+                    Err(Error::Llm("No embedding in response".into()))
+                }
+            }
+            QwenApiType::DashScope => {
+                // Build DashScope embedding request
+                let request = json!({
+                    "model": self.embedding_model,
+                    "input": {
+                        "texts": [text]
+                    }
+                });
+
+                // Send request using reqwest directly
+                let client = reqwest::Client::new();
+                let response = client
+                    .post("https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding")
+                    .header("Authorization", format!("Bearer {}", self.api_key))
+                    .header("Content-Type", "application/json")
+                    .json(&request)
+                    .send()
+                    .await
+                    .map_err(|e| Error::Llm(e.to_string()))?;
+
+                let response_text = response.text().await
+                    .map_err(|e| Error::Llm(e.to_string()))?;
+
+                let response_json: DashScopeEmbeddingResponse = serde_json::from_str(&response_text)
+                    .map_err(|e| Error::Llm(format!("Failed to parse embedding response: {}\nResponse text: {}", e, response_text)))?;
+
+                if let Some(embedding) = response_json.output.embeddings.first() {
+                    Ok(embedding.embedding.clone())
+                } else {
+                    Err(Error::Llm("No embedding in response".into()))
+                }
+            }
         }
     }
 }

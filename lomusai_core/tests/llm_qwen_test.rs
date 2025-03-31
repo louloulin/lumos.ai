@@ -70,12 +70,7 @@ async fn test_qwen_openai_compatible() {
     let api_key = env::var("QWEN_OPENAI_KEY").unwrap_or_else(|_| "EMPTY".to_string());
 
     // Create provider with OpenAI-compatible API
-    let provider = QwenProvider::new_with_api_type(
-        api_key,
-        "qwen2.5-7b-instruct",
-        server_url,
-        QwenApiType::OpenAICompatible,
-    );
+    let provider = QwenProvider::new_openai_compatible(api_key, "qwen2.5-7b-instruct", Some(server_url));
     
     // Test basic prompt
     let options = LlmOptions::default()
@@ -180,12 +175,7 @@ async fn test_qwen_function_calling_openai() {
     let api_key = env::var("QWEN_OPENAI_KEY").unwrap_or_else(|_| "EMPTY".to_string());
 
     // Create provider with OpenAI-compatible API
-    let provider = QwenProvider::new_with_api_type(
-        api_key,
-        "qwen2.5-7b-instruct",
-        server_url,
-        QwenApiType::OpenAICompatible,
-    );
+    let provider = QwenProvider::new_openai_compatible(api_key, "qwen2.5-7b-instruct", Some(server_url));
     
     // Define a weather tool (OpenAI-compatible format)
     let tools = json!([

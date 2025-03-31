@@ -178,8 +178,11 @@ impl Storage for MemoryStorage {
         // Apply selection criteria if provided
         if let Some(select) = args.select_by {
             if let Some(last) = select.last {
+                // Sort by timestamp in reverse order for 'last' selection
                 result.sort_by(|a, b| b.created_at.cmp(&a.created_at));
                 result.truncate(last);
+                // Sort back to chronological order after truncation
+                result.sort_by(|a, b| a.created_at.cmp(&b.created_at));
             }
             
             // Handle includes if specified
@@ -216,6 +219,7 @@ impl Storage for MemoryStorage {
             }
         }
 
+        // Always ensure final result is in chronological order
         result.sort_by(|a, b| a.created_at.cmp(&b.created_at));
         Ok(result)
     }

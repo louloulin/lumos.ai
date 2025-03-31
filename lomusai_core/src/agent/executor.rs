@@ -841,7 +841,7 @@ mod voice_tests {
             ..Default::default()
         };
         
-        let mut agent = BasicAgent::new(config, mock_llm);
+        let agent = BasicAgent::new(config, mock_llm);
         
         // 测试结构化输出
         let user_message = Message {

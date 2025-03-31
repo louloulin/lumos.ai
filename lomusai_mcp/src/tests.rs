@@ -1,18 +1,18 @@
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::pin::Pin;
-    use std::sync::Arc;
     
-    use futures::{Stream, StreamExt};
+    
+    
+    use futures::StreamExt;
     use mockall::predicate::*;
     use mockall::mock;
-    use tokio::sync::{mpsc, Mutex};
+    use tokio::sync::mpsc;
     
-    use super::*;
+    
     use crate::client::MCPClient;
-    use crate::error::{MCPError, Result};
-    use crate::types::{MCPMessage, Resource, ResourceMetadata, ToolDefinition, ParameterSchema, ListResourcesResult};
+    use crate::error::Result;
+    use crate::types::{MCPMessage, Resource, ResourceMetadata, ToolDefinition, ParameterSchema};
     use crate::transport::Transport;
     
     // Create a mock for the Transport trait

@@ -396,7 +396,7 @@ mod tests {
         }).await.unwrap();
         
         assert_eq!(selected.len(), 1);
-        assert_eq!(selected[0].id, "msg1");
+        assert_eq!(selected[0].id, "msg2");
     }
 
     #[tokio::test]

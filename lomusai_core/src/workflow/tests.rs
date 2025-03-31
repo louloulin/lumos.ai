@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use crate::workflow::basic::{Workflow, StepCondition, WorkflowStep, BasicWorkflow, StepResult};
-    use crate::workflow::step::{BasicStep, StepBuilder, StepConfig};
+    use crate::workflow::basic::{Workflow, StepCondition, WorkflowStep, BasicWorkflow};
+    
     use crate::error::{Error, Result};
     use crate::agent::{Agent, AgentGenerateResult, AgentStep, assistant_message};
     use crate::agent::types::{StepType, TokenUsage, ToolCall};
-    use crate::llm::{Message, Role};
+    use crate::llm::Message;
     use serde_json::{json, Value};
     use std::collections::HashMap;
     use std::sync::Arc;
-    use async_trait::async_trait;
+    
     use crate::base::Base;
     use crate::logger::{Logger, Component};
     use crate::telemetry::TelemetrySink;

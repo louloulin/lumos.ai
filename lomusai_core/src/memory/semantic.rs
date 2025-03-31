@@ -13,7 +13,7 @@ use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
 use crate::logger::{Component, LogLevel};
 use crate::llm::{Message, LlmProvider};
-use crate::memory::{Memory, MemoryConfig, MessageRange};
+use crate::memory::{Memory, MemoryConfig, MessageRange, SemanticRecallConfig};
 use crate::vector::{VectorStorage, Document, FilterCondition};
 
 /// 语义搜索内存实现
@@ -329,6 +329,7 @@ pub fn create_semantic_memory<P: LlmProvider + 'static>(
 mod tests {
     use super::*;
     use crate::llm::{MockLlmProvider, Role};
+    use crate::memory::{MessageRange, SemanticRecallConfig};
     
     // 测试用例辅助函数 - 创建符合特定嵌入向量维度的配置
     fn create_test_config(namespace: &str, query: Option<&str>) -> MemoryConfig {

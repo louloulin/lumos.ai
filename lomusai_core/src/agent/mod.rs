@@ -47,7 +47,7 @@ mod tests {
     use async_trait::async_trait;
     
     use crate::llm::{LlmOptions, LlmProvider, Message, Role};
-    use crate::tool::{FunctionTool, ParameterSchema, ToolSchema, ToolExecutionOptions};
+    use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
     use crate::Result;
     use super::*;
     

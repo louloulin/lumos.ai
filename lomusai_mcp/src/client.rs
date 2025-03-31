@@ -17,7 +17,7 @@ use serde_json::Value;
 use crate::error::{MCPError, Result};
 use crate::types::{
     ClientCapabilities, ExecuteToolRequest, ListResourcesResult, MCPMessage,
-    ServerParameters, StdioServerParameters, SSEServerParameters, ToolDefinition,
+    ServerParameters, StdioServerParameters, SSEServerParameters,
 };
 use crate::transport::{Transport, create_transport};
 

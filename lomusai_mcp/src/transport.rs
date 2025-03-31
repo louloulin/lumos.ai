@@ -1,13 +1,11 @@
 use async_trait::async_trait;
 use std::process::{Stdio, Command};
-use std::collections::HashMap;
 use tokio::io::{AsyncWriteExt, BufReader};
 use tokio::process::Child;
 use tokio::sync::{Mutex, mpsc, broadcast};
 use eventsource_stream::EventStream;
-use futures::{Stream, StreamExt};
+use futures::StreamExt;
 use reqwest::Client;
-use std::pin::Pin;
 use std::sync::Arc;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use futures::stream::BoxStream;

@@ -9,6 +9,8 @@ use tokio::task::JoinHandle;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use dashmap::DashMap;
+use std::fmt;
+use std::time::{SystemTime};
 
 use crate::error::{Error, Result};
 use crate::types::{AgentId, AgentType, AgentStatus, AgentCapability};
@@ -241,6 +243,33 @@ impl AgentNode {
                 }
             }
         }
+    }
+
+    /// 处理消息
+    async fn process_message(&self, message: Message) -> Result<Vec<Message>> {
+        // 创建结果向量
+        let mut results = Vec::new();
+        
+        // 获取消息类型
+        let msg_type = &message.message_type;
+        
+        // 查找消息处理器
+        if let Some(handlers) = self.message_handlers.get(msg_type) {
+            // 遍历所有处理器
+            for handler in handlers.value() {
+                // 调用处理器
+                match handler(message.clone()) {
+                    Ok(mut messages) => {
+                        results.append(&mut messages);
+                    }
+                    Err(e) => {
+                        log::error!("处理消息时出错: {}", e);
+                    }
+                }
+            }
+        }
+        
+        Ok(results)
     }
 }
 
@@ -496,6 +525,70 @@ impl Clone for AgentNetwork {
             topology: self.topology.clone(),
             discovery: self.discovery.clone(),
         }
+    }
+}
+
+/// 网络中心管理器
+pub struct NetworkManager {
+    /// 网络实例的ID
+    id: String,
+    /// 消息路由器
+    router: Arc<dyn MessageRouter>,
+    /// 用于管理消息处理器的映射
+    message_handlers: DashMap<MessageType, Vec<Box<dyn Fn(Message) -> Result<Vec<Message>> + Send + Sync>>>,
+    /// 网络拓扑管理
+    topology: Option<Arc<dyn NetworkTopology>>,
+    /// 全局元数据
+    metadata: RwLock<HashMap<String, String>>,
+    /// 是否已启动
+    running: RwLock<bool>,
+}
+
+impl NetworkManager {
+    /// 处理接收到的消息
+    async fn handle_message(&self, message: Message) -> Result<()> {
+        // 创建一个消息克隆用于处理
+        let mut message_clone = message.clone();
+        
+        // 标记为已接收
+        message_clone.mark_as_received();
+        
+        // 获取消息类型
+        let msg_type = &message_clone.message_type;
+        
+        // 处理消息并生成响应消息
+        let mut responses = Vec::new();
+        
+        // 检查是否有该类型的消息处理器
+        if let Some(handlers) = self.message_handlers.get(msg_type) {
+            // 遍历所有处理器
+            for handler in handlers.value() {
+                // 克隆消息对象，以便每个处理器都有自己的副本
+                let msg_for_handler = message_clone.clone();
+                
+                // 调用处理器
+                match handler(msg_for_handler) {
+                    Ok(mut handler_responses) => {
+                        responses.append(&mut handler_responses);
+                    }
+                    Err(e) => {
+                        eprintln!("处理消息时出错: {}", e);
+                    }
+                }
+            }
+        }
+        
+        // 将所有响应消息通过路由器发送
+        for response in responses {
+            if let Err(e) = self.router.route(response).await {
+                eprintln!("发送响应消息时出错: {}", e);
+            }
+        }
+        
+        // 标记原始消息为已处理
+        message_clone.mark_as_processed();
+        
+        Ok(())
     }
 }
 

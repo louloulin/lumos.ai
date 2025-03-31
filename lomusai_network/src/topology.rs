@@ -4,9 +4,12 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use async_trait::async_trait;
 use parking_lot::RwLock;
-use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::graph::{DiGraph, NodeIndex, EdgeIndex};
 use petgraph::algo::dijkstra;
+use petgraph::visit::{EdgeRef};
+use petgraph::Direction;
 use serde::{Serialize, Deserialize};
+use tokio::sync::RwLock as TokioRwLock;
 
 use crate::error::{Error, Result};
 use crate::types::{AgentId, AgentLocation};
@@ -147,46 +150,52 @@ impl GraphTopology {
 #[async_trait]
 impl NetworkTopology for GraphTopology {
     async fn add_node(&self, id: AgentId, attrs: Option<NodeAttributes>) -> Result<()> {
-        // 如果节点已存在，返回错误
-        if self.get_node_index(&id).is_some() {
-            return Err(Error::Topology(format!("节点已存在: {}", id)));
-        }
-        
         // 创建节点属性
-        let node_attrs = attrs.unwrap_or_else(|| NodeAttributes {
-            id: id.clone(),
-            location: None,
-            label: None,
-        });
+        let id_copy = id.clone(); // Clone the ID first
+        let node_attrs = match attrs {
+            Some(a) => a,
+            None => NodeAttributes {
+                id: id_copy, // Use the clone
+                location: None,
+                label: None,
+            },
+        };
         
         // 添加节点到图
         let mut graph = self.graph.write();
         let node_idx = graph.add_node(node_attrs);
         
-        // 添加到索引映射
+        // 更新索引映射
         let mut indices = self.node_indices.write();
         indices.insert(id, node_idx);
         
-        // 根据拓扑类型处理连接
-        match self.topology_type {
-            TopologyType::FullyConnected => {
-                // 与所有现有节点建立双向连接
-                let all_indices: Vec<(AgentId, NodeIndex)> = indices.iter()
-                    .filter(|(agent_id, _)| *agent_id != &id)
+        // 为全连接拓扑添加边
+        if self.topology_type == TopologyType::FullyConnected {
+            // 获取所有现有节点
+            let existing_nodes: Vec<(AgentId, NodeIndex)> = indices.iter()
+                    .filter(|(agent_id, _)| agent_id.as_str() != node_attrs.id.as_str())
                     .map(|(agent_id, idx)| (agent_id.clone(), *idx))
                     .collect();
+            
+            // 添加双向边
+            for (other_id, other_idx) in existing_nodes {
+                // 添加到新节点的边
+                graph.add_edge(
+                    node_idx,
+                    other_idx,
+                    EdgeAttributes::default()
+                );
                 
-                for (other_id, other_idx) in all_indices {
-                    // 添加双向边
-                    graph.add_edge(node_idx, other_idx, EdgeAttributes::default());
-                    graph.add_edge(other_idx, node_idx, EdgeAttributes::default());
-                    
-                    // 更新索引映射（虽然在这里不需要，添加了便于理解）
-                    indices.insert(other_id, other_idx);
-                }
-            },
-            // 其他拓扑类型的连接逻辑可以在这里添加
-            _ => {}
+                // 添加从新节点的边
+                graph.add_edge(
+                    other_idx,
+                    node_idx,
+                    EdgeAttributes::default()
+                );
+                
+                // 记录连接
+                // log::debug!("建立连接: {} <-> {}", id, other_id);
+            }
         }
         
         Ok(())
@@ -286,8 +295,7 @@ impl NetworkTopology for GraphTopology {
         
         // 使用Dijkstra算法计算最短路径
         let path = dijkstra(&*graph, from_idx, Some(to_idx), |e| {
-            let edge = graph.edge_weight(e).unwrap();
-            edge.weight
+            graph.edge_weight(e).unwrap().weight
         });
         
         // 没有找到路径
@@ -308,7 +316,9 @@ impl NetworkTopology for GraphTopology {
             let mut found_prev = false;
             for edge in prev_edges {
                 let source = edge.source();
-                if path.contains_key(&source) && path[&source] + graph[edge.id()].weight == path[&current] {
+                let edge_weight = graph.edge_weight(graph.find_edge(source, current).unwrap()).unwrap();
+                
+                if path.contains_key(&source) && path[&source] + edge_weight.weight == path[&current] {
                     path_indices.push(source);
                     current = source;
                     found_prev = true;

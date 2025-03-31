@@ -15,13 +15,18 @@ impl AgentId {
     }
     
     /// 从字符串创建Agent ID
-    pub fn from_string(id: impl Into<String>) -> Self {
+    pub fn from_str(id: impl Into<String>) -> Self {
         Self(id.into())
     }
     
     /// 获取Agent ID字符串
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+    
+    /// 获取内部字符串值的克隆
+    pub fn value(&self) -> String {
+        self.0.clone()
     }
 }
 
@@ -109,6 +114,43 @@ impl AgentCapability {
     /// 添加能力元数据
     pub fn with_metadata(mut self, metadata: serde_json::Value) -> Self {
         self.metadata = Some(metadata);
+        self
+    }
+}
+
+/// Agent地理位置信息
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AgentLocation {
+    /// 经度
+    pub longitude: f64,
+    /// 纬度
+    pub latitude: f64,
+    /// 区域标识
+    pub region: Option<String>,
+    /// 位置描述
+    pub description: Option<String>,
+}
+
+impl AgentLocation {
+    /// 创建新的位置信息
+    pub fn new(longitude: f64, latitude: f64) -> Self {
+        Self {
+            longitude,
+            latitude,
+            region: None,
+            description: None,
+        }
+    }
+    
+    /// 设置区域
+    pub fn with_region(mut self, region: impl Into<String>) -> Self {
+        self.region = Some(region.into());
+        self
+    }
+    
+    /// 设置描述
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
         self
     }
 } 

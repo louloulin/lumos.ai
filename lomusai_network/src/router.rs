@@ -111,7 +111,7 @@ impl DefaultMessageRouter {
         // 尝试找到匹配的规则
         for rule in rules.iter() {
             // 基础匹配逻辑，实际实现可能更复杂
-            if rule.source_pattern == "*" || rule.source_pattern == message.sender.0 {
+            if rule.source_pattern == "*" || rule.source_pattern == message.sender.as_str() {
                 return rule.strategy.clone();
             }
         }
@@ -158,7 +158,7 @@ impl MessageRouter for DefaultMessageRouter {
                             return Err(Error::Routing(format!("无法发送消息: {}", e)));
                         }
                     } else {
-                        return Err(Error::AgentNotFound(receiver.0.clone()));
+                        return Err(Error::AgentNotFound(receiver.value()));
                     }
                 }
             },

@@ -32,7 +32,7 @@ impl Default for MessageId {
 }
 
 /// 消息类型
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum MessageType {
     /// 文本消息
     Text,

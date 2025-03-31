@@ -53,17 +53,14 @@ impl LlmProvider for MockLlmProvider {
         
         if responses.is_empty() {
             Ok("Default mock response".to_string())
-        } else if responses.len() == 1 {
-            // If there's only one response, return it but don't remove it
-            Ok(responses[0].clone())
         } else {
-            // Otherwise, pop and return the first response
+            // 总是移除并返回第一个响应
             Ok(responses.remove(0))
         }
     }
     
     async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> Result<String> {
-        // Reuse the generate method
+        // 复用generate方法
         self.generate("", _options).await
     }
     
@@ -72,15 +69,15 @@ impl LlmProvider for MockLlmProvider {
         _prompt: &'a str,
         _options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
-        let responses = self.responses.lock().unwrap();
+        let mut responses = self.responses.lock().unwrap();
         
         let response = if responses.is_empty() {
             "Default mock response".to_string()
         } else {
-            responses[0].clone()
+            responses.remove(0)
         };
         
-        // Split the response into chunks to simulate streaming
+        // 将响应分成多个块以模拟流式传输
         let chunks = response
             .chars()
             .collect::<Vec<_>>()
@@ -100,11 +97,8 @@ impl LlmProvider for MockLlmProvider {
         
         if embeddings.is_empty() {
             Err(Error::Unavailable("No embeddings available".to_string()))
-        } else if embeddings.len() == 1 {
-            // 如果只有一个嵌入向量，返回它但不删除
-            Ok(embeddings[0].clone())
         } else {
-            // 否则，删除并返回第一个嵌入向量
+            // 总是移除并返回第一个嵌入向量
             Ok(embeddings.remove(0))
         }
     }
@@ -116,6 +110,7 @@ mod tests {
     
     #[tokio::test]
     async fn test_mock_llm_generate() {
+        // 初始化时提供两个响应
         let mock = MockLlmProvider::new(vec![
             "First response".to_string(),
             "Second response".to_string(),
@@ -123,31 +118,36 @@ mod tests {
         
         let options = LlmOptions::default();
         
+        // 第一次调用，获取第一个响应并删除它
         let response1 = mock.generate("test", &options).await.unwrap();
         assert_eq!(response1, "First response");
         
+        // 第二次调用，获取第二个响应并删除它
         let response2 = mock.generate("test", &options).await.unwrap();
         assert_eq!(response2, "Second response");
         
-        // After all responses are used, it should return the default
+        // 第三次调用，没有更多响应，返回默认响应
         let response3 = mock.generate("test", &options).await.unwrap();
         assert_eq!(response3, "Default mock response");
     }
     
     #[tokio::test]
     async fn test_mock_llm_embedding() {
+        // 初始化时提供两个嵌入向量
         let mock = MockLlmProvider::new_with_embeddings(vec![
             vec![0.1, 0.2, 0.3],
             vec![0.4, 0.5, 0.6],
         ]);
         
+        // 第一次调用，获取第一个嵌入向量并删除它
         let embedding1 = mock.get_embedding("test").await.unwrap();
         assert_eq!(embedding1, vec![0.1, 0.2, 0.3]);
         
+        // 第二次调用，获取第二个嵌入向量并删除它
         let embedding2 = mock.get_embedding("test").await.unwrap();
         assert_eq!(embedding2, vec![0.4, 0.5, 0.6]);
         
-        // After all embeddings are used, it should return an error
+        // 第三次调用，没有更多嵌入向量，应返回错误
         let result = mock.get_embedding("test").await;
         assert!(result.is_err());
     }

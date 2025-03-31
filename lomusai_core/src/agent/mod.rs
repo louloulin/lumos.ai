@@ -96,12 +96,6 @@ mod tests {
     
     #[tokio::test]
     async fn test_agent_with_tool() {
-        // Create a mock LLM provider that first calls a tool, then provides a final response
-        let mock_llm = Arc::new(MockLlmProvider::new(vec![
-            "Using the tool 'echo' with parameters: { \"message\": \"Hello from tool!\" }".to_string(),
-            "The tool returned: Echo: Hello from tool!".to_string(),
-        ]));
-        
         // Create an echo tool
         let schema = ToolSchema {
             parameters: vec![
@@ -131,9 +125,22 @@ mod tests {
             name: "TestAgent".to_string(),
             instructions: "You are a test agent.".to_string(),
             memory_config: None,
+            model_id: None,
+            voice_config: None,
+            telemetry: None,
+            working_memory: None,
         };
         
-        let mut agent = create_basic_agent(config, mock_llm);
+        let mock_llm = Arc::new(MockLlmProvider::new(vec![
+            "I'll help you with that! Using the tool 'echo' with parameters: {\"message\": \"Hello from tool!\"}".to_string(),
+            "The tool returned: Echo: Hello from tool!".to_string(),
+        ]));
+        
+        let mut agent = create_basic_agent(
+            "TestAgent".to_string(),
+            "You are a test agent.".to_string(), 
+            mock_llm
+        );
         agent.add_tool(Box::new(echo_tool)).unwrap();
         
         // Generate a response

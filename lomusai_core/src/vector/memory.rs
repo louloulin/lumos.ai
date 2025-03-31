@@ -316,7 +316,10 @@ mod tests {
             "test_index",
             vec![1.0, 0.0, 0.0],
             2,
-            Some(FilterCondition::Eq("type".to_string(), serde_json::json!("A"))),
+            Some(FilterCondition::Eq { 
+                field_name: "type".to_string(), 
+                value: serde_json::json!("A") 
+            }),
             true,
         ).await.unwrap();
         

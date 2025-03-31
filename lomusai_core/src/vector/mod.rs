@@ -241,7 +241,7 @@ mod tests {
     async fn test_vector_storage_factory() {
         // Test default memory storage
         let config = VectorStorageConfig::default();
-        let storage = create_vector_storage(config).unwrap();
+        let storage = create_vector_storage(Some(config)).unwrap();
         
         // Create test index
         storage.create_index("test_factory", 3, None).await.unwrap();
@@ -282,7 +282,7 @@ mod tests {
                 in_memory: true,
             };
             
-            let sqlite_storage = create_vector_storage(sqlite_config).unwrap();
+            let sqlite_storage = create_vector_storage(Some(sqlite_config)).unwrap();
             
             // Create test index
             sqlite_storage.create_index("sqlite_test", 3, None).await.unwrap();

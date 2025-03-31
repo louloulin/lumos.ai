@@ -92,33 +92,29 @@ async fn main() -> LumusResult<()> {
     ));
 
     // 创建各个步骤的代理
-    let extract_agent_config = AgentConfig {
-        name: "extract_agent".to_string(),
-        instructions: "Extract data from the input".to_string(),
-        memory_config: None,
-    };
-    let extract_agent = Arc::new(create_basic_agent(extract_agent_config, extract_provider));
+    let extract_agent = Arc::new(create_basic_agent(
+        "extract_agent".to_string(),
+        "请从给定的数据中提取关键信息。".to_string(),
+        extract_provider
+    ));
     
-    let transform_agent_config = AgentConfig {
-        name: "transform_agent".to_string(),
-        instructions: "Transform the extracted data".to_string(),
-        memory_config: None,
-    };
-    let transform_agent = Arc::new(create_basic_agent(transform_agent_config, transform_provider));
+    let transform_agent = Arc::new(create_basic_agent(
+        "transform_agent".to_string(),
+        "请对提取的数据进行转换和处理。".to_string(),
+        transform_provider
+    ));
     
-    let analyze_agent_config = AgentConfig {
-        name: "analyze_agent".to_string(),
-        instructions: "Analyze the transformed data".to_string(),
-        memory_config: None,
-    };
-    let analyze_agent = Arc::new(create_basic_agent(analyze_agent_config, analyze_provider));
+    let analyze_agent = Arc::new(create_basic_agent(
+        "analyze_agent".to_string(),
+        "请分析处理后的数据并提供洞察。".to_string(),
+        analyze_provider
+    ));
     
-    let load_agent_config = AgentConfig {
-        name: "load_agent".to_string(),
-        instructions: "Load the analyzed data".to_string(),
-        memory_config: None,
-    };
-    let load_agent = Arc::new(create_basic_agent(load_agent_config, load_provider));
+    let load_agent = Arc::new(create_basic_agent(
+        "load_agent".to_string(),
+        "请将分析结果加载到目标位置。".to_string(),
+        load_provider
+    ));
     
     // 创建一个基本工作流
     let mut workflow = BasicWorkflow::new("etl_workflow".to_string());

@@ -1,6 +1,6 @@
 use lomusai_core::Result;
 use lomusai_core::llm::{LlmAdapter, LlmOptions, LlmProvider};
-use lomusai_core::Message;
+use lomusai_core::{Message, Role};
 use lumos_macro::{tools, agent, lumos, LlmAdapter};
 use serde_json::{json, Value};
 use std::collections::HashMap;

@@ -141,13 +141,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let llm = Arc::new(tests::MockLlmProvider::new(mock_responses));
     
     // 创建智能体
-    let config = AgentConfig {
-        name: "助手".to_string(),
-        instructions: "你是一个有用的助手，可以进行计算和查询天气。".to_string(),
-        memory_config: None,
-    };
-    
-    let mut agent = create_basic_agent(config, llm);
+    let mut agent = create_basic_agent(
+        "助手".to_string(),
+        "你是一个有用的助手，可以进行计算和查询天气。".to_string(),
+        llm
+    );
     
     // 添加工具
     agent.add_tool(create_calculator_tool())?;

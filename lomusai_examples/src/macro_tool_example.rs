@@ -10,6 +10,7 @@ use lumos_macro::tool;
 
 // 对于未启用宏的情况，提供传统实现
 #[cfg(not(feature = "macros"))]
+#[derive(Debug)]
 struct CalculatorTool;
 
 #[cfg(not(feature = "macros"))]

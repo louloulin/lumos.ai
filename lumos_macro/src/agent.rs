@@ -205,7 +205,7 @@ pub fn agent(input: TokenStream) -> TokenStream {
         };
         
         quote! {
-            let memory_config = lomusai_core::memory::MemoryConfig::new(#store_type)
+            let memory_config = lumosai_core::memory::MemoryConfig::new(#store_type)
                 #capacity;
             
             agent_config.with_memory_config(memory_config);
@@ -232,8 +232,8 @@ pub fn agent(input: TokenStream) -> TokenStream {
     
     let expanded = quote! {
         {
-            use lomusai_core::agent::{Agent, AgentConfig};
-            use lomusai_core::llm::LlmProvider;
+            use lumosai_core::agent::{Agent, AgentConfig};
+            use lumosai_core::llm::LlmProvider;
             use std::sync::Arc;
             
             let mut agent_config = AgentConfig::new(#agent_name, #instructions);
@@ -245,7 +245,7 @@ pub fn agent(input: TokenStream) -> TokenStream {
             let llm_provider: Arc<dyn LlmProvider> = Arc::new(#llm_provider);
             
             // 创建代理
-            let mut agent = lomusai_core::agent::create_basic_agent(agent_config, llm_provider);
+            let mut agent = lumosai_core::agent::create_basic_agent(agent_config, llm_provider);
             
             // 添加工具
             #(#tool_registrations)*

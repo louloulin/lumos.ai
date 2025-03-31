@@ -6,7 +6,7 @@
 ### 1. CLI框架设计
 - 使用`clap`创建命令行解析
 - 实现类似`cargo`的子命令结构
-- 创建`lomusai_cli` crate作为主入口点
+- 创建`lumosai_cli` crate作为主入口点
 
 ### 2. 核心命令实现
 - `init` - 创建新项目
@@ -27,7 +27,7 @@
 ## 本地模型支持
 
 ### 1. 本地模型接口
-- 扩展`lomusai_core::llm::provider`trait
+- 扩展`lumosai_core::llm::provider`trait
 - 实现统一的模型加载和预测接口
 
 ### 2. 集成推理引擎
@@ -43,12 +43,12 @@
 
 ### CLI挑战
 - **跨平台兼容性** - 使用`dirs`和`home`处理路径
-- **项目状态管理** - 实现.lomusai配置目录
+- **项目状态管理** - 实现.lumosai配置目录
 
 ## 依赖需求
 
 ```toml
-# lomusai_cli/Cargo.toml
+# lumosai_cli/Cargo.toml
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
 dialoguer = "0.10" # 交互式提示
@@ -57,9 +57,9 @@ console = "0.15" # 终端彩色输出
 dirs = "4.0" # 目录管理
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.5"
-lomusai_core = { path = "../lomusai_core" }
+lumosai_core = { path = "../lumosai_core" }
 
-# lomusai_core/Cargo.toml (本地模型部分)
+# lumosai_core/Cargo.toml (本地模型部分)
 [features]
 default = ["openai", "anthropic"]
 local-models = ["llm-rs"]

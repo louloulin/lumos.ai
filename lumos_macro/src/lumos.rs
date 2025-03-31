@@ -231,7 +231,7 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     
     let expanded = quote! {
         {
-            use lomusai_core::app::LumosApp;
+            use lumosai_core::app::LumosApp;
             
             let mut app = LumosApp::new(#app_name)
                 #description;

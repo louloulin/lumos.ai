@@ -47,7 +47,7 @@ mod lumos;
 ///         required = true
 ///     )]
 ///     b: f64,
-/// ) -> Result<serde_json::Value, lomusai_core::Error> {
+/// ) -> Result<serde_json::Value, lumosai_core::Error> {
 ///     // Function implementation
 /// }
 /// ```

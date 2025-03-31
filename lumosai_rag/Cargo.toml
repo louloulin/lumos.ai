@@ -1,0 +1,44 @@
+[package]
+name = "lumosai_rag"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lumosai Team"]
+description = "Retrieval Augmented Generation (RAG) module for Lumosai AI framework"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = ["openai-embeddings"]
+openai-embeddings = ["reqwest"]
+all = ["openai-embeddings"]
+
+[dependencies]
+# Internal dependencies
+lumosai_core = { path = "../lumosai_core" }
+
+# Core dependencies
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# HTTP & API dependencies
+reqwest = { workspace = true, optional = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+regex = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+mockall = { workspace = true }
+mockito = { workspace = true }
+tempfile = { workspace = true } 

@@ -1,4 +1,4 @@
-# Lomusai Agent 语音功能实现更新
+# Lumosai Agent 语音功能实现更新
 
 ## 已实现功能
 

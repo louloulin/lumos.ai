@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use lomusai_core::{
+use lumosai_core::{
     memory::{
         MemoryConfig, MessageRange, SemanticRecallConfig,
         semantic_memory::{SemanticSearchOptions, create_semantic_memory}

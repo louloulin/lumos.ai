@@ -1,6 +1,6 @@
-# Lomusai DSL宏详解
+# Lumosai DSL宏详解
 
-Lomusai框架提供了一系列受Mastra API启发的声明式DSL宏，用于简化常见任务的定义。这些DSL宏使用Rust的过程宏系统实现，提供了优雅、直观的语法，同时保持了Rust的类型安全和编译时检查。
+Lumosai框架提供了一系列受Mastra API启发的声明式DSL宏，用于简化常见任务的定义。这些DSL宏使用Rust的过程宏系统实现，提供了优雅、直观的语法，同时保持了Rust的类型安全和编译时检查。
 
 ## 概述
 
@@ -57,7 +57,7 @@ let workflow = workflow! {
 ### 示例
 
 ```rust
-use lomusai_core::agent::Agent;
+use lumosai_core::agent::Agent;
 use lumos_macro::workflow;
 
 let content_workflow = workflow! {
@@ -176,7 +176,7 @@ let pipeline = rag_pipeline! {
 ### 示例
 
 ```rust
-use lomusai_core::rag::DocumentSource;
+use lumosai_core::rag::DocumentSource;
 use lumos_macro::rag_pipeline;
 
 let kb = rag_pipeline! {
@@ -209,7 +209,7 @@ let kb = rag_pipeline! {
 };
 
 // 执行查询
-let results = kb.query("如何使用Lomusai工具?").await?;
+let results = kb.query("如何使用Lumosai工具?").await?;
 ```
 
 ## 评估套件DSL (eval_suite!)
@@ -276,7 +276,7 @@ let suite = eval_suite! {
 ### 示例
 
 ```rust
-use lomusai_core::eval::{AccuracyMetric, RelevanceMetric};
+use lumosai_core::eval::{AccuracyMetric, RelevanceMetric};
 use lumos_macro::eval_suite;
 
 let suite = eval_suite! {
@@ -459,7 +459,7 @@ let result = client.execute_tool("data_analysis", params).await?;
 
 ```toml
 [dependencies]
-lomusai_core = { version = "0.1.0", features = ["macros"] }
+lumosai_core = { version = "0.1.0", features = ["macros"] }
 ```
 
 然后在代码中导入相应的宏：
@@ -519,7 +519,7 @@ let agent = agent! {
 ### 示例
 
 ```rust
-use lomusai_core::llm::OpenAiAdapter;
+use lumosai_core::llm::OpenAiAdapter;
 use lumos_macro::agent;
 
 let agent = agent! {
@@ -580,7 +580,7 @@ tools! {
 ### 示例
 
 ```rust
-use lomusai_core::Error;
+use lumosai_core::Error;
 use lumos_macro::tools;
 use serde_json::json;
 
@@ -650,7 +650,7 @@ let weather_info = weather().execute(weather_params, &options).await?;
 
 ## Lumos应用配置 (lumos!)
 
-`lumos!`宏是Lomusai框架中最高层次的DSL，提供了一种声明式方式来配置整个应用程序。它允许开发者在一个地方整合所有组件，包括代理、工具、RAG系统、工作流和MCP端点，从而简化应用开发和配置过程。
+`lumos!`宏是Lumosai框架中最高层次的DSL，提供了一种声明式方式来配置整个应用程序。它允许开发者在一个地方整合所有组件，包括代理、工具、RAG系统、工作流和MCP端点，从而简化应用开发和配置过程。
 
 ### 语法结构
 
@@ -761,7 +761,7 @@ let response = app.run("用户请求").await?;
 以下是一个完整的股票助手应用示例，展示如何使用`lumos!`宏整合多个组件：
 
 ```rust
-use lomusai_core::{
+use lumosai_core::{
     llm::OpenAiAdapter,
     rag::DocumentSource,
     memory::BufferMemory

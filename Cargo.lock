@@ -1491,15 +1491,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
-name = "lomusai"
+name = "lumos_macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+ "trybuild",
+]
+
+[[package]]
+name = "lumosai"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "lomusai_core",
- "lomusai_evals",
- "lomusai_network",
- "lomusai_rag",
  "lumos_macro",
+ "lumosai_core",
+ "lumosai_evals",
+ "lumosai_network",
+ "lumosai_rag",
  "redis",
  "reqwest",
  "serde",
@@ -1510,7 +1520,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lomusai_core"
+name = "lumosai_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1535,13 +1545,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "lomusai_evals"
+name = "lumosai_evals"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
  "futures",
- "lomusai_core",
+ "lumosai_core",
  "mockall",
  "regex",
  "serde",
@@ -1554,7 +1564,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lomusai_examples"
+name = "lumosai_examples"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1562,11 +1572,11 @@ dependencies = [
  "axum",
  "chrono",
  "futures",
- "lomusai_core",
- "lomusai_evals",
- "lomusai_mcp",
- "lomusai_rag",
  "lumos_macro",
+ "lumosai_core",
+ "lumosai_evals",
+ "lumosai_mcp",
+ "lumosai_rag",
  "regex",
  "reqwest",
  "serde",
@@ -1578,7 +1588,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lomusai_mcp"
+name = "lumosai_mcp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1587,7 +1597,7 @@ dependencies = [
  "eventsource-stream",
  "futures",
  "indexmap",
- "lomusai_core",
+ "lumosai_core",
  "mockall",
  "reqwest",
  "serde",
@@ -1605,14 +1615,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "lomusai_network"
+name = "lumosai_network"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "dashmap",
  "futures",
  "log",
- "lomusai_core",
+ "lumosai_core",
  "parking_lot",
  "petgraph",
  "serde",
@@ -1625,14 +1635,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "lomusai_rag"
+name = "lumosai_rag"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
  "futures",
- "lomusai_core",
+ "lumosai_core",
  "mockall",
  "mockito",
  "regex",
@@ -1646,16 +1656,6 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
-]
-
-[[package]]
-name = "lumos_macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
- "trybuild",
 ]
 
 [[package]]

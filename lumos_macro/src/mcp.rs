@@ -273,7 +273,7 @@ pub fn mcp_client_impl(input: TokenStream) -> TokenStream {
     
     let expanded = quote! {
         {
-            use lomusai_core::mcp::*;
+            use lumosai_core::mcp::*;
             
             let mut mcp_client = McpClient::new()
                 .with_endpoints(#endpoints)

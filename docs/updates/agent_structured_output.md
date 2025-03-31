@@ -1,4 +1,4 @@
-# Lomusai Agent 结构化输出功能实现
+# Lumosai Agent 结构化输出功能实现
 
 ## 功能概述
 

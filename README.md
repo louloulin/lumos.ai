@@ -1,6 +1,6 @@
-# Lomusai - Rust语言的AI Agent框架
+# Lumosai - Rust语言的AI Agent框架
 
-Lomusai是一个用Rust实现的AI Agent框架，专注于性能、安全性和可扩展性。它提供了创建、管理和部署智能代理的工具和抽象，使开发者能够轻松构建高效的AI应用。
+Lumosai是一个用Rust实现的AI Agent框架，专注于性能、安全性和可扩展性。它提供了创建、管理和部署智能代理的工具和抽象，使开发者能够轻松构建高效的AI应用。
 
 ## 主要特性
 
@@ -15,7 +15,7 @@ Lomusai是一个用Rust实现的AI Agent框架，专注于性能、安全性和�
 
 ## 项目结构
 
-- `lomusai_core`：核心库，包含基本抽象和接口
+- `lumosai_core`：核心库，包含基本抽象和接口
   - `agent`：Agent trait和实现
   - `tool`：Tool trait和实现
   - `memory`：内存和状态管理
@@ -23,16 +23,16 @@ Lomusai是一个用Rust实现的AI Agent框架，专注于性能、安全性和�
   - `eval`：评估和测试框架
   - `rag`：检索增强生成支持
   - `mcp`：MCP（Mastra Compatible Protocol）支持
-- `lomusai_rag`：检索增强生成库，提供扩展的RAG功能
+- `lumosai_rag`：检索增强生成库，提供扩展的RAG功能
   - `embedding`：向量嵌入支持
   - `chunking`：文档分块策略
   - `retrieval`：检索算法和优化
   - `reranking`：结果重排序
-- `lomusai_evals`：评估和测试框架，提供全面的评估工具
+- `lumosai_evals`：评估和测试框架，提供全面的评估工具
   - `metrics`：预定义和自定义评估指标
   - `evaluators`：评估器实现
   - `reporting`：结果报告和可视化
-- `lomusai_examples`：示例代码，展示框架使用方法
+- `lumosai_examples`：示例代码，展示框架使用方法
   - 基础示例：代理创建、工具使用等
   - 工作流示例：多代理协作和流程编排
   - DSL示例：各种DSL的使用方法
@@ -47,14 +47,14 @@ Lomusai是一个用Rust实现的AI Agent框架，专注于性能、安全性和�
 
 ```toml
 [dependencies]
-lomusai_core = "0.1.0"
+lumosai_core = "0.1.0"
 ```
 
 若要使用宏功能，启用`macros`特性：
 
 ```toml
 [dependencies]
-lomusai_core = { version = "0.1.0", features = ["macros"] }
+lumosai_core = { version = "0.1.0", features = ["macros"] }
 lumos_macro = "0.1.0"
 ```
 
@@ -62,9 +62,9 @@ lumos_macro = "0.1.0"
 
 ```toml
 [dependencies]
-lomusai_core = "0.1.0"
-lomusai_rag = "0.1.0"
-lomusai_evals = "0.1.0"
+lumosai_core = "0.1.0"
+lumosai_rag = "0.1.0"
+lumosai_evals = "0.1.0"
 ```
 
 ## 快速开始
@@ -72,10 +72,10 @@ lomusai_evals = "0.1.0"
 ### 基础使用示例
 
 ```rust
-use lomusai_core::{Result, Error};
-use lomusai_core::agent::{Agent, SimpleAgent};
-use lomusai_core::tool::{Tool, FunctionTool};
-use lomusai_core::llm::{LlmProvider, OpenAiAdapter};
+use lumosai_core::{Result, Error};
+use lumosai_core::agent::{Agent, SimpleAgent};
+use lumosai_core::tool::{Tool, FunctionTool};
+use lumosai_core::llm::{LlmProvider, OpenAiAdapter};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -117,8 +117,8 @@ async fn main() -> Result<()> {
 ### 使用宏的简化示例
 
 ```rust
-use lomusai_core::{Result, Error};
-use lomusai_core::llm::OpenAiAdapter;
+use lumosai_core::{Result, Error};
+use lumosai_core::llm::OpenAiAdapter;
 use lumos_macro::{tool, agent};
 use std::sync::Arc;
 
@@ -172,9 +172,9 @@ async fn main() -> Result<()> {
 ### 使用DSL宏示例
 
 ```rust
-use lomusai_core::{Result, Error};
-use lomusai_core::agent::Agent;
-use lomusai_core::llm::OpenAiAdapter;
+use lumosai_core::{Result, Error};
+use lumosai_core::agent::Agent;
+use lumosai_core::llm::OpenAiAdapter;
 use lumos_macro::{workflow, rag_pipeline};
 use std::sync::Arc;
 
@@ -241,7 +241,7 @@ async fn main() -> Result<()> {
 
 ## 示例
 
-请参阅 `lomusai_examples` 目录中的示例程序，了解更多使用方法。可以通过以下命令运行示例：
+请参阅 `lumosai_examples` 目录中的示例程序，了解更多使用方法。可以通过以下命令运行示例：
 
 ```bash
 cargo run --example basic_usage
@@ -320,7 +320,7 @@ pub trait LlmProvider: Send + Sync {
 
 ### RAG (检索增强生成)
 
-Lomusai提供了完整的RAG支持，包括：
+Lumosai提供了完整的RAG支持，包括：
 
 - 文档加载和处理
 - 向量嵌入生成
@@ -354,7 +354,7 @@ let results = rag_pipeline.query("如何使用Rust的所有权系统？", 5).awa
 
 ### 评估框架
 
-Lomusai提供了评估代理性能的工具：
+Lumosai提供了评估代理性能的工具：
 
 ```rust
 let eval_suite = eval_suite! {
@@ -383,7 +383,7 @@ let results = eval_suite.run(agent).await?;
 
 ### 工作流
 
-Lomusai支持定义复杂的多代理工作流：
+Lumosai支持定义复杂的多代理工作流：
 
 ```rust
 let workflow = workflow! {

@@ -1,6 +1,6 @@
-# Lomusai Agent系统增强计划
+# Lumosai Agent系统增强计划
 
-基于对Mastra Agent系统的分析，本文档提出了Lomusai Agent系统的增强计划，旨在让其具备与Mastra同等的功能，同时保持Rust的优势。
+基于对Mastra Agent系统的分析，本文档提出了Lumosai Agent系统的增强计划，旨在让其具备与Mastra同等的功能，同时保持Rust的优势。
 
 ## 1. 核心功能增强
 
@@ -285,7 +285,7 @@ pub trait VoiceProvider: Send + Sync {
 
 ## 总结
 
-本增强计划将使Lomusai Agent系统达到与Mastra同等的功能水平，同时保持Rust的性能和安全优势。通过分阶段实施，我们可以逐步完善Agent系统，使其更强大、更灵活，满足复杂的人工智能应用需求。
+本增强计划将使Lumosai Agent系统达到与Mastra同等的功能水平，同时保持Rust的性能和安全优势。通过分阶段实施，我们可以逐步完善Agent系统，使其更强大、更灵活，满足复杂的人工智能应用需求。
 
 ## 实施进度
 

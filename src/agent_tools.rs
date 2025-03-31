@@ -1,5 +1,5 @@
-use lomusai_core::Result;
-use lomusai_core::llm::{LlmOptions, LlmProvider, Message, Role};
+use lumosai_core::Result;
+use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use lumos_macro::{tools, tool};
@@ -74,11 +74,11 @@ async fn main() -> Result<()> {
             "subtract" => a - b,
             "multiply" => a * b,
             "divide" => if b == 0.0 {
-                return Err(lomusai_core::Error::InvalidInput("Cannot divide by zero".into()))
+                return Err(lumosai_core::Error::InvalidInput("Cannot divide by zero".into()))
             } else {
                 a / b
             },
-            _ => return Err(lomusai_core::Error::InvalidInput("Unknown operation".into()))
+            _ => return Err(lumosai_core::Error::InvalidInput("Unknown operation".into()))
         };
         
         Ok(json!({ "result": result }))
@@ -117,7 +117,7 @@ async fn main() -> Result<()> {
     let llm_provider = Arc::new(MockLlmAdapter::new());
     
     // 创建一个简单的代理
-    let agent_config = lomusai_core::agent::AgentConfig {
+    let agent_config = lumosai_core::agent::AgentConfig {
         name: "assistant".to_string(),
         instructions: "你是一个通用助手，可以进行数学计算和查询天气信息。".to_string(),
         memory_config: None,
@@ -127,7 +127,7 @@ async fn main() -> Result<()> {
         working_memory: None,
     };
     
-    let mut agent = lomusai_core::agent::create_basic_agent(
+    let mut agent = lumosai_core::agent::create_basic_agent(
         "assistant", 
         "你是一个通用助手，可以进行数学计算和查询天气信息。", 
         llm_provider
@@ -148,7 +148,7 @@ async fn main() -> Result<()> {
         name: None,
     };
     
-    let calc_result = agent.generate(&[user_message], &lomusai_core::agent::AgentGenerateOptions::default()).await?;
+    let calc_result = agent.generate(&[user_message], &lumosai_core::agent::AgentGenerateOptions::default()).await?;
     println!("代理回答: {}", calc_result.response);
     
     println!("\n处理天气查询:");
@@ -159,7 +159,7 @@ async fn main() -> Result<()> {
         name: None,
     };
     
-    let weather_result = agent.generate(&[user_message], &lomusai_core::agent::AgentGenerateOptions::default()).await?;
+    let weather_result = agent.generate(&[user_message], &lumosai_core::agent::AgentGenerateOptions::default()).await?;
     println!("代理回答: {}", weather_result.response);
     
     // 执行工具直接调用

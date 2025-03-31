@@ -181,7 +181,7 @@ pub fn workflow_impl(input: TokenStream) -> TokenStream {
         };
         
         let step_def = quote! {
-            let #step_var_name = lomusai_core::workflow::WorkflowStep::new(#step_name)
+            let #step_var_name = lumosai_core::workflow::WorkflowStep::new(#step_name)
                 .with_agent(#agent)
                 #instructions
                 #tools;
@@ -208,7 +208,7 @@ pub fn workflow_impl(input: TokenStream) -> TokenStream {
         {
             #(#step_defs)*
             
-            let mut workflow_def = lomusai_core::workflow::WorkflowDefinition::new(None)
+            let mut workflow_def = lumosai_core::workflow::WorkflowDefinition::new(None)
                 .with_name(#workflow_name)
                 #description;
                 

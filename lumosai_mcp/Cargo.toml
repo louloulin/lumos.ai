@@ -1,0 +1,32 @@
+[package]
+name = "lumosai_mcp"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lumosai Team"]
+description = "MCP (Model Context Protocol) implementation for Lumosai"
+license = "MIT"
+
+[dependencies]
+lumosai_core = { path = "../lumosai_core" }
+tokio = { version = "1.34", features = ["full"] }
+tokio-stream = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures = "0.3"
+async-trait = "0.1"
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+reqwest = { version = "0.11", features = ["json", "stream"] }
+tokio-process-stream = "0.4"
+url = "2.5"
+async-sse = "5.1"
+eventsource-stream = "0.2"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+indexmap = "2.2"
+tokio-util = { version = "0.7", features = ["codec"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.11"
+tempfile = "3.8" 

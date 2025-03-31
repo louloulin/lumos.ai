@@ -1,0 +1,23 @@
+[package]
+name = "lumosai_network"
+version = "0.1.0"
+edition = "2021"
+description = "Agent network implementation for Lumosai"
+
+[dependencies]
+lumosai_core = { path = "../lumosai_core" }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { version = "1.4.1", features = ["v4", "serde"] }
+tracing = "0.1"
+futures = "0.3"
+petgraph = "0.6.3"     # 用于表示和分析网络拓扑
+dashmap = "5.5.0"      # 并发哈希表
+parking_lot = "0.12.1" # 高性能锁
+log = "0.4.17"
+
+[dev-dependencies]
+tokio-test = "0.4" 

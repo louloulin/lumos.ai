@@ -1,0 +1,77 @@
+[package]
+name = "lumosai_examples"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lumosai Team"]
+description = "Examples for the Lumosai framework"
+license = "MIT"
+
+[dependencies]
+lumosai_core = { path = "../lumosai_core" }
+lumosai_rag = { path = "../lumosai_rag", optional = true }
+lumosai_evals = { path = "../lumosai_evals", optional = true }
+lumosai_mcp = { path = "../lumosai_mcp" }
+lumos_macro = { path = "../lumos_macro", optional = true }
+tokio = { version = "1.34", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures = "0.3"
+async-trait = "0.1"
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+reqwest = { version = "0.11", features = ["json"] }
+axum = "0.7"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
+
+[features]
+default = ["rag", "evals"]
+rag = ["lumosai_rag"]
+evals = ["lumosai_evals"]
+macros = ["lumos_macro"]
+
+[[example]]
+name = "basic_usage"
+path = "src/basic_usage.rs"
+
+[[example]]
+name = "agent_usage"
+path = "src/agent_usage.rs"
+
+[[example]]
+name = "agent_tools"
+path = "src/agent_tools.rs"
+
+[[example]]
+name = "workflow_example"
+path = "src/workflow_example.rs"
+
+[[example]]
+name = "workflow_dsl"
+path = "src/workflow_dsl.rs"
+
+[[example]]
+name = "rag_dsl"
+path = "src/rag_dsl.rs"
+
+[[example]]
+name = "eval_dsl"
+path = "src/eval_dsl.rs"
+
+[[example]]
+name = "mcp_dsl"
+path = "src/mcp_dsl.rs"
+
+[[example]]
+name = "lumos_app"
+path = "src/lumos_app.rs"
+
+[[example]]
+name = "lumos_macro_usage"
+path = "src/lumos_macro_usage.rs"
+
+[[example]]
+name = "macro_tool_example"
+path = "src/macro_tool_example.rs" 

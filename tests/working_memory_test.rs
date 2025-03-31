@@ -1,4 +1,4 @@
-use lomusai_core::{
+use lumosai_core::{
     memory::{WorkingMemoryConfig, create_working_memory},
     Result,
 };

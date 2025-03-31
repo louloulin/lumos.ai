@@ -1,31 +1,32 @@
 [workspace]
 members = [
-    "lomusai_core",
-    "lomusai_evals",
-    "lomusai_rag",
-    "lomusai_network",
+    "lumosai_core",
+    "lumosai_evals",
+    "lumosai_rag",
+    "lumosai_network",
     "lumos_macro",
-    "lomusai_examples"
+    "lumosai_mcp",
+    "lumosai_examples"
 ]
 resolver = "2"
 
 [workspace.metadata.workspaces]
-direct-packages = ["lomusai_stores"]
+direct-packages = ["lumosai_stores"]
 
 [workspace.metadata.resolver]
-# 指定 lomusai_stores 中的 sqlx 应该使用不同于其他包的 libsqlite3-sys
+# 指定 lumosai_stores 中的 sqlx 应该使用不同于其他包的 libsqlite3-sys
 version_conflicts = [
     { name = "libsqlite3-sys", versions = ["0.26.0", "0.27.0"] }
 ]
 
 [package]
-name = "lomusai"
+name = "lumosai"
 version = "0.1.0"
 edition = "2021"
-authors = ["Lomusai Team"]
+authors = ["Lumosai Team"]
 description = "Rust版本的Mastra AI应用框架"
 license = "MIT"
-repository = "https://github.com/lomusai/lomusai"
+repository = "https://github.com/lumosai/lumosai"
 
 [workspace.dependencies]
 # 核心依赖
@@ -68,10 +69,10 @@ default = ["integrations"]
 integrations = ["reqwest", "sqlx"]
 
 [dependencies]
-lomusai_core = { path = "lomusai_core", features = ["macros"] }
-lomusai_evals = { path = "lomusai_evals" }
-lomusai_rag = { path = "lomusai_rag" }
-lomusai_network = { path = "lomusai_network" }
+lumosai_core = { path = "lumosai_core", features = ["macros"] }
+lumosai_evals = { path = "lumosai_evals" }
+lumosai_rag = { path = "lumosai_rag" }
+lumosai_network = { path = "lumosai_network" }
 lumos_macro = { path = "lumos_macro" }
 redis = { workspace = true }
 

@@ -2,8 +2,8 @@
 name = "lumos_macro"
 version = "0.1.0"
 edition = "2021"
-description = "Procedural macros for the Lomusai agent framework"
-authors = ["Lomusai Team"]
+description = "Procedural macros for the Lumosai agent framework"
+authors = ["Lumosai Team"]
 license = "MIT"
 
 [lib]

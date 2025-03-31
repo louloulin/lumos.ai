@@ -219,7 +219,7 @@ pub fn eval_suite_impl(input: TokenStream) -> TokenStream {
     
     let expanded = quote! {
         {
-            use lomusai_core::eval::*;
+            use lumosai_core::eval::*;
             
             let mut suite = EvaluationSuite::new(#name);
             

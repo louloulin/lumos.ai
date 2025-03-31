@@ -1,8 +1,8 @@
-# Lomus UI 开发计划
+# Lumos UI 开发计划
 
 ## 1. 当前 UI 实现分析
 
-目前 Lomus UI (lumos_ui) 已经实现了基础的组件和页面结构，但还需要进一步完善以支持 Lomus 的全部功能。当前实现包括:
+目前 Lumos UI (lumos_ui) 已经实现了基础的组件和页面结构，但还需要进一步完善以支持 Lumos 的全部功能。当前实现包括:
 
 - React 基础架构和组件
 - 页面路由系统
@@ -14,32 +14,32 @@
 ### 2.1 功能差距
 1. **工作流可视化编辑器**
    - Mastra: 完整的工作流编辑和可视化功能
-   - Lomus: 基础界面已实现，需要完善编辑和保存功能
+   - Lumos: 基础界面已实现，需要完善编辑和保存功能
 
 2. **代理可视化和交互**
    - Mastra: 丰富的代理管理和交互界面
-   - Lomus: 需要增强代理配置和监控界面
+   - Lumos: 需要增强代理配置和监控界面
 
 3. **LLM 模型管理**
    - Mastra: 完整的模型管理和切换功能
-   - Lomus: 需要实现模型配置和参数调整界面
+   - Lumos: 需要实现模型配置和参数调整界面
 
 4. **RAG 知识库管理**
    - Mastra: 可视化知识库管理
-   - Lomus: 需要实现文档上传和索引管理界面
+   - Lumos: 需要实现文档上传和索引管理界面
 
 5. **集成与部署**
    - Mastra: 完整的部署流程和集成管理
-   - Lomus: 需要实现部署配置界面
+   - Lumos: 需要实现部署配置界面
 
 ### 2.2 技术差距
 1. **与后端通信**
    - Mastra: 完整的类型安全 API 客户端
-   - Lomus: 需要实现 Rust 后端 API 客户端
+   - Lumos: 需要实现 Rust 后端 API 客户端
 
 2. **开发体验**
    - Mastra: 集成的开发环境和热重载
-   - Lomus: 需要 `lomus dev` 命令支持自动重载
+   - Lumos: 需要 `lumos dev` 命令支持自动重载
 
 ## 3. 实施计划
 
@@ -118,7 +118,7 @@
 ### 第四阶段：开发工具链（1-2周）
 
 1. **CLI 集成**
-   - [ ] 实现 `lomus dev` 命令
+   - [ ] 实现 `lumos dev` 命令
    - [ ] 添加 UI 自动启动功能
    - [ ] 实现代码热重载
    - [ ] 添加开发日志和调试信息
@@ -129,12 +129,12 @@
    - [ ] 实现自动化测试
    - [ ] 添加文档生成功能
 
-## 4. `lomus dev` 命令实现
+## 4. `lumos dev` 命令实现
 
-`lomus dev` 命令将作为开发工具链的核心部分，参考 Mastra 的实现，需要实现以下功能：
+`lumos dev` 命令将作为开发工具链的核心部分，参考 Mastra 的实现，需要实现以下功能：
 
 ```rust
-// lomusai_cli/src/commands/dev.rs
+// lumosai_cli/src/commands/dev.rs
 
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
@@ -268,4 +268,4 @@ pub async fn run_dev_command(args: DevCommandArgs) -> Result<(), anyhow::Error> 
 
 ## 9. 结论
 
-Lomus UI 的实现需要专注于提供优秀的开发者体验和强大的可视化功能，通过分阶段实施计划，可以逐步构建一个功能完整、性能优异的 AI 应用开发环境。特别是 `lomus dev` 命令的实现将大大提升开发者的工作效率，使 Lomus 成为一个真正易用的 AI 应用框架。 
+Lumos UI 的实现需要专注于提供优秀的开发者体验和强大的可视化功能，通过分阶段实施计划，可以逐步构建一个功能完整、性能优异的 AI 应用开发环境。特别是 `lumos dev` 命令的实现将大大提升开发者的工作效率，使 Lumos 成为一个真正易用的 AI 应用框架。 

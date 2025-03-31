@@ -180,7 +180,7 @@ pub fn tools(input: TokenStream) -> TokenStream {
             };
             
             quote! {
-                lomusai_core::tool::ParameterSchema {
+                lumosai_core::tool::ParameterSchema {
                     name: #param_name.to_string(),
                     description: #param_desc.to_string(),
                     r#type: #param_type.to_string(),
@@ -192,9 +192,9 @@ pub fn tools(input: TokenStream) -> TokenStream {
         }).collect::<Vec<_>>();
         
         let tool_def = quote! {
-            pub fn #tool_fn_name() -> impl lomusai_core::tool::Tool {
+            pub fn #tool_fn_name() -> impl lumosai_core::tool::Tool {
                 use serde_json::json;
-                use lomusai_core::tool::{FunctionTool, ParameterSchema, ToolSchema};
+                use lumosai_core::tool::{FunctionTool, ParameterSchema, ToolSchema};
                 
                 let schema = ToolSchema {
                     parameters: vec![

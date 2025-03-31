@@ -1,0 +1,85 @@
+[workspace]
+members = [
+    "lumosai_core",
+    "lumosai_evals",
+    "lumosai_rag",
+    "lumosai_network",
+    "lumos_macro",
+    "lumosai_examples"
+]
+resolver = "2"
+
+[workspace.metadata.workspaces]
+direct-packages = ["lumosai_stores"]
+
+[workspace.metadata.resolver]
+# 指定 lumosai_stores 中的 sqlx 应该使用不同于其他包的 libsqlite3-sys
+version_conflicts = [
+    { name = "libsqlite3-sys", versions = ["0.26.0", "0.27.0"] }
+]
+
+[package]
+name = "lumosai"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lumosai Team"]
+description = "Rust版本的Mastra AI应用框架"
+license = "MIT"
+repository = "https://github.com/lumosai/lumosai"
+
+[workspace.dependencies]
+# 核心依赖
+tokio = { version = "1.33", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures = "0.3"
+async-trait = "0.1.73"
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+reqwest = { version = "0.11.23", features = ["json"] }
+axum = "0.7"
+redis = { version = "0.23.0", features = ["tokio-comp"] }
+sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "sqlite", "json"] }
+
+# 工具库
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
+url = "2.5"
+
+# 测试工具
+tokio-test = "0.4"
+mockall = "0.11"
+mockito = "1.2"
+tempfile = "3.8"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[features]
+default = ["integrations"]
+integrations = ["reqwest", "sqlx"]
+
+[dependencies]
+lumosai_core = { path = "lumosai_core", features = ["macros"] }
+lumosai_evals = { path = "lumosai_evals" }
+lumosai_rag = { path = "lumosai_rag" }
+lumosai_network = { path = "lumosai_network" }
+lumos_macro = { path = "lumos_macro" }
+redis = { workspace = true }
+
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+
+reqwest = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true }

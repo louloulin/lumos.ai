@@ -407,7 +407,7 @@ pub fn rag_pipeline_impl(input: TokenStream) -> TokenStream {
             };
             
             quote! {
-                let query_config = lomusai_core::rag::QueryConfig::new()
+                let query_config = lumosai_core::rag::QueryConfig::new()
                     #rerank
                     #top_k
                     #filter;
@@ -422,7 +422,7 @@ pub fn rag_pipeline_impl(input: TokenStream) -> TokenStream {
     
     let expanded = quote! {
         {
-            use lomusai_core::rag::*;
+            use lumosai_core::rag::*;
             
             let chunk_config = ChunkConfig::new(#chunk_size)
                 #chunk_overlap

@@ -1,6 +1,6 @@
 # Lumos Macro
 
-Lumos Macro是Lomusai框架的一部分，提供了一系列过程宏，用于简化Lomusai框架中工具、代理和LLM适配器的定义和使用。
+Lumos Macro是Lumosai框架的一部分，提供了一系列过程宏，用于简化Lumosai框架中工具、代理和LLM适配器的定义和使用。
 
 ## 特性
 
@@ -25,7 +25,7 @@ Lumos Macro是Lomusai框架的一部分，提供了一系列过程宏，用于�
 
 ```toml
 [dependencies]
-lomusai_core = { version = "0.1.0", features = ["macros"] }
+lumosai_core = { version = "0.1.0", features = ["macros"] }
 ```
 
 核心的`macros`特性会自动包含`lumos_macro`库。
@@ -35,7 +35,7 @@ lomusai_core = { version = "0.1.0", features = ["macros"] }
 ### 工具定义 (使用#[tool]宏)
 
 ```rust
-use lomusai_core::{Error, Result};
+use lumosai_core::{Error, Result};
 use serde_json::{Value, json};
 use lumos_macro::tool;
 
@@ -91,7 +91,7 @@ fn calculator(
 
 ```rust
 use std::sync::Arc;
-use lomusai_core::llm::LlmProvider;
+use lumosai_core::llm::LlmProvider;
 use lumos_macro::agent;
 
 #[agent(
@@ -114,8 +114,8 @@ struct MathAgent {
 
 ```rust
 use async_trait::async_trait;
-use lomusai_core::{Result, Message, Role, Error};
-use lomusai_core::llm::{LlmProvider, LlmOptions};
+use lumosai_core::{Result, Message, Role, Error};
+use lumosai_core::llm::{LlmProvider, LlmOptions};
 use lumos_macro::LlmAdapter;
 
 #[derive(LlmAdapter)]
@@ -167,7 +167,7 @@ async fn main() -> Result<()> {
 
 ```rust
 use lumos_macro::workflow;
-use lomusai_core::agent::Agent;
+use lumosai_core::agent::Agent;
 
 let content_workflow = workflow! {
     name: "content_creation",
@@ -201,7 +201,7 @@ let result = content_workflow.execute(input_data).await?;
 
 ```rust
 use lumos_macro::rag_pipeline;
-use lomusai_core::rag::DocumentSource;
+use lumosai_core::rag::DocumentSource;
 
 let kb = rag_pipeline! {
     name: "knowledge_base",
@@ -244,7 +244,7 @@ let results = kb.query("如何使用RAG?").await?;
 
 ```rust
 use lumos_macro::eval_suite;
-use lomusai_core::eval::{AccuracyMetric, RelevanceMetric, CompletenessMetric};
+use lumosai_core::eval::{AccuracyMetric, RelevanceMetric, CompletenessMetric};
 
 let suite = eval_suite! {
     name: "agent_performance",
@@ -430,7 +430,7 @@ let response = app.run("查询苹果公司股票价格").await?;
 
 ## 与Mastra API的比较
 
-Lumos宏的设计受到了Mastra API的启发，提供了类似的声明式API，但专为Rust语言和Lomusai框架量身定制。相比于Mastra的JavaScript API，Lumos宏利用了Rust的强类型系统和编译时检查，以提供更安全和高效的代码。
+Lumos宏的设计受到了Mastra API的启发，提供了类似的声明式API，但专为Rust语言和Lumosai框架量身定制。相比于Mastra的JavaScript API，Lumos宏利用了Rust的强类型系统和编译时检查，以提供更安全和高效的代码。
 
 新增的DSL宏直接受到Mastra的工作流、RAG、评估和MCP功能的启发，提供了相似的声明式语法，但保持了Rust语言的特性和安全性。
 

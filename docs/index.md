@@ -1,6 +1,6 @@
-# Lomusai 文档
+# Lumosai 文档
 
-欢迎使用Lomusai文档！Lomusai是一个用Rust实现的AI Agent框架，专注于性能、安全性和可扩展性。
+欢迎使用Lumosai文档！Lumosai是一个用Rust实现的AI Agent框架，专注于性能、安全性和可扩展性。
 
 ## 目录
 
@@ -36,7 +36,7 @@
 
 ### API参考
 
-- [lomusai_core API](./api/core.md)
+- [lumosai_core API](./api/core.md)
 - [lumos_macro API](./api/macros.md)
 
 ### 高级主题
@@ -52,12 +52,12 @@
 - [贡献指南](./contributing.md)
 - [版本历史](./changelog.md)
 
-## Lomusai框架架构
+## Lumosai框架架构
 
-Lomusai框架由以下主要组件组成：
+Lumosai框架由以下主要组件组成：
 
 ```
-lomusai_core/           # 核心库
+lumosai_core/           # 核心库
 ├── agent/             # 代理抽象和实现
 ├── tool/              # 工具抽象和实现
 ├── llm/               # LLM适配器
@@ -85,6 +85,6 @@ lumos_macro/            # 宏库
 
 ## 相关资源
 
-- [GitHub仓库](https://github.com/yourusername/lomusai)
-- [Crates.io页面](https://crates.io/crates/lomusai_core)
-- [API文档](https://docs.rs/lomusai_core) 
+- [GitHub仓库](https://github.com/yourusername/lumosai)
+- [Crates.io页面](https://crates.io/crates/lumosai_core)
+- [API文档](https://docs.rs/lumosai_core) 

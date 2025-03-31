@@ -124,14 +124,14 @@ pub fn agent_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     let agent_fn_name = format_ident!("create_{}", struct_name.to_string().to_lowercase());
     
     let expanded = quote! {
-        pub fn #agent_fn_name(llm_provider: std::sync::Arc<dyn lomusai_core::llm::LlmProvider>) -> impl lomusai_core::agent::Agent {
-            let config = lomusai_core::agent::AgentConfig {
+        pub fn #agent_fn_name(llm_provider: std::sync::Arc<dyn lumosai_core::llm::LlmProvider>) -> impl lumosai_core::agent::Agent {
+            let config = lumosai_core::agent::AgentConfig {
                 name: #agent_name.to_string(),
                 instructions: #instructions.to_string(),
                 memory_config: None,
             };
             
-            let mut agent = lomusai_core::agent::create_basic_agent(config, llm_provider);
+            let mut agent = lumosai_core::agent::create_basic_agent(config, llm_provider);
             
             // Add tools
             #(agent.add_tool(#tools).expect("Failed to add tool to agent");)*

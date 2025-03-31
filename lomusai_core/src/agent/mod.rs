@@ -121,7 +121,7 @@ mod tests {
         );
         
         // Create an agent
-        let config = AgentConfig {
+        let _config = AgentConfig {
             name: "TestAgent".to_string(),
             instructions: "You are a test agent.".to_string(),
             memory_config: None,

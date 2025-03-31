@@ -1,6 +1,4 @@
 use std::process::Command;
-use std::fs;
-use std::path::Path;
 use tempfile::TempDir;
 
 #[test]

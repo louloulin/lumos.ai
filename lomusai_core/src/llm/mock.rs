@@ -127,6 +127,8 @@ impl LlmProvider for MockLlmProvider {
 mod tests {
     use super::*;
     
+    const FLOAT_EPSILON: f32 = 1e-6;
+    
     #[tokio::test]
     async fn test_mock_llm_generate() {
         // 初始化时提供两个响应
@@ -178,18 +180,30 @@ mod tests {
         
         // 获取并验证第一个嵌入向量
         let embedding1 = mock.get_embedding("test").await.unwrap();
-        assert_eq!(embedding1, vec![0.1, 0.11, 0.12, 0.13]);
+        assert_approx_vectors(&embedding1, &[0.1, 0.11, 0.12, 0.13]);
         
         // 获取并验证第二个嵌入向量
         let embedding2 = mock.get_embedding("test").await.unwrap();
-        assert_eq!(embedding2, vec![0.3, 0.31, 0.32, 0.33]);
+        assert_approx_vectors(&embedding2, &[0.3, 0.31, 0.32, 0.33]);
         
         // 获取并验证第三个嵌入向量
         let embedding3 = mock.get_embedding("test").await.unwrap();
-        assert_eq!(embedding3, vec![0.5, 0.51, 0.52, 0.53]);
+        assert_approx_vectors(&embedding3, &[0.5, 0.51, 0.52, 0.53]);
         
         // 确认没有更多的嵌入向量
         let result = mock.get_embedding("test").await;
         assert!(result.is_err());
+    }
+    
+    // 辅助函数：验证向量元素在误差范围内相等
+    fn assert_approx_vectors(actual: &[f32], expected: &[f32]) {
+        assert_eq!(actual.len(), expected.len(), "向量长度不同");
+        
+        for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                approx_eq!(f32, *a, *e, epsilon = FLOAT_EPSILON),
+                "向量元素 {} 不相等: {} != {}", i, a, e
+            );
+        }
     }
 } 

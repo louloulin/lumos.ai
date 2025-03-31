@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
-use crate::types::{EvalOptions, EvalResult, TestInfo};
+use crate::types::{EvalOptions, EvalResult};
 use crate::evaluator::Evaluator;
 use lomusai_core::llm::{LlmProvider, LlmOptions, Message, Role};
 

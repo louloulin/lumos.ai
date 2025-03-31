@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::{quote, format_ident};
+use quote::quote;
 use syn::{parse_macro_input, LitStr, Expr, Token, braced, parse::{Parse, ParseStream}};
 use syn::punctuated::Punctuated;
 

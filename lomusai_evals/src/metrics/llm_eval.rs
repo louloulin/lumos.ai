@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use async_trait::async_trait;
-use futures::stream::{self, BoxStream};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
 
 use crate::error::{Error, Result};
 use crate::metrics::{Metric, MetricResult};

@@ -3,7 +3,7 @@
 //! 该模块提供了用于执行评估的接口和实现。
 
 use crate::error::Result;
-use crate::types::{EvalOptions, EvalResult, TestInfo};
+use crate::types::{EvalOptions, EvalResult};
 use crate::metrics::Metric;
 
 use std::sync::Arc;

@@ -5,8 +5,6 @@ use serde::{Deserialize, Serialize};
 use crate::error::{Error, Result};
 use crate::metrics::{Metric, MetricResult};
 use lomusai_core::llm::{LlmProvider, LlmOptions, Message, Role};
-use futures::stream::{self, BoxStream};
-use std::sync::Mutex;
 
 /// 相关性评估指标，用于评估输出与输入问题的相关程度
 #[derive(Serialize, Deserialize)]

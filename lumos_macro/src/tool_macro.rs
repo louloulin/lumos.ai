@@ -1,11 +1,8 @@
 use proc_macro::TokenStream;
-use quote::{quote, format_ident};
+use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote,
-    punctuated::Punctuated,
-    token, Arm, Attribute, Expr, ExprClosure, ExprLit, FnArg, Ident, ItemFn, LitBool, LitStr, 
-    Meta, MetaList, MetaNameValue, Pat, PatIdent, PatType, Result, Token, Type
+    parse_macro_input, Expr, Ident, ItemFn, LitStr, Token
 };
 use syn::spanned::Spanned;
 use proc_macro2::Span;

@@ -89,7 +89,7 @@ impl LlmProvider for MockLlmProvider {
             .collect::<Vec<_>>();
         
         let stream = stream::iter(chunks)
-            .map(|chunk| Ok(chunk))
+            .map(Ok)
             .boxed();
         
         Ok(stream)

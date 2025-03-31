@@ -9,7 +9,19 @@ use serde_json::Value;
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
 use crate::logger::Component;
-use crate::memory::{WorkingMemoryConfig, MemoryConfig};
+
+/// 工作内存配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkingMemoryConfig {
+    /// 是否启用工作内存
+    pub enabled: bool,
+    /// 内存模板
+    pub template: Option<String>,
+    /// 内容类型
+    pub content_type: Option<String>,
+    /// 最大容量
+    pub max_capacity: Option<usize>,
+}
 
 /// 工作内存内容
 #[derive(Debug, Clone, Serialize, Deserialize)]

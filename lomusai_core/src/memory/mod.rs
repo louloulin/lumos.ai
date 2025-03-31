@@ -6,19 +6,6 @@ use std::collections::HashMap;
 use crate::llm::Message;
 use crate::Result;
 
-/// 工作内存配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkingMemoryConfig {
-    /// 是否启用工作内存
-    pub enabled: bool,
-    /// 内存模板
-    pub template: Option<String>,
-    /// 内容类型
-    pub content_type: Option<String>,
-    /// 最大容量
-    pub max_capacity: Option<usize>,
-}
-
 /// 语义回忆配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticRecallConfig {
@@ -62,7 +49,7 @@ pub struct MemoryConfig {
     #[serde(default = "default_memory_enabled")]
     pub enabled: bool,
     /// 工作内存配置
-    pub working_memory: Option<WorkingMemoryConfig>,
+    pub working_memory: Option<working::WorkingMemoryConfig>,
     /// 语义回忆配置
     pub semantic_recall: Option<SemanticRecallConfig>,
     /// 每次获取的最后消息数量
@@ -104,10 +91,30 @@ pub trait Memory: Send + Sync {
     async fn retrieve(&self, config: &MemoryConfig) -> Result<Vec<Message>>;
 }
 
+// 模块声明
 pub mod working;
 pub mod semantic;
 pub mod semantic_memory;
+pub mod basic;
 
-// 重新导出工作内存类型
-pub use working::{WorkingMemory, WorkingMemoryContent, create_working_memory}; 
-pub use semantic_memory::{SemanticMemoryTrait as SemanticMemory, SemanticSearchOptions, SemanticSearchResult, create_semantic_memory}; 
+// 重新导出
+pub use working::{
+    WorkingMemory, 
+    WorkingMemoryContent, 
+    WorkingMemoryConfig, 
+    BasicWorkingMemory, 
+    create_working_memory
+}; 
+pub use semantic_memory::{
+    SemanticMemoryTrait as SemanticMemory, 
+    SemanticSearchOptions, 
+    SemanticSearchResult, 
+    create_semantic_memory,
+};
+pub use basic::BasicMemory;
+
+/// 添加兼容函数，用于创建基本工作内存
+#[inline]
+pub fn create_basic_working_memory(config: &WorkingMemoryConfig) -> Result<Box<dyn WorkingMemory>> {
+    create_working_memory(config)
+} 

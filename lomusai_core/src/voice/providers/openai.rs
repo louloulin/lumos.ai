@@ -3,10 +3,8 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
-use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tokio::io::AsyncRead;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
@@ -73,8 +71,10 @@ impl OpenAIVoice {
     
     /// 创建默认的OpenAI语音提供者
     pub fn default_with_api_key(api_key: impl Into<String>) -> Result<Self> {
-        let mut config = OpenAIVoiceConfig::default();
-        config.api_key = Some(api_key.into());
+        let config = OpenAIVoiceConfig {
+            api_key: Some(api_key.into()),
+            ..Default::default()
+        };
         Self::new(config)
     }
     
@@ -164,7 +164,7 @@ impl VoiceProvider for OpenAIVoice {
         Ok(Box::pin(stream::once(async { Ok(audio_data) })))
     }
     
-    async fn listen(&self, audio: Vec<u8>, options: &ListenOptions) -> Result<String> {
+    async fn listen(&self, _audio: Vec<u8>, _options: &ListenOptions) -> Result<String> {
         self.logger().debug("OpenAIVoice: 将语音转换为文本", None);
         
         // 目前，此功能未实现，使用MockVoice提供的模拟功能

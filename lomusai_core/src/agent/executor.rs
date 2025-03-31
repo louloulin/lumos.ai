@@ -37,6 +37,7 @@ use crate::agent::AgentConfig;
 use crate::agent::types::{system_message, tool_message};
 
 /// Basic agent implementation
+#[allow(dead_code, clippy::borrowed_box)]
 pub struct BasicAgent {
     /// Base component for logging and telemetry
     base: BaseComponent,
@@ -47,7 +48,7 @@ pub struct BasicAgent {
     /// LLM provider
     llm: Arc<dyn LlmProvider>,
     /// Tools available to the agent
-    tools: Mutex<HashMap<String, Box<dyn Tool>>>,
+    tools: Arc<Mutex<HashMap<String, Box<dyn Tool>>>>,
     /// Memory
     memory: Option<Arc<dyn Memory>>,
     /// Working memory
@@ -78,10 +79,7 @@ impl BasicAgent {
         // Initialize working memory (if configured)
         let working_memory = if let Some(wm_config) = &config.working_memory {
             match create_working_memory(wm_config) {
-                Ok(wm) => {
-                    let wm_name = wm.name().unwrap_or("unknown").to_string();
-                    Some(wm)
-                },
+                Ok(wm) => Some(wm),
                 Err(e) => {
                     eprintln!("Failed to initialize working memory: {}", e);
                     None
@@ -96,7 +94,7 @@ impl BasicAgent {
             name: config.name,
             instructions: config.instructions,
             llm,
-            tools: Mutex::new(HashMap::new()),
+            tools: Arc::new(Mutex::new(HashMap::new())),
             memory: config.memory_config.and_then(|_| None), // This will be implemented later
             working_memory,
             voice: config.voice_config.and_then(|_| None),
@@ -109,20 +107,39 @@ impl BasicAgent {
     }
     
     /// Build tool descriptions for the system message
-    fn build_tool_descriptions(&self, options: &AgentGenerateOptions) -> String {
-        let mut tool_descriptions = String::new();
+    #[allow(unused_variables)]
+    fn build_tool_descriptions(&self, _options: &AgentGenerateOptions) -> String {
+        let tools = match self.tools.lock() {
+            Ok(tools) => tools,
+            Err(_) => return "".to_string(),
+        };
+
+        if tools.is_empty() {
+            return "".to_string();
+        }
+
+        let mut descriptions = String::new();
         
-        if let Ok(tools) = self.tools.lock() {
-            for (_, tool) in tools.iter() {
-                tool_descriptions.push_str(&format!(
-                    "Tool: {}\nDescription: {}\n\n",
-                    tool.name(), 
-                    tool.description()
-                ));
+        for tool in tools.values() {
+            descriptions.push_str(&format!("工具名称: {}\n", tool.name()));
+            descriptions.push_str(&format!("描述: {}\n", tool.description()));
+            
+            // 添加工具参数描述
+            let schema = tool.schema();
+            if !schema.parameters.is_empty() {
+                descriptions.push_str("参数:\n");
+                for param in &schema.parameters {
+                    descriptions.push_str(&format!("  - 名称: {}\n", param.name));
+                    descriptions.push_str(&format!("    描述: {}\n", param.description));
+                    descriptions.push_str(&format!("    类型: {}\n", param.r#type));
+                    descriptions.push_str(&format!("    必须: {}\n", param.required));
+                }
             }
+            
+            descriptions.push_str("\n");
         }
         
-        tool_descriptions
+        descriptions
     }
 
     /// Create a system message with agent instructions and tool descriptions
@@ -224,7 +241,8 @@ impl Agent for BasicAgent {
         Ok(())
     }
     
-    fn get_tool(&self, tool_name: &str) -> Option<&Box<dyn Tool>> {
+    #[allow(unused_variables)]
+    fn get_tool(&self, _tool_name: &str) -> Option<&Box<dyn Tool>> {
         None // We can't return a reference to a locked Mutex, so we'll return None
         // This is a limitation of the current design and would need refactoring
     }
@@ -721,7 +739,8 @@ impl AgentVoiceSender for BasicAgent {
     }
 }
 
-// 用于包装Agent引用的辅助结构体，使其可以在spawn的任务中使用
+// 为未使用的结构体添加告警注解
+#[allow(dead_code)]
 struct AgentRef<'a>(&'a BasicAgent);
 
 // 实现Send和Sync，使AgentRef可以跨线程传递

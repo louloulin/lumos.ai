@@ -19,10 +19,10 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "dev:vite": "vite",
+    "dev": "vite",
     "dev:css": "tailwindcss -i ./src/index.css -o ./dist/output.css --watch",
-    "dev": "bun run dev:css & bun run dev:vite",
-    "build": "tailwindcss -i ./src/index.css -o ./dist/output.css && tsc && vite build",
+    "dev:vite": "vite",
+    "build": "tsc && vite build",
     "build:watch": "tailwindcss -i ./src/index.css -o ./dist/output.css && vite build --watch",
     "build:publish": "bun build && yalc push",
     "preview": "vite preview"

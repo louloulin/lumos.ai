@@ -5,19 +5,24 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true,
-    port: 3000,
-    open: true
+    port: 9800,
+    strictPort: true,
+    host: '127.0.0.1',
+    open: false,
   },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      '@lumosai/client-js': resolve(__dirname, '../packages/client-js/src'),
-      '@lumosai/ui-components': resolve(__dirname, '../packages/ui-components/src')
     },
   },
   css: {
     postcss: './postcss.config.mjs',
   },
-  clearScreen: false
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    minify: 'terser',
+    emptyOutDir: true,
+  },
+  clearScreen: false,
 });

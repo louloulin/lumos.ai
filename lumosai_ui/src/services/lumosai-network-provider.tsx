@@ -7,7 +7,7 @@ import {
   AssistantRuntimeProvider,
 } from '@assistant-ui/react';
 import { processDataStream } from '@ai-sdk/ui-utils';
-import { LomusaiClient } from '@lomusai/client-js';
+import { LumosAIClient } from '@lumosai/client-js';
 import { useState, ReactNode, useEffect } from 'react';
 
 import { ChatProps } from '@/types';
@@ -16,7 +16,7 @@ const convertMessage = (message: ThreadMessageLike): ThreadMessageLike => {
   return message;
 };
 
-export function LomusaiNetworkRuntimeProvider({
+export function LumosaiNetworkRuntimeProvider({
   children,
   agentId,
   initialMessages,
@@ -41,21 +41,21 @@ export function LomusaiNetworkRuntimeProvider({
     }
   }, [initialMessages, threadId, memory, messages]);
 
-  const mastra = new LomusaiClient({
+  const lumosai = new LumosAIClient({
     baseUrl: baseUrl || '',
   });
 
-  console.log('LomusaiClient initialized');
+  console.log('LumosAIClient initialized');
 
   console.log(messages, '###');
 
-  const network = mastra.getNetwork(agentId);
+  const network = lumosai.getNetwork(agentId);
 
   const onNew = async (message: AppendMessage) => {
     if (message.content[0]?.type !== 'text') throw new Error('Only text messages are supported');
 
     const input = message.content[0].text;
-    setMessages(currentConversation => [...currentConversation, { role: 'user', content: input }]);
+    setMessages(prev => [...prev, { role: 'user', content: input }]);
     setIsRunning(true);
 
     try {
@@ -207,7 +207,7 @@ export function LomusaiNetworkRuntimeProvider({
 
       setIsRunning(false);
     } catch (error) {
-      console.error('Error occured in LomusaiRuntimeProvider', error);
+      console.error('Error occurred in LumosaiRuntimeProvider', error);
       setIsRunning(false);
     }
   };

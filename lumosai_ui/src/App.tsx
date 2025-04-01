@@ -19,6 +19,7 @@ import WorkflowsPage from '@/pages/workflows';
 import WorkflowEditor from '@/pages/workflow-editor';
 import KnowledgeBasePage from '@/pages/knowledge-base';
 import ModelsPage from '@/pages/models';
+import SettingsPage from '@/pages/settings';
 
 // Import a simple agent chat for testing
 import { AgentChat } from '@/domains/agents/agent/agent-chat';
@@ -122,7 +123,7 @@ export default function App() {
               <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/docs" element={<DocsPlaceholder />} />
-              <Route path="/settings" element={<SettingsPlaceholder />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </main>
         </div>
@@ -135,9 +136,12 @@ export default function App() {
 
 // Placeholder components for routes not yet implemented
 function AgentChatPage() {
+  // 尝试从环境变量或者本地存储中获取 API URL
+  const apiUrl = process.env.LUMOSAI_API_URL || localStorage.getItem('lumosai_api_url') || 'http://localhost:3000/api';
+  
   return (
     <div className="h-screen">
-      <AgentChat agentId="test" agentName="Test Agent" />
+      <AgentChat agentId="test" agentName="Test Agent" apiUrl={apiUrl} />
     </div>
   );
 }
@@ -150,20 +154,6 @@ function DocsPlaceholder() {
         <h2 className="text-2xl font-bold mb-2">Documentation</h2>
         <p className="text-muted-foreground">
           Documentation is coming soon. For now, you can visit the GitHub repository for more information.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function SettingsPlaceholder() {
-  return (
-    <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-      <div className="text-center max-w-md">
-        <Settings className="h-12 w-12 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Settings</h2>
-        <p className="text-muted-foreground">
-          Settings panel is coming soon. It will allow you to configure Lumos and manage your preferences.
         </p>
       </div>
     </div>

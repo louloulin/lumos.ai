@@ -63,3 +63,16 @@ export type RefinedTrace = {
   status: SpanStatus;
   trace: Span[];
 };
+
+// 代理定义
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  model: string;
+  systemPrompt: string;
+  temperature: number;
+  maxTokens: number;
+  tools: string[];
+  isActive: boolean;
+}

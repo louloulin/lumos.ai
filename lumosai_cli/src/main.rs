@@ -1,18 +1,17 @@
-mod commands;
-mod error;
-mod config;
-mod util;
-mod template;
-mod swagger;
-
 use clap::{Parser, Subcommand, Args};
 use colored::Colorize;
 use std::path::PathBuf;
-use error::{CliResult, CliError};
 
-/// Lumos AI 命令行工具
+mod commands;
+mod error;
+mod util;
+mod server;
+
+use error::CliResult;
+
+/// Lumosai 命令行工具
 ///
-/// 用于创建、开发、运行和部署 Lumos AI 应用
+/// 用于创建、开发、运行和部署 Lumosai AI 应用
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 pub struct Cli {
@@ -22,205 +21,135 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// 初始化一个新的Lumos AI项目
-    #[clap(name = "init")]
-    Init(InitArgs),
+    /// 创建一个新的Lumosai项目
+    Create(CreateArgs),
     
     /// 启动开发服务器
-    #[clap(name = "dev")]
-    Dev(DevArgs),
+    Dev(commands::dev::DevOptions),
     
-    /// 运行Lumos AI应用
-    #[clap(name = "run")]
-    Run(RunArgs),
+    /// 启动UI服务器
+    Ui(UiArgs),
     
-    /// 构建Lumos AI应用
-    #[clap(name = "build")]
-    Build(BuildArgs),
+    /// 启动交互式测试环境
+    Playground(commands::playground::PlaygroundOptions),
     
-    /// 部署Lumos AI应用
-    #[clap(name = "deploy")]
-    Deploy(DeployArgs),
+    /// 生成API端点
+    Api(ApiArgs),
     
-    /// 模板管理
-    #[clap(name = "template", subcommand)]
-    Template(TemplateCommands),
+    /// 生成可视化图表
+    Visualize(commands::visualize::VisualizeOptions),
 }
 
 #[derive(Args, Debug)]
-struct InitArgs {
+struct CreateArgs {
     /// 项目名称
-    #[clap(short, long)]
+    #[arg(long)]
     name: Option<String>,
     
-    /// 模板类型（agent, workflow, rag 或自定义名称）
-    #[clap(short, long)]
-    template: Option<String>,
+    /// 包含的组件，以逗号分隔 (agents,tools,workflows,rag)
+    #[arg(long)]
+    components: Option<String>,
     
-    /// 从URL下载模板
-    #[clap(long)]
-    template_url: Option<String>,
+    /// LLM提供商 (openai, anthropic, gemini, local)
+    #[arg(long)]
+    llm: Option<String>,
     
-    /// 输出目录
-    #[clap(short, long)]
-    output: Option<PathBuf>,
+    /// LLM API密钥
+    #[arg(long = "api-key")]
+    llm_api_key: Option<String>,
+    
+    /// 项目目录
+    #[arg(long)]
+    project_dir: Option<PathBuf>,
+    
+    /// 添加示例代码
+    #[arg(long)]
+    example: bool,
 }
 
 #[derive(Args, Debug)]
-struct DevArgs {
+struct UiArgs {
     /// 项目目录
-    #[clap(short = 'd', long)]
+    #[arg(long)]
     project_dir: Option<PathBuf>,
     
     /// 端口号
-    #[clap(short, long, default_value = "3000")]
+    #[arg(long, default_value = "4003")]
     port: u16,
     
-    /// 启用热重载（使用-r而不是-h避免与帮助选项冲突）
-    #[clap(short = 'r', long)]
-    hot_reload: bool,
+    /// 主题 (light/dark)
+    #[arg(long)]
+    theme: Option<String>,
     
-    /// 日志级别 (trace, debug, info, warn, error)
-    #[clap(short = 'l', long, default_value = "info")]
-    log_level: Option<String>,
+    /// 开发模式
+    #[arg(long)]
+    dev: bool,
     
-    /// 启用调试模式，显示更详细的信息
-    #[clap(long)]
-    debug: bool,
-    
-    /// 额外监视的目录，以逗号分隔
-    #[clap(short = 'w', long)]
-    watch: Option<String>,
-    
-    /// 生成API文档
-    #[clap(long, default_value = "true")]
-    docs: bool,
+    /// API服务器URL
+    #[arg(long)]
+    api_url: Option<String>,
 }
 
 #[derive(Args, Debug)]
-struct RunArgs {
+struct ApiArgs {
     /// 项目目录
-    #[clap(short = 'd', long)]
-    project_dir: Option<PathBuf>,
-}
-
-#[derive(Args, Debug)]
-struct BuildArgs {
-    /// 项目目录
-    #[clap(short = 'd', long)]
+    #[arg(long)]
     project_dir: Option<PathBuf>,
     
     /// 输出目录
-    #[clap(short, long)]
+    #[arg(long)]
     output: Option<PathBuf>,
-}
-
-#[derive(Args, Debug)]
-struct DeployArgs {
-    /// 项目目录
-    #[clap(short = 'd', long)]
-    project_dir: Option<PathBuf>,
     
-    /// 部署目标（local, docker, aws, azure, gcp）
-    #[clap(short, long, default_value = "local")]
-    target: String,
-}
-
-#[derive(Subcommand, Debug)]
-enum TemplateCommands {
-    /// 列出可用模板
-    List,
-    
-    /// 下载模板
-    Download(TemplateDownloadArgs),
-    
-    /// 删除模板
-    Remove(TemplateRemoveArgs),
-}
-
-#[derive(Args, Debug)]
-struct TemplateDownloadArgs {
-    /// 模板URL
-    #[clap(short, long)]
-    url: String,
-    
-    /// 模板名称
-    #[clap(short, long)]
-    name: Option<String>,
-}
-
-#[derive(Args, Debug)]
-struct TemplateRemoveArgs {
-    /// 模板名称
-    #[clap(short, long)]
-    name: String,
-    
-    /// 不确认删除
-    #[clap(short, long)]
-    force: bool,
+    /// 代理列表，以逗号分隔
+    #[arg(long)]
+    agents: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> CliResult<()> {
+    // 显示欢迎信息
+    let version = env!("CARGO_PKG_VERSION");
+    println!("{}", format!("Lumosai CLI v{}", version).bright_cyan());
+    println!("{}", "用于创建、开发和部署 Lumosai AI 应用".bright_cyan());
+    println!();
+    
     let cli = Cli::parse();
     
     match cli.command {
-        Commands::Init(args) => {
-            commands::init::run(
+        Commands::Create(args) => {
+            commands::create::run(
                 args.name,
-                args.template,
-                args.template_url,
-                args.output,
+                args.components,
+                args.llm,
+                args.llm_api_key,
+                args.project_dir,
+                args.example,
             ).await
         },
-        Commands::Dev(args) => {
-            // 将 watch 字符串分割为 Vec<String>
-            let watch_dirs = args.watch.map(|w| {
-                w.split(',')
-                 .map(|s| s.trim().to_string())
-                 .filter(|s| !s.is_empty())
-                 .collect()
-            });
-            
-            commands::dev::run(
+        Commands::Dev(options) => {
+            commands::dev::run(options).await
+        },
+        Commands::Ui(args) => {
+            commands::ui::run(
                 args.project_dir,
                 args.port,
-                args.hot_reload,
-                args.log_level,
-                args.debug,
-                watch_dirs,
-                args.docs,
+                args.theme,
+                args.dev,
+                args.api_url,
             ).await
         },
-        Commands::Run(args) => {
-            commands::run::run(
-                args.project_dir,
-            ).await
+        Commands::Playground(options) => {
+            commands::playground::run(options).await
         },
-        Commands::Build(args) => {
-            commands::build::run(
+        Commands::Api(args) => {
+            commands::api::run(
                 args.project_dir,
                 args.output,
+                args.agents,
             ).await
         },
-        Commands::Deploy(args) => {
-            commands::deploy::run(
-                args.project_dir,
-                &args.target,
-            ).await
-        },
-        Commands::Template(template_cmd) => {
-            match template_cmd {
-                TemplateCommands::List => {
-                    list_templates().await
-                },
-                TemplateCommands::Download(args) => {
-                    download_template(args.url, args.name).await
-                },
-                TemplateCommands::Remove(args) => {
-                    remove_template(args.name, args.force).await
-                },
-            }
+        Commands::Visualize(options) => {
+            commands::visualize::run(options).await
         },
     }
 }
@@ -233,7 +162,7 @@ async fn list_templates() -> CliResult<()> {
     if templates.is_empty() {
         println!("{}", "没有可用模板".bright_yellow());
         println!("{}", "使用以下命令下载模板:".bright_blue());
-        println!("  lumos template download --url <URL> [--name <NAME>]");
+        println!("  lumos template download --url <URL> [--name <n>]");
     } else {
         println!("{}", "可用模板:".bright_blue());
         for (name, description) in templates {
@@ -248,31 +177,17 @@ async fn list_templates() -> CliResult<()> {
 async fn download_template(url: String, name: Option<String>) -> CliResult<()> {
     let template_manager = template::TemplateManager::new()?;
     
-    // 如果没有提供名称，从URL提取
-    let template_name = match name {
-        Some(n) => n,
-        None => {
-            // 从URL提取模板名称，例如从GitHub仓库名或URL的最后一部分
-            if url.contains("github.com") {
-                // 从GitHub URL中提取仓库名
-                url.split('/')
-                   .last()
-                   .unwrap_or("custom-template")
-                   .replace(".git", "")
-            } else {
-                // 从其他URL中提取最后一部分
-                url.split('/')
-                   .last()
-                   .unwrap_or("custom-template")
-                   .split('.')
-                   .next()
-                   .unwrap_or("custom-template")
-                   .to_string()
-            }
-        }
-    };
+    let template_name = name.unwrap_or_else(|| {
+        // 尝试从URL提取名称
+        let parts: Vec<&str> = url.split('/').collect();
+        parts.last().unwrap_or(&"custom-template").to_string()
+    });
+    
+    println!("{}", format!("下载模板 '{}' 从 {}", template_name, url).bright_blue());
     
     template_manager.download_template(&url, &template_name)?;
+    
+    println!("{}", format!("模板 '{}' 已下载", template_name).bright_green());
     
     Ok(())
 }
@@ -281,23 +196,24 @@ async fn download_template(url: String, name: Option<String>) -> CliResult<()> {
 async fn remove_template(name: String, force: bool) -> CliResult<()> {
     let template_manager = template::TemplateManager::new()?;
     
-    // 如果不是强制删除，先确认
     if !force {
-        let confirm = match dialoguer::Confirm::new()
-            .with_prompt(format!("确定要删除模板 {}?", name))
+        use dialoguer::Confirm;
+        
+        let confirm = Confirm::new()
+            .with_prompt(format!("确定要删除模板'{}'吗?", name))
             .default(false)
-            .interact() {
-                Ok(result) => result,
-                Err(e) => return Err(CliError::Interaction(e.to_string()))
-            };
+            .interact()?;
             
         if !confirm {
-            println!("{}", "操作已取消".bright_yellow());
-            return Ok(());
+            return Err(CliError::canceled("删除已取消"));
         }
     }
     
+    println!("{}", format!("删除模板 '{}'...", name).bright_blue());
+    
     template_manager.remove_template(&name)?;
+    
+    println!("{}", format!("模板 '{}' 已删除", name).bright_green());
     
     Ok(())
 } 

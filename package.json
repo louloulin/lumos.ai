@@ -1,8 +1,35 @@
 {
-	"dependencies": {
-		"@assistant-ui/react": "0.7.91",
-		"@assistant-ui/react-markdown": "0.7.21",
-		"@assistant-ui/react-syntax-highlighter": "0.7.10",
-		"@mastra/client-js": "^0.1.13"
-	}
+  "name": "lumosai",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "lumosai_ui",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:ui": "pnpm --filter @lumosai/playground-ui dev",
+    "build:ui": "pnpm --filter @lumosai/playground-ui build",
+    "dev:client": "pnpm --filter @lumosai/client-js dev",
+    "build:client": "pnpm --filter @lumosai/client-js build",
+    "build:all": "pnpm -r build",
+    "verify-workspace": "node scripts/verify-workspace.js",
+    "create-package": "node scripts/create-package.js",
+    "dev:ui-components": "pnpm --filter @lumosai/ui-components dev",
+    "build:ui-components": "pnpm --filter @lumosai/ui-components build",
+    "fix-modules": "cd packages/client-js && pnpm build && cd ../.. && pnpm install"
+  },
+  "dependencies": {
+    "@assistant-ui/react": "0.7.91",
+    "@assistant-ui/react-markdown": "0.7.21",
+    "@assistant-ui/react-syntax-highlighter": "0.7.10"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "prettier": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.10.0"
 }

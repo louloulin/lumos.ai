@@ -1,5 +1,5 @@
 {
-  "name": "@lomusai/client-js",
+  "name": "@lumosai/client-js",
   "version": "0.1.0",
   "description": "JavaScript client for LumosAI API",
   "main": "dist/index.js",
@@ -9,15 +9,15 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "lint": "eslint src --ext .ts",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "example": "tsx examples/basic-usage.ts"
+    "build": "bun build ./src/index.ts --outdir dist --target node",
+    "dev": "bun build ./src/index.ts --outdir dist --target node --watch",
+    "lint": "bun x eslint src --ext .ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "example": "bun run examples/basic-usage.ts"
   },
   "keywords": [
-    "lomusai",
+    "lumosai",
     "ai",
     "client",
     "api"
@@ -25,12 +25,9 @@
   "author": "LumosAI",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^20.17.27",
+    "bun-types": "latest",
     "eslint": "^8.56.0",
-    "tsup": "^8.0.2",
-    "tsx": "^4.19.3",
-    "typescript": "^5.3.3",
-    "vitest": "^1.2.1"
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "zod": "^3.22.4"

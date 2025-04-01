@@ -1,0 +1,3 @@
+packages:
+  - 'lumosai_ui'
+  - 'packages/*' 

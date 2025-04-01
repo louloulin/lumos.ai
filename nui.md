@@ -39,15 +39,15 @@
 
 ## 迁移策略
 
-### 第一阶段：基础设置 (1-2周)
+### 第一阶段：基础设置 (1-2周) [已完成]
 
-1. **项目结构设置**
+1. **项目结构设置** [已完成]
    - 在 `lumosai-nui-new` 中创建合适的目录结构
    - 设置 `src/components` 目录用于UI组件
    - 设置 `src/styles` 目录用于样式文件
    - 创建 `src/lib` 目录用于工具函数和共享逻辑
 
-2. **依赖项管理**
+2. **依赖项管理** [已完成]
    - 添加必要的依赖，包括但不限于：
      - Tailwind CSS 和相关插件
      - Radix UI 组件
@@ -56,48 +56,48 @@
      - Lucide React 用于图标
      - 其他必要的第三方库
 
-3. **样式系统设置**
+3. **样式系统设置** [已完成]
    - 配置 Tailwind CSS
    - 集成 CSS 变量系统
    - 实现主题切换功能
    - 设置全局样式基础
 
-4. **Tauri 配置优化**
+4. **Tauri 配置优化** [已完成]
    - 完善 `tauri.conf.json` 配置
    - 设置应用窗口属性
    - 配置应用安全策略
    - 设置构建选项
 
-### 第二阶段：核心组件迁移 (2-3周)
+### 第二阶段：核心组件迁移 (2-3周) [进行中]
 
-1. **基础组件**
-   - 按钮 (Button)
-   - 输入框 (Input)
-   - 选择器 (Select)
-   - 开关 (Switch)
-   - 复选框 (Checkbox)
-   - 标签 (Label)
-   - 卡片 (Card)
+1. **基础组件** [已完成]
+   - 按钮 (Button) ✅
+   - 输入框 (Input) ✅
+   - 选择器 (Select) ✅
+   - 开关 (Switch) ✅
+   - 复选框 (Checkbox) ✅
+   - 标签 (Label) ✅
+   - 卡片 (Card) ✅
 
-2. **布局组件**
-   - 网格 (Grid)
-   - 弹性布局 (Flex)
-   - 容器 (Container)
-   - 分隔线 (Separator)
-   - 滚动区域 (ScrollArea)
+2. **布局组件** [已完成]
+   - 网格 (Grid) - 使用 CSS Grid 替代 ✅
+   - 弹性布局 (Flex) ✅
+   - 容器 (Container) ✅
+   - 分隔线 (Separator) ✅
+   - 滚动区域 (ScrollArea) - 待实现
 
-3. **导航组件**
-   - 标签页 (Tabs)
-   - 导航菜单 (NavigationMenu)
-   - 侧边栏 (Sidebar)
-   - 面包屑 (Breadcrumb)
+3. **导航组件** [部分完成]
+   - 标签页 (Tabs) ✅
+   - 导航菜单 (NavigationMenu) - 待实现
+   - 侧边栏 (Sidebar) - 待实现
+   - 面包屑 (Breadcrumb) - 待实现
 
-4. **反馈组件**
-   - 提示 (Toast)
-   - 对话框 (Dialog)
-   - 弹出框 (Popover)
-   - 工具提示 (Tooltip)
-   - 加载指示器 (LoadingIndicator)
+4. **反馈组件** [部分完成]
+   - 提示 (Toast) ✅
+   - 对话框 (Dialog) ✅
+   - 弹出框 (Popover) ✅
+   - 工具提示 (Tooltip) - 待实现
+   - 加载指示器 (LoadingIndicator) - 待实现
 
 ### 第三阶段：高级组件迁移 (3-4周)
 
@@ -125,7 +125,7 @@
    - 系统菜单
    - 全局快捷键
 
-### 第四阶段：优化和测试 (2-3周)
+### 第四阶段：优化和测试 (2-3周) [部分完成]
 
 1. **性能优化**
    - 组件懒加载
@@ -139,8 +139,8 @@
    - 高对比度主题
    - WAI-ARIA 实践
 
-3. **测试**
-   - 单元测试
+3. **测试** [部分完成]
+   - 单元测试 ✅ (为部分组件添加了测试)
    - 集成测试
    - 端到端测试
    - 可访问性测试
@@ -153,36 +153,36 @@
 
 ## 技术栈选择
 
-1. **核心框架**
-   - React 18+
-   - TypeScript
-   - Tauri 2.0
+1. **核心框架** [已完成]
+   - React 18+ ✅
+   - TypeScript ✅
+   - Tauri 2.0 ✅
 
-2. **构建工具**
-   - Vite
-   - PostCSS
+2. **构建工具** [已完成]
+   - Vite ✅
+   - PostCSS ✅
 
-3. **样式方案**
-   - Tailwind CSS
-   - CSS 变量
-   - CSS Modules (必要时)
+3. **样式方案** [已完成]
+   - Tailwind CSS ✅
+   - CSS 变量 ✅
+   - CSS Modules (必要时) ✅
 
-4. **组件库基础**
-   - Radix UI (无样式组件)
+4. **组件库基础** [已完成]
+   - Radix UI (无样式组件) ✅
    - Headless UI (必要时)
 
-5. **状态管理**
-   - React Context
+5. **状态管理** [部分完成]
+   - React Context ✅
    - Zustand (复杂状态)
 
 6. **表单处理**
    - React Hook Form
    - Zod
 
-7. **其他工具**
+7. **其他工具** [已完成]
    - date-fns (日期处理)
-   - clsx/tailwind-merge (条件类名)
-   - Lucide React (图标)
+   - clsx/tailwind-merge (条件类名) ✅
+   - Lucide React (图标) ✅
 
 ## 迁移注意事项
 
@@ -205,10 +205,10 @@
 
 ## 时间线
 
-- **第一阶段**：1-2周
-- **第二阶段**：2-3周
+- **第一阶段**：1-2周 [已完成]
+- **第二阶段**：2-3周 [进行中]
 - **第三阶段**：3-4周
-- **第四阶段**：2-3周
+- **第四阶段**：2-3周 [部分完成]
 
 总计：8-12周
 

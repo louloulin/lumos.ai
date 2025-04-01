@@ -1,46 +1,44 @@
 import React from "react";
 
-interface DialogProps {
+interface AlertDialogProps {
   className?: string;
   children?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
 
-export function Dialog({ 
+export function AlertDialog({ 
   className, 
   children,
   open,
   onOpenChange
-}: DialogProps) {
+}: AlertDialogProps) {
   if (!open) return null;
   
   return (
-    <div className={`dialog-overlay`}>
-      <div className={`dialog ${className || ""}`}>
+    <div className={`alert-dialog-overlay`}>
+      <div className={`alert-dialog ${className || ""}`}>
         {children}
       </div>
     </div>
   );
 }
 
-export function DialogTrigger({ 
+export function AlertDialogTrigger({ 
   className, 
-  children,
-  asChild
+  children
 }: {
   className?: string;
   children?: React.ReactNode;
-  asChild?: boolean;
 }) {
   return (
-    <button className={`dialog-trigger ${className || ""}`}>
+    <button className={`alert-dialog-trigger ${className || ""}`}>
       {children}
     </button>
   );
 }
 
-export function DialogContent({ 
+export function AlertDialogContent({ 
   className, 
   children 
 }: {
@@ -48,13 +46,13 @@ export function DialogContent({
   children?: React.ReactNode;
 }) {
   return (
-    <div className={`dialog-content ${className || ""}`}>
+    <div className={`alert-dialog-content ${className || ""}`}>
       {children}
     </div>
   );
 }
 
-export function DialogHeader({ 
+export function AlertDialogHeader({ 
   className, 
   children 
 }: {
@@ -62,13 +60,13 @@ export function DialogHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className={`dialog-header ${className || ""}`}>
+    <div className={`alert-dialog-header ${className || ""}`}>
       {children}
     </div>
   );
 }
 
-export function DialogFooter({ 
+export function AlertDialogFooter({ 
   className, 
   children 
 }: {
@@ -76,13 +74,13 @@ export function DialogFooter({
   children?: React.ReactNode;
 }) {
   return (
-    <div className={`dialog-footer ${className || ""}`}>
+    <div className={`alert-dialog-footer ${className || ""}`}>
       {children}
     </div>
   );
 }
 
-export function DialogTitle({ 
+export function AlertDialogTitle({ 
   className, 
   children 
 }: {
@@ -90,13 +88,13 @@ export function DialogTitle({
   children?: React.ReactNode;
 }) {
   return (
-    <h2 className={`dialog-title ${className || ""}`}>
+    <h2 className={`alert-dialog-title ${className || ""}`}>
       {children}
     </h2>
   );
 }
 
-export function DialogDescription({ 
+export function AlertDialogDescription({ 
   className, 
   children 
 }: {
@@ -104,13 +102,13 @@ export function DialogDescription({
   children?: React.ReactNode;
 }) {
   return (
-    <p className={`dialog-description ${className || ""}`}>
+    <p className={`alert-dialog-description ${className || ""}`}>
       {children}
     </p>
   );
 }
 
-export function DialogClose({ 
+export function AlertDialogAction({ 
   className, 
   children 
 }: {
@@ -118,8 +116,22 @@ export function DialogClose({
   children?: React.ReactNode;
 }) {
   return (
-    <button className={`dialog-close ${className || ""}`}>
+    <button className={`alert-dialog-action ${className || ""}`}>
       {children}
     </button>
   );
 }
+
+export function AlertDialogCancel({ 
+  className, 
+  children 
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <button className={`alert-dialog-cancel ${className || ""}`}>
+      {children}
+    </button>
+  );
+} 

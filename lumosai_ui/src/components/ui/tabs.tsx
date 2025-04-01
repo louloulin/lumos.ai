@@ -1,37 +1,71 @@
 'use client';
 
-import * as TabsPrimitive from '@radix-ui/react-tabs';
-import * as React from 'react';
+import React from "react";
 
-import { cn } from '../../lib/utils';
+interface TabsProps {
+  className?: string;
+  children?: React.ReactNode;
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+}
 
-const Tabs = TabsPrimitive.Root;
+export function Tabs({ 
+  className, 
+  children,
+  defaultValue,
+  value,
+  onValueChange
+}: TabsProps) {
+  return (
+    <div className={`tabs ${className || ""}`}>
+      {children}
+    </div>
+  );
+}
 
-const TabsList = React.forwardRef<
-  React.ComponentRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => <TabsPrimitive.List ref={ref} className={cn(className)} {...props} />);
-TabsList.displayName = TabsPrimitive.List.displayName;
+export function TabsList({ 
+  className, 
+  children 
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className={`tabs-list ${className || ""}`}>
+      {children}
+    </div>
+  );
+}
 
-const TabsTrigger = React.forwardRef<
-  React.ComponentRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => <TabsPrimitive.Trigger ref={ref} className={cn(className)} {...props} />);
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+export function TabsTrigger({ 
+  className, 
+  children,
+  value
+}: {
+  className?: string;
+  children?: React.ReactNode;
+  value: string;
+}) {
+  return (
+    <button className={`tabs-trigger ${className || ""}`} data-value={value}>
+      {children}
+    </button>
+  );
+}
 
-const TabsContent = React.forwardRef<
-  React.ComponentRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    className={cn(
-      'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-      className,
-    )}
-    {...props}
-  />
-));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
-
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+export function TabsContent({ 
+  className, 
+  children,
+  value
+}: {
+  className?: string;
+  children?: React.ReactNode;
+  value: string;
+}) {
+  return (
+    <div className={`tabs-content ${className || ""}`} data-value={value}>
+      {children}
+    </div>
+  );
+}

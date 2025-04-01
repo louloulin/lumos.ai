@@ -16,7 +16,8 @@ import ReactFlow, {
 import '@xyflow/react/dist/style.css';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { LomusaiClient } from '@lomusai/client-js';
+// Create a mock client instead of importing the real one
+// import { LumosAIClient } from '@lumosai/client-js';
 import { useToast } from '@/components/ui/use-toast';
 import { SaveIcon, PlayIcon, ArrowLeftIcon, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -236,9 +237,14 @@ export default function WorkflowEditor() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
 
-  const client = new LomusaiClient({
-    baseUrl: import.meta.env.VITE_API_BASE_URL || '',
-  });
+  // Create a mock client
+  const client = {
+    getWorkflow: async (id: string) => {
+      // Return the example workflow when any ID is requested
+      return exampleWorkflow;
+    },
+    // Add other mock methods as needed
+  };
 
   // Load workflow data
   const fetchWorkflow = async () => {

@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .thread-viewport > [data-radix-scroll-area-content] {
   @apply flex flex-col items-center self-stretch bg-inherit;
 }
@@ -8,4 +12,172 @@
 
 .unset-position {
   position: unset;
+}
+
+/* Basic component styles */
+.button {
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1;
+}
+.button-default {
+  @apply bg-gray-900 text-white hover:bg-gray-800;
+}
+.button-destructive {
+  @apply bg-red-600 text-white hover:bg-red-500;
+}
+.button-outline {
+  @apply border border-gray-300 bg-white hover:bg-gray-100;
+}
+.button-secondary {
+  @apply bg-gray-200 text-gray-900 hover:bg-gray-300;
+}
+.button-ghost {
+  @apply hover:bg-gray-100;
+}
+.button-link {
+  @apply text-blue-600 underline-offset-4 hover:underline;
+}
+
+.card {
+  @apply rounded-lg border border-gray-200 bg-white shadow-sm;
+}
+.card-header {
+  @apply flex flex-col space-y-1.5 p-6;
+}
+.card-title {
+  @apply text-xl font-semibold;
+}
+.card-description {
+  @apply text-sm text-gray-500;
+}
+.card-content {
+  @apply p-6 pt-0;
+}
+.card-footer {
+  @apply flex items-center p-6 pt-0;
+}
+
+.dropdown-menu {
+  @apply relative;
+}
+.dropdown-menu-trigger {
+  @apply inline-flex;
+}
+.dropdown-menu-content {
+  @apply absolute right-0 z-50 mt-2 min-w-[8rem] overflow-hidden rounded-md border border-gray-200 bg-white p-1 shadow-md;
+}
+.dropdown-menu-item {
+  @apply flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-gray-100;
+}
+.dropdown-menu-separator {
+  @apply my-1 h-px bg-gray-200;
+}
+
+.dialog-overlay {
+  @apply fixed inset-0 z-50 bg-black/50 flex items-center justify-center;
+}
+.dialog {
+  @apply w-full max-w-md rounded-lg bg-white p-6 shadow-lg;
+}
+.dialog-header {
+  @apply mb-4;
+}
+.dialog-title {
+  @apply text-lg font-semibold;
+}
+.dialog-content {
+  @apply mb-4;
+}
+.dialog-footer {
+  @apply flex justify-end space-x-2;
+}
+
+.select-trigger {
+  @apply flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm;
+}
+.select-content {
+  @apply absolute z-50 mt-1 max-h-60 min-w-[8rem] overflow-hidden rounded-md border border-gray-200 bg-white p-1 shadow-md;
+}
+.select-item {
+  @apply relative flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm hover:bg-gray-100;
+}
+
+.input {
+  @apply flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2;
+}
+
+.label {
+  @apply text-sm font-medium leading-none;
+}
+
+.textarea {
+  @apply flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2;
+}
+
+.checkbox {
+  @apply h-4 w-4 rounded border border-gray-300 text-blue-600 focus:ring-blue-500;
+}
+
+.switch {
+  @apply relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none;
+}
+.switch-unchecked {
+  @apply bg-gray-200;
+}
+.switch-checked {
+  @apply bg-blue-600;
+}
+.switch-thumb {
+  @apply pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out;
+}
+
+.tabs {
+  @apply w-full;
+}
+.tabs-list {
+  @apply inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500;
+}
+.tabs-trigger {
+  @apply inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-gray-950 data-[state=active]:shadow-sm;
+}
+.tabs-content {
+  @apply mt-2 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2;
+}
+
+.separator-horizontal {
+  @apply h-[1px] w-full bg-gray-200;
+}
+.separator-vertical {
+  @apply h-full w-[1px] bg-gray-200;
+}
+
+.alert-dialog-overlay {
+  @apply fixed inset-0 z-50 bg-black/50 flex items-center justify-center;
+}
+.alert-dialog {
+  @apply w-full max-w-md rounded-lg bg-white p-6 shadow-lg;
+}
+.alert-dialog-title {
+  @apply text-lg font-semibold;
+}
+.alert-dialog-description {
+  @apply mt-2 text-sm text-gray-500;
+}
+.alert-dialog-footer {
+  @apply mt-4 flex justify-end space-x-2;
+}
+.alert-dialog-action {
+  @apply inline-flex h-10 items-center justify-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2;
+}
+.alert-dialog-cancel {
+  @apply inline-flex h-10 items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2;
+}
+
+.progress-container {
+  @apply relative h-4 w-full overflow-hidden rounded-full bg-gray-200;
+}
+.progress-track {
+  @apply h-full w-full bg-gray-200;
+}
+.progress-indicator {
+  @apply h-full bg-blue-600 transition-all;
 }

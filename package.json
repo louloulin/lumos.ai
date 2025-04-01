@@ -7,16 +7,16 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:ui": "pnpm --filter @lumosai/playground-ui dev",
-    "build:ui": "pnpm --filter @lumosai/playground-ui build",
-    "dev:client": "pnpm --filter @lumosai/client-js dev",
-    "build:client": "pnpm --filter @lumosai/client-js build",
-    "build:all": "pnpm -r build",
+    "dev:ui": "cd lumosai_ui && bun run dev",
+    "build:ui": "cd lumosai_ui && bun run build",
+    "dev:client": "cd packages/client-js && bun run dev",
+    "build:client": "cd packages/client-js && bun run build",
+    "build:all": "bun run build -r",
     "verify-workspace": "node scripts/verify-workspace.js",
     "create-package": "node scripts/create-package.js",
-    "dev:ui-components": "pnpm --filter @lumosai/ui-components dev",
-    "build:ui-components": "pnpm --filter @lumosai/ui-components build",
-    "fix-modules": "cd packages/client-js && pnpm build && cd ../.. && pnpm install"
+    "dev:ui-components": "cd packages/ui-components && bun run dev",
+    "build:ui-components": "cd packages/ui-components && bun run build",
+    "fix-modules": "cd packages/client-js && bun run build && cd ../.. && bun install"
   },
   "dependencies": {
     "@assistant-ui/react": "0.7.91",
@@ -24,12 +24,11 @@
     "@assistant-ui/react-syntax-highlighter": "0.7.10"
   },
   "devDependencies": {
-    "typescript": "^5.8.2",
-    "prettier": "^3.1.0"
+    "@shadcn/ui": "^0.0.4",
+    "prettier": "^3.1.0",
+    "typescript": "^5.8.2"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
-  },
-  "packageManager": "pnpm@8.10.0"
+    "node": ">=18.0.0"
+  }
 }

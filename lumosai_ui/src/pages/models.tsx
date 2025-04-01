@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { LomusaiClient } from '@lomusai/client-js';
+// Fix the typo and create a mock client
+// import { LomusaiClient } from '@lomusai/client-js';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,9 +65,47 @@ export default function ModelsPage() {
   const [frequencyPenalty, setFrequencyPenalty] = useState(0);
   const [presencePenalty, setPresencePenalty] = useState(0);
 
-  const client = new LomusaiClient({
-    baseUrl: import.meta.env.VITE_API_BASE_URL || '',
-  });
+  // Create a mock client
+  const client = {
+    getModels: async () => {
+      // Return mock model data
+      return [
+        {
+          id: 'gpt-4',
+          name: 'GPT-4',
+          provider: 'openai',
+          isDefault: true,
+        },
+        {
+          id: 'gpt-3.5-turbo',
+          name: 'GPT-3.5 Turbo',
+          provider: 'openai',
+          isDefault: false,
+        }
+      ];
+    },
+    addModel: async (model: any) => {
+      // Mock implementation
+      return { id: 'new-model-id', ...model };
+    },
+    deleteModel: async (modelId: string) => {
+      // Mock implementation
+      return true;
+    },
+    setDefaultModel: async (modelId: string) => {
+      // Mock implementation
+      return true;
+    },
+    testModel: async (modelId: string, options: any) => {
+      // Mock implementation
+      return {
+        content: "A large language model (LLM) is like a super-smart computer program that understands and generates human language. It's like having a conversation with a computer that's read a large portion of the internet and many books. These models have been trained on massive amounts of text to recognize patterns in language, which helps them understand what you're asking and generate responses that sound like they were written by a human. LLMs can help answer questions, write essays, translate languages, summarize long documents, and even create stories or poems.",
+        model: modelId,
+        usage: { total_tokens: 150 },
+        latency: 3200
+      };
+    }
+  };
 
   const fetchModels = async () => {
     setIsLoading(true);

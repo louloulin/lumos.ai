@@ -1,29 +1,50 @@
 'use client';
 
-import * as SwitchPrimitives from '@radix-ui/react-switch';
-import * as React from 'react';
+import React from "react";
 
-import { cn } from '../../lib/utils';
+interface SwitchProps {
+  className?: string;
+  checked?: boolean;
+  defaultChecked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+}
 
-const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => (
-  <SwitchPrimitives.Root
-    className={cn(
-      'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-mastra-bg-7 data-[state=unchecked]:bg-input',
-      className,
-    )}
-    {...props}
-    ref={ref}
-  >
-    <SwitchPrimitives.Thumb
-      className={cn(
-        'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0',
-      )}
-    />
-  </SwitchPrimitives.Root>
-));
-Switch.displayName = SwitchPrimitives.Root.displayName;
+export function Switch({ 
+  className, 
+  checked,
+  defaultChecked,
+  onCheckedChange,
+  ...props
+}: SwitchProps & React.HTMLAttributes<HTMLButtonElement>) {
+  const [isChecked, setIsChecked] = React.useState(defaultChecked || false);
+  
+  React.useEffect(() => {
+    if (checked !== undefined) {
+      setIsChecked(checked);
+    }
+  }, [checked]);
+  
+  const handleToggle = () => {
+    const newValue = !isChecked;
+    setIsChecked(newValue);
+    if (onCheckedChange) {
+      onCheckedChange(newValue);
+    }
+  };
 
-export { Switch };
+  return (
+    <button
+      type="button" 
+      role="switch"
+      aria-checked={isChecked}
+      className={`switch ${isChecked ? 'switch-checked' : 'switch-unchecked'} ${className || ""}`}
+      onClick={handleToggle}
+      {...props}
+    >
+      <span className="switch-thumb" style={{ 
+        transform: isChecked ? 'translateX(100%)' : 'translateX(0%)',
+        marginLeft: isChecked ? '2px' : '2px'
+      }} />
+    </button>
+  );
+}

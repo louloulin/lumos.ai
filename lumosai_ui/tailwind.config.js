@@ -1,8 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 
 module.exports = {
-  darkMode: ['class'],
-  content: ['./src/**/*.{html,js, tsx, ts, jsx}'],
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+    "./index.html",
+    "./src/components/**/*.{js,jsx,ts,tsx}",
+    "./src/pages/**/*.{js,jsx,ts,tsx}",
+    "./src/layouts/**/*.{js,jsx,ts,tsx}",
+    "./src/domains/**/*.{js,jsx,ts,tsx}"
+  ],
   theme: {
     extend: {
       animation: {
@@ -24,7 +30,5 @@ module.exports = {
   },
   plugins: [
     require('tailwindcss-animate'),
-    require('@assistant-ui/react/tailwindcss'),
-    require('@assistant-ui/react-markdown/tailwindcss'),
   ],
 };

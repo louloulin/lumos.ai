@@ -6,3 +6,6 @@
 @ui.md    参考Mastra UI ，实现lumos_ui模块，对接lumosai_core
 
 @agent_enhancement_plan.md 继续按照这个实现相关功能，增加相关测试验证，验证通过后 更新 @agent_enhancement_plan.md 标记实现的功能
+
+
+@dev.md 按照计划，参考 @mastra 的代码和 @mastra 和分析整个  @lumosai_cli 的代码，实现计划中的功能，增加单元测试，测试通过后，更新  @dev.md 

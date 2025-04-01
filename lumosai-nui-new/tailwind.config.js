@@ -1,64 +1,56 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
+  darkMode: ["class"],
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
-      textColor: {
-        foreground: 'rgb(var(--foreground) / <alpha-value>)',
-        'primary-foreground': 'rgb(var(--primary-foreground) / <alpha-value>)',
-        'secondary-foreground': 'rgb(var(--secondary-foreground) / <alpha-value>)',
-        'muted-foreground': 'rgb(var(--muted-foreground) / <alpha-value>)',
-        'accent-foreground': 'rgb(var(--accent-foreground) / <alpha-value>)',
-        'popover-foreground': 'rgb(var(--popover-foreground) / <alpha-value>)',
-        'card-foreground': 'rgb(var(--card-foreground) / <alpha-value>)',
-        'destructive-foreground': 'rgb(var(--destructive-foreground) / <alpha-value>)',
-      },
-      backgroundColor: {
-        background: 'rgb(var(--background) / <alpha-value>)',
-        primary: 'rgb(var(--primary) / <alpha-value>)',
-        secondary: 'rgb(var(--secondary) / <alpha-value>)',
-        muted: 'rgb(var(--muted) / <alpha-value>)',
-        accent: 'rgb(var(--accent) / <alpha-value>)',
-        popover: 'rgb(var(--popover) / <alpha-value>)',
-        card: 'rgb(var(--card) / <alpha-value>)',
-        destructive: 'rgb(var(--destructive) / <alpha-value>)',
-      },
-      borderColor: {
-        input: 'rgb(var(--input) / <alpha-value>)',
-      },
-      outlineColor: {
-        ring: 'rgb(var(--ring) / <alpha-value>)',
-      },
-      ringOffsetColor: {
-        background: 'rgb(var(--background) / <alpha-value>)',
+      colors: {
+        border: "rgb(var(--border))",
+        input: "rgb(var(--input))",
+        ring: "rgb(var(--ring))",
+        background: "rgb(var(--background))",
+        foreground: "rgb(var(--foreground))",
+        primary: {
+          DEFAULT: "rgb(var(--primary))",
+          foreground: "rgb(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "rgb(var(--secondary))",
+          foreground: "rgb(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "rgb(var(--destructive))",
+          foreground: "rgb(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "rgb(var(--muted))",
+          foreground: "rgb(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "rgb(var(--accent))",
+          foreground: "rgb(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "rgb(var(--popover))",
+          foreground: "rgb(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "rgb(var(--card))",
+          foreground: "rgb(var(--card-foreground))",
+        },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
-      },
-      animation: {
-        'fade-in': 'fade-in 1s ease-out',
-      },
-      keyframes: {
-        'fade-in': {
-          '0%': {
-            opacity: '0.8',
-            backgroundColor: 'hsl(var(--muted))',
-          },
-          '100%': {
-            opacity: '1',
-            backgroundColor: 'transparent',
-          },
-        },
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
     },
   },
   plugins: [
-    require('tailwindcss-animate'),
+    require("tailwindcss-animate")
   ],
 }
 

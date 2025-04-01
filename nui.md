@@ -84,11 +84,11 @@
    - 弹性布局 (Flex) ✅
    - 容器 (Container) ✅
    - 分隔线 (Separator) ✅
-   - 滚动区域 (ScrollArea) - 待实现
+   - 滚动区域 (ScrollArea) ✅
 
 3. **导航组件** [部分完成]
    - 标签页 (Tabs) ✅
-   - 导航菜单 (NavigationMenu) - 待实现
+   - 导航菜单 (NavigationMenu) ✅
    - 侧边栏 (Sidebar) - 待实现
    - 面包屑 (Breadcrumb) - 待实现
 
@@ -96,16 +96,16 @@
    - 提示 (Toast) ✅
    - 对话框 (Dialog) ✅
    - 弹出框 (Popover) ✅
-   - 工具提示 (Tooltip) - 待实现
-   - 加载指示器 (LoadingIndicator) - 待实现
+   - 工具提示 (Tooltip) ✅
+   - 加载指示器 (LoadingIndicator) ✅
 
 ### 第三阶段：高级组件迁移 (3-4周)
 
-1. **数据展示组件**
-   - 表格 (Table)
-   - 列表 (List)
-   - 树形控件 (Tree)
-   - 图表 (Charts)
+1. **数据展示组件** [部分完成]
+   - 表格 (Table) ✅
+   - 列表 (List) ✅
+   - 树形控件 (Tree) ✅
+   - 图表 (Charts) ✅
    - 日期选择器 (DatePicker)
 
 2. **编辑器组件**
@@ -140,7 +140,7 @@
    - WAI-ARIA 实践
 
 3. **测试** [部分完成]
-   - 单元测试 ✅ (为部分组件添加了测试)
+   - 单元测试 ✅ (为以下组件添加了测试: Button, Dialog, Toast, Tooltip, ScrollArea, NavigationMenu, LoadingIndicator, Table, List, Tree, Charts)
    - 集成测试
    - 端到端测试
    - 可访问性测试

@@ -19,7 +19,9 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "dev": "concurrently \"vite\" \"tailwindcss -i ./src/index.css -o ./dist/output.css --watch\"",
+    "dev:vite": "vite",
+    "dev:css": "tailwindcss -i ./src/index.css -o ./dist/output.css --watch",
+    "dev": "bun run dev:css & bun run dev:vite",
     "build": "tailwindcss -i ./src/index.css -o ./dist/output.css && tsc && vite build",
     "build:watch": "tailwindcss -i ./src/index.css -o ./dist/output.css && vite build --watch",
     "build:publish": "bun build && yalc push",
@@ -53,6 +55,7 @@
     "@radix-ui/react-switch": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.8",
+    "@tailwindcss/postcss": "^4.0.17",
     "@tanstack/react-table": "^8.21.2",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/codemirror-theme-github": "^4.23.8",

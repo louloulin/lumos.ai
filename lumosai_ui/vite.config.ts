@@ -1,13 +1,14 @@
 import react from '@vitejs/plugin-react';
-import autoprefixer from 'autoprefixer';
 import { resolve } from 'path';
-import tailwindcss from 'tailwindcss';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [
-    react(),
-  ],
+  plugins: [react()],
+  server: {
+    host: true,
+    port: 3000,
+    open: true
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
@@ -16,8 +17,7 @@ export default defineConfig({
     },
   },
   css: {
-    postcss: {
-      plugins: [tailwindcss, autoprefixer],
-    },
+    postcss: './postcss.config.mjs',
   },
+  clearScreen: false
 });

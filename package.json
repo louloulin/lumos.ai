@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "cd lumosai_ui && bun run dev",
     "dev:ui": "cd lumosai_ui && bun run dev",
     "build:ui": "cd lumosai_ui && bun run build",
     "dev:client": "cd packages/client-js && bun run dev",

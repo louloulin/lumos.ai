@@ -24,9 +24,11 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Loader2, Save, Play, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Save, Play, Plus, Trash2, Settings, MoreHorizontal, XCircle, Code, Search, Info } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription } from '../ui/alert';
+import { Separator } from '../ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 // 导入自定义节点
 import { InputNode } from './nodes/InputNode';
@@ -42,6 +44,12 @@ const nodeTypes = {
   llm: LLMNode,
   tool: ToolNode,
   condition: ConditionNode,
+};
+
+// 自定义样式
+const flowStyles = {
+  background: '#121212',
+  height: '100%',
 };
 
 interface WorkflowEditorProps {
@@ -398,92 +406,169 @@ export function WorkflowEditor({ workflowId, onSave }: WorkflowEditorProps) {
     event.dataTransfer.effectAllowed = 'move';
   };
 
+  // 获取节点类型颜色
+  const getNodeTypeColor = (type: string): { bg: string, border: string, text: string, icon: JSX.Element } => {
+    const typeColors: Record<string, { bg: string, border: string, text: string, icon: JSX.Element }> = {
+      input: { 
+        bg: 'bg-[#1E293B]', 
+        border: 'border-[#334155]', 
+        text: 'text-blue-400',
+        icon: <Code size={12} className="text-blue-400" />
+      },
+      output: { 
+        bg: 'bg-[#1A2E1A]', 
+        border: 'border-[#294429]', 
+        text: 'text-emerald-400',
+        icon: <Code size={12} className="text-emerald-400" />
+      },
+      llm: { 
+        bg: 'bg-[#2D1B3A]', 
+        border: 'border-[#4A2D62]', 
+        text: 'text-purple-400',
+        icon: <Settings size={12} className="text-purple-400" />
+      },
+      tool: { 
+        bg: 'bg-[#2E1C11]', 
+        border: 'border-[#4F301D]', 
+        text: 'text-orange-400',
+        icon: <Settings size={12} className="text-orange-400" />
+      },
+      condition: { 
+        bg: 'bg-[#2E2911]', 
+        border: 'border-[#4F461D]', 
+        text: 'text-yellow-400',
+        icon: <Search size={12} className="text-yellow-400" />
+      }
+    };
+    
+    return typeColors[type] || { 
+      bg: 'bg-[#1C1C1C]', 
+      border: 'border-[#2E2E2E]', 
+      text: 'text-gray-400',
+      icon: <Info size={12} className="text-gray-400" />
+    };
+  };
+
   // 加载状态
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">加载工作流...</span>
+      <div className="flex items-center justify-center h-[400px] bg-[#121212] text-white">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+        <span className="ml-2 text-gray-300">加载工作流...</span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="editor">编辑器</TabsTrigger>
-          <TabsTrigger value="details">工作流详情</TabsTrigger>
-          <TabsTrigger value="runs">执行历史</TabsTrigger>
+    <div className="flex flex-col h-full bg-[#0A0A0A]">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-[#1C1C1C] border border-[#2E2E2E] p-0.5 h-9 mb-4">
+          <TabsTrigger value="editor" className="px-4 text-xs h-8 data-[state=active]:bg-[#2E2E2E] data-[state=active]:text-white">
+            编辑器
+          </TabsTrigger>
+          <TabsTrigger value="details" className="px-4 text-xs h-8 data-[state=active]:bg-[#2E2E2E] data-[state=active]:text-white">
+            工作流详情
+          </TabsTrigger>
+          <TabsTrigger value="runs" className="px-4 text-xs h-8 data-[state=active]:bg-[#2E2E2E] data-[state=active]:text-white">
+            执行历史
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="editor" className="flex-1">
+        <TabsContent value="editor" className="flex-1 mt-0">
           <div className="flex flex-col h-[700px]">
-            <div className="flex justify-between p-2 bg-muted/20 rounded-t-md">
+            <div className="flex justify-between items-center p-3 bg-[#1C1C1C] border border-[#2E2E2E] rounded-t-md">
               <div className="flex items-center">
-                <h2 className="text-lg font-semibold mr-2">
+                <h2 className="text-sm font-medium text-white mr-3">
                   {workflowDetails.name || '未命名工作流'}
                 </h2>
-                {workflowDetails.tags.map(tag => (
-                  <Badge key={tag} variant="secondary" className="mr-1">
-                    {tag}
-                  </Badge>
-                ))}
+                <div className="flex gap-1">
+                  {workflowDetails.tags.slice(0, 3).map(tag => (
+                    <Badge key={tag} className="px-1.5 py-0.5 bg-[#2E2E2E] text-[10px] font-normal text-gray-300 hover:bg-[#3E3E3E]">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {workflowDetails.tags.length > 3 && (
+                    <Badge className="px-1.5 py-0.5 bg-[#2E2E2E] text-[10px] font-normal text-gray-300 hover:bg-[#3E3E3E]">
+                      +{workflowDetails.tags.length - 3}
+                    </Badge>
+                  )}
+                </div>
+                <Badge 
+                  className={`ml-3 px-2 py-0.5 text-[10px] font-normal ${
+                    workflowDetails.status === 'active' 
+                      ? 'bg-emerald-900/30 text-emerald-400 border-emerald-900/50' 
+                      : workflowDetails.status === 'draft' 
+                      ? 'bg-amber-900/30 text-amber-400 border-amber-900/50'
+                      : 'bg-gray-900/30 text-gray-400 border-gray-900/50'
+                  }`}
+                >
+                  {workflowDetails.status === 'active' ? '已激活' : workflowDetails.status === 'draft' ? '草稿' : '已归档'}
+                </Badge>
               </div>
               
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={executing}
-                  onClick={executeWorkflow}
-                >
-                  {executing ? (
-                    <>
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                      执行中
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-1 h-3 w-3" />
-                      执行
-                    </>
-                  )}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        disabled={executing}
+                        onClick={executeWorkflow}
+                        className="h-7 text-xs border-[#2E2E2E] bg-[#1C1C1C] text-gray-300 hover:bg-[#2E2E2E] hover:text-white"
+                      >
+                        {executing ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Play className="h-3 w-3" />
+                        )}
+                        <span className="ml-1.5">执行</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">执行当前工作流</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 
-                <Button 
-                  size="sm" 
-                  disabled={saving}
-                  onClick={saveWorkflow}
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                      保存中
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-1 h-3 w-3" />
-                      保存
-                    </>
-                  )}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        disabled={saving}
+                        onClick={saveWorkflow}
+                        className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        {saving ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Save className="h-3 w-3" />
+                        )}
+                        <span className="ml-1.5">保存</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">保存工作流</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
             
             {error && (
-              <Alert variant="destructive" className="mt-2">
+              <Alert variant="destructive" className="mt-2 bg-red-900/20 border-red-900/50 text-red-300">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
             
             {success && (
-              <Alert className="mt-2 bg-green-50 border-green-200 text-green-800">
+              <Alert className="mt-2 bg-emerald-900/20 border-emerald-900/50 text-emerald-300">
                 <AlertDescription>{success}</AlertDescription>
               </Alert>
             )}
             
-            <div className="flex-1 relative border rounded-b-md overflow-hidden" ref={reactFlowWrapper}>
+            <div className="flex-1 relative border border-[#2E2E2E] border-t-0 rounded-b-md overflow-hidden" ref={reactFlowWrapper}>
               <ReactFlowProvider>
                 <ReactFlow
                   nodes={nodes}
@@ -497,58 +582,88 @@ export function WorkflowEditor({ workflowId, onSave }: WorkflowEditorProps) {
                   onPaneClick={onPaneClick}
                   nodeTypes={nodeTypes}
                   fitView
+                  style={flowStyles}
+                  defaultEdgeOptions={{
+                    style: { stroke: '#3E3E3E', strokeWidth: 1.5 },
+                    animated: true,
+                  }}
                 >
-                  <Background />
-                  <Controls />
-                  <MiniMap />
+                  <Background 
+                    color="#2E2E2E" 
+                    gap={16} 
+                    size={1}
+                    variant="dots"
+                  />
+                  <Controls 
+                    className="bg-[#1C1C1C] border border-[#2E2E2E] rounded-md p-1"
+                    style={{ 
+                      button: { 
+                        backgroundColor: '#2E2E2E', 
+                        color: '#9CA3AF', 
+                        border: 'none',
+                        width: '24px',
+                        height: '24px',
+                        margin: '2px'
+                      } 
+                    }}
+                  />
+                  <MiniMap 
+                    style={{ 
+                      backgroundColor: '#1C1C1C',
+                      border: '1px solid #2E2E2E',
+                      borderRadius: '4px'
+                    }}
+                    nodeColor={(node) => {
+                      const type = node.type as NodeType || 'default';
+                      switch (type) {
+                        case 'input': return '#3B82F6';
+                        case 'output': return '#10B981';
+                        case 'llm': return '#8B5CF6';
+                        case 'tool': return '#F97316';
+                        case 'condition': return '#EAB308';
+                        default: return '#9CA3AF';
+                      }
+                    }}
+                    maskColor="rgba(12, 12, 12, 0.5)"
+                  />
                   
-                  <Panel position="top-left" className="flex flex-col gap-2 p-2 bg-background rounded shadow">
-                    <h3 className="text-sm font-medium mb-1">节点类型</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <div
-                        className="px-2 py-1 text-xs bg-blue-50 border border-blue-200 rounded cursor-move hover:bg-blue-100"
-                        onDragStart={(e) => onDragStart(e, 'input')}
-                        draggable
-                      >
-                        输入
-                      </div>
-                      <div
-                        className="px-2 py-1 text-xs bg-green-50 border border-green-200 rounded cursor-move hover:bg-green-100"
-                        onDragStart={(e) => onDragStart(e, 'output')}
-                        draggable
-                      >
-                        输出
-                      </div>
-                      <div
-                        className="px-2 py-1 text-xs bg-purple-50 border border-purple-200 rounded cursor-move hover:bg-purple-100"
-                        onDragStart={(e) => onDragStart(e, 'llm')}
-                        draggable
-                      >
-                        LLM
-                      </div>
-                      <div
-                        className="px-2 py-1 text-xs bg-orange-50 border border-orange-200 rounded cursor-move hover:bg-orange-100"
-                        onDragStart={(e) => onDragStart(e, 'tool')}
-                        draggable
-                      >
-                        工具
-                      </div>
-                      <div
-                        className="px-2 py-1 text-xs bg-yellow-50 border border-yellow-200 rounded cursor-move hover:bg-yellow-100"
-                        onDragStart={(e) => onDragStart(e, 'condition')}
-                        draggable
-                      >
-                        条件
-                      </div>
+                  <Panel position="top-left" className="p-3 bg-[#1C1C1C] border border-[#2E2E2E] rounded-md shadow-md">
+                    <h3 className="text-xs font-medium text-white mb-2">节点类型</h3>
+                    <Separator className="bg-[#2E2E2E] mb-2" />
+                    <div className="grid grid-cols-2 gap-2">
+                      {['input', 'output', 'llm', 'tool', 'condition'].map(type => {
+                        const { bg, border, text, icon } = getNodeTypeColor(type);
+                        return (
+                          <div
+                            key={type}
+                            className={`px-2 py-1.5 text-xs ${bg} border ${border} rounded-md cursor-move hover:opacity-80 transition-opacity flex items-center gap-1.5`}
+                            onDragStart={(e) => onDragStart(e, type as NodeType)}
+                            draggable
+                          >
+                            {icon}
+                            <span className={`${text}`}>{getNodeTypeLabel(type)}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </Panel>
                   
                   {selectedNode && (
-                    <Panel position="top-right" className="w-60 p-3 bg-background rounded shadow">
-                      <h3 className="text-sm font-medium mb-2">节点属性</h3>
-                      <div className="space-y-2">
+                    <Panel position="top-right" className="w-64 p-3 bg-[#1C1C1C] border border-[#2E2E2E] rounded-md shadow-md">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-medium text-white">节点属性</h3>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0" 
+                          onClick={() => setSelectedNode(null)}>
+                          <XCircle size={14} className="text-gray-400 hover:text-white" />
+                        </Button>
+                      </div>
+                      <Separator className="bg-[#2E2E2E] my-2" />
+                      <div className="space-y-3">
                         <div>
-                          <Label htmlFor="nodeName" className="text-xs">名称</Label>
+                          <Label htmlFor="nodeName" className="text-xs text-gray-400">名称</Label>
                           <Input
                             id="nodeName"
                             value={selectedNode.data.name || ''}
@@ -568,7 +683,7 @@ export function WorkflowEditor({ workflowId, onSave }: WorkflowEditorProps) {
                                 data: { ...selectedNode.data, name: e.target.value }
                               });
                             }}
-                            className="h-7 text-xs"
+                            className="h-7 text-xs mt-1 bg-[#1C1C1C] border-[#2E2E2E] text-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         </div>
                         
@@ -577,9 +692,9 @@ export function WorkflowEditor({ workflowId, onSave }: WorkflowEditorProps) {
                             variant="destructive"
                             size="sm"
                             onClick={deleteSelectedNode}
-                            className="h-7 text-xs"
+                            className="h-7 text-xs flex items-center gap-1 bg-red-900/60 hover:bg-red-900 text-white"
                           >
-                            <Trash2 className="h-3 w-3 mr-1" />
+                            <Trash2 className="h-3 w-3" />
                             删除节点
                           </Button>
                         </div>
@@ -592,40 +707,43 @@ export function WorkflowEditor({ workflowId, onSave }: WorkflowEditorProps) {
           </div>
         </TabsContent>
         
-        <TabsContent value="details">
-          <Card>
+        <TabsContent value="details" className="mt-0">
+          <Card className="bg-[#1C1C1C] border-[#2E2E2E] text-white shadow-md">
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">工作流名称</Label>
+                  <Label htmlFor="name" className="text-gray-400">工作流名称</Label>
                   <Input
                     id="name"
                     name="name"
                     value={workflowDetails.name}
                     onChange={handleWorkflowDetailsChange}
                     placeholder="输入工作流名称"
+                    className="bg-[#1C1C1C] border-[#2E2E2E] text-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                   />
                 </div>
                 
                 <div className="grid gap-2">
-                  <Label htmlFor="description">工作流描述</Label>
+                  <Label htmlFor="description" className="text-gray-400">工作流描述</Label>
                   <Input
                     id="description"
                     name="description"
                     value={workflowDetails.description}
                     onChange={handleWorkflowDetailsChange}
                     placeholder="描述此工作流的功能和用途"
+                    className="bg-[#1C1C1C] border-[#2E2E2E] text-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                   />
                 </div>
                 
                 <div className="grid gap-2">
-                  <Label htmlFor="tags">标签</Label>
+                  <Label htmlFor="tags" className="text-gray-400">标签</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="tags"
                       value={newTag}
                       onChange={(e) => setNewTag(e.target.value)}
                       placeholder="添加标签"
+                      className="bg-[#1C1C1C] border-[#2E2E2E] text-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -638,6 +756,7 @@ export function WorkflowEditor({ workflowId, onSave }: WorkflowEditorProps) {
                       size="sm" 
                       onClick={addTag}
                       disabled={!newTag.trim()}
+                      className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white border-0"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -646,14 +765,14 @@ export function WorkflowEditor({ workflowId, onSave }: WorkflowEditorProps) {
                   {workflowDetails.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {workflowDetails.tags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="flex items-center gap-1 px-2 py-1">
+                        <Badge key={tag} className="px-1.5 py-0.5 bg-[#2E2E2E] text-xs text-gray-300 hover:bg-[#3E3E3E] flex items-center gap-1">
                           {tag}
                           <button
                             type="button"
-                            className="text-muted-foreground hover:text-foreground"
+                            className="text-gray-400 hover:text-white"
                             onClick={() => removeTag(tag)}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <XCircle className="h-3 w-3" />
                           </button>
                         </Badge>
                       ))}
@@ -665,6 +784,7 @@ export function WorkflowEditor({ workflowId, onSave }: WorkflowEditorProps) {
                   <Button 
                     onClick={saveWorkflow}
                     disabled={saving}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
                   >
                     {saving ? (
                       <>
@@ -681,9 +801,13 @@ export function WorkflowEditor({ workflowId, onSave }: WorkflowEditorProps) {
           </Card>
         </TabsContent>
         
-        <TabsContent value="runs">
-          <div className="flex items-center justify-center h-[400px] border rounded-lg bg-slate-50">
-            <p className="text-gray-500">工作流执行历史记录即将推出</p>
+        <TabsContent value="runs" className="mt-0">
+          <div className="flex items-center justify-center h-[400px] border border-[#2E2E2E] rounded-lg bg-[#1C1C1C] text-center">
+            <div>
+              <Loader2 className="h-10 w-10 animate-spin text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-400">工作流执行历史记录即将推出</p>
+              <p className="text-gray-500 text-sm mt-2">我们正在努力实现这一功能</p>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

@@ -5,10 +5,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { ProjectDashboard } from '../dashboard/ProjectDashboard';
 import { ResourceBrowser } from '../resources/ResourceBrowser';
 import { WorkflowEditor } from '../workflows/WorkflowEditor';
-import { LogOut, User, PlusCircle, Settings, Menu, LayoutDashboard, Database, GitBranch, Rocket, BrainCircuit, Layers, Bot, ChevronRight, Terminal, Code, BarChart } from 'lucide-react';
+import { LogOut, User, PlusCircle, Settings, Menu, LayoutDashboard, Database, GitBranch, Rocket, BrainCircuit, Layers, Bot, ChevronRight, Terminal, Code, BarChart, FileText, MessageSquare } from 'lucide-react';
 import { CreateProjectForm } from '../projects/CreateProjectForm';
 import { useMediaQuery } from '../../hooks/use-media-query';
 import { cn } from '../../lib/utils';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tabs from '@radix-ui/react-tabs';
@@ -20,11 +21,12 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const [showCreateProject, setShowCreateProject] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const isMobile = useMediaQuery('(max-width: 768px)');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // 更新当前时间
   useEffect(() => {
@@ -50,8 +52,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       .toUpperCase();
   };
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
+  const getCurrentSection = () => {
+    const path = location.pathname.split('/')[1];
+    return path || 'dashboard';
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -70,21 +77,21 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const navItems = [
-    { id: 'dashboard', label: '仪表盘', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { id: 'resources', label: '资源', icon: <Database className="h-4 w-4" /> },
-    { id: 'workflows', label: '工作流', icon: <GitBranch className="h-4 w-4" /> },
-    { id: 'deployments', label: '部署', icon: <Rocket className="h-4 w-4" /> },
+    { id: 'dashboard', label: '仪表盘', icon: <LayoutDashboard className="h-4 w-4" />, path: '/dashboard' },
+    { id: 'resources', label: '资源', icon: <Database className="h-4 w-4" />, path: '/resources' },
+    { id: 'workflows', label: '工作流', icon: <GitBranch className="h-4 w-4" />, path: '/workflows' },
+    { id: 'deployments', label: '部署', icon: <Rocket className="h-4 w-4" />, path: '/deployments' },
   ];
 
   const toolItems = [
-    { id: 'agents', label: '代理', icon: <Bot className="h-3.5 w-3.5" /> },
-    { id: 'models', label: '模型', icon: <Layers className="h-3.5 w-3.5" /> },
-    { id: 'code', label: '代码', icon: <Code className="h-3.5 w-3.5" /> },
-    { id: 'analytics', label: '分析', icon: <BarChart className="h-3.5 w-3.5" /> },
+    { id: 'agents', label: '代理', icon: <Bot className="h-3.5 w-3.5" />, path: '/agents' },
+    { id: 'prompts', label: '提示库', icon: <MessageSquare className="h-3.5 w-3.5" />, path: '/prompts' },
+    { id: 'models', label: '模型', icon: <Layers className="h-3.5 w-3.5" />, path: '/models' },
+    { id: 'tools', label: '工具库', icon: <Terminal className="h-3.5 w-3.5" />, path: '/tools' },
   ];
 
   const Sidebar = () => (
-    <div className="h-full w-full flex flex-col bg-[#1C1C1C] border-r border-[#2E2E2E]">
+    <div className="h-full w-full flex flex-col bg-gradient-to-b from-[#1A1A1A] to-[#121212] border-r border-[#2E2E2E]">
       <div className="px-3 py-3 flex items-center gap-2 border-b border-[#2E2E2E]">
         <div className="flex items-center justify-center h-7 w-7">
           <BrainCircuit className="h-5 w-5 text-emerald-500" />
@@ -104,11 +111,11 @@ export function AppLayout({ children }: AppLayoutProps) {
             variant="ghost" 
             className={cn(
               "w-full justify-start h-9 px-2 text-sm font-medium",
-              activeTab === item.id ? 
-                "bg-[#2E2E2E] text-white" : 
+              getCurrentSection() === item.id ? 
+                "bg-gradient-to-r from-emerald-950/70 to-emerald-900/20 text-white border-l-2 border-emerald-500" : 
                 "text-gray-400 hover:bg-[#2E2E2E] hover:text-white"
             )}
-            onClick={() => handleTabChange(item.id)}
+            onClick={() => handleNavigation(item.path)}
           >
             <span className="mr-3">{item.icon}</span>
             {item.label}
@@ -135,7 +142,13 @@ export function AppLayout({ children }: AppLayoutProps) {
             <Button 
               key={item.id}
               variant="ghost" 
-              className="w-full justify-start h-8 px-2 text-[13px] text-gray-400 hover:bg-[#2E2E2E] hover:text-white"
+              className={cn(
+                "w-full justify-start h-8 px-2 text-[13px]",
+                getCurrentSection() === item.id ? 
+                  "bg-gradient-to-r from-emerald-950/70 to-emerald-900/20 text-white border-l-2 border-emerald-500" : 
+                  "text-gray-400 hover:bg-[#2E2E2E] hover:text-white"
+              )}
+              onClick={() => handleNavigation(item.path)}
             >
               <span className="mr-3 opacity-70">{item.icon}</span>
               {item.label}
@@ -183,7 +196,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* 顶部栏 */}
-        <header className="h-14 border-b border-[#2E2E2E] px-4 flex items-center justify-between bg-[#1C1C1C]">
+        <header className="h-14 border-b border-[#2E2E2E] px-4 flex items-center justify-between bg-gradient-to-r from-[#1A1A1A] to-[#121212]">
           <div className="flex items-center gap-2">
             {isMobile && (
               <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 text-gray-400 hover:text-white hover:bg-[#2E2E2E]" onClick={() => setSidebarOpen(!sidebarOpen)}>
@@ -196,7 +209,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="flex items-center gap-4">
             <Button 
               size="sm" 
-              className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+              className="h-8 gap-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white border-0"
               onClick={() => setShowCreateProject(true)}
             >
               <PlusCircle className="h-3.5 w-3.5" />
@@ -244,33 +257,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
         
         {/* 主内容区 */}
-        <main className="flex-1 overflow-auto">
-          <div className="container mx-auto py-6 px-6">
-            {activeTab === 'dashboard' && <ProjectDashboard />}
-            {activeTab === 'resources' && <ResourceBrowser />}
-            {activeTab === 'workflows' && <WorkflowEditor />}
-            {activeTab === 'deployments' && (
-              <div className="flex flex-col items-center justify-center h-[400px] border border-[#2E2E2E] rounded-lg bg-[#1C1C1C]">
-                <div className="p-6 flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-full bg-[#2E2E2E] flex items-center justify-center mb-4">
-                    <Rocket className="h-6 w-6 text-emerald-500" />
-                  </div>
-                  <p className="text-gray-300 font-medium mb-2">部署中心即将推出</p>
-                  <p className="text-gray-500 text-sm text-center max-w-md mb-6">
-                    我们正在构建一个强大的部署系统，以便您无缝发布AI应用。
-                  </p>
-                  <div className="flex gap-3">
-                    <Button variant="outline" className="h-8 text-xs border-[#2E2E2E] bg-[#1C1C1C] text-gray-300 hover:bg-[#2E2E2E]">
-                      查看文档
-                    </Button>
-                    <Button className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
-                      加入公测计划
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+        <main className="flex-1 overflow-auto bg-gradient-to-b from-[#121212] to-[#0A0A0A]">
+          {children || <Outlet />}
         </main>
       </div>
     </div>

@@ -1,13 +1,24 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vitest/config';
+/// <reference types="vite/client" />
+
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test-setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    environment: 'jsdom',
+    setupFiles: 'src/test/setup.ts',
+    // 覆盖全局对象，此处添加ResizeObserver模拟
+    environmentOptions: {
+      jsdom: {
+        resources: 'usable',
+      },
+    },
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+    },
   },
 }); 

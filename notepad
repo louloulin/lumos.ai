@@ -18,4 +18,17 @@
 结合 和 参考 @mastra ，同时分析lumosai整个代码  ，按照  @nui.md 的计划实现功能将代码写入  考虑基于tauri的跨平台性，增加测试用例，测试通过后更新 @nui.md 标记实现的功能 实现lumosai 云平台功能
 
 
-结合 @lumosai_ui 和 @playground-ui 参考 @mastra ，同时分析lumosai整个代码  ，按照  @nui.md 的计划实现功能将代码写入 @lumosai-nui-new  考虑基于tauri的跨平台性，增加测试用例，测试通过后更新 @nui.md 标记实现的功能
+@playground-ui  参考 @mastra ，同时分析lumosai整个代码  ，按照  @nui.md 的计划实现功能将代码写入  考虑基于tauri的跨平台性，增加测试用例，测试通过后更新 @nui.md 标记实现的功能，实现lumosai 云平台功能
+
+
+
+LumosAI系统提供了两个默认账号:
+管理员账号:
+邮箱: admin@lumosai.com
+用户名: admin
+密码: password
+普通用户账号:
+邮箱: demo@lumosai.com
+用户名: demouser
+密码: password
+所有账号都使用同一个通用密码"password"。这些是系统内置的模拟账号，用

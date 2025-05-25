@@ -2,10 +2,12 @@ use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::{Error, Result};
-use super::provider::LlmProvider;
+use super::provider::{LlmProvider, FunctionCallingResponse};
 use super::types::{LlmOptions, Message};
+use super::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
 
 /// OpenAI API响应结构
 #[derive(Debug, Deserialize)]
@@ -25,6 +27,22 @@ struct OpenAIChoice {
 struct OpenAIMessage {
     role: String,
     content: Option<String>,
+    #[serde(default)]
+    tool_calls: Vec<OpenAIToolCall>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAIToolCall {
+    id: String,
+    #[serde(rename = "type")]
+    call_type: String,
+    function: OpenAIFunction,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAIFunction {
+    name: String,
+    arguments: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,6 +82,10 @@ struct OpenAIRequest {
     top_p: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stream: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_choice: Option<Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -322,4 +344,120 @@ impl LlmProvider for OpenAiProvider {
             
         Ok(embedding)
     }
-} 
+
+    fn supports_function_calling(&self) -> bool {
+        true
+    }
+
+    async fn generate_with_functions(
+        &self,
+        messages: &[Message],
+        functions: &[FunctionDefinition],
+        tool_choice: &ToolChoice,
+        options: &LlmOptions,
+    ) -> Result<FunctionCallingResponse> {
+        let url = format!("{}/chat/completions", self.base_url);
+        
+        // 转换消息格式
+        let api_messages: Vec<serde_json::Value> = messages
+            .iter()
+            .map(|msg| {
+                serde_json::json!({
+                    "role": msg.role.as_str(),
+                    "content": msg.content.clone(),
+                    "name": msg.name.clone(),
+                })
+            })
+            .collect();
+
+        // 转换函数定义为 OpenAI tools 格式
+        let tools: Vec<Value> = functions.iter().map(|func| {
+            serde_json::json!({
+                "type": "function",
+                "function": {
+                    "name": func.name,
+                    "description": func.description,
+                    "parameters": func.parameters
+                }
+            })
+        }).collect();
+
+        // 转换工具选择
+        let tool_choice_value = match tool_choice {
+            ToolChoice::Auto => serde_json::json!("auto"),
+            ToolChoice::None => serde_json::json!("none"),
+            ToolChoice::Required => serde_json::json!("required"),
+            ToolChoice::Function { name } => serde_json::json!({
+                "type": "function",
+                "function": { "name": name }
+            }),
+        };
+
+        // 构建请求
+        let mut body = serde_json::json!({
+            "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
+            "messages": api_messages,
+        });
+
+        if !tools.is_empty() {
+            body["tools"] = Value::Array(tools);
+            body["tool_choice"] = tool_choice_value;
+        }
+
+        // 添加其他选项
+        if let Some(temperature) = options.temperature {
+            body["temperature"] = serde_json::json!(temperature);
+        }
+        if let Some(max_tokens) = options.max_tokens {
+            body["max_tokens"] = serde_json::json!(max_tokens);
+        }
+
+        // 发送请求
+        let res = self.client
+            .post(&url)
+            .headers(self.create_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {}", e)))?;
+
+        let status = res.status();
+        let response_text = res.text().await
+            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {}", e)))?;
+
+        if !status.is_success() {
+            return Err(Error::Llm(format!(
+                "OpenAI API returned error status {}: {}",
+                status, response_text
+            )));
+        }
+
+        // 解析响应
+        let response: OpenAIResponse = serde_json::from_str(&response_text)
+            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {}", e)))?;
+
+        if response.choices.is_empty() {
+            return Err(Error::Llm("No choices in OpenAI response".to_string()));
+        }
+
+        let choice = &response.choices[0];
+        let message = &choice.message;
+
+        // 转换 function calls
+        let function_calls: Vec<FunctionCall> = message.tool_calls
+            .iter()
+            .filter(|tc| tc.call_type == "function")
+            .map(|tc| FunctionCall {
+                id: Some(tc.id.clone()),
+                name: tc.function.name.clone(),
+                arguments: tc.function.arguments.clone(),
+            })
+            .collect();
+
+        Ok(FunctionCallingResponse {
+            content: message.content.clone(),
+            function_calls,
+            finish_reason: choice.finish_reason.clone().unwrap_or_else(|| "stop".to_string()),
+        })
+    }
+}

@@ -32,3 +32,6 @@ LumosAI系统提供了两个默认账号:
 用户名: demouser
 密码: password
 所有账号都使用同一个通用密码"password"。这些是系统内置的模拟账号，用
+
+
+plan2.md 按照整个方案 阅读 mastra 目录下相关代码，同时参考 mastra 文档，基于rust实现 实现mastra功能迁移到 lumosai，实现后，增加单元测试，测试通过 更新 plan2.md 标记实现的功能

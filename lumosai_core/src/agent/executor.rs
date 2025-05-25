@@ -14,7 +14,7 @@ use tokio::io::AsyncRead;
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
 use crate::logger::{Component, Logger};
-use crate::llm::{LlmProvider, LlmOptions, Message, Role};
+use crate::llm::{LlmProvider, LlmOptions, Message, Role, FunctionDefinition, ToolChoice as LlmToolChoice};
 use crate::memory::Memory;
 use crate::telemetry::TelemetrySink;
 use crate::tool::{Tool, ToolExecutionOptions, ToolExecutionContext};
@@ -62,6 +62,8 @@ pub struct BasicAgent {
     output_schema: Option<Value>,
     /// Experimental features flag
     experimental_output: bool,
+    /// Enable function calling (if provider supports it)
+    enable_function_calling: bool,
     /// Telemetry settings
     telemetry: Option<Box<dyn TelemetrySink>>,
 }
@@ -101,6 +103,7 @@ impl BasicAgent {
             abort_signal: None,
             output_schema: None,
             experimental_output: false,
+            enable_function_calling: config.enable_function_calling.unwrap_or(true), // Default to true
             telemetry: None,
         }
     }
@@ -162,6 +165,80 @@ impl BasicAgent {
             metadata: None,
             name: None,
         }
+    }
+    
+    /// Convert tools to function definitions for OpenAI function calling
+    fn build_function_definitions(&self) -> Vec<FunctionDefinition> {
+        let tools = match self.tools.lock() {
+            Ok(tools) => tools,
+            Err(_) => return Vec::new(),
+        };
+
+        if tools.is_empty() {
+            return Vec::new();
+        }
+
+        let mut functions = Vec::new();
+        
+        for tool in tools.values() {
+            let schema = tool.schema();
+            
+            // Build parameters schema for OpenAI format
+            let mut properties = serde_json::Map::new();
+            let mut required = Vec::new();
+            
+            for param in &schema.parameters {
+                let mut param_schema = serde_json::Map::new();
+                param_schema.insert("type".to_string(), serde_json::Value::String(param.r#type.clone()));
+                param_schema.insert("description".to_string(), serde_json::Value::String(param.description.clone()));
+                
+                if let Some(default) = &param.default {
+                    param_schema.insert("default".to_string(), default.clone());
+                }
+                
+                properties.insert(param.name.clone(), serde_json::Value::Object(param_schema));
+                
+                if param.required {
+                    required.push(param.name.clone());
+                }
+            }
+            
+            let parameters = serde_json::json!({
+                "type": "object",
+                "properties": properties,
+                "required": required
+            });
+            
+            functions.push(FunctionDefinition {
+                name: tool.id().to_string(),
+                description: Some(tool.description().to_string()),
+                parameters,
+            });
+        }
+        
+        functions
+    }
+    
+    /// Parse function calls from OpenAI function calling response
+    fn parse_function_calls(&self, function_calls: &[crate::llm::FunctionCall]) -> Vec<ToolCall> {
+        let mut tool_calls = Vec::new();
+        
+        for func_call in function_calls {
+            match serde_json::from_str::<HashMap<String, Value>>(&func_call.arguments) {
+                Ok(arguments) => {
+                    tool_calls.push(ToolCall {
+                        id: func_call.id.clone().unwrap_or_else(|| Uuid::new_v4().to_string()),
+                        name: func_call.name.clone(),
+                        arguments,
+                    });
+                },
+                Err(e) => {
+                    self.logger().warn(&format!("Failed to parse function call arguments: {}", e), None);
+                }
+            }
+        }
+        
+        tool_calls
     }
 }
 
@@ -247,6 +324,10 @@ impl Agent for BasicAgent {
     }
     
     fn parse_tool_calls(&self, response: &str) -> Result<Vec<ToolCall>> {
+        // First try to detect if this is a function calling response
+        // (This would be handled differently in the generate method, but kept for compatibility)
+        
+        // Parse regex-based tool calls (existing functionality)
         let re = Regex::new(r"Using the tool '([^']+)' with parameters: (\{[^}]+\})").unwrap();
         
         let mut tool_calls = Vec::new();
@@ -268,10 +349,9 @@ impl Agent for BasicAgent {
                 }
             }
         }
-        
-        Ok(tool_calls)
+         Ok(tool_calls)
     }
-    
+
     async fn execute_tool_call(&self, tool_call: &ToolCall) -> Result<Value> {
         // First get a clone of the tool to avoid holding the lock across await
         let tool_clone = {
@@ -371,19 +451,126 @@ impl Agent for BasicAgent {
         
         let mut final_response = String::new();
         
+        // Check if we should use function calling
+        let use_function_calling = self.enable_function_calling && 
+                                  self.llm.supports_function_calling() &&
+                                  !self.tools.lock().map(|tools| tools.is_empty()).unwrap_or(true);
+        
         while current_step < max_steps {
             current_step += 1;
             
-            // Generate a response
-            let llm_options = options.llm_options.clone();
-            let response = self.llm.generate_with_messages(&all_messages, &llm_options).await?;
-            
-            // Parse the response to see if it contains tool calls
-            let tool_calls = self.parse_tool_calls(&response);
-            
-            if let Ok(calls) = tool_calls {
-                if calls.is_empty() {
-                    // No tool calls, this is the final response
+            if use_function_calling {
+                // Use OpenAI function calling
+                let function_definitions = self.build_function_definitions();
+                
+                if !function_definitions.is_empty() {
+                    // Convert tool choice from agent options to LLM tool choice
+                    let llm_tool_choice = match &options.tool_choice {
+                        Some(crate::agent::types::ToolChoice::Auto) => LlmToolChoice::Auto,
+                        Some(crate::agent::types::ToolChoice::None) => LlmToolChoice::None,
+                        Some(crate::agent::types::ToolChoice::Required) => LlmToolChoice::Required,
+                        Some(crate::agent::types::ToolChoice::Tool { tool_name }) => {
+                            LlmToolChoice::Function { name: tool_name.clone() }
+                        },
+                        None => LlmToolChoice::Auto,
+                    };
+                    
+                    let llm_options = options.llm_options.clone();
+                    let response: crate::llm::provider::FunctionCallingResponse = self.llm.generate_with_functions(
+                        &all_messages, 
+                        &function_definitions,
+                        &llm_tool_choice,
+                        &llm_options
+                    ).await?;
+                    
+                    if !response.function_calls.is_empty() {
+                        // Execute function calls
+                        let tool_calls = self.parse_function_calls(&response.function_calls);
+                        let mut tool_results = Vec::new();
+                        
+                        for call in &tool_calls {
+                            let result = match self.execute_tool_call(call).await {
+                                Ok(result) => ToolResult {
+                                    call_id: call.id.clone(),
+                                    name: call.name.clone(),
+                                    result,
+                                    status: ToolResultStatus::Success,
+                                },
+                                Err(e) => ToolResult {
+                                    call_id: call.id.clone(),
+                                    name: call.name.clone(),
+                                    result: Value::String(format!("Error: {}", e)),
+                                    status: ToolResultStatus::Error,
+                                },
+                            };
+                            
+                            tool_results.push(result);
+                        }
+                        
+                        // Create a tool step
+                        let tool_step = AgentStep {
+                            id: Uuid::new_v4().to_string(),
+                            step_type: StepType::Tool,
+                            input: all_messages.clone(),
+                            output: Some(Message {
+                                role: Role::Assistant,
+                                content: response.content.clone().unwrap_or_default(),
+                                metadata: None,
+                                name: None,
+                            }),
+                            tool_calls,
+                            tool_results: tool_results.clone(),
+                            metadata: HashMap::new(),
+                        };
+                        
+                        steps.push(tool_step);
+                        
+                        // Add assistant message with function calls
+                        all_messages.push(Message {
+                            role: Role::Assistant,
+                            content: response.content.unwrap_or_default(),
+                            metadata: None,
+                            name: None,
+                        });
+                        
+                        // Add tool results to messages
+                        for result in tool_results {
+                            let content = format!("Tool result from {}: {}", 
+                                result.name, 
+                                serde_json::to_string_pretty(&result.result).unwrap_or_else(|_| "Error serializing result".to_string())
+                            );
+                            
+                            all_messages.push(tool_message(content));
+                        }
+                        
+                        continue; // Continue the loop for the next step
+                    }
+                    
+                    // No function calls, this is the final response
+                    let content = response.content.unwrap_or_default();
+                    let final_step = AgentStep {
+                        id: Uuid::new_v4().to_string(),
+                        step_type: StepType::Final,
+                        input: all_messages.clone(),
+                        output: Some(Message {
+                            role: Role::Assistant,
+                            content: content.clone(),
+                            metadata: None,
+                            name: None,
+                        }),
+                        tool_calls: Vec::new(),
+                        tool_results: Vec::new(),
+                        metadata: HashMap::new(),
+                    };
+                    
+                    steps.push(final_step);
+                    final_response = content;
+                    break;
+                } else {
+                    // No tools available, fall back to regular generation
+                    let llm_options = options.llm_options.clone();
+                    let response = self.llm.generate_with_messages(&all_messages, &llm_options).await?;
+                    
                     let final_step = AgentStep {
                         id: Uuid::new_v4().to_string(),
                         step_type: StepType::Final,
@@ -402,77 +589,108 @@ impl Agent for BasicAgent {
                     steps.push(final_step);
                     final_response = response;
                     break;
-                } else {
-                    // We have tool calls, execute them
-                    let mut tool_results = Vec::new();
-                    
-                    for call in &calls {
-                        let result = match self.execute_tool_call(call).await {
-                            Ok(result) => ToolResult {
-                                call_id: call.id.clone(),
-                                name: call.name.clone(),
-                                result,
-                                status: ToolResultStatus::Success,
-                            },
-                            Err(e) => ToolResult {
-                                call_id: call.id.clone(),
-                                name: call.name.clone(),
-                                result: Value::String(format!("Error: {}", e)),
-                                status: ToolResultStatus::Error,
-                            },
+                }
+            } else {
+                // Use traditional regex-based tool calling
+                let llm_options = options.llm_options.clone();
+                let response = self.llm.generate_with_messages(&all_messages, &llm_options).await?;
+                
+                // Parse the response to see if it contains tool calls
+                let tool_calls = self.parse_tool_calls(&response);
+                
+                if let Ok(calls) = tool_calls {
+                    if calls.is_empty() {
+                        // No tool calls, this is the final response
+                        let final_step = AgentStep {
+                            id: Uuid::new_v4().to_string(),
+                            step_type: StepType::Final,
+                            input: all_messages.clone(),
+                            output: Some(Message {
+                                role: Role::Assistant,
+                                content: response.clone(),
+                                metadata: None,
+                                name: None,
+                            }),
+                            tool_calls: Vec::new(),
+                            tool_results: Vec::new(),
+                            metadata: HashMap::new(),
                         };
                         
-                        tool_results.push(result);
+                        steps.push(final_step);
+                        final_response = response;
+                        break;
+                    } else {
+                        // We have tool calls, execute them
+                        let mut tool_results = Vec::new();
+                        
+                        for call in &calls {
+                            let result = match self.execute_tool_call(call).await {
+                                Ok(result) => ToolResult {
+                                    call_id: call.id.clone(),
+                                    name: call.name.clone(),
+                                    result,
+                                    status: ToolResultStatus::Success,
+                                },
+                                Err(e) => ToolResult {
+                                    call_id: call.id.clone(),
+                                    name: call.name.clone(),
+                                    result: Value::String(format!("Error: {}", e)),
+                                    status: ToolResultStatus::Error,
+                                },
+                            };
+                            
+                            tool_results.push(result);
+                        }
+                        
+                        // Create a tool step
+                        let tool_step = AgentStep {
+                            id: Uuid::new_v4().to_string(),
+                            step_type: StepType::Tool,
+                            input: all_messages.clone(),
+                            output: Some(Message {
+                                role: Role::Assistant,
+                                content: response,
+                                metadata: None,
+                                name: None,
+                            }),
+                            tool_calls: calls,
+                            tool_results: tool_results.clone(),
+                            metadata: HashMap::new(),
+                        };
+                        
+                        steps.push(tool_step);
+                        
+                        // Add tool results to messages
+                        for result in tool_results {
+                            let content = format!("Tool result from {}: {}", 
+                                result.name, 
+                                serde_json::to_string_pretty(&result.result).unwrap_or_else(|_| "Error serializing result".to_string())
+                            );
+                            
+                            all_messages.push(tool_message(content));
+                        }
                     }
-                    
-                    // Create a tool step
-                    let tool_step = AgentStep {
+                } else {
+                    // Error parsing tool calls, treat as final response
+                    let final_step = AgentStep {
                         id: Uuid::new_v4().to_string(),
-                        step_type: StepType::Tool,
+                        step_type: StepType::Final,
                         input: all_messages.clone(),
                         output: Some(Message {
                             role: Role::Assistant,
-                            content: response,
+                            content: response.clone(),
                             metadata: None,
                             name: None,
                         }),
-                        tool_calls: calls,
-                        tool_results: tool_results.clone(),
+                        tool_calls: Vec::new(),
+                        tool_results: Vec::new(),
                         metadata: HashMap::new(),
                     };
                     
-                    steps.push(tool_step);
-                    
-                    // Add tool results to messages
-                    for result in tool_results {
-                        let content = format!("Tool result from {}: {}", 
-                            result.name, 
-                            serde_json::to_string_pretty(&result.result).unwrap_or_else(|_| "Error serializing result".to_string())
-                        );
-                        
-                        all_messages.push(tool_message(content));
-                    }
+                    steps.push(final_step);
+                    final_response = response;
+                    break;
                 }
-            } else {
-                // Error parsing tool calls, treat as final response
-                let final_step = AgentStep {
-                    id: Uuid::new_v4().to_string(),
-                    step_type: StepType::Final,
-                    input: all_messages.clone(),
-                    output: Some(Message {
-                        role: Role::Assistant,
-                        content: response.clone(),
-                        metadata: None,
-                        name: None,
-                    }),
-                    tool_calls: Vec::new(),
-                    tool_results: Vec::new(),
-                    metadata: HashMap::new(),
-                };
-                
-                steps.push(final_step);
-                final_response = response;
-                break;
             }
         }
         
@@ -948,4 +1166,4 @@ mod voice_tests {
             println!("成功收集了 {} 段音频数据", audio_data.len());
         }
     }
-} 
+}

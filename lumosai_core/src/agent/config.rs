@@ -27,6 +27,9 @@ pub struct AgentConfig {
     /// Working memory configuration for the agent
     #[serde(skip_serializing_if = "Option::is_none")]
     pub working_memory: Option<WorkingMemoryConfig>,
+    /// Enable function calling (if provider supports it)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enable_function_calling: Option<bool>,
 }
 
 impl Default for AgentConfig {
@@ -39,6 +42,7 @@ impl Default for AgentConfig {
             voice_config: None,
             telemetry: None,
             working_memory: None,
+            enable_function_calling: Some(true), // Default to enabled
         }
     }
 }

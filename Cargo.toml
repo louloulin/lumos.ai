@@ -28,6 +28,10 @@ description = "Rust版本的Mastra AI应用框架"
 license = "MIT"
 repository = "https://github.com/lumosai/lumosai"
 
+[lib]
+name = "lumosai"
+path = "src/lib.rs"
+
 [workspace.dependencies]
 # 核心依赖
 tokio = { version = "1.33", features = ["full"] }

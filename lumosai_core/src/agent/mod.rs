@@ -36,6 +36,7 @@ pub fn create_basic_agent(
         voice_config: None,
         telemetry: None,
         working_memory: None,
+        enable_function_calling: Some(true),
     };
     
     BasicAgent::new(_config, llm)
@@ -127,6 +128,7 @@ mod tests {
             voice_config: None,
             telemetry: None,
             working_memory: None,
+            enable_function_calling: Some(true),
         };
         
         let mock_llm = Arc::new(MockLlmProvider::new(vec![

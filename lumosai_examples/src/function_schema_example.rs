@@ -5,13 +5,12 @@
 
 use lumosai_core::{
     agent::{Agent, BasicAgent, AgentConfig, AgentGenerateOptions},
-    llm::{OpenAiProvider, LlmOptions, Message, Role},
-    tool::function::FunctionSchema,
+    llm::{LlmOptions, Message, Role},
+    tool::FunctionSchema,
     Result,
 };
 use lumosai_derive::FunctionSchema;
 use serde::{Serialize, Deserialize};
-use serde_json::Value;
 use std::sync::Arc;
 
 /// Calculator parameters with automatic schema generation
@@ -157,7 +156,7 @@ async fn test_agent_with_function_calling() -> Result<()> {
     };
 
     // Create the agent
-    let mut agent = BasicAgent::new(config, mock_llm);
+    let agent = BasicAgent::new(config, mock_llm);
 
     // Note: In a real implementation, you would add actual tools here
     // For this example, we're just testing the schema generation
@@ -255,7 +254,7 @@ impl lumosai_core::llm::LlmProvider for MockLlmWithFunctionCalling {
         Ok(FunctionCallingResponse {
             content: Some("I'll calculate that for you.".to_string()),
             function_calls: vec![function_call],
-            finish_reason: Some("function_call".to_string()),
+            finish_reason: "function_call".to_string(),
         })
     }
 }

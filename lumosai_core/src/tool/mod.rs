@@ -2,7 +2,7 @@
 
 mod schema;
 mod tool;
-mod function;
+pub mod function;
 mod context;
 
 #[cfg(test)]

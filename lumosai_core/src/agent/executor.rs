@@ -18,6 +18,7 @@ use crate::llm::{LlmProvider, LlmOptions, Message, Role, FunctionDefinition, Too
 use crate::memory::Memory;
 use crate::telemetry::TelemetrySink;
 use crate::tool::{Tool, ToolExecutionOptions, ToolExecutionContext};
+use crate::llm::function_calling_utils;
 use crate::agent::types::{
     AgentGenerateResult, 
     AgentGenerateOptions, 
@@ -178,59 +179,48 @@ impl BasicAgent {
             return Vec::new();
         }
 
-        let mut functions = Vec::new();
-        
-        for tool in tools.values() {
-            let schema = tool.schema();
-            
-            // Build parameters schema for OpenAI format
-            let mut properties = serde_json::Map::new();
-            let mut required = Vec::new();
-            
-            for param in &schema.parameters {
-                let mut param_schema = serde_json::Map::new();
-                param_schema.insert("type".to_string(), serde_json::Value::String(param.r#type.clone()));
-                param_schema.insert("description".to_string(), serde_json::Value::String(param.description.clone()));
-                
-                if let Some(default) = &param.default {
-                    param_schema.insert("default".to_string(), default.clone());
-                }
-                
-                properties.insert(param.name.clone(), serde_json::Value::Object(param_schema));
-                
-                if param.required {
-                    required.push(param.name.clone());
-                }
-            }
-            
-            let parameters = serde_json::json!({
-                "type": "object",
-                "properties": properties,
-                "required": required
-            });
-            
-            functions.push(FunctionDefinition {
-                name: tool.id().to_string(),
-                description: Some(tool.description().to_string()),
-                parameters,
-            });
-        }
-        
-        functions
+        // Use the utility function from llm module
+        function_calling_utils::tools_to_function_definitions(&*tools)
     }
     
     /// Parse function calls from OpenAI function calling response
     fn parse_function_calls(&self, function_calls: &[crate::llm::FunctionCall]) -> Vec<ToolCall> {
         let mut tool_calls = Vec::new();
         
+        // Get function definitions for validation
+        let function_definitions = self.build_function_definitions();
+        
         for func_call in function_calls {
             match serde_json::from_str::<HashMap<String, Value>>(&func_call.arguments) {
                 Ok(arguments) => {
-                    tool_calls.push(ToolCall {
-                        id: func_call.id.clone().unwrap_or_else(|| Uuid::new_v4().to_string()),
-                        name: func_call.name.clone(),
-                        arguments,
-                    });
+                    // Validate arguments against function schema
+                    let validation_result = function_calling_utils::validate_against_schema(
+                        &serde_json::to_value(&arguments).unwrap_or(Value::Null),
+                        &function_definitions.iter()
+                            .find(|def| def.name == func_call.name)
+                            .map(|def| &def.parameters)
+                            .unwrap_or(&Value::Null)
+                    );
+                    
+                    match validation_result {
+                        Ok(_) => {
+                            tool_calls.push(ToolCall {
+                                id: func_call.id.clone().unwrap_or_else(|| Uuid::new_v4().to_string()),
+                                name: func_call.name.clone(),
+                                arguments,
+                            });
+                            self.logger().debug(&format!("Function call '{}' validated successfully", func_call.name), None);
+                        },
+                        Err(e) => {
+                            self.logger().warn(&format!("Function call '{}' failed validation: {}", func_call.name, e), None);
+                            // Still add the call but log the validation failure
+                            tool_calls.push(ToolCall {
+                                id: func_call.id.clone().unwrap_or_else(|| Uuid::new_v4().to_string()),
+                                name: func_call.name.clone(),
+                                arguments,
+                            });
+                        }
+                    }
                 },
                 Err(e) => {
                     self.logger().warn(&format!("Failed to parse function call arguments: {}", e), None);
@@ -484,23 +474,41 @@ impl Agent for BasicAgent {
                     ).await?;
                     
                     if !response.function_calls.is_empty() {
-                        // Execute function calls
+                        // Execute function calls with enhanced logging
                         let tool_calls = self.parse_function_calls(&response.function_calls);
                         let mut tool_results = Vec::new();
                         
+                        self.logger().info(&format!("Executing {} function calls", tool_calls.len()), None);
+                        
                         for call in &tool_calls {
+                            self.logger().debug(&format!("Executing function call: {} with arguments: {}", 
+                                call.name, 
+                                serde_json::to_string_pretty(&call.arguments).unwrap_or_else(|_| "{}".to_string())
+                            ), None);
+                            
+                            let start_time = std::time::Instant::now();
                             let result = match self.execute_tool_call(call).await {
-                                Ok(result) => ToolResult {
-                                    call_id: call.id.clone(),
-                                    name: call.name.clone(),
-                                    result,
-                                    status: ToolResultStatus::Success,
+                                Ok(result) => {
+                                    let execution_time = start_time.elapsed();
+                                    self.logger().debug(&format!("Function call '{}' completed in {:?}", call.name, execution_time), None);
+                                    
+                                    ToolResult {
+                                        call_id: call.id.clone(),
+                                        name: call.name.clone(),
+                                        result,
+                                        status: ToolResultStatus::Success,
+                                    }
                                 },
-                                Err(e) => ToolResult {
-                                    call_id: call.id.clone(),
-                                    name: call.name.clone(),
-                                    result: Value::String(format!("Error: {}", e)),
-                                    status: ToolResultStatus::Error,
+                                Err(e) => {
+                                    let execution_time = start_time.elapsed();
+                                    self.logger().error(&format!("Function call '{}' failed after {:?}: {}", call.name, execution_time, e), None);
+                                    
+                                    ToolResult {
+                                        call_id: call.id.clone(),
+                                        name: call.name.clone(),
+                                        result: Value::String(format!("Error: {}", e)),
+                                        status: ToolResultStatus::Error,
+                                    }
                                 },
                             };
                             
@@ -722,34 +730,101 @@ impl Agent for BasicAgent {
         messages: &'a [Message], 
         options: &'a AgentStreamOptions
     ) -> Result<BoxStream<'a, Result<String>>> {
-        // For now, we'll just convert the generate method to a stream
-        // In a real implementation, this would use the streaming capabilities of the LLM
+        // Check if we should use function calling for streaming
+        let use_function_calling = self.enable_function_calling && 
+                                  self.llm.supports_function_calling() &&
+                                  !self.tools.lock().map(|tools| tools.is_empty()).unwrap_or(true);
         
-        let result = self.generate(messages, &AgentGenerateOptions {
-            instructions: options.instructions.clone(),
-            context: options.context.clone(),
-            memory_options: options.memory_options.clone(),
-            thread_id: options.thread_id.clone(),
-            resource_id: options.resource_id.clone(),
-            run_id: options.run_id.clone(),
-            max_steps: options.max_steps,
-            tool_choice: options.tool_choice.clone(),
-            llm_options: options.llm_options.clone(),
-        }).await?;
-        
-        // Split the response into chunks for streaming simulation
-        let chunks = result.response
-            .chars()
-            .collect::<Vec<_>>()
-            .chunks(20)
-            .map(|c| c.iter().collect::<String>())
-            .collect::<Vec<_>>();
-        
-        let stream = stream::iter(chunks)
-            .map(Ok)
-            .boxed();
-        
-        Ok(stream)
+        if use_function_calling {
+            // For function calling, we need to process the complete response first
+            // then stream the results (since function calls need to be executed)
+            let result = self.generate(messages, &AgentGenerateOptions {
+                instructions: options.instructions.clone(),
+                context: options.context.clone(),
+                memory_options: options.memory_options.clone(),
+                thread_id: options.thread_id.clone(),
+                resource_id: options.resource_id.clone(),
+                run_id: options.run_id.clone(),
+                max_steps: options.max_steps,
+                tool_choice: options.tool_choice.clone(),
+                llm_options: options.llm_options.clone(),
+            }).await?;
+            
+            // Stream the function call steps and final response
+            let mut stream_items = Vec::new();
+            
+            // Add step-by-step streaming for better UX
+            for step in &result.steps {
+                match step.step_type {
+                    StepType::Tool => {
+                        stream_items.push(format!("🔧 Executing {} tool call(s)...\n", step.tool_calls.len()));
+                        for tool_call in &step.tool_calls {
+                            stream_items.push(format!("  • Calling {}\n", tool_call.name));
+                        }
+                        for tool_result in &step.tool_results {
+                            match tool_result.status {
+                                ToolResultStatus::Success => {
+                                    stream_items.push(format!("  ✅ {} completed\n", tool_result.name));
+                                },
+                                ToolResultStatus::Error => {
+                                    stream_items.push(format!("  ❌ {} failed\n", tool_result.name));
+                                }
+                            }
+                        }
+                    },
+                    StepType::Final => {
+                        // Stream the final response in chunks
+                        let response_chunks = result.response
+                            .chars()
+                            .collect::<Vec<_>>()
+                            .chunks(20)
+                            .map(|c| c.iter().collect::<String>())
+                            .collect::<Vec<_>>();
+                        
+                        stream_items.extend(response_chunks);
+                    },
+                    _ => {
+                        // Handle other step types
+                        if let Some(output) = &step.output {
+                            stream_items.push(output.content.clone());
+                        }
+                    }
+                }
+            }
+            
+            let stream = stream::iter(stream_items)
+                .map(Ok)
+                .boxed();
+            
+            Ok(stream)
+        } else {
+            // Fallback to regular streaming without function calling
+            let result = self.generate(messages, &AgentGenerateOptions {
+                instructions: options.instructions.clone(),
+                context: options.context.clone(),
+                memory_options: options.memory_options.clone(),
+                thread_id: options.thread_id.clone(),
+                resource_id: options.resource_id.clone(),
+                run_id: options.run_id.clone(),
+                max_steps: options.max_steps,
+                tool_choice: options.tool_choice.clone(),
+                llm_options: options.llm_options.clone(),
+            }).await?;
+            
+            // Split the response into chunks for streaming simulation
+            let chunks = result.response
+                .chars()
+                .collect::<Vec<_>>()
+                .chunks(20)
+                .map(|c| c.iter().collect::<String>())
+                .collect::<Vec<_>>();
+            
+            let stream = stream::iter(chunks)
+                .map(Ok)
+                .boxed();
+            
+            Ok(stream)
+        }
     }
 
     /// 流式输出带回调

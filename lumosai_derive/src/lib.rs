@@ -106,7 +106,7 @@ fn generate_function_schema(input: &DeriveInput) -> syn::Result<proc_macro2::Tok
             }
         }
         
-        impl ::lumosai_core::tool::function::FunctionSchema for #name {
+        impl ::lumosai_core::tool::FunctionSchema for #name {
             fn function_definition() -> ::lumosai_core::llm::function_calling::FunctionDefinition {
                 Self::function_definition()
             }

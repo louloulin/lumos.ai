@@ -1,8 +1,8 @@
 use lumosai_core::Result;
 use lumosai_core::llm::{DeepSeekProvider, Message, Role, LlmOptions};
+use lumosai_core::llm::provider::LlmProvider;
 use lumosai_core::llm::function_calling::{FunctionDefinition, ToolChoice};
-use serde_json::{json, Value};
-use std::sync::Arc;
+use serde_json::json;
 
 #[tokio::main]
 async fn main() -> Result<()> {

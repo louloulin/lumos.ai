@@ -49,6 +49,14 @@ name = "workflow_example"
 path = "src/workflow_example.rs"
 
 [[example]]
+name = "agent_tools_simple"
+path = "src/agent_tools_simple.rs"
+
+[[example]]
+name = "deepseek_integration"
+path = "src/deepseek_integration.rs"
+
+[[example]]
 name = "workflow_dsl"
 path = "src/workflow_dsl.rs"
 

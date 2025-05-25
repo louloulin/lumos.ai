@@ -162,6 +162,150 @@ impl Tool for FunctionTool {
     }
 }
 
+/// Trait for tools that can be automatically converted to OpenAI function definitions
+/// 
+/// This trait is typically implemented automatically using the `FunctionSchema` derive macro.
+/// It provides the bridge between Rust type definitions and OpenAI function calling schema.
+/// 
+/// # Example
+/// 
+/// ```rust
+/// use lumosai_derive::FunctionSchema;
+/// use serde::{Serialize, Deserialize};
+/// 
+/// #[derive(Serialize, Deserialize, FunctionSchema)]
+/// #[function(name = "calculate", description = "Performs calculations")]
+/// pub struct CalculatorParams {
+///     pub expression: String,
+///     pub precision: Option<u32>,
+/// }
+/// 
+/// // The derive macro automatically implements FunctionSchema
+/// let definition = CalculatorParams::function_definition();
+/// assert_eq!(definition.name, "calculate");
+/// ```
+pub trait FunctionSchema {
+    /// Generate the OpenAI function definition for this tool
+    /// 
+    /// Returns a `FunctionDefinition` that can be sent to OpenAI's function calling API.
+    /// The definition includes the function name, description, and parameter schema.
+    fn function_definition() -> crate::llm::function_calling::FunctionDefinition;
+    
+    /// Validate that the provided arguments match this function's schema
+    /// 
+    /// This is an optional validation step that can be used to ensure
+    /// arguments received from OpenAI function calling are valid.
+    fn validate_arguments(arguments: &Value) -> Result<()> {
+        // Default implementation: basic JSON validation
+        if !arguments.is_object() {
+            return Err(crate::Error::InvalidInput(
+                "Function arguments must be a JSON object".to_string()
+            ));
+        }
+        Ok(())
+    }
+    
+    /// Get the function name (convenience method)
+    fn function_name() -> String {
+        Self::function_definition().name
+    }
+    
+    /// Get the function description (convenience method)
+    fn function_description() -> Option<String> {
+        Self::function_definition().description
+    }
+}
+
+/// Enhanced function calling utilities
+pub mod utils {
+    use super::*;
+    use crate::llm::function_calling::FunctionDefinition;
+    use std::collections::HashMap;
+    
+    /// Convert a collection of tools to OpenAI function definitions
+    pub fn tools_to_function_definitions(tools: &HashMap<String, Box<dyn Tool>>) -> Vec<FunctionDefinition> {
+        let mut functions = Vec::new();
+        
+        for tool in tools.values() {
+            let schema = tool.schema();
+            
+            // Build parameters schema for OpenAI format
+            let mut properties = serde_json::Map::new();
+            let mut required = Vec::new();
+            
+            for param in &schema.parameters {
+                let mut param_schema = serde_json::Map::new();
+                param_schema.insert("type".to_string(), serde_json::Value::String(param.r#type.clone()));
+                param_schema.insert("description".to_string(), serde_json::Value::String(param.description.clone()));
+                
+                if let Some(default) = &param.default {
+                    param_schema.insert("default".to_string(), default.clone());
+                }
+                
+                properties.insert(param.name.clone(), serde_json::Value::Object(param_schema));
+                
+                if param.required {
+                    required.push(param.name.clone());
+                }
+            }
+            
+            let parameters = serde_json::json!({
+                "type": "object",
+                "properties": properties,
+                "required": required
+            });
+            
+            functions.push(FunctionDefinition::new(
+                tool.id().to_string(),
+                Some(tool.description().to_string()),
+                parameters,
+            ));
+        }
+        
+        functions
+    }
+    
+    /// Validate function call arguments against a schema
+    pub fn validate_function_arguments(
+        function_name: &str,
+        arguments: &Value,
+        functions: &[FunctionDefinition],
+    ) -> Result<()> {
+        let function_def = functions
+            .iter()
+            .find(|f| f.name == function_name)
+            .ok_or_else(|| crate::Error::InvalidInput(
+                format!("Unknown function: {}", function_name)
+            ))?;
+        
+        // Basic validation - could be enhanced with full JSON schema validation
+        if !arguments.is_object() {
+            return Err(crate::Error::InvalidInput(
+                "Function arguments must be a JSON object".to_string()
+            ));
+        }
+        
+        // Check required fields
+        if let Some(required) = function_def.parameters.get("required") {
+            if let Some(required_array) = required.as_array() {
+                let args_obj = arguments.as_object().unwrap();
+                
+                for required_field in required_array {
+                    if let Some(field_name) = required_field.as_str() {
+                        if !args_obj.contains_key(field_name) {
+                            return Err(crate::Error::InvalidInput(
+                                format!("Missing required field: {}", field_name)
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,4 +347,4 @@ mod tests {
         
         assert_eq!(result, Value::String("Echo: Hello, world!".to_string()));
     }
-} 
+}

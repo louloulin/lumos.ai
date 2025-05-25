@@ -1584,6 +1584,7 @@ dependencies = [
  "futures",
  "lumos_macro",
  "lumosai_core",
+ "lumosai_derive",
  "lumosai_evals",
  "lumosai_mcp",
  "lumosai_rag",

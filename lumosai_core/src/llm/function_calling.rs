@@ -359,9 +359,7 @@ pub mod utils {
         Ok(())
     }
     
-    // Re-export validate function for use in FunctionCall
-    pub use validate_against_schema;
-}
+    }
 
 // Make validation function available at module level
 pub use utils::validate_against_schema;

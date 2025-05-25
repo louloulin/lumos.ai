@@ -8,6 +8,7 @@ license = "MIT"
 
 [dependencies]
 lumosai_core = { path = "../lumosai_core" }
+lumosai_derive = { path = "../lumosai_derive" }
 lumosai_rag = { path = "../lumosai_rag", optional = true }
 lumosai_evals = { path = "../lumosai_evals", optional = true }
 lumosai_mcp = { path = "../lumosai_mcp" }
@@ -47,6 +48,10 @@ path = "src/agent_tools.rs"
 [[example]]
 name = "workflow_example"
 path = "src/workflow_example.rs"
+
+[[example]]
+name = "function_schema_example"
+path = "src/function_schema_example.rs"
 
 [[example]]
 name = "agent_tools_simple"

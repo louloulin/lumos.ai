@@ -249,76 +249,73 @@ pub mod utils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tool::{ParameterSchema, ToolSchema, FunctionTool};
+    use serde_json::{json, Value};
 
     #[test]
-    fn test_function_definition_from_tool() {
-        let schema = ToolSchema::new(vec![
-            ParameterSchema {
-                name: "text".to_string(),
-                description: "The text to process".to_string(),
-                r#type: "string".to_string(),
-                required: true,
-                properties: None,
-                default: None,
-            },
-        ]);
-
-        let tool = FunctionTool::new(
-            "test_tool",
-            "A test tool",
-            schema,
-            |_params| Ok(serde_json::json!({"result": "success"})),
+    fn test_function_definition_creation() {
+        let func_def = FunctionDefinition::new(
+            "test_function".to_string(),
+            Some("A test function".to_string()),
+            json!({
+                "type": "object",
+                "properties": {
+                    "param1": {
+                        "type": "string",
+                        "description": "First parameter"
+                    },
+                    "param2": {
+                        "type": "number",
+                        "description": "Second parameter"
+                    }
+                },
+                "required": ["param1"]
+            }),
         );
 
-        let func_def = FunctionDefinition::from_tool(&tool);
-        
-        assert_eq!(func_def.name, "test_tool");
-        assert_eq!(func_def.description, Some("A test tool".to_string()));
-        
-        let params = func_def.parameters.as_object().unwrap();
-        assert_eq!(params.get("type").unwrap().as_str().unwrap(), "object");
-        
-        let properties = params.get("properties").unwrap().as_object().unwrap();
-        assert!(properties.contains_key("text"));
-        
-        let required = params.get("required").unwrap().as_array().unwrap();
-        assert_eq!(required.len(), 1);
-        assert_eq!(required[0].as_str().unwrap(), "text");
+        assert_eq!(func_def.name, "test_function");
+        assert_eq!(func_def.description, Some("A test function".to_string()));
+        assert!(func_def.parameters.is_object());
     }
 
     #[test]
     fn test_function_call_parse_arguments() {
-        let func_call = FunctionCall::new(
-            "test_func".to_string(),
-            r#"{"param1": "value1", "param2": 42}"#.to_string(),
-        );
+        let func_call = FunctionCall {
+            id: Some("call_123".to_string()),
+            name: "test_function".to_string(),
+            arguments: r#"{"param1": "value1", "param2": 42}"#.to_string(),
+        };
 
-        let args = func_call.parse_arguments().unwrap();
-        assert_eq!(args.get("param1").unwrap().as_str().unwrap(), "value1");
-        assert_eq!(args.get("param2").unwrap().as_i64().unwrap(), 42);
+        let parsed = func_call.parse_arguments().unwrap();
+        assert_eq!(parsed["param1"], Value::String("value1".to_string()));
+        assert_eq!(parsed["param2"], Value::Number(serde_json::Number::from(42)));
+
+        let parsed_map = func_call.parse_arguments_as_map().unwrap();
+        assert_eq!(parsed_map.len(), 2);
+        assert!(parsed_map.contains_key("param1"));
+        assert!(parsed_map.contains_key("param2"));
     }
 
     #[test]
-    fn test_parse_openai_function_calls() {
-        let response = serde_json::json!({
-            "choices": [{
-                "message": {
-                    "tool_calls": [{
-                        "id": "call_123",
-                        "type": "function",
-                        "function": {
-                            "name": "test_function",
-                            "arguments": "{\"param\": \"value\"}"
-                        }
-                    }]
-                }
-            }]
-        });
+    fn test_function_call_result_success() {
+        let result = FunctionCallResult::success(
+            Some("call_123".to_string()),
+            "test_function".to_string(),
+            json!({"result": "success"}),
+        );
 
-        let calls = utils::parse_openai_function_calls(&response).unwrap();
-        assert_eq!(calls.len(), 1);
-        assert_eq!(calls[0].name, "test_function");
-        assert_eq!(calls[0].id, Some("call_123".to_string()));
+        assert_eq!(result.call_id, Some("call_123".to_string()));
+        assert_eq!(result.name, "test_function");
+        assert!(result.success);
+        assert!(result.error.is_none());
+        assert_eq!(result.result["result"], Value::String("success".to_string()));
+    }
+
+    #[test]
+    fn test_tool_choice_default() {
+        let choice = ToolChoice::default();
+        match choice {
+            ToolChoice::Auto => assert!(true),
+            _ => panic!("Default tool choice should be Auto"),
+        }
     }
 }

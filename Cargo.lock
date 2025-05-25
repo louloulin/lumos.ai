@@ -1545,6 +1545,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "lumosai_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "lumosai_evals"
 version = "0.1.0"
 dependencies = [

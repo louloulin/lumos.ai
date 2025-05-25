@@ -117,6 +117,54 @@ impl FunctionCall {
             _ => Err(Error::InvalidInput("Function arguments must be a JSON object".to_string()))
         }
     }
+
+    /// Validate that this function call matches a given function definition
+    pub fn validate_against_definition(&self, definition: &FunctionDefinition) -> Result<()> {
+        if self.name != definition.name {
+            return Err(Error::InvalidInput(format!(
+                "Function call name '{}' does not match definition name '{}'",
+                self.name, definition.name
+            )));
+        }
+
+        // Parse and validate arguments against the schema
+        let args = self.parse_arguments()?;
+        validate_against_schema(&args, &definition.parameters)?;
+        
+        Ok(())
+    }
+
+    /// Get a typed parameter from the function call arguments
+    pub fn get_parameter<T>(&self, name: &str) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let args = self.parse_arguments()?;
+        if let Some(value) = args.get(name) {
+            serde_json::from_value(value.clone())
+                .map_err(|e| Error::Json(e))
+        } else {
+            Err(Error::InvalidInput(format!("Parameter '{}' not found", name)))
+        }
+    }
+
+    /// Get an optional typed parameter from the function call arguments
+    pub fn get_optional_parameter<T>(&self, name: &str) -> Result<Option<T>>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let args = self.parse_arguments()?;
+        if let Some(value) = args.get(name) {
+            if value.is_null() {
+                Ok(None)
+            } else {
+                Ok(Some(serde_json::from_value(value.clone())
+                    .map_err(|e| Error::Json(e))?))
+            }
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 /// Represents a tool choice for OpenAI function calling
@@ -244,7 +292,79 @@ pub mod utils {
         
         Ok(function_calls)
     }
+
+    /// Validate a JSON value against a JSON schema
+    pub fn validate_against_schema(value: &Value, schema: &Value) -> Result<()> {
+        // Basic JSON schema validation
+        match schema.get("type").and_then(|t| t.as_str()) {
+            Some("object") => {
+                if !value.is_object() {
+                    return Err(Error::InvalidInput("Expected object type".to_string()));
+                }
+                
+                // Check required fields
+                if let Some(required) = schema.get("required").and_then(|r| r.as_array()) {
+                    let obj = value.as_object().unwrap();
+                    for req in required {
+                        if let Some(field_name) = req.as_str() {
+                            if !obj.contains_key(field_name) {
+                                return Err(Error::InvalidInput(format!(
+                                    "Required field '{}' is missing", field_name
+                                )));
+                            }
+                        }
+                    }
+                }
+                
+                // Validate properties
+                if let Some(properties) = schema.get("properties").and_then(|p| p.as_object()) {
+                    let obj = value.as_object().unwrap();
+                    for (prop_name, prop_value) in obj {
+                        if let Some(prop_schema) = properties.get(prop_name) {
+                            validate_against_schema(prop_value, prop_schema)?;
+                        }
+                    }
+                }
+            },
+            Some("string") => {
+                if !value.is_string() {
+                    return Err(Error::InvalidInput("Expected string type".to_string()));
+                }
+            },
+            Some("number") => {
+                if !value.is_number() {
+                    return Err(Error::InvalidInput("Expected number type".to_string()));
+                }
+            },
+            Some("integer") => {
+                if !value.is_i64() && !value.is_u64() {
+                    return Err(Error::InvalidInput("Expected integer type".to_string()));
+                }
+            },
+            Some("boolean") => {
+                if !value.is_boolean() {
+                    return Err(Error::InvalidInput("Expected boolean type".to_string()));
+                }
+            },
+            Some("array") => {
+                if !value.is_array() {
+                    return Err(Error::InvalidInput("Expected array type".to_string()));
+                }
+            },
+            _ => {
+                // Unknown or no type specified - allow anything
+            }
+        }
+        
+        Ok(())
+    }
+    
+    // Re-export validate function for use in FunctionCall
+    pub use validate_against_schema;
 }
+
+// Make validation function available at module level
+pub use utils::validate_against_schema;
 
 #[cfg(test)]
 mod tests {

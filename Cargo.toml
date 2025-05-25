@@ -6,7 +6,8 @@ members = [
     "lumosai_network",
     "lumos_macro",
     "lumosai_mcp",
-    "lumosai_examples"
+    "lumosai_examples",
+    "lumosai_derive"
 ]
 resolver = "2"
 

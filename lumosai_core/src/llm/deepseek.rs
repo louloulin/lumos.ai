@@ -140,8 +140,9 @@ impl LlmProvider for DeepSeekProvider {
             body["max_tokens"] = serde_json::json!(max_tokens);
         }
 
-        if let Some(top_p) = options.top_p {
-            body["top_p"] = serde_json::json!(top_p);
+        // Check for top_p in extra parameters
+        if let Some(top_p) = options.extra.get("top_p") {
+            body["top_p"] = top_p.clone();
         }
 
         // Send request
@@ -207,8 +208,9 @@ impl LlmProvider for DeepSeekProvider {
             body["max_tokens"] = serde_json::json!(max_tokens);
         }
 
-        if let Some(top_p) = options.top_p {
-            body["top_p"] = serde_json::json!(top_p);
+        // Check for top_p in extra parameters
+        if let Some(top_p) = options.extra.get("top_p") {
+            body["top_p"] = top_p.clone();
         }
 
         // Send request

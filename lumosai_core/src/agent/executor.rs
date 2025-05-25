@@ -123,6 +123,14 @@ impl BasicAgent {
 
         let mut descriptions = String::new();
         
+        // Add instruction for legacy regex tool calling
+        descriptions.push_str("To use tools, use the following format:\n");
+        descriptions.push_str("思考: [your reasoning about which tool to use]\n");
+        descriptions.push_str("工具: <tool_id>\n");
+        descriptions.push_str("参数: {\"parameter_name\": \"parameter_value\"}\n");
+        descriptions.push_str("结果: [tool execution result will appear here]\n\n");
+        descriptions.push_str("Available tools:\n\n");
+        
         for tool in tools.values() {
             descriptions.push_str(&format!("工具ID: {}\n", tool.id()));
             descriptions.push_str(&format!("描述: {}\n", tool.description()));
@@ -150,15 +158,35 @@ impl BasicAgent {
         // Get custom instructions or default instructions
         let instructions = options.instructions.as_ref().unwrap_or(&self.instructions);
         
-        // Build tool descriptions
-        let tool_descriptions = self.build_tool_descriptions(options);
+        // Check if we're using function calling mode
+        let use_function_calling = self.enable_function_calling && self.llm.supports_function_calling();
         
-        // Format the final system message
-        let system_content = format!(
-            "{}\n\nYou have access to the following tools:\n\n{}",
-            instructions,
-            tool_descriptions
-        );
+        let system_content = if use_function_calling {
+            // For function calling mode, tools are passed separately via function definitions
+            // Only include basic instructions without detailed tool descriptions
+            self.logger().debug(
+                "Using function calling mode - omitting tool descriptions from system message",
+                None,
+            );
+            instructions.to_string()
+        } else {
+            // For legacy regex mode, include detailed tool descriptions in system message
+            self.logger().debug(
+                "Using legacy regex mode - including tool descriptions in system message",
+                None,
+            );
+            
+            let tool_descriptions = self.build_tool_descriptions(options);
+            if tool_descriptions.is_empty() {
+                instructions.to_string()
+            } else {
+                format!(
+                    "{}\n\nYou have access to the following tools:\n\n{}",
+                    instructions,
+                    tool_descriptions
+                )
+            }
+        };
         
         Message {
             role: Role::System,
@@ -314,10 +342,16 @@ impl Agent for BasicAgent {
     }
     
     fn parse_tool_calls(&self, response: &str) -> Result<Vec<ToolCall>> {
-        // First try to detect if this is a function calling response
-        // (This would be handled differently in the generate method, but kept for compatibility)
+        // Legacy method for backward compatibility only
+        // This should only be used when function calling is disabled
+        // or as a fallback for providers that don't support function calling
         
-        // Parse regex-based tool calls (existing functionality)
+        if self.enable_function_calling && self.llm.supports_function_calling() {
+            self.logger().warn("parse_tool_calls called despite function calling being enabled", None);
+            return Ok(Vec::new());
+        }
+        
+        // Parse regex-based tool calls (legacy functionality)
         let re = Regex::new(r"Using the tool '([^']+)' with parameters: (\{[^}]+\})").unwrap();
         
         let mut tool_calls = Vec::new();
@@ -339,7 +373,12 @@ impl Agent for BasicAgent {
                 }
             }
         }
-         Ok(tool_calls)
+        
+        if !tool_calls.is_empty() {
+            self.logger().info(&format!("Parsed {} tool calls using legacy regex method", tool_calls.len()), None);
+        }
+        
+        Ok(tool_calls)
     }
 
     async fn execute_tool_call(&self, tool_call: &ToolCall) -> Result<Value> {

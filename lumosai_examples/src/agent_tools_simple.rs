@@ -1,19 +1,64 @@
 use lumosai_core::Result;
 use lumosai_core::llm::{MockLlmProvider, Message, Role};
-use lumosai_core::agent::{Agent, AgentConfig, AgentGenerateOptions, create_basic_agent};
-use lumosai_core::tool::{Tool, ToolExecutionOptions, ToolSchema, ParameterSchema, ToolExecutionContext};
-use lumosai_core::base::Base;
+use lumosai_core::agent::{Agent, AgentGenerateOptions, create_basic_agent};
+use lumosai_core::tool::{Tool, ToolExecutionOptions, ToolSchema, ParameterSchema, ToolExecutionContext, SchemaFormat};
+use lumosai_core::base::{Base, BaseComponent, ComponentConfig};
+use lumosai_core::logger::{Component, Logger};
+use lumosai_core::telemetry::TelemetrySink;
 use serde_json::{json, Value};
 use async_trait::async_trait;
 use std::sync::Arc;
 
 // 简单的计算器工具实现
-#[derive(Debug, Clone)]
-pub struct CalculatorTool;
+#[derive(Clone)]
+pub struct CalculatorTool {
+    base: BaseComponent,
+}
+
+impl std::fmt::Debug for CalculatorTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CalculatorTool")
+            .field("name", &self.name())
+            .finish()
+    }
+}
+
+impl CalculatorTool {
+    pub fn new() -> Self {
+        let config = ComponentConfig {
+            name: Some("calculator".to_string()),
+            component: Component::Tool,
+            log_level: None,
+        };
+        Self {
+            base: BaseComponent::new(config),
+        }
+    }
+}
 
 impl Base for CalculatorTool {
-    fn name(&self) -> &str {
-        "calculator"
+    fn name(&self) -> Option<&str> {
+        self.base.name()
+    }
+
+    fn component(&self) -> Component {
+        self.base.component()
+    }
+
+    fn logger(&self) -> Arc<dyn Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: Arc<dyn Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
     }
 }
 
@@ -29,34 +74,35 @@ impl Tool for CalculatorTool {
 
     fn schema(&self) -> ToolSchema {
         ToolSchema {
-            name: "calculator".to_string(),
-            description: "执行基本的数学运算".to_string(),
             parameters: vec![
                 ParameterSchema {
                     name: "operation".to_string(),
-                    parameter_type: "string".to_string(),
                     description: "要执行的数学运算 (add, subtract, multiply, divide)".to_string(),
+                    r#type: "string".to_string(),
                     required: true,
+                    properties: None,
                     default: None,
-                    format: None,
                 },
                 ParameterSchema {
                     name: "a".to_string(),
-                    parameter_type: "number".to_string(),
                     description: "第一个数字".to_string(),
+                    r#type: "number".to_string(),
                     required: true,
+                    properties: None,
                     default: None,
-                    format: None,
                 },
                 ParameterSchema {
                     name: "b".to_string(),
-                    parameter_type: "number".to_string(),
                     description: "第二个数字".to_string(),
+                    r#type: "number".to_string(),
                     required: true,
+                    properties: None,
                     default: None,
-                    format: None,
                 },
             ],
+            json_schema: None,
+            format: SchemaFormat::Parameters,
+            output_schema: None,
         }
     }
 
@@ -91,7 +137,9 @@ async fn main() -> Result<()> {
     println!("简单的Agent和Tools示例");
     
     // 创建LLM提供者（使用MockLlmProvider进行测试）
-    let llm_provider = Arc::new(MockLlmProvider::new());
+    let llm_provider = Arc::new(MockLlmProvider::new(vec![
+        "我将使用计算器工具来计算 15.2 + 15.3。结果是 30.5。".to_string()
+    ]));
     
     // 创建代理
     let mut agent = create_basic_agent(
@@ -101,11 +149,11 @@ async fn main() -> Result<()> {
     );
     
     // 添加工具到代理
-    agent.add_tool(Box::new(CalculatorTool));
+    agent.add_tool(Box::new(CalculatorTool::new()))?;
     
     // 测试计算器工具直接调用
     println!("\n直接调用计算器工具:");
-    let calc_tool = CalculatorTool;
+    let calc_tool = CalculatorTool::new();
     let calc_params = json!({
         "operation": "multiply",
         "a": 6.5,

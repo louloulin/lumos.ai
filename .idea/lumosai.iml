@@ -15,6 +15,7 @@
       <sourceFolder url="file://$MODULE_DIR$/lumosai_mcp/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lumosai_network/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lumosai_rag/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>

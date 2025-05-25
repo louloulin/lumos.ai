@@ -7,6 +7,7 @@ pub mod function_calling;
 mod openai;
 mod anthropic;
 mod qwen;
+mod deepseek;
 #[cfg(test)]
 mod tests;
 
@@ -17,6 +18,7 @@ pub use mock::MockLlmProvider;
 pub use openai::OpenAiProvider;
 pub use anthropic::AnthropicProvider;
 pub use qwen::{QwenProvider, QwenApiType};
+pub use deepseek::DeepSeekProvider;
 pub use function_calling::{
     FunctionDefinition, 
     FunctionCall, 

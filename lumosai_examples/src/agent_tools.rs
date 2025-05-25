@@ -1,72 +1,58 @@
 use lumosai_core::Result;
-use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role};
+use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role, MockLlmProvider};
+use lumosai_core::agent::{Agent, BasicAgent, AgentConfig, AgentGenerateOptions, create_basic_agent};
+use lumosai_core::tool::{Tool, ToolExecuteOptions};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use lumos_macro::tool;
+use async_trait::async_trait;
+use std::sync::Arc;
+use futures::stream::BoxStream;
+
+use lumosai_core::Result;
+use lumosai_core::llm::{LlmOptions, MockLlmProvider, Message, Role};
+use lumosai_core::agent::{Agent, BasicAgent, AgentConfig, AgentGenerateOptions, create_basic_agent};
+use lumosai_core::tool::{Tool, ToolExecuteOptions};
+use serde_json::{json, Value};
 use async_trait::async_trait;
 use std::sync::Arc;
 
-// 定义一个简单的LLM适配器用于示例
-struct MockLlmAdapter {
-    responses: HashMap<String, String>,
-}
-
-impl MockLlmAdapter {
-    fn new() -> Self {
-        let mut responses = HashMap::new();
-        responses.insert("计算".to_string(), "根据计算，结果是30.5".to_string());
-        responses.insert("查询天气".to_string(), "北京今天晴朗，温度20-25摄氏度".to_string());
-        Self { responses }
-    }
-}
+// 简单的计算器工具实现
+#[derive(Debug, Clone)]
+pub struct CalculatorTool;
 
 #[async_trait]
-impl LlmProvider for MockLlmAdapter {
-    async fn generate(&self, prompt: &str, _options: &LlmOptions) -> Result<String> {
-        // 简单的模拟实现
-        for (keyword, response) in &self.responses {
-            if prompt.contains(keyword) {
-                return Ok(response.clone());
-            }
-        }
-        Ok("我不知道如何回答这个问题".to_string())
+impl Tool for CalculatorTool {
+    fn name(&self) -> &str {
+        "calculator"
     }
-    
-    async fn generate_with_messages(&self, messages: &[Message], _options: &LlmOptions) -> Result<String> {
-        // 简单的模拟实现
-        for message in messages {
-            if message.role == Role::User {
-                // 修复Option<String>处理
-                if let Some(content) = &message.content {
-                    for (keyword, response) in &self.responses {
-                        if content.contains(keyword) {
-                            return Ok(response.clone());
-                        }
-                    }
-                }
-            }
-        }
-        Ok("我不知道如何回答这个问题".to_string())
-    }
-    
-    // 修复生命周期参数
-    async fn generate_stream(&self, prompt: &str, _options: &LlmOptions) -> Result<Box<dyn Iterator<Item = Result<String>> + Send>> {
-        let response = self.generate(prompt, _options).await?;
-        Ok(Box::new(std::iter::once(Ok(response))))
-    }
-    
-    async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
-        Ok(vec![0.1, 0.2, 0.3])
-    }
-}
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    println!("Agent和Tools示例");
-    
-    // 创建一个简单的计算器工具
-    #[tool(name = "calculator", description = "执行基本的数学运算")]
-    async fn calculator(params: Value) -> Result<Value> {
+    fn description(&self) -> &str {
+        "执行基本的数学运算"
+    }
+
+    fn schema(&self) -> serde_json::Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["add", "subtract", "multiply", "divide"],
+                    "description": "要执行的数学运算"
+                },
+                "a": {
+                    "type": "number",
+                    "description": "第一个数字"
+                },
+                "b": {
+                    "type": "number",
+                    "description": "第二个数字"
+                }
+            },
+            "required": ["operation", "a", "b"]
+        })
+    }
+
+    async fn execute(&self, params: Value, _options: &ToolExecuteOptions) -> Result<Value> {
         let operation = params["operation"].as_str().unwrap_or("");
         let a = params["a"].as_f64().unwrap_or(0.0);
         let b = params["b"].as_f64().unwrap_or(0.0);
@@ -75,9 +61,10 @@ async fn main() -> Result<()> {
             "add" => a + b,
             "subtract" => a - b,
             "multiply" => a * b,
-            "divide" => if b == 0.0 {
-                return Err(lumosai_core::Error::InvalidInput("Cannot divide by zero".into()))
-            } else {
+            "divide" => {
+                if b == 0.0 {
+                    return Err(lumosai_core::Error::InvalidInput("Cannot divide by zero".into()));
+                }
                 a / b
             },
             _ => return Err(lumosai_core::Error::InvalidInput("Unknown operation".into()))
@@ -85,10 +72,36 @@ async fn main() -> Result<()> {
         
         Ok(json!({ "result": result }))
     }
-    
-    // 创建一个简单的天气工具
-    #[tool(name = "weather", description = "获取指定城市的天气信息")]
-    async fn weather(params: Value) -> Result<Value> {
+}
+
+// 简单的天气工具实现
+#[derive(Debug, Clone)]
+pub struct WeatherTool;
+
+#[async_trait]
+impl Tool for WeatherTool {
+    fn name(&self) -> &str {
+        "weather"
+    }
+
+    fn description(&self) -> &str {
+        "获取指定城市的天气信息"
+    }
+
+    fn schema(&self) -> serde_json::Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "description": "要查询天气的城市名称"
+                }
+            },
+            "required": ["city"]
+        })
+    }
+
+    async fn execute(&self, params: Value, _options: &ToolExecuteOptions) -> Result<Value> {
         let city = params["city"].as_str().unwrap_or("未知");
         
         // 简化的天气数据模拟
@@ -114,12 +127,17 @@ async fn main() -> Result<()> {
         
         Ok(weather_data)
     }
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    println!("Agent和Tools示例");
     
-    // 使用创建的工具
-    let llm_provider = Arc::new(MockLlmAdapter::new());
+    // 创建LLM提供者（使用MockLlmProvider进行测试）
+    let llm_provider = Arc::new(MockLlmProvider::new());
     
-    // 创建一个简单的代理
-    let agent_config = lumosai_core::agent::AgentConfig {
+    // 创建Agent配置
+    let agent_config = AgentConfig {
         name: "assistant".to_string(),
         instructions: "你是一个通用助手，可以进行数学计算和查询天气信息。".to_string(),
         memory_config: None,
@@ -127,55 +145,64 @@ async fn main() -> Result<()> {
         voice_config: None,
         telemetry: None,
         working_memory: None,
+        enable_function_calling: Some(true),
     };
     
-    let mut agent = lumosai_core::agent::create_basic_agent(
+    // 创建代理
+    let mut agent = create_basic_agent(
         "assistant", 
         "你是一个通用助手，可以进行数学计算和查询天气信息。", 
         llm_provider
     );
     
     // 添加工具到代理
-    // 获取tool实例
-    let calc_tool = calculator();
-    let weather_tool = weather();
+    agent.add_tool(Box::new(CalculatorTool));
+    agent.add_tool(Box::new(WeatherTool));
     
-    agent.add_tool(Box::new(calc_tool.clone())).expect("无法添加计算器工具");
-    agent.add_tool(Box::new(weather_tool.clone())).expect("无法添加天气工具");
-    
-    // 使用代理处理查询
-    println!("\n处理数学计算查询:");
-    let user_message = Message {
-        role: Role::User,
-        content: Some("计算 15.2 + 15.3".to_string()),
-        metadata: None,
-        name: None,
-    };
-    
-    let calc_result = agent.generate(&[user_message], &lumosai_core::agent::AgentGenerateOptions::default()).await?;
-    println!("代理回答: {}", calc_result.response);
-    
-    println!("\n处理天气查询:");
-    let user_message = Message {
-        role: Role::User,
-        content: Some("查询北京的天气".to_string()),
-        metadata: None,
-        name: None,
-    };
-    
-    let weather_result = agent.generate(&[user_message], &lumosai_core::agent::AgentGenerateOptions::default()).await?;
-    println!("代理回答: {}", weather_result.response);
-    
-    // 执行工具直接调用
+    // 测试计算器工具直接调用
     println!("\n直接调用计算器工具:");
+    let calc_tool = CalculatorTool;
     let calc_params = json!({
         "operation": "multiply",
         "a": 6.5,
         "b": 7.2
     });
     
-    let tool_result = calc_tool.execute(calc_params, &Default::default()).await?;
+    let tool_result = calc_tool.execute(calc_params, &ToolExecuteOptions::default()).await?;
     println!("计算结果: {}", tool_result["result"]);
+    
+    // 测试天气工具直接调用
+    println!("\n直接调用天气工具:");
+    let weather_tool = WeatherTool;
+    let weather_params = json!({
+        "city": "北京"
+    });
+    
+    let weather_result = weather_tool.execute(weather_params, &ToolExecuteOptions::default()).await?;
+    println!("天气结果: {}", weather_result);
+    
+    // 使用代理处理查询（这里Agent需要实现工具调用功能）
+    println!("\n处理数学计算查询:");
+    let user_message = Message {
+        role: Role::User,
+        content: "计算 15.2 + 15.3".to_string(),
+        metadata: None,
+        name: None,
+    };
+    
+    let calc_result = agent.generate(&[user_message], &AgentGenerateOptions::default()).await?;
+    println!("代理回答: {}", calc_result.response);
+    
+    println!("\n处理天气查询:");
+    let user_message = Message {
+        role: Role::User,
+        content: "查询北京的天气".to_string(),
+        metadata: None,
+        name: None,
+    };
+    
+    let weather_result = agent.generate(&[user_message], &AgentGenerateOptions::default()).await?;
+    println!("代理回答: {}", weather_result.response);
     
     Ok(())
 } 

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::Value;
 
 use crate::{Error, Result};
@@ -11,6 +11,7 @@ use super::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
 
 /// DeepSeek API response structures (compatible with OpenAI format)
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct DeepSeekResponse {
     choices: Vec<DeepSeekChoice>,
     #[serde(default)]
@@ -24,6 +25,7 @@ struct DeepSeekChoice {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct DeepSeekMessage {
     role: String,
     content: Option<String>,
@@ -46,6 +48,7 @@ struct DeepSeekFunction {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct DeepSeekUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
@@ -54,18 +57,21 @@ struct DeepSeekUsage {
 
 /// DeepSeek embedding response structures
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct DeepSeekEmbeddingResponse {
     data: Vec<DeepSeekEmbeddingData>,
     usage: DeepSeekEmbeddingUsage,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct DeepSeekEmbeddingData {
     embedding: Vec<f32>,
     index: usize,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct DeepSeekEmbeddingUsage {
     prompt_tokens: u32,
     total_tokens: u32,
@@ -264,7 +270,7 @@ impl LlmProvider for DeepSeekProvider {
         Ok(Box::pin(stream::iter(chunks)))
     }
     
-    async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
+    async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
         // Note: DeepSeek doesn't provide embedding API in their current offering
         // This is a placeholder implementation
         // In a real implementation, you might want to:
@@ -342,8 +348,8 @@ impl LlmProvider for DeepSeekProvider {
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
         }
-        if let Some(top_p) = options.top_p {
-            body["top_p"] = serde_json::json!(top_p);
+        if let Some(top_p) = options.extra.get("top_p") {
+            body["top_p"] = top_p.clone();
         }
 
         // Send request
@@ -399,7 +405,6 @@ impl LlmProvider for DeepSeekProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::types::MessageRole;
 
     #[test]
     fn test_deepseek_provider_creation() {

@@ -121,12 +121,20 @@ async fn main() -> CliResult<()> {
     
     match cli.command {
         Commands::Create(args) => {
+            // 将逗号分隔的字符串转换为 Vec<String>
+            let components = args.components.map(|s| {
+                s.split(',').map(|s| s.trim().to_string()).collect()
+            });
+            
+            // 创建name的副本以避免所有权问题
+            let name_clone = args.name.clone();
+            
             commands::create::run(
-                args.name,
-                args.components,
+                name_clone,
+                components,
                 args.llm,
                 args.llm_api_key,
-                args.project_dir,
+                args.name.or_else(|| args.project_dir.and_then(|p| p.file_name().and_then(|n| n.to_str().map(|s| s.to_string())))),
                 args.example,
             ).await
         },
@@ -146,10 +154,15 @@ async fn main() -> CliResult<()> {
             commands::playground::run(options).await
         },
         Commands::Api(args) => {
+            // 将逗号分隔的字符串转换为 Vec<String>
+            let agents = args.agents.map(|s| {
+                s.split(',').map(|s| s.trim().to_string()).collect()
+            });
+            
             commands::api::run(
                 args.project_dir,
                 args.output,
-                args.agents,
+                agents,
             ).await
         },
         Commands::Visualize(options) => {

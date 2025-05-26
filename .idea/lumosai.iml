@@ -8,6 +8,8 @@
       <sourceFolder url="file://$MODULE_DIR$/lomusai_mcp/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lomusai_rag/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lumos_macro/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lumosai_cli/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lumosai_cli/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/lumosai_core/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lumosai_core/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/lumosai_derive/src" isTestSource="false" />

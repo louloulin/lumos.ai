@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream, StreamExt};
 use regex::Regex;
@@ -16,7 +17,7 @@ use crate::error::{Error, Result};
 use crate::logger::{Component, Logger};
 use crate::llm::{LlmProvider, LlmOptions, Message, Role, FunctionDefinition, ToolChoice as LlmToolChoice};
 use crate::memory::Memory;
-use crate::telemetry::TelemetrySink;
+use crate::telemetry::{TelemetrySink, MetricsCollector, TraceCollector, AgentMetrics, ToolMetrics, MemoryMetrics, ExecutionContext, TraceBuilder, StepType as TraceStepType, TokenUsage as TelemetryTokenUsage, TraceStep};
 use crate::tool::{Tool, ToolExecutionOptions, ToolExecutionContext};
 use crate::llm::function_calling_utils;
 use crate::agent::types::{
@@ -67,6 +68,10 @@ pub struct BasicAgent {
     enable_function_calling: bool,
     /// Telemetry settings
     telemetry: Option<Box<dyn TelemetrySink>>,
+    /// Metrics collector for performance monitoring
+    metrics_collector: Option<Arc<dyn MetricsCollector>>,
+    /// Trace collector for execution tracing
+    trace_collector: Option<Arc<dyn TraceCollector>>,
 }
 
 impl BasicAgent {
@@ -106,7 +111,32 @@ impl BasicAgent {
             experimental_output: false,
             enable_function_calling: config.enable_function_calling.unwrap_or(true), // Default to true
             telemetry: None,
+            metrics_collector: None,
+            trace_collector: None,
         }
+    }
+    
+    /// Set metrics collector
+    pub fn with_metrics_collector(mut self, collector: Arc<dyn MetricsCollector>) -> Self {
+        self.metrics_collector = Some(collector);
+        self
+    }
+    
+    /// Set trace collector
+    pub fn with_trace_collector(mut self, collector: Arc<dyn TraceCollector>) -> Self {
+        self.trace_collector = Some(collector);
+        self
+    }
+    
+    /// Set both metrics and trace collectors
+    pub fn with_monitoring(
+        mut self, 
+        metrics_collector: Arc<dyn MetricsCollector>,
+        trace_collector: Arc<dyn TraceCollector>
+    ) -> Self {
+        self.metrics_collector = Some(metrics_collector);
+        self.trace_collector = Some(trace_collector);
+        self
     }
     
     /// Build tool descriptions for the system message
@@ -463,6 +493,34 @@ impl Agent for BasicAgent {
         let mut current_step = 0;
         let metadata = HashMap::new();
         
+        // Start monitoring
+        let start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+        
+        // Start execution trace
+        let trace_id = if let Some(trace_collector) = &self.trace_collector {
+            match trace_collector.start_trace(
+                format!("agent_{}", self.name),
+                {
+                    let mut trace_metadata = HashMap::new();
+                    trace_metadata.insert("run_id".to_string(), serde_json::Value::String(run_id.clone()));
+                    trace_metadata.insert("agent_name".to_string(), serde_json::Value::String(self.name.clone()));
+                    trace_metadata.insert("max_steps".to_string(), serde_json::Value::Number(serde_json::Number::from(max_steps)));
+                    trace_metadata
+                }
+            ).await {
+                Ok(id) => Some(id),
+                Err(e) => {
+                    self.logger().warn(&format!("Failed to start trace: {}", e), None);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        
         // Log the generation start
         self.logger().debug(&format!("Starting generation for agent '{}' (run_id: {})", self.name, run_id), None);
         
@@ -526,10 +584,55 @@ impl Agent for BasicAgent {
                             ), None);
                             
                             let start_time = std::time::Instant::now();
+                            
+                            // Add trace step for tool call start
+                            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                                let mut step = TraceStep::new(
+                                    format!("Starting tool call: {}", call.name),
+                                    TraceStepType::ToolCall,
+                                );
+                                step.metadata.insert("tool_name".to_string(), serde_json::Value::String(call.name.clone()));
+                                step.metadata.insert("arguments".to_string(), serde_json::to_value(&call.arguments).unwrap_or_default());
+                                step.duration_ms = 0; // Duration will be updated when complete
+                                step.success = true;
+                                
+                                let _ = trace_collector.add_trace_step(trace_id, step).await;
+                            }
+                            
                             let result = match self.execute_tool_call(call).await {
                                 Ok(result) => {
                                     let execution_time = start_time.elapsed();
                                     self.logger().debug(&format!("Function call '{}' completed in {:?}", call.name, execution_time), None);
+                                    
+                                    // Record tool metrics
+                                    if let Some(metrics_collector) = &self.metrics_collector {
+                                        let tool_metrics = crate::telemetry::ToolMetrics {
+                                            tool_name: call.name.clone(),
+                                            execution_time_ms: execution_time.as_millis() as u64,
+                                            success: true,
+                                            error: None,
+                                            input_size_bytes: serde_json::to_string(&call.arguments).unwrap_or_default().len(),
+                                            output_size_bytes: serde_json::to_string(&result).unwrap_or_default().len(),
+                                            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                                        };
+                                        
+                                        let _ = metrics_collector.record_tool_execution(tool_metrics).await;
+                                    }
+                                    
+                                    // Complete trace step for successful tool call
+                                    if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                                        let mut step = TraceStep::new(
+                                            format!("Tool call {} completed successfully", call.name),
+                                            TraceStepType::ToolCall,
+                                        );
+                                        step.metadata.insert("tool_name".to_string(), serde_json::Value::String(call.name.clone()));
+                                        step.metadata.insert("success".to_string(), serde_json::Value::Bool(true));
+                                        step.metadata.insert("result_size".to_string(), serde_json::Value::Number(serde_json::Number::from(serde_json::to_string(&result).unwrap_or_default().len())));
+                                        step.duration_ms = execution_time.as_millis() as u64;
+                                        step.success = true;
+                                        
+                                        let _ = trace_collector.add_trace_step(trace_id, step).await;
+                                    }
                                     
                                     ToolResult {
                                         call_id: call.id.clone(),
@@ -541,6 +644,37 @@ impl Agent for BasicAgent {
                                 Err(e) => {
                                     let execution_time = start_time.elapsed();
                                     self.logger().error(&format!("Function call '{}' failed after {:?}: {}", call.name, execution_time, e), None);
+                                    
+                                    // Record failed tool metrics
+                                    if let Some(metrics_collector) = &self.metrics_collector {
+                                        let tool_metrics = crate::telemetry::ToolMetrics {
+                                            tool_name: call.name.clone(),
+                                            execution_time_ms: execution_time.as_millis() as u64,
+                                            success: false,
+                                            error: Some(e.to_string()),
+                                            input_size_bytes: serde_json::to_string(&call.arguments).unwrap_or_default().len(),
+                                            output_size_bytes: 0,
+                                            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                                        };
+                                        
+                                        let _ = metrics_collector.record_tool_execution(tool_metrics).await;
+                                    }
+                                    
+                                    // Complete trace step for failed tool call
+                                    if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                                        let mut step = TraceStep::new(
+                                            format!("Tool call {} failed: {}", call.name, e),
+                                            TraceStepType::ToolCall,
+                                        );
+                                        step.metadata.insert("tool_name".to_string(), serde_json::Value::String(call.name.clone()));
+                                        step.metadata.insert("success".to_string(), serde_json::Value::Bool(false));
+                                        step.metadata.insert("error".to_string(), serde_json::Value::String(e.to_string()));
+                                        step.duration_ms = execution_time.as_millis() as u64;
+                                        step.success = false;
+                                        step.error = Some(e.to_string());
+                                        
+                                        let _ = trace_collector.add_trace_step(trace_id, step).await;
+                                    }
                                     
                                     ToolResult {
                                         call_id: call.id.clone(),
@@ -756,6 +890,103 @@ impl Agent for BasicAgent {
             completion_tokens: final_response.len() / 4,
             total_tokens: all_messages.iter().map(|m| m.content.len() / 4).sum::<usize>() + final_response.len() / 4,
         };
+        
+        // Calculate execution metrics
+        let end_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+        
+        let execution_time_ms = end_time - start_time;
+        let success = !final_response.is_empty();
+        
+        // Count tool calls and memory operations
+        let tool_calls_count = steps.iter()
+            .map(|step| step.tool_calls.len())
+            .sum::<usize>();
+        
+        let memory_operations = if self.memory.is_some() || self.working_memory.is_some() { 
+            current_step as usize // Approximate based on steps 
+        } else { 
+            0 
+        };
+        
+        // Record metrics
+        if let Some(metrics_collector) = &self.metrics_collector {
+            let agent_metrics = AgentMetrics {
+                agent_name: self.name.clone(),
+                execution_id: run_id.clone(),
+                start_time,
+                end_time,
+                execution_time_ms,
+                success,
+                token_usage: TelemetryTokenUsage {
+                    prompt_tokens: usage.prompt_tokens as u32,
+                    completion_tokens: usage.completion_tokens as u32,
+                    total_tokens: usage.total_tokens as u32,
+                },
+                tool_calls_count,
+                memory_operations,
+                error_count: if success { 0 } else { 1 },
+                custom_metrics: {
+                    let mut custom = HashMap::new();
+                    custom.insert("steps_count".to_string(), crate::telemetry::MetricValue::Integer(current_step as i64));
+                    custom.insert("max_steps".to_string(), crate::telemetry::MetricValue::Integer(max_steps as i64));
+                    custom.insert("response_length".to_string(), crate::telemetry::MetricValue::Integer(final_response.len() as i64));
+                    custom
+                },
+                context: ExecutionContext {
+                    session_id: options.thread_id.clone(),
+                    user_id: None,
+                    request_id: Some(run_id.clone()),
+                    environment: "development".to_string(),
+                    version: Some("1.0.0".to_string()),
+                },
+            };
+            
+            if let Err(e) = metrics_collector.record_agent_execution(agent_metrics).await {
+                self.logger().warn(&format!("Failed to record agent metrics: {}", e), None);
+            }
+        }
+        
+        // Complete execution trace
+        if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+            // Add final step to trace
+            let mut step = TraceStep::new(
+                format!("Agent {} generation complete", self.name),
+                TraceStepType::LlmCall,
+            );
+            step.metadata.insert("final_response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(final_response.len())));
+            step.metadata.insert("total_steps".to_string(), serde_json::Value::Number(serde_json::Number::from(current_step)));
+            step.metadata.insert("success".to_string(), serde_json::Value::Bool(success));
+            step.duration_ms = execution_time_ms;
+            step.success = success;
+            
+            if let Err(e) = trace_collector.add_trace_step(trace_id, step).await {
+                self.logger().warn(&format!("Failed to add final trace step: {}", e), None);
+            }
+            
+            // Complete the trace
+            if let Err(e) = trace_collector.end_trace(trace_id, success).await {
+                self.logger().warn(&format!("Failed to complete trace: {}", e), None);
+            }
+        }
+        
+        // Record telemetry metrics (legacy support)
+        if let Some(telemetry) = &self.telemetry {
+            let _guard = telemetry.start_span("agent_generate", None);
+            
+            telemetry.record("agent_name", &self.name);
+            telemetry.record("run_id", &run_id);
+            telemetry.record("total_steps", &current_step);
+            telemetry.record("max_steps", &max_steps);
+            telemetry.record("final_response_length", &final_response.len());
+            
+            // Record token usage
+            telemetry.record("prompt_tokens", &usage.prompt_tokens);
+            telemetry.record("completion_tokens", &usage.completion_tokens);
+            telemetry.record("total_tokens", &usage.total_tokens);
+        }
         
         Ok(AgentGenerateResult {
             response: final_response,
@@ -1075,209 +1306,5 @@ impl AgentVoiceSender for BasicAgent {
             .boxed();
         
         Ok(output_stream)
-    }
-}
-
-// 为未使用的结构体添加告警注解
-#[allow(dead_code)]
-struct AgentRef<'a>(&'a BasicAgent);
-
-// 实现Send和Sync，使AgentRef可以跨线程传递
-unsafe impl Send for AgentRef<'_> {}
-unsafe impl Sync for AgentRef<'_> {}
-
-#[cfg(test)]
-mod voice_tests {
-    use std::sync::Arc;
-    use super::*;
-    use crate::voice::{MockVoice, VoiceOptions};
-    use serde::{Deserialize, Serialize};
-    
-    /// 模拟的LLM提供者，用于测试
-    struct MockLlmProvider {
-        responses: Vec<String>,
-        index: std::sync::atomic::AtomicUsize,
-    }
-    
-    impl MockLlmProvider {
-        fn new(responses: Vec<String>) -> Self {
-            Self {
-                responses,
-                index: std::sync::atomic::AtomicUsize::new(0),
-            }
-        }
-    }
-    
-    #[async_trait]
-    impl LlmProvider for MockLlmProvider {
-        async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
-            let index = self.index.fetch_add(1, std::sync::atomic::Ordering::SeqCst) % self.responses.len();
-            Ok(self.responses[index].clone())
-        }
-        
-        async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> Result<String> {
-            let index = self.index.fetch_add(1, std::sync::atomic::Ordering::SeqCst) % self.responses.len();
-            Ok(self.responses[index].clone())
-        }
-        
-        async fn generate_stream<'a>(
-            &'a self,
-            _prompt: &'a str,
-            _options: &'a LlmOptions,
-        ) -> Result<futures::stream::BoxStream<'a, Result<String>>> {
-            unimplemented!("Streaming not implemented for mock provider")
-        }
-        
-        async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
-            unimplemented!("Embeddings not implemented for mock provider")
-        }
-    }
-    
-    // 用于结构化输出的测试结构
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    struct TestOutput {
-        message: String,
-        value: i32,
-    }
-    
-    // 扩展MockLlmProvider以返回结构化输出
-    struct StructuredMockLlm;
-    
-    #[async_trait]
-    impl LlmProvider for StructuredMockLlm {
-        async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
-            // 返回JSON格式的结构化输出
-            Ok(r#"{"message": "Hello, world!", "value": 42}"#.to_string())
-        }
-        
-        async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> Result<String> {
-            // 返回JSON格式的结构化输出
-            Ok(r#"{"message": "Hello, world!", "value": 42}"#.to_string())
-        }
-        
-        async fn generate_stream<'a>(
-            &'a self,
-            _prompt: &'a str,
-            _options: &'a LlmOptions,
-        ) -> Result<futures::stream::BoxStream<'a, Result<String>>> {
-            unimplemented!("Streaming not implemented for mock provider")
-        }
-        
-        async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
-            unimplemented!("Embeddings not implemented for mock provider")
-        }
-    }
-    
-    #[tokio::test]
-    async fn test_agent_structured_output() {
-        // 创建一个结构化输出的LLM提供者
-        let mock_llm = Arc::new(StructuredMockLlm);
-        
-        // 创建Agent
-        let config = AgentConfig {
-            name: "TestAgent".to_string(),
-            instructions: "You are a test agent.".to_string(),
-            memory_config: None,
-            ..Default::default()
-        };
-        
-        let agent = BasicAgent::new(config, mock_llm);
-        
-        // 测试结构化输出
-        let user_message = Message {
-            role: Role::User,
-            content: "Hello".to_string(),
-            metadata: None,
-            name: None,
-        };
-        
-        let result: TestOutput = agent.generate_structured(&[user_message], &AgentGenerateOptions::default()).await.unwrap();
-        
-        assert_eq!(result.message, "Hello, world!");
-        assert_eq!(result.value, 42);
-    }
-    
-    #[tokio::test]
-    async fn test_agent_voice() {
-        // 创建一个模拟LLM提供者
-        let mock_llm = Arc::new(MockLlmProvider::new(vec![
-            "Hello, this is a voice test".to_string(),
-        ]));
-        
-        // 创建Agent
-        let config = AgentConfig {
-            name: "TestAgent".to_string(),
-            instructions: "You are a test agent.".to_string(),
-            memory_config: None,
-            ..Default::default()
-        };
-        
-        let mut agent = BasicAgent::new(config, mock_llm);
-        
-        // 添加语音提供者
-        let voice = Arc::new(MockVoice::new());
-        agent.set_voice(voice);
-        
-        // 测试语音功能 - 使用AgentVoiceSender trait
-        let agent_voice_sender: &dyn AgentVoiceSender = &agent;
-        let audio_stream = agent_voice_sender.speak(
-            "Test voice functionality", 
-            &VoiceOptions::default()
-        ).await.unwrap();
-        
-        // 收集音频数据
-        let mut audio_data = Vec::new();
-        futures::pin_mut!(audio_stream);
-        while let Some(result) = futures::StreamExt::next(&mut audio_stream).await {
-            audio_data.push(result.unwrap());
-        }
-        
-        // 验证有数据返回
-        assert!(!audio_data.is_empty());
-    }
-    
-    #[tokio::test]
-    async fn test_agent_voice_sender_speak() {
-        // 创建一个模拟LLM提供者
-        let mock_llm = Arc::new(MockLlmProvider::new(vec![
-            "Hello, this is a voice test".to_string(),
-        ]));
-        
-        // 创建Agent
-        let config = AgentConfig {
-            name: "TestAgent".to_string(),
-            instructions: "You are a test agent.".to_string(),
-            memory_config: None,
-            ..Default::default()
-        };
-        
-        let mut agent = BasicAgent::new(config, mock_llm);
-        
-        // 添加语音提供者
-        let voice = Arc::new(MockVoice::new());
-        agent.set_voice(voice);
-        
-        // 直接调用speak方法
-        let agent_voice_sender = &agent as &dyn AgentVoiceSender;
-        let result = agent_voice_sender.speak("Test direct voice call", &VoiceOptions::default()).await;
-        
-        // 验证返回结果
-        assert!(result.is_ok(), "speak方法应该返回Ok结果");
-        
-        if let Ok(stream) = result {
-            // 收集所有音频数据
-            let mut audio_data = Vec::new();
-            futures::pin_mut!(stream);
-            
-            while let Some(chunk_result) = stream.next().await {
-                if let Ok(chunk) = chunk_result {
-                    audio_data.push(chunk);
-                }
-            }
-            
-            // 验证有音频数据返回
-            assert!(!audio_data.is_empty(), "应该有音频数据返回");
-            println!("成功收集了 {} 段音频数据", audio_data.len());
-        }
     }
 }

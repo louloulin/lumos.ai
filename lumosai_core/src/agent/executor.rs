@@ -189,34 +189,34 @@ impl BasicAgent {
         let instructions = options.instructions.as_ref().unwrap_or(&self.instructions);
         
         // Check if we're using function calling mode
-        let use_function_calling = self.enable_function_calling && self.llm.supports_function_calling();
+        let tools = self.tools.lock().ok();
+        let has_tools = tools.as_ref().map_or(false, |t| !t.is_empty());
+        let use_function_calling = crate::llm::function_calling_utils::should_use_function_calling(
+            self.enable_function_calling,
+            self.llm.supports_function_calling(),
+            has_tools
+        );
         
-        let system_content = if use_function_calling {
-            // For function calling mode, tools are passed separately via function definitions
-            // Only include basic instructions without detailed tool descriptions
-            self.logger().debug(
-                "Using function calling mode - omitting tool descriptions from system message",
-                None,
-            );
-            instructions.to_string()
+        // Build tool descriptions for legacy mode
+        let tool_descriptions = if !use_function_calling && has_tools {
+            let tools_ref = tools.as_ref().unwrap();
+            Some(crate::llm::function_calling_utils::create_tools_description(tools_ref))
         } else {
-            // For legacy regex mode, include detailed tool descriptions in system message
-            self.logger().debug(
-                "Using legacy regex mode - including tool descriptions in system message",
-                None,
-            );
-            
-            let tool_descriptions = self.build_tool_descriptions(options);
-            if tool_descriptions.is_empty() {
-                instructions.to_string()
-            } else {
-                format!(
-                    "{}\n\nYou have access to the following tools:\n\n{}",
-                    instructions,
-                    tool_descriptions
-                )
-            }
+            None
         };
+        
+        // Generate appropriate system prompt based on mode
+        let system_content = crate::llm::function_calling_utils::generate_system_prompt(
+            instructions,
+            use_function_calling,
+            tool_descriptions.as_deref()
+        );
+        
+        if use_function_calling {
+            self.logger().debug("Using function calling mode - omitting tool format from system message", None);
+        } else if has_tools {
+            self.logger().debug("Using legacy regex mode - including tool format in system message", None);
+        }
         
         Message {
             role: Role::System,
@@ -372,16 +372,73 @@ impl Agent for BasicAgent {
     }
     
     fn parse_tool_calls(&self, response: &str) -> Result<Vec<ToolCall>> {
-        // Legacy method for backward compatibility only
-        // This should only be used when function calling is disabled
-        // or as a fallback for providers that don't support function calling
+        // Enhanced method for parsing tool calls
+        // Now supports multiple parsing strategies with better error handling
         
+        // Check if we're using function calling - if so, log warning and return empty
         if self.enable_function_calling && self.llm.supports_function_calling() {
             self.logger().warn("parse_tool_calls called despite function calling being enabled", None);
             return Ok(Vec::new());
         }
         
-        // Parse regex-based tool calls (legacy functionality)
+        // Enhanced parsing with multiple patterns
+        // Try JSON extraction first (for structured responses)
+        if response.contains("```json") && response.contains("```") {
+            // Try to extract JSON code blocks
+            let mut tool_calls = Vec::new();
+            let json_regex = Regex::new(r"```json\s*\n?(.*?)\n?\s*```").unwrap();
+            
+            for cap in json_regex.captures_iter(response) {
+                let json_str = cap[1].trim();
+                
+                match serde_json::from_str::<HashMap<String, Value>>(json_str) {
+                    Ok(json_obj) => {
+                        // Extract tool name and arguments from JSON
+                        if let Some(tool_name) = json_obj.get("tool").and_then(Value::as_str) {
+                            if let Some(args) = json_obj.get("parameters") {
+                                let arguments = match args {
+                                    Value::Object(obj) => obj.clone(),
+                                    _ => {
+                                        // Try to parse as string
+                                        if let Some(arg_str) = args.as_str() {
+                                            match serde_json::from_str::<HashMap<String, Value>>(arg_str) {
+                                                Ok(parsed) => parsed,
+                                                Err(_) => {
+                                                    // Fallback: create a single parameter "value"
+                                                    let mut single_param = Map::new();
+                                                    single_param.insert("value".to_string(), args.clone());
+                                                    single_param
+                                                }
+                                            }
+                                        } else {
+                                            let mut single_param = Map::new();
+                                            single_param.insert("value".to_string(), args.clone());
+                                            single_param
+                                        }
+                                    }
+                                };
+                                
+                                tool_calls.push(ToolCall {
+                                    id: Uuid::new_v4().to_string(),
+                                    name: tool_name.to_string(),
+                                    arguments: arguments.into_iter().collect(),
+                                });
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        self.logger().warn(&format!("Failed to parse JSON code block: {}", e), None);
+                    }
+                }
+            }
+            
+            if !tool_calls.is_empty() {
+                self.logger().info(&format!("Parsed {} tool calls from code blocks", tool_calls.len()), None);
+                return Ok(tool_calls);
+            }
+        }
+        
+        // If JSON extraction didn't work, try the legacy regex pattern
         let re = Regex::new(r"Using the tool '([^']+)' with parameters: (\{[^}]+\})").unwrap();
         
         let mut tool_calls = Vec::new();
@@ -404,8 +461,84 @@ impl Agent for BasicAgent {
             }
         }
         
+        // Try additional pattern for function-style calls
+        if tool_calls.is_empty() {
+            let fn_regex = Regex::new(r"(\w+)\(([^)]*)\)").unwrap();
+            
+            for cap in fn_regex.captures_iter(response) {
+                let tool_name = cap[1].to_string();
+                let params_str = cap[2].trim();
+                
+                // Only process if we have this tool
+                let tools = match self.tools.lock() {
+                    Ok(t) => t,
+                    Err(_) => continue,
+                };
+                
+                if !tools.contains_key(&tool_name) {
+                    continue;
+                }
+                
+                // Try to parse arguments
+                let mut arguments = HashMap::new();
+                
+                // Try JSON-like string first
+                if params_str.starts_with('{') && params_str.ends_with('}') {
+                    match serde_json::from_str::<HashMap<String, Value>>(params_str) {
+                        Ok(args) => {
+                            arguments = args;
+                        },
+                        Err(_) => {
+                            // Fall through to simple parsing
+                        }
+                    }
+                }
+                
+                // If not parsed as JSON, try key-value parsing
+                if arguments.is_empty() && !params_str.is_empty() {
+                    // Simple key=value,key2=value2 parsing
+                    for pair in params_str.split(',') {
+                        let parts: Vec<&str> = pair.split('=').collect();
+                        if parts.len() == 2 {
+                            let key = parts[0].trim();
+                            let value = parts[1].trim();
+                            
+                            // Try to parse as number or boolean first
+                            if let Ok(num) = value.parse::<i64>() {
+                                arguments.insert(key.to_string(), Value::Number(num.into()));
+                            } else if let Ok(float) = value.parse::<f64>() {
+                                // Use serde_json's number constructor which handles precision
+                                if let Some(num) = serde_json::Number::from_f64(float) {
+                                    arguments.insert(key.to_string(), Value::Number(num));
+                                } else {
+                                    arguments.insert(key.to_string(), Value::String(value.to_string()));
+                                }
+                            } else if value == "true" {
+                                arguments.insert(key.to_string(), Value::Bool(true));
+                            } else if value == "false" {
+                                arguments.insert(key.to_string(), Value::Bool(false));
+                            } else {
+                                // Remove quotes if present
+                                let clean_value = value.trim_matches('"').trim_matches('\'');
+                                arguments.insert(key.to_string(), Value::String(clean_value.to_string()));
+                            }
+                        }
+                    }
+                }
+                
+                // If parsing worked, add the tool call
+                if !arguments.is_empty() || params_str.is_empty() {
+                    tool_calls.push(ToolCall {
+                        id: Uuid::new_v4().to_string(),
+                        name: tool_name,
+                        arguments,
+                    });
+                }
+            }
+        }
+        
         if !tool_calls.is_empty() {
-            self.logger().info(&format!("Parsed {} tool calls using legacy regex method", tool_calls.len()), None);
+            self.logger().info(&format!("Parsed {} tool calls using enhanced parsing methods", tool_calls.len()), None);
         }
         
         Ok(tool_calls)

@@ -24,5 +24,6 @@ pub use function_calling::{
     FunctionCall, 
     FunctionCallResult, 
     ToolChoice,
-    utils as function_calling_utils
+    utils
 };
+pub mod function_calling_utils;

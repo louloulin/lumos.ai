@@ -8,6 +8,7 @@ use tokio::net::TcpListener;
 use tokio::process::Command;
 use tokio::io::AsyncWriteExt;
 use tokio::signal;
+use tokio::time::sleep;
 use actix_web::{web, App, HttpServer, HttpResponse, Responder, middleware, error, Error};
 use actix_files as fs_web;
 use actix_cors::Cors;
@@ -337,7 +338,7 @@ async fn start_dev_server(config: UiServerConfig) -> CliResult<()> {
         match child.try_wait() {
             Ok(Some(status)) => {
                 if !status.success() {
-                    return Err(CliError::failed(
+                    return Err(CliError::failed::<std::io::Error>(
                         format!("UI开发服务器异常退出，状态码: {:?}", status.code()).as_str(),
                         None,
                     ));
@@ -447,14 +448,15 @@ async fn serve_index(data: web::Data<UiServerConfig>) -> Result<HttpResponse, Er
 }
 
 /// 启动UI服务器，根据配置选择开发模式或生产模式
-pub async fn start_server(
+pub fn start_server(
     ui_dir: PathBuf,
     port: u16,
     theme: String,
     dev_mode: bool,
     api_url: Option<String>,
     project_dir: PathBuf,
-) -> CliResult<()> {
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = CliResult<()>> + Send>> {
+    Box::pin(async move {
     // 检查端口是否可用
     if !check_port_available(port).await {
         let new_port = get_available_port(port).unwrap_or(port + 1);
@@ -479,17 +481,19 @@ pub async fn start_server(
     } else {
         start_production_server(config).await
     }
+    })
 }
 
 /// 启动Playground服务器
-pub async fn start_playground(
+pub fn start_playground(
     playground_dir: PathBuf,
     port: u16,
     agent_id: Option<String>,
     save_history: bool,
     api_url: Option<String>,
     project_dir: PathBuf,
-) -> CliResult<()> {
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = CliResult<()>> + Send>> {
+    Box::pin(async move {
     // 检查端口是否可用
     if !check_port_available(port).await {
         let new_port = get_available_port(port).unwrap_or(port + 1);
@@ -510,4 +514,5 @@ pub async fn start_playground(
     
     // 启动生产模式服务器
     start_production_server(config).await
+    })
 } 

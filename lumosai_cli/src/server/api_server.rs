@@ -90,7 +90,7 @@ fn find_agents(agents_dir: &Path) -> CliResult<Vec<String>> {
     }
 
     for entry in fs::read_dir(agents_dir)
-        .map_err(|e| CliError::io(format!("无法读取代理目录: {}", agents_dir.display()), e))? {
+        .map_err(|e| CliError::io_string(format!("无法读取代理目录: {}", agents_dir.display()), e))? {
         let entry = entry.map_err(|e| CliError::io("读取目录条目失败", e))?;
         let path = entry.path();
 
@@ -151,11 +151,12 @@ fn check_api_module(config: &ApiServerConfig) -> bool {
 }
 
 /// 启动API服务器
-pub async fn start_server(
+pub fn start_server(
     port: u16,
     project_dir: PathBuf,
     api_module_path: Option<PathBuf>,
-) -> CliResult<()> {
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = CliResult<()>> + Send>> {
+    Box::pin(async move {
     // 检查端口是否可用
     if !check_port_available(port).await {
         let new_port = get_available_port(port).unwrap_or(port + 1);
@@ -201,7 +202,7 @@ pub async fn start_server(
             .service(web::resource("/api/info").route(web::get().to(api_info)))
     })
     .bind(config.get_bind_address())
-    .map_err(|e| CliError::io(format!("无法绑定到端口: {}", config.port), e))?
+    .map_err(|e| CliError::io_string(format!("无法绑定到端口: {}", config.port), e))?
     .run();
     
     println!("{}", "API服务器已启动".bright_green());
@@ -212,4 +213,5 @@ pub async fn start_server(
         .map_err(|e| CliError::io("启动服务器时出错", e))?;
     
     Ok(())
+    })
 } 

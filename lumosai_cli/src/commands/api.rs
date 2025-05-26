@@ -38,7 +38,7 @@ pub async fn run(
     // 创建输出目录（如果不存在）
     if !output_dir.exists() {
         fs::create_dir_all(&output_dir)
-            .map_err(|e| CliError::io(format!("无法创建输出目录: {}", output_dir.display()), e))?;
+            .map_err(|e| CliError::io_string(format!("无法创建输出目录: {}", output_dir.display()), e))?;
     }
 
     // 获取所有代理信息
@@ -55,9 +55,8 @@ pub async fn run(
             // 验证所有指定的代理都存在
             for agent in &specified_agents {
                 if !available_agents.contains(agent) {
-                    return Err(CliError::invalid_input(
-                        format!("指定的代理 '{}' 不存在", agent),
-                        "请检查代理名称或添加该代理"
+                    return Err(CliError::invalid_input_string(
+                        format!("指定的代理 '{}' 不存在。请检查代理名称或添加该代理", agent)
                     ));
                 }
             }
@@ -100,7 +99,7 @@ fn find_agents(agents_dir: &Path) -> CliResult<Vec<String>> {
     }
 
     for entry in fs::read_dir(agents_dir)
-        .map_err(|e| CliError::io(format!("无法读取代理目录: {}", agents_dir.display()), e))? {
+        .map_err(|e| CliError::io_string(format!("无法读取代理目录: {}", agents_dir.display()), e))? {
         let entry = entry.map_err(|e| CliError::io("读取目录条目失败", e))?;
         let path = entry.path();
 
@@ -169,7 +168,7 @@ fn generate_api_module(output_dir: &Path, agents: &[String]) -> CliResult<()> {
     
     // 写入文件
     fs::write(&mod_path, content)
-        .map_err(|e| CliError::io(format!("无法写入文件: {}", mod_path.display()), e))?;
+        .map_err(|e| CliError::io_string(format!("无法写入文件: {}", mod_path.display()), e))?;
     
     println!("{}", format!("生成API模块: {}", mod_path.display()).bright_green());
     
@@ -258,7 +257,7 @@ fn generate_agent_api(output_dir: &Path, agent_name: &str, project_dir: &Path) -
     
     // 写入文件
     fs::write(&agent_api_path, content)
-        .map_err(|e| CliError::io(format!("无法写入文件: {}", agent_api_path.display()), e))?;
+        .map_err(|e| CliError::io_string(format!("无法写入文件: {}", agent_api_path.display()), e))?;
     
     println!("{}", format!("为代理 '{}' 生成API: {}", agent_name, agent_api_path.display()).bright_green());
     

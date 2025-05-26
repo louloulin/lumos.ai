@@ -267,7 +267,7 @@ async fn start_file_watcher(
     let (watcher_tx, mut watcher_rx) = mpsc::channel(100);
     
     // 配置监视器
-    let mut watcher = notify::recommended_watcher(move |res| {
+    let mut watcher = notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
         match res {
             Ok(event) => {
                 // 只关注修改和创建事件

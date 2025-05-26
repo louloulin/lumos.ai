@@ -4,7 +4,7 @@ use std::env;
 use std::sync::Arc;
 use colored::Colorize;
 
-use lumosai_core::telemetry::collectors::{InMemoryMetricsCollector, InMemoryTraceCollector};
+use lumosai_core::telemetry::collectors::InMemoryMetricsCollector;
 use lumosai_core::telemetry::metrics::MetricsCollector;
 use lumosai_core::telemetry::trace::TraceCollector;
 
@@ -87,7 +87,7 @@ pub async fn run(options: MonitoringOptions) -> CliResult<()> {
     // 创建指标收集器和追踪收集器
     // 在实际应用中，这些可能会从项目配置中加载或从文件系统恢复
     let metrics_collector: Arc<dyn MetricsCollector> = Arc::new(InMemoryMetricsCollector::new());
-    let trace_collector: Arc<dyn TraceCollector> = Arc::new(InMemoryTraceCollector::new());
+    let trace_collector: Arc<dyn TraceCollector> = Arc::new(InMemoryMetricsCollector::new());
 
     // 启动监控服务器
     monitoring_server::start_monitoring_server(
@@ -110,7 +110,7 @@ pub async fn health_check(port: u16) -> CliResult<()> {
         Ok(response) => {
             if response.status().is_success() {
                 let status: serde_json::Value = response.json().await
-                    .map_err(|e| CliError::io("解析响应失败", e))?;
+                    .map_err(|e| CliError::from(e))?;
                 
                 println!("{}", "监控服务器健康状态:".bright_green());
                 println!("{}", serde_json::to_string_pretty(&status).unwrap());
@@ -120,7 +120,7 @@ pub async fn health_check(port: u16) -> CliResult<()> {
         },
         Err(e) => {
             println!("{}", format!("无法连接到监控服务器: {}", e).bright_red());
-            return Err(CliError::io("健康检查失败", e));
+            return Err(CliError::from(e));
         }
     }
     
@@ -137,7 +137,7 @@ pub async fn get_realtime_metrics(port: u16) -> CliResult<()> {
         Ok(response) => {
             if response.status().is_success() {
                 let metrics: serde_json::Value = response.json().await
-                    .map_err(|e| CliError::io("解析响应失败", e))?;
+                    .map_err(|e| CliError::from(e))?;
                 
                 println!("{}", "实时监控数据:".bright_green());
                 println!("{}", serde_json::to_string_pretty(&metrics).unwrap());
@@ -147,7 +147,7 @@ pub async fn get_realtime_metrics(port: u16) -> CliResult<()> {
         },
         Err(e) => {
             println!("{}", format!("无法连接到监控服务器: {}", e).bright_red());
-            return Err(CliError::io("获取监控数据失败", e));
+            return Err(CliError::from(e));
         }
     }
     

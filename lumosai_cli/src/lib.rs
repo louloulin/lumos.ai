@@ -2,6 +2,7 @@ pub mod commands;
 pub mod error;
 pub mod util;
 pub mod server;
+pub mod template;
 
 /// Lumosai CLI工具主要版本号
 pub const LUMOSAI_CLI_VERSION: &str = env!("CARGO_PKG_VERSION");

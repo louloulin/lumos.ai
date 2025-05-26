@@ -6,8 +6,9 @@ mod commands;
 mod error;
 mod util;
 mod server;
+mod template;
 
-use error::CliResult;
+use error::{CliResult, CliError};
 
 /// Lumosai 命令行工具
 ///

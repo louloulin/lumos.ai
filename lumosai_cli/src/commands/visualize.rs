@@ -77,7 +77,7 @@ pub async fn run(options: VisualizeOptions) -> CliResult<()> {
 
     // 检查代理和工作流参数
     if options.agent.is_none() && options.workflow.is_none() {
-        return Err(CliError::other("请指定要可视化的代理或工作流"));
+        return Err(CliError::Other("请指定要可视化的代理或工作流".to_string()));
     }
 
     // 确定输出格式
@@ -398,7 +398,7 @@ async fn convert_dot_to_format(
     ))?;
     
     if !status.success() {
-        return Err(CliError::failed("转换DOT文件失败", None));
+        return Err(CliError::failed::<std::io::Error>("转换DOT文件失败", None));
     }
     
     Ok(())

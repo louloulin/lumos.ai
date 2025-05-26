@@ -77,7 +77,7 @@ pub struct MonitoringAppState {
 }
 
 /// 实时监控数据结构
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RealTimeMetrics {
     /// 当前时间戳
     pub timestamp: u64,
@@ -98,7 +98,7 @@ pub struct RealTimeMetrics {
 }
 
 /// 代理概览统计
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentOverview {
     /// 总代理数
     pub total_agents: u64,
@@ -117,7 +117,7 @@ pub struct AgentOverview {
 }
 
 /// 代理状态
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentStatus {
     /// 代理名称
     pub name: String,
@@ -136,7 +136,7 @@ pub struct AgentStatus {
 }
 
 /// 系统性能指标
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemMetrics {
     /// CPU使用率（百分比）
     pub cpu_usage: f64,
@@ -151,7 +151,7 @@ pub struct SystemMetrics {
 }
 
 /// 错误事件
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorEvent {
     /// 时间戳
     pub timestamp: u64,
@@ -166,7 +166,7 @@ pub struct ErrorEvent {
 }
 
 /// 工具使用统计
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolUsageStats {
     /// 工具名称
     pub tool_name: String,
@@ -181,7 +181,7 @@ pub struct ToolUsageStats {
 }
 
 /// 内存操作统计
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryStats {
     /// 总操作次数
     pub total_operations: u64,
@@ -1336,6 +1336,10 @@ pub enum WebSocketMessage {
     Pong { timestamp: u64 },
 }
 
+impl actix::Message for WebSocketMessage {
+    type Result = ();
+}
+
 /// WebSocket连接信息
 #[derive(Debug, Clone)]
 pub struct WebSocketConnectionInfo {
@@ -1629,12 +1633,13 @@ async fn generate_realtime_metrics(
 }
 
 /// 启动监控服务器
-pub async fn start_monitoring_server(
+pub fn start_monitoring_server(
     port: u16,
     project_dir: PathBuf,
     metrics_collector: Arc<dyn MetricsCollector>,
     trace_collector: Arc<dyn TraceCollector>,
-) -> CliResult<()> {
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = CliResult<()>> + Send>> {
+    Box::pin(async move {
     // 检查端口是否可用
     if !check_port_available(port).await {
         let new_port = get_available_port(port).unwrap_or(port + 1);
@@ -1708,7 +1713,7 @@ pub async fn start_monitoring_server(
             })
     })
     .bind(&config.get_bind_address())
-    .map_err(|e| CliError::io(&format!("无法绑定到端口: {}", config.port), e))?
+    .map_err(|e| CliError::io_string(format!("无法绑定到端口: {}", config.port), e))?
     .run();
     
     println!("{}", "监控服务器已启动".bright_green());
@@ -1722,4 +1727,5 @@ pub async fn start_monitoring_server(
         .map_err(|e| CliError::io("启动监控服务器时出错", e))?;
     
     Ok(())
+    })
 }

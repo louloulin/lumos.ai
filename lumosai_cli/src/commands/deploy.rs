@@ -19,7 +19,7 @@ pub async fn run(
     };
     
     // 检查是否为Lumos项目
-    if !is_lumos_project()? {
+    if !is_lumos_project(&project_dir) {
         println!("{}", "警告: 当前目录不是一个Lumos AI项目".bright_yellow());
         println!("{}", "如果这是错误的，请确认项目中包含lumosai依赖".bright_yellow());
     }

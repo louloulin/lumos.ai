@@ -79,7 +79,7 @@ pub async fn run(
             
             let selections = MultiSelect::new()
                 .with_prompt("选择要包含的组件")
-                .items(&choices)
+                .items(&choices[..])
                 .defaults(&defaults)
                 .interact()?;
                 
@@ -100,7 +100,7 @@ pub async fn run(
             
             let selection = Select::new()
                 .with_prompt("选择默认LLM提供商")
-                .items(&choices)
+                .items(&choices[..])
                 .default(0)
                 .interact()?;
                 

@@ -26,6 +26,16 @@ pub trait Tool: Base + Send + Sync + Debug {
         None
     }
     
+    /// Get the category of the tool (optional)
+    fn category(&self) -> Option<String> {
+        None
+    }
+    
+    /// Get examples of using the tool (optional)
+    fn examples(&self) -> Option<Vec<String>> {
+        None
+    }
+    
     /// Execute the tool with the given parameters
     async fn execute(
         &self, 

@@ -31,6 +31,7 @@ rusqlite = { version = "0.29", optional = true }
 float-cmp = "0.9"
 regex = "1.10.2"
 schemars = "0.8"
+jsonschema = "0.17"
 rand = "0.8"
 lumos_macro = { path = "../lumos_macro", optional = true }
 async-openai = "0.18.3"

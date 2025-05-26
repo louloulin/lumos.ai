@@ -123,29 +123,24 @@ pub fn parse_openai_function_calls(response: &Value) -> Result<Vec<FunctionCall>
 
 /// Validate a JSON value against a JSON schema
 pub fn validate_against_schema(value: &Value, schema: &Value) -> Result<()> {
-    use jsonschema::{Draft, JSONSchema, SchemaResolver, CompilationOptions};
+    use jsonschema::JSONSchema;
 
     // Check if schema is null (means no schema validation needed)
     if schema.is_null() {
         return Ok(());
     }
 
-    // Compile schema with latest draft support
-    let options = CompilationOptions::new()
-        .with_format_validation(true)
-        .with_draft(Draft::Draft7);
-
-    let compiled_schema = JSONSchema::compile_with_options(schema, &options)
+    // Compile schema using the simple compile method
+    let compiled_schema = JSONSchema::compile(schema)
         .map_err(|e| Error::InvalidInput(format!("Invalid schema: {}", e)))?;
 
     // Validate with detailed error reporting
-    compiled_schema.validate(value)
-        .map_err(|errors| {
-            let error_details = errors.map(|e| {
-                format!("{} at path: {}", e.to_string(), e.instance_path)
-            }).collect::<Vec<_>>().join(", ");
-            Error::InvalidInput(format!("Schema validation failed: {}", error_details))
-        })?;
+    if let Err(errors) = compiled_schema.validate(value) {
+        let error_details = errors.map(|e| {
+            format!("{} at path: {}", e.to_string(), e.instance_path)
+        }).collect::<Vec<_>>().join(", ");
+        return Err(Error::InvalidInput(format!("Schema validation failed: {}", error_details)));
+    }
 
     Ok(())
 }
@@ -206,7 +201,8 @@ pub fn create_tools_description(
     tools: &HashMap<String, Box<dyn Tool>>,
     format: Option<&ToolDescriptionFormat>
 ) -> String {
-    let format = format.unwrap_or(&ToolDescriptionFormat::default());
+    let default_format = ToolDescriptionFormat::default();
+    let format = format.unwrap_or(&default_format);
     let mut descriptions = Vec::new();
     
     // Group tools by category if needed

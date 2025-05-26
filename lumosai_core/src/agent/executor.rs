@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream, StreamExt};
 use regex::Regex;
-use serde_json::Value;
+use serde_json::{Value, Map};
 use uuid::Uuid;
 use serde::de::DeserializeOwned;
 use tokio::sync::watch;
@@ -200,7 +200,7 @@ impl BasicAgent {
         // Build tool descriptions for legacy mode
         let tool_descriptions = if !use_function_calling && has_tools {
             let tools_ref = tools.as_ref().unwrap();
-            Some(crate::llm::function_calling_utils::create_tools_description(tools_ref))
+            Some(crate::llm::function_calling_utils::create_tools_description(tools_ref, None))
         } else {
             None
         };
@@ -401,7 +401,7 @@ impl Agent for BasicAgent {
                                     _ => {
                                         // Try to parse as string
                                         if let Some(arg_str) = args.as_str() {
-                                            match serde_json::from_str::<HashMap<String, Value>>(arg_str) {
+                                            match serde_json::from_str::<Map<String, Value>>(arg_str) {
                                                 Ok(parsed) => parsed,
                                                 Err(_) => {
                                                     // Fallback: create a single parameter "value"

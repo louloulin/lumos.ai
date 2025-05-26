@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "lumosai_core",
+    "lumosai_cli",
     "lumosai_evals",
     "lumosai_rag",
     "lumosai_network",

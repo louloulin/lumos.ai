@@ -2,12 +2,11 @@ use clap::Args;
 use std::path::{Path, PathBuf};
 use std::env;
 use std::fs;
-use std::process::Stdio;
 use colored::Colorize;
 use tokio::process::Command;
 
 use crate::error::{CliResult, CliError};
-use crate::util::{find_project_root, is_lumos_project, ensure_dir_exists};
+use crate::util::{is_lumos_project, ensure_dir_exists};
 
 /// 代理可视化配置选项
 #[derive(Args, Debug)]
@@ -525,9 +524,15 @@ async fn generate_interactive_html(
     let dot_content = fs::read_to_string(dot_file)
         .map_err(|e| CliError::io_error(e, dot_file))?;
     
+    // 转义DOT内容以安全嵌入到JavaScript中
+    let escaped_dot_content = dot_content
+        .replace('\\', "\\\\")
+        .replace('`', "\\`")
+        .replace('$', "\\$");
+    
     // 创建交互式HTML
     let html_content = format!(
-        r#"<!DOCTYPE html>
+        r##"<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -559,7 +564,7 @@ async fn generate_interactive_html(
             .fit(true);
             
         // 渲染图形
-        const dotSource = `{0}`;
+        const dotSource = `{}`;
         graphviz.renderDot(dotSource);
         
         // 控制按钮
@@ -581,13 +586,13 @@ async fn generate_interactive_html(
             const serializer = new XMLSerializer();
             let source = serializer.serializeToString(svg);
             
-            //添加命名空间
+            // 添加命名空间
             if (!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {{
                 source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
             }}
             
             // 添加XML声明
-            source = '<?xml version="1.0" standalone="no"?>\\r\\n' + source;
+            source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
             
             // 将SVG源转换为URI数据模式
             const svgBlob = new Blob([source], {{ type: "image/svg+xml;charset=utf-8" }});
@@ -604,8 +609,8 @@ async fn generate_interactive_html(
     </script>
 </body>
 </html>
-"#,
-        dot_content.replace('\\', "\\\\").replace('"', "\\\"")
+"##,
+        escaped_dot_content
     );
     
     // 写入HTML文件

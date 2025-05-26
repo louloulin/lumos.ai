@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream, StreamExt};
 use regex::Regex;
@@ -500,8 +500,8 @@ impl Agent for BasicAgent {
         
         // Create execution context for telemetry
         let execution_context = ExecutionContext {
-            session_id: options.session_id.clone(),
-            user_id: options.user_id.clone(),
+            session_id: options.thread_id.clone(),
+            user_id: options.resource_id.clone(),
             request_id: Some(run_id.clone()),
             environment: std::env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string()),
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
@@ -571,7 +571,7 @@ impl Agent for BasicAgent {
         steps.push(initial_step);
         
         let mut final_response = String::new();
-        let mut total_tokens = TelemetryTokenUsage::default();
+        let total_tokens = TelemetryTokenUsage::default();
         let mut total_tool_calls = 0;
         let mut total_errors = 0;
         
@@ -643,12 +643,8 @@ impl Agent for BasicAgent {
                     
                     let llm_duration = llm_start_time.elapsed();
                     
-                    // Update token usage
-                    if let Some(usage) = &response.usage {
-                        total_tokens.prompt_tokens += usage.prompt_tokens;
-                        total_tokens.completion_tokens += usage.completion_tokens;
-                        total_tokens.total_tokens += usage.total_tokens;
-                    }
+                    // Note: FunctionCallingResponse doesn't include usage info
+                    // Token usage tracking would need to be handled separately
                     
                     // Record LLM call completion in trace
                     if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
@@ -658,13 +654,12 @@ impl Agent for BasicAgent {
                         );
                         llm_step.duration_ms = llm_duration.as_millis() as u64;
                         llm_step.success = true;
-                        llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.message.len())));
+                        let empty_content = String::new();
+                        let response_content = response.content.as_ref().unwrap_or(&empty_content);
+                        llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response_content.len())));
                         llm_step.metadata.insert("function_calls_count".to_string(), serde_json::Value::Number(serde_json::Number::from(response.function_calls.len())));
-                        if let Some(usage) = &response.usage {
-                            llm_step.metadata.insert("tokens_used".to_string(), serde_json::Value::Number(serde_json::Number::from(usage.total_tokens)));
-                        }
                         llm_step.output = Some(serde_json::json!({
-                            "message": response.message,
+                            "content": response_content,
                             "function_calls_count": response.function_calls.len()
                         }));
                         
@@ -792,7 +787,9 @@ impl Agent for BasicAgent {
                         // Add tool results to messages and continue
                         all_messages.push(Message {
                             role: Role::Assistant,
-                            content: response.message.clone(),
+                            content: response.content.clone().unwrap_or_default(),
+                            metadata: None,
+                            name: None,
                         });
                         
                         for result in &tool_results {
@@ -803,8 +800,13 @@ impl Agent for BasicAgent {
                             id: Uuid::new_v4().to_string(),
                             step_type: StepType::Tool,
                             input: all_messages.clone(),
-                            output: Some(response.message.clone()),
-                            tool_calls: tool_calls,
+                            output: Some(Message {
+                                role: Role::Assistant,
+                                content: response.content.clone().unwrap_or_default(),
+                                metadata: None,
+                                name: None,
+                            }),
+                            tool_calls: tool_calls.clone(),
                             tool_results: tool_results,
                             metadata: HashMap::new(),
                         };
@@ -814,21 +816,16 @@ impl Agent for BasicAgent {
                         continue;
                     } else {
                         // No function calls, this is the final response
-                        final_response = response.message;
+                        final_response = response.content.unwrap_or_default();
                         break;
                     }
                 } else {
                     // No tools available, generate normally
                     let llm_start_time = std::time::Instant::now();
-                    let response = self.llm.generate(&all_messages, &options.llm_options).await?;
+                    let response = self.llm.generate_with_messages(&all_messages, &options.llm_options).await?;
                     let llm_duration = llm_start_time.elapsed();
                     
-                    // Update token usage if available
-                    if let Some(usage) = &response.usage {
-                        total_tokens.prompt_tokens += usage.prompt_tokens;
-                        total_tokens.completion_tokens += usage.completion_tokens;
-                        total_tokens.total_tokens += usage.total_tokens;
-                    }
+                    // Note: generate_with_messages returns String, no usage info available
                     
                     // Record LLM call in trace
                     if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
@@ -838,28 +835,20 @@ impl Agent for BasicAgent {
                         );
                         llm_step.duration_ms = llm_duration.as_millis() as u64;
                         llm_step.success = true;
-                        llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.message.len())));
-                        if let Some(usage) = &response.usage {
-                            llm_step.metadata.insert("tokens_used".to_string(), serde_json::Value::Number(serde_json::Number::from(usage.total_tokens)));
-                        }
-                        llm_step.output = Some(serde_json::Value::String(response.message.clone()));
+                        llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.len())));
+                        llm_step.output = Some(serde_json::Value::String(response.clone()));
                         
                         let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
                     }
                     
-                    final_response = response.message;
+                    final_response = response;
                     break;
                 }
             } else {
                 // Use legacy regex-based tool calling
-                let response = self.llm.generate(&all_messages, &options.llm_options).await?;
+                let response = self.llm.generate_with_messages(&all_messages, &options.llm_options).await?;
                 
-                // Update token usage if available
-                if let Some(usage) = &response.usage {
-                    total_tokens.prompt_tokens += usage.prompt_tokens;
-                    total_tokens.completion_tokens += usage.completion_tokens;
-                    total_tokens.total_tokens += usage.total_tokens;
-                }
+                // Note: generate_with_messages returns String, no usage info available
                 
                 // Record legacy LLM call in trace
                 if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
@@ -870,16 +859,13 @@ impl Agent for BasicAgent {
                     llm_step.duration_ms = step_start_time.elapsed().as_millis() as u64;
                     llm_step.success = true;
                     llm_step.metadata.insert("mode".to_string(), serde_json::Value::String("legacy_regex".to_string()));
-                    llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.message.len())));
-                    if let Some(usage) = &response.usage {
-                        llm_step.metadata.insert("tokens_used".to_string(), serde_json::Value::Number(serde_json::Number::from(usage.total_tokens)));
-                    }
-                    llm_step.output = Some(serde_json::Value::String(response.message.clone()));
+                    llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.len())));
+                    llm_step.output = Some(serde_json::Value::String(response.clone()));
                     
                     let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
                 }
                 
-                let tool_calls = self.parse_tool_calls(&response.message);
+                let tool_calls = self.parse_tool_calls(&response)?;
                 
                 if !tool_calls.is_empty() {
                     // Execute tools found in response text
@@ -988,7 +974,7 @@ impl Agent for BasicAgent {
                     }
                     
                     // Format tool results and add to messages
-                    let mut updated_response = response.message.clone();
+                    let mut updated_response = response.clone();
                     for (call, result) in tool_calls.iter().zip(tool_results.iter()) {
                         let result_text = match &result.status {
                             ToolResultStatus::Success => format!("结果: {}", result.result),
@@ -1009,13 +995,20 @@ impl Agent for BasicAgent {
                     all_messages.push(Message {
                         role: Role::Assistant,
                         content: updated_response.clone(),
+                        metadata: None,
+                        name: None,
                     });
                     
                     let step = AgentStep {
                         id: Uuid::new_v4().to_string(),
                         step_type: StepType::Tool,
                         input: all_messages.clone(),
-                        output: Some(updated_response.clone()),
+                        output: Some(Message {
+                            role: Role::Assistant,
+                            content: updated_response.clone(),
+                            metadata: None,
+                            name: None,
+                        }),
                         tool_calls,
                         tool_results,
                         metadata: HashMap::new(),
@@ -1025,7 +1018,7 @@ impl Agent for BasicAgent {
                     final_response = updated_response;
                 } else {
                     // No tool calls found, this is the final response
-                    final_response = response.message;
+                    final_response = response;
                     break;
                 }
             }
@@ -1041,7 +1034,7 @@ impl Agent for BasicAgent {
         // Finalize agent metrics
         if let Some(mut metrics) = agent_metrics {
             metrics.end_timing();
-            metrics.set_token_usage(total_tokens);
+            metrics.set_token_usage(total_tokens.clone());
             metrics.set_success(total_errors == 0);
             
             // Add custom metrics
@@ -1089,9 +1082,14 @@ impl Agent for BasicAgent {
         // Create final step
         let final_step = AgentStep {
             id: Uuid::new_v4().to_string(),
-            step_type: StepType::Response,
+            step_type: StepType::Final,
             input: all_messages.clone(),
-            output: Some(final_response.clone()),
+            output: Some(Message {
+                role: Role::Assistant,
+                content: final_response.clone(),
+                metadata: None,
+                name: None,
+            }),
             tool_calls: Vec::new(),
             tool_results: Vec::new(),
             metadata: HashMap::new(),
@@ -1105,11 +1103,11 @@ impl Agent for BasicAgent {
             response: final_response,
             steps,
             usage: TokenUsage {
-                prompt_tokens: total_tokens.prompt_tokens,
-                completion_tokens: total_tokens.completion_tokens,
-                total_tokens: total_tokens.total_tokens,
+                prompt_tokens: total_tokens.prompt_tokens as usize,
+                completion_tokens: total_tokens.completion_tokens as usize,
+                total_tokens: total_tokens.total_tokens as usize,
             },
-            messages: all_messages,
+            metadata: HashMap::new(),
         })
     }
     
@@ -1199,8 +1197,6 @@ impl Agent for BasicAgent {
                 max_steps: options.max_steps,
                 tool_choice: options.tool_choice.clone(),
                 llm_options: options.llm_options.clone(),
-                session_id: options.session_id.clone(),
-                user_id: options.user_id.clone(),
             }).await?;
             let generation_time = generation_start.elapsed();
             
@@ -1321,8 +1317,6 @@ impl Agent for BasicAgent {
                 max_steps: options.max_steps,
                 tool_choice: options.tool_choice.clone(),
                 llm_options: options.llm_options.clone(),
-                session_id: options.session_id.clone(),
-                user_id: options.user_id.clone(),
             }).await?;
             let generation_time = generation_start.elapsed();
             

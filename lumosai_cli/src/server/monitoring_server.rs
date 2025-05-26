@@ -4,9 +4,11 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, middleware, Result as ActixResult};
+use actix_web::{web, App, HttpServer, HttpResponse, Responder, middleware, Result as ActixResult, HttpRequest};
 use actix_files as fs;
 use actix_cors::Cors;
+use actix::{Actor, StreamHandler, ActorContext, AsyncContext, Running};
+use actix_web_actors::ws;
 use serde::{Serialize, Deserialize};
 use colored::Colorize;
 
@@ -71,6 +73,7 @@ pub struct MonitoringAppState {
     pub trace_collector: Arc<dyn TraceCollector>,
     pub config: MonitoringServerConfig,
     pub start_time: SystemTime,
+    pub websocket_manager: WebSocketManager,
 }
 
 /// 实时监控数据结构
@@ -935,7 +938,193 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
 
     <script>
         const API_BASE = window.location.origin;
+        const WS_URL = `ws://${window.location.host}/ws/monitoring`;
         let refreshInterval;
+        let websocket = null;
+        let wsConnectionStatus = 'disconnected';
+        let fallbackToHttp = false;
+
+        // WebSocket连接管理
+        function connectWebSocket() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            try {
+                websocket = new WebSocket(WS_URL);
+                
+                websocket.onopen = function(event) {
+                    console.log('WebSocket连接已建立');
+                    wsConnectionStatus = 'connected';
+                    fallbackToHttp = false;
+                    updateConnectionStatus();
+                    
+                    // 停止HTTP轮询
+                    if (refreshInterval) {
+                        clearInterval(refreshInterval);
+                        refreshInterval = null;
+                    }
+                };
+                
+                websocket.onmessage = function(event) {
+                    try {
+                        const message = JSON.parse(event.data);
+                        handleWebSocketMessage(message);
+                    } catch (error) {
+                        console.error('解析WebSocket消息失败:', error);
+                    }
+                };
+                
+                websocket.onclose = function(event) {
+                    console.log('WebSocket连接已断开');
+                    wsConnectionStatus = 'disconnected';
+                    updateConnectionStatus();
+                    
+                    // 启用HTTP轮询作为备用
+                    fallbackToHttp = true;
+                    startHttpPolling();
+                    
+                    // 尝试重连
+                    setTimeout(connectWebSocket, 5000);
+                };
+                
+                websocket.onerror = function(error) {
+                    console.error('WebSocket错误:', error);
+                    wsConnectionStatus = 'error';
+                    updateConnectionStatus();
+                };
+                
+            } catch (error) {
+                console.error('创建WebSocket连接失败:', error);
+                fallbackToHttp = true;
+                startHttpPolling();
+            }
+        }
+
+        // 处理WebSocket消息
+        function handleWebSocketMessage(message) {
+            switch (message.type) {
+                case 'RealTimeMetrics':
+                    updateDashboard(message.data);
+                    showDashboard();
+                    break;
+                case 'AgentStatus':
+                    updateAgentStatus(message.data);
+                    break;
+                case 'ErrorEvent':
+                    showErrorNotification(message.data);
+                    break;
+                case 'Alert':
+                    showAlert(message.data);
+                    break;
+                case 'Connected':
+                    console.log('WebSocket连接确认:', message.data.client_id);
+                    break;
+                case 'Ping':
+                    // 回复Pong
+                    if (websocket && websocket.readyState === WebSocket.OPEN) {
+                        websocket.send(JSON.stringify({
+                            type: 'Pong',
+                            data: { timestamp: message.data.timestamp }
+                        }));
+                    }
+                    break;
+                default:
+                    console.log('未知WebSocket消息类型:', message.type);
+            }
+        }
+
+        // 更新连接状态指示器
+        function updateConnectionStatus() {
+            // 在页面上添加连接状态指示器（如果不存在）
+            let statusIndicator = document.getElementById('connection-status');
+            if (!statusIndicator) {
+                statusIndicator = document.createElement('div');
+                statusIndicator.id = 'connection-status';
+                statusIndicator.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    padding: 8px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 500;
+                    z-index: 1000;
+                    transition: all 0.3s ease;
+                `;
+                document.body.appendChild(statusIndicator);
+            }
+            
+            switch (wsConnectionStatus) {
+                case 'connected':
+                    statusIndicator.textContent = '🟢 实时连接';
+                    statusIndicator.style.background = '#dcfce7';
+                    statusIndicator.style.color = '#166534';
+                    break;
+                case 'disconnected':
+                    statusIndicator.textContent = fallbackToHttp ? '🟡 HTTP轮询' : '🔴 已断开';
+                    statusIndicator.style.background = fallbackToHttp ? '#fef3c7' : '#fef2f2';
+                    statusIndicator.style.color = fallbackToHttp ? '#d97706' : '#dc2626';
+                    break;
+                case 'error':
+                    statusIndicator.textContent = '🔴 连接错误';
+                    statusIndicator.style.background = '#fef2f2';
+                    statusIndicator.style.color = '#dc2626';
+                    break;
+            }
+        }
+
+        // 显示告警通知
+        function showAlert(alert) {
+            const alertContainer = document.createElement('div');
+            alertContainer.style.cssText = `
+                position: fixed;
+                top: 60px;
+                right: 10px;
+                padding: 12px 16px;
+                border-radius: 8px;
+                max-width: 300px;
+                z-index: 1001;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            const bgColor = alert.level === 'error' ? '#fef2f2' : 
+                          alert.level === 'warning' ? '#fef3c7' : '#ecfdf5';
+            const textColor = alert.level === 'error' ? '#dc2626' : 
+                            alert.level === 'warning' ? '#d97706' : '#059669';
+            
+            alertContainer.style.background = bgColor;
+            alertContainer.style.color = textColor;
+            alertContainer.innerHTML = `
+                <div style="font-weight: 500; margin-bottom: 4px;">${alert.level.toUpperCase()}</div>
+                <div style="font-size: 14px;">${alert.message}</div>
+                <div style="font-size: 12px; opacity: 0.7; margin-top: 4px;">
+                    ${new Date(alert.timestamp).toLocaleTimeString()}
+                </div>
+            `;
+            
+            document.body.appendChild(alertContainer);
+            
+            // 5秒后自动移除
+            setTimeout(() => {
+                if (alertContainer.parentNode) {
+                    alertContainer.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => alertContainer.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        // 启动HTTP轮询作为WebSocket的备用方案
+        function startHttpPolling() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            refreshInterval = setInterval(() => {
+                if (!fallbackToHttp) return;
+                loadDashboardData();
+            }, 5000);
+        }
 
         // 格式化时间
         function formatDuration(seconds) {
@@ -966,10 +1155,10 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
             }
         }
 
-        // 加载仪表板数据
+        // 加载仪表板数据（HTTP备用方案）
         async function loadDashboardData() {
             try {
-                console.log('Loading dashboard data...');
+                console.log('Loading dashboard data via HTTP...');
                 const response = await fetch(`${API_BASE}/api/monitoring/realtime`);
                 
                 if (!response.ok) {
@@ -1127,6 +1316,318 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
     Ok(HttpResponse::Ok().content_type("text/html").body(dashboard_html))
 }
 
+/// WebSocket消息类型
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data")]
+pub enum WebSocketMessage {
+    /// 实时指标数据
+    RealTimeMetrics(RealTimeMetrics),
+    /// 代理状态更新
+    AgentStatus { agent_name: String, status: AgentStatus },
+    /// 错误事件
+    ErrorEvent(ErrorEvent),
+    /// 告警信息
+    Alert { level: String, message: String, timestamp: u64 },
+    /// 连接确认
+    Connected { client_id: String, timestamp: u64 },
+    /// 心跳检测
+    Ping { timestamp: u64 },
+    /// 心跳响应
+    Pong { timestamp: u64 },
+}
+
+/// WebSocket连接信息
+#[derive(Debug, Clone)]
+pub struct WebSocketConnectionInfo {
+    pub client_id: String,
+    pub connected_at: u64,
+    pub last_ping: u64,
+    pub addr: actix::Addr<MonitoringWebSocket>,
+}
+
+/// WebSocket连接管理器
+#[derive(Debug, Clone, Default)]
+pub struct WebSocketManager {
+    connections: Arc<RwLock<HashMap<String, WebSocketConnectionInfo>>>,
+}
+
+impl WebSocketManager {
+    pub fn new() -> Self {
+        Self {
+            connections: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// 添加新连接
+    pub async fn add_connection(&self, client_id: String, addr: actix::Addr<MonitoringWebSocket>) {
+        let connection_info = WebSocketConnectionInfo {
+            client_id: client_id.clone(),
+            connected_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+            last_ping: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+            addr,
+        };
+        
+        self.connections.write().await.insert(client_id, connection_info);
+    }
+
+    /// 移除连接
+    pub async fn remove_connection(&self, client_id: &str) {
+        self.connections.write().await.remove(client_id);
+    }
+
+    /// 广播消息给所有连接
+    pub async fn broadcast(&self, message: WebSocketMessage) {
+        let connections = self.connections.read().await;
+        for connection in connections.values() {
+            connection.addr.do_send(message.clone());
+        }
+    }
+
+    /// 获取连接数量
+    pub async fn connection_count(&self) -> usize {
+        self.connections.read().await.len()
+    }
+
+    /// 清理超时连接
+    pub async fn cleanup_stale_connections(&self, timeout_ms: u64) {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+        let mut connections = self.connections.write().await;
+        connections.retain(|_id, connection| {
+            now - connection.last_ping < timeout_ms
+        });
+    }
+}
+
+/// WebSocket Actor
+pub struct MonitoringWebSocket {
+    client_id: String,
+    websocket_manager: WebSocketManager,
+    last_heartbeat: std::time::Instant,
+}
+
+impl MonitoringWebSocket {
+    pub fn new(client_id: String, websocket_manager: WebSocketManager) -> Self {
+        Self {
+            client_id,
+            websocket_manager,
+            last_heartbeat: std::time::Instant::now(),
+        }
+    }
+
+    /// 开始心跳检测
+    fn start_heartbeat(&self, ctx: &mut ws::WebsocketContext<Self>) {
+        ctx.run_interval(Duration::from_secs(30), |act, ctx| {
+            // 检查是否超时
+            if std::time::Instant::now().duration_since(act.last_heartbeat) > Duration::from_secs(60) {
+                println!("WebSocket心跳超时，断开连接: {}", act.client_id);
+                ctx.stop();
+                return;
+            }
+            
+            // 发送心跳
+            let ping_message = WebSocketMessage::Ping {
+                timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+            };
+            
+            if let Ok(text) = serde_json::to_string(&ping_message) {
+                ctx.text(text);
+            }
+        });
+    }
+}
+
+impl Actor for MonitoringWebSocket {
+    type Context = ws::WebsocketContext<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        println!("WebSocket连接已建立: {}", self.client_id);
+        
+        // 开始心跳检测
+        self.start_heartbeat(ctx);
+        
+        // 注册连接
+        let client_id = self.client_id.clone();
+        let addr = ctx.address();
+        let manager = self.websocket_manager.clone();
+        
+        tokio::spawn(async move {
+            manager.add_connection(client_id.clone(), addr).await;
+        });
+        
+        // 发送连接确认消息
+        let connected_message = WebSocketMessage::Connected {
+            client_id: self.client_id.clone(),
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+        };
+        
+        if let Ok(text) = serde_json::to_string(&connected_message) {
+            ctx.text(text);
+        }
+    }
+
+    fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
+        println!("WebSocket连接正在断开: {}", self.client_id);
+        
+        // 从管理器中移除连接
+        let client_id = self.client_id.clone();
+        let manager = self.websocket_manager.clone();
+        
+        tokio::spawn(async move {
+            manager.remove_connection(&client_id).await;
+        });
+        
+        Running::Stop
+    }
+}
+
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MonitoringWebSocket {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        match msg {
+            Ok(ws::Message::Ping(msg)) => {
+                self.last_heartbeat = std::time::Instant::now();
+                ctx.pong(&msg);
+            }
+            Ok(ws::Message::Pong(_)) => {
+                self.last_heartbeat = std::time::Instant::now();
+            }
+            Ok(ws::Message::Text(text)) => {
+                self.last_heartbeat = std::time::Instant::now();
+                
+                // 处理客户端消息
+                if let Ok(message) = serde_json::from_str::<WebSocketMessage>(&text) {
+                    match message {
+                        WebSocketMessage::Ping { timestamp } => {
+                            let pong_message = WebSocketMessage::Pong { timestamp };
+                            if let Ok(response) = serde_json::to_string(&pong_message) {
+                                ctx.text(response);
+                            }
+                        }
+                        WebSocketMessage::Pong { .. } => {
+                            // 更新心跳时间
+                        }
+                        _ => {
+                            // 其他消息类型暂时忽略
+                        }
+                    }
+                }
+            }
+            Ok(ws::Message::Binary(_)) => {
+                // 不支持二进制消息
+            }
+            Ok(ws::Message::Close(reason)) => {
+                ctx.close(reason);
+                ctx.stop();
+            }
+            _ => ctx.stop(),
+        }
+    }
+}
+
+impl actix::Handler<WebSocketMessage> for MonitoringWebSocket {
+    type Result = ();
+
+    fn handle(&mut self, msg: WebSocketMessage, ctx: &mut Self::Context) {
+        if let Ok(text) = serde_json::to_string(&msg) {
+            ctx.text(text);
+        }
+    }
+}
+
+/// WebSocket连接处理器
+async fn websocket_handler(
+    req: HttpRequest,
+    stream: web::Payload,
+    data: web::Data<MonitoringAppState>,
+) -> ActixResult<impl Responder> {
+    // 生成客户端ID
+    let client_id = format!("client_{}", rand::random::<u32>());
+    
+    // 创建WebSocket Actor
+    let websocket = MonitoringWebSocket::new(client_id, data.websocket_manager.clone());
+    
+    // 启动WebSocket连接
+    ws::start(websocket, &req, stream)
+}
+
+/// 背景任务：广播实时指标数据
+async fn broadcast_realtime_metrics(
+    websocket_manager: WebSocketManager,
+    metrics_collector: Arc<dyn MetricsCollector>,
+    refresh_interval: u64,
+) {
+    let mut interval = tokio::time::interval(Duration::from_secs(refresh_interval));
+    
+    loop {
+        interval.tick().await;
+        
+        // 检查是否有WebSocket连接
+        if websocket_manager.connection_count().await == 0 {
+            continue;
+        }
+        
+        // 生成实时指标数据
+        match generate_realtime_metrics(&metrics_collector).await {
+            Ok(metrics) => {
+                let message = WebSocketMessage::RealTimeMetrics(metrics);
+                websocket_manager.broadcast(message).await;
+            }
+            Err(e) => {
+                eprintln!("生成实时指标数据失败: {}", e);
+                
+                // 发送错误告警
+                let alert_message = WebSocketMessage::Alert {
+                    level: "error".to_string(),
+                    message: format!("指标收集失败: {}", e),
+                    timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                };
+                websocket_manager.broadcast(alert_message).await;
+            }
+        }
+        
+        // 清理超时连接（5分钟超时）
+        websocket_manager.cleanup_stale_connections(5 * 60 * 1000).await;
+    }
+}
+
+/// 生成实时指标数据
+async fn generate_realtime_metrics(
+    metrics_collector: &Arc<dyn MetricsCollector>,
+) -> Result<RealTimeMetrics, Box<dyn std::error::Error + Send + Sync>> {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+
+    // 获取代理概览统计
+    let agent_overview = get_agent_overview(metrics_collector).await;
+    
+    // 获取活跃代理列表
+    let active_agents = get_active_agents(metrics_collector).await;
+    
+    // 获取系统性能指标
+    let system_metrics = get_system_metrics().await;
+    
+    // 获取最近错误
+    let recent_errors = get_recent_errors(metrics_collector).await;
+    
+    // 获取工具使用统计
+    let tool_usage = get_tool_usage_stats(metrics_collector).await;
+    
+    // 获取内存统计
+    let memory_stats = get_memory_stats(metrics_collector).await;
+
+    Ok(RealTimeMetrics {
+        timestamp: now,
+        uptime_seconds: now / 1000, // 简化的运行时间计算
+        agent_overview,
+        active_agents,
+        system_metrics,
+        recent_errors,
+        tool_usage,
+        memory_stats,
+    })
+}
+
 /// 启动监控服务器
 pub async fn start_monitoring_server(
     port: u16,
@@ -1144,12 +1645,14 @@ pub async fn start_monitoring_server(
     
     let config = MonitoringServerConfig::new(port, project_dir.clone());
     let start_time = SystemTime::now();
+    let websocket_manager = WebSocketManager::new();
     
     let app_state = MonitoringAppState {
-        metrics_collector,
+        metrics_collector: metrics_collector.clone(),
         trace_collector,
         config: config.clone(),
         start_time,
+        websocket_manager: websocket_manager.clone(),
     };
     
     println!("{}", "启动监控服务器...".bright_blue());
@@ -1158,6 +1661,13 @@ pub async fn start_monitoring_server(
     println!("{}", format!("实时监控: {}", if config.enable_realtime { "启用" } else { "禁用" }).bright_blue());
     
     let state_data = web::Data::new(app_state);
+    
+    // 启动背景任务来广播实时数据
+    tokio::spawn(broadcast_realtime_metrics(
+        websocket_manager.clone(),
+        metrics_collector.clone(),
+        config.refresh_interval,
+    ));
     
     // 创建并启动HTTP服务器
     let server = HttpServer::new(move || {
@@ -1175,6 +1685,8 @@ pub async fn start_monitoring_server(
             // 仪表板首页
             .service(web::resource("/").route(web::get().to(serve_dashboard)))
             .service(web::resource("/dashboard").route(web::get().to(serve_dashboard)))
+            // WebSocket端点
+            .service(web::resource("/ws/monitoring").route(web::get().to(websocket_handler)))
             // 健康检查端点
             .service(web::resource("/health").route(web::get().to(get_health_status)))
             // 实时监控数据端点
@@ -1189,18 +1701,19 @@ pub async fn start_monitoring_server(
             .service({
                 let static_dir = get_static_dir();
                 if static_dir.exists() {
-                    fs::Files::new("/static", static_dir).show_files_listing()
+                    fs::Files::new("/static", &static_dir).show_files_listing()
                 } else {
                     fs::Files::new("/static", ".").show_files_listing() // 占位符
                 }
             })
     })
-    .bind(config.get_bind_address())
-    .map_err(|e| CliError::io(format!("无法绑定到端口: {}", config.port), e))?
+    .bind(&config.get_bind_address())
+    .map_err(|e| CliError::io(&format!("无法绑定到端口: {}", config.port), e))?
     .run();
     
     println!("{}", "监控服务器已启动".bright_green());
     println!("{}", format!("仪表板: http://localhost:{}/", config.port).bright_green());
+    println!("{}", format!("WebSocket: ws://localhost:{}/ws/monitoring", config.port).bright_green());
     println!("{}", format!("健康检查: http://localhost:{}/health", config.port).bright_green());
     println!("{}", format!("实时监控API: http://localhost:{}/api/monitoring/realtime", config.port).bright_green());
     

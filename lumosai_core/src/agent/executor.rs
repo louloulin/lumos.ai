@@ -491,13 +491,28 @@ impl Agent for BasicAgent {
         let run_id = options.run_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
         let max_steps = options.max_steps.unwrap_or(5);
         let mut current_step = 0;
-        let metadata = HashMap::new();
         
-        // Start monitoring
+        // Initialize comprehensive monitoring
         let start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
+        
+        // Create execution context for telemetry
+        let execution_context = ExecutionContext {
+            session_id: options.session_id.clone(),
+            user_id: options.user_id.clone(),
+            request_id: Some(run_id.clone()),
+            environment: std::env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string()),
+            version: Some(env!("CARGO_PKG_VERSION").to_string()),
+        };
+        
+        // Initialize agent metrics
+        let mut agent_metrics = if self.metrics_collector.is_some() {
+            Some(AgentMetrics::new(self.name.clone(), execution_context.clone()))
+        } else {
+            None
+        };
         
         // Start execution trace
         let trace_id = if let Some(trace_collector) = &self.trace_collector {
@@ -508,10 +523,14 @@ impl Agent for BasicAgent {
                     trace_metadata.insert("run_id".to_string(), serde_json::Value::String(run_id.clone()));
                     trace_metadata.insert("agent_name".to_string(), serde_json::Value::String(self.name.clone()));
                     trace_metadata.insert("max_steps".to_string(), serde_json::Value::Number(serde_json::Number::from(max_steps)));
+                    trace_metadata.insert("message_count".to_string(), serde_json::Value::Number(serde_json::Number::from(messages.len())));
                     trace_metadata
                 }
             ).await {
-                Ok(id) => Some(id),
+                Ok(id) => {
+                    self.logger().debug(&format!("Started execution trace: {}", id), None);
+                    Some(id)
+                },
                 Err(e) => {
                     self.logger().warn(&format!("Failed to start trace: {}", e), None);
                     None
@@ -520,6 +539,21 @@ impl Agent for BasicAgent {
         } else {
             None
         };
+        
+        // Record initial trace step
+        if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+            let mut init_step = TraceStep::new(
+                "Agent execution started".to_string(),
+                TraceStepType::DataProcessing,
+            );
+            init_step.input = Some(serde_json::to_value(messages).unwrap_or_default());
+            init_step.metadata.insert("messages_count".to_string(), serde_json::Value::Number(serde_json::Number::from(messages.len())));
+            init_step.metadata.insert("max_steps".to_string(), serde_json::Value::Number(serde_json::Number::from(max_steps)));
+            init_step.success = true;
+            init_step.duration_ms = 0;
+            
+            let _ = trace_collector.add_trace_step(trace_id, init_step).await;
+        }
         
         // Log the generation start
         self.logger().debug(&format!("Starting generation for agent '{}' (run_id: {})", self.name, run_id), None);
@@ -537,14 +571,49 @@ impl Agent for BasicAgent {
         steps.push(initial_step);
         
         let mut final_response = String::new();
+        let mut total_tokens = TelemetryTokenUsage::default();
+        let mut total_tool_calls = 0;
+        let mut total_errors = 0;
         
         // Check if we should use function calling
         let use_function_calling = self.enable_function_calling && 
                                   self.llm.supports_function_calling() &&
                                   !self.tools.lock().map(|tools| tools.is_empty()).unwrap_or(true);
         
+        self.logger().info(&format!("Using function calling mode: {}", use_function_calling), None);
+        
+        // Record function calling mode in trace
+        if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+            let mut mode_step = TraceStep::new(
+                "Function calling mode determined".to_string(),
+                TraceStepType::DataProcessing,
+            );
+            mode_step.metadata.insert("function_calling_enabled".to_string(), serde_json::Value::Bool(use_function_calling));
+            mode_step.metadata.insert("tools_available".to_string(), serde_json::Value::Number(serde_json::Number::from(self.tools.lock().map(|t| t.len()).unwrap_or(0))));
+            mode_step.success = true;
+            mode_step.duration_ms = 0;
+            
+            let _ = trace_collector.add_trace_step(trace_id, mode_step).await;
+        }
+
         while current_step < max_steps {
             current_step += 1;
+            let step_start_time = std::time::Instant::now();
+            
+            self.logger().debug(&format!("Starting step {} of {}", current_step, max_steps), None);
+            
+            // Record step start in trace
+            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                let mut step = TraceStep::new(
+                    format!("Step {} - LLM Generation", current_step),
+                    TraceStepType::LlmCall,
+                );
+                step.metadata.insert("step_number".to_string(), serde_json::Value::Number(serde_json::Number::from(current_step)));
+                step.metadata.insert("messages_count".to_string(), serde_json::Value::Number(serde_json::Number::from(all_messages.len())));
+                step.input = Some(serde_json::to_value(&all_messages).unwrap_or_default());
+                
+                let _ = trace_collector.add_trace_step(trace_id, step).await;
+            }
             
             if use_function_calling {
                 // Use OpenAI function calling
@@ -563,6 +632,8 @@ impl Agent for BasicAgent {
                     };
                     
                     let llm_options = options.llm_options.clone();
+                    let llm_start_time = std::time::Instant::now();
+                    
                     let response: crate::llm::provider::FunctionCallingResponse = self.llm.generate_with_functions(
                         &all_messages, 
                         &function_definitions,
@@ -570,10 +641,45 @@ impl Agent for BasicAgent {
                         &llm_options
                     ).await?;
                     
+                    let llm_duration = llm_start_time.elapsed();
+                    
+                    // Update token usage
+                    if let Some(usage) = &response.usage {
+                        total_tokens.prompt_tokens += usage.prompt_tokens;
+                        total_tokens.completion_tokens += usage.completion_tokens;
+                        total_tokens.total_tokens += usage.total_tokens;
+                    }
+                    
+                    // Record LLM call completion in trace
+                    if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                        let mut llm_step = TraceStep::new(
+                            format!("LLM call completed - step {}", current_step),
+                            TraceStepType::LlmCall,
+                        );
+                        llm_step.duration_ms = llm_duration.as_millis() as u64;
+                        llm_step.success = true;
+                        llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.message.len())));
+                        llm_step.metadata.insert("function_calls_count".to_string(), serde_json::Value::Number(serde_json::Number::from(response.function_calls.len())));
+                        if let Some(usage) = &response.usage {
+                            llm_step.metadata.insert("tokens_used".to_string(), serde_json::Value::Number(serde_json::Number::from(usage.total_tokens)));
+                        }
+                        llm_step.output = Some(serde_json::json!({
+                            "message": response.message,
+                            "function_calls_count": response.function_calls.len()
+                        }));
+                        
+                        let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
+                    }
+                    
                     if !response.function_calls.is_empty() {
-                        // Execute function calls with enhanced logging
+                        // Execute function calls with enhanced logging and metrics
                         let tool_calls = self.parse_function_calls(&response.function_calls);
                         let mut tool_results = Vec::new();
+                        
+                        total_tool_calls += tool_calls.len();
+                        if let Some(ref mut metrics) = agent_metrics {
+                            metrics.tool_calls_count += tool_calls.len();
+                        }
                         
                         self.logger().info(&format!("Executing {} function calls", tool_calls.len()), None);
                         
@@ -583,28 +689,14 @@ impl Agent for BasicAgent {
                                 serde_json::to_string_pretty(&call.arguments).unwrap_or_else(|_| "{}".to_string())
                             ), None);
                             
-                            let start_time = std::time::Instant::now();
-                            
-                            // Add trace step for tool call start
-                            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                                let mut step = TraceStep::new(
-                                    format!("Starting tool call: {}", call.name),
-                                    TraceStepType::ToolCall,
-                                );
-                                step.metadata.insert("tool_name".to_string(), serde_json::Value::String(call.name.clone()));
-                                step.metadata.insert("arguments".to_string(), serde_json::to_value(&call.arguments).unwrap_or_default());
-                                step.duration_ms = 0; // Duration will be updated when complete
-                                step.success = true;
-                                
-                                let _ = trace_collector.add_trace_step(trace_id, step).await;
-                            }
+                            let tool_start_time = std::time::Instant::now();
                             
                             let result = match self.execute_tool_call(call).await {
                                 Ok(result) => {
-                                    let execution_time = start_time.elapsed();
+                                    let execution_time = tool_start_time.elapsed();
                                     self.logger().debug(&format!("Function call '{}' completed in {:?}", call.name, execution_time), None);
                                     
-                                    // Record tool metrics
+                                    // Record successful tool metrics
                                     if let Some(metrics_collector) = &self.metrics_collector {
                                         let tool_metrics = crate::telemetry::ToolMetrics {
                                             tool_name: call.name.clone(),
@@ -619,17 +711,20 @@ impl Agent for BasicAgent {
                                         let _ = metrics_collector.record_tool_execution(tool_metrics).await;
                                     }
                                     
-                                    // Complete trace step for successful tool call
+                                    // Record successful tool call in trace
                                     if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
                                         let mut step = TraceStep::new(
-                                            format!("Tool call {} completed successfully", call.name),
+                                            format!("Tool call: {} - Success", call.name),
                                             TraceStepType::ToolCall,
                                         );
                                         step.metadata.insert("tool_name".to_string(), serde_json::Value::String(call.name.clone()));
                                         step.metadata.insert("success".to_string(), serde_json::Value::Bool(true));
-                                        step.metadata.insert("result_size".to_string(), serde_json::Value::Number(serde_json::Number::from(serde_json::to_string(&result).unwrap_or_default().len())));
+                                        step.metadata.insert("input_size".to_string(), serde_json::Value::Number(serde_json::Number::from(serde_json::to_string(&call.arguments).unwrap_or_default().len())));
+                                        step.metadata.insert("output_size".to_string(), serde_json::Value::Number(serde_json::Number::from(serde_json::to_string(&result).unwrap_or_default().len())));
                                         step.duration_ms = execution_time.as_millis() as u64;
                                         step.success = true;
+                                        step.input = Some(serde_json::to_value(&call.arguments).unwrap_or_default());
+                                        step.output = Some(serde_json::to_value(&result).unwrap_or_default());
                                         
                                         let _ = trace_collector.add_trace_step(trace_id, step).await;
                                     }
@@ -642,7 +737,12 @@ impl Agent for BasicAgent {
                                     }
                                 },
                                 Err(e) => {
-                                    let execution_time = start_time.elapsed();
+                                    let execution_time = tool_start_time.elapsed();
+                                    total_errors += 1;
+                                    if let Some(ref mut metrics) = agent_metrics {
+                                        metrics.record_error();
+                                    }
+                                    
                                     self.logger().error(&format!("Function call '{}' failed after {:?}: {}", call.name, execution_time, e), None);
                                     
                                     // Record failed tool metrics
@@ -660,10 +760,10 @@ impl Agent for BasicAgent {
                                         let _ = metrics_collector.record_tool_execution(tool_metrics).await;
                                     }
                                     
-                                    // Complete trace step for failed tool call
+                                    // Record failed tool call in trace
                                     if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
                                         let mut step = TraceStep::new(
-                                            format!("Tool call {} failed: {}", call.name, e),
+                                            format!("Tool call: {} - Failed", call.name),
                                             TraceStepType::ToolCall,
                                         );
                                         step.metadata.insert("tool_name".to_string(), serde_json::Value::String(call.name.clone()));
@@ -672,6 +772,7 @@ impl Agent for BasicAgent {
                                         step.duration_ms = execution_time.as_millis() as u64;
                                         step.success = false;
                                         step.error = Some(e.to_string());
+                                        step.input = Some(serde_json::to_value(&call.arguments).unwrap_or_default());
                                         
                                         let _ = trace_collector.add_trace_step(trace_id, step).await;
                                     }
@@ -682,317 +783,333 @@ impl Agent for BasicAgent {
                                         result: Value::String(format!("Error: {}", e)),
                                         status: ToolResultStatus::Error,
                                     }
-                                },
+                                }
                             };
                             
                             tool_results.push(result);
                         }
                         
-                        // Create a tool step
-                        let tool_step = AgentStep {
+                        // Add tool results to messages and continue
+                        all_messages.push(Message {
+                            role: Role::Assistant,
+                            content: response.message.clone(),
+                        });
+                        
+                        for result in &tool_results {
+                            all_messages.push(tool_message(&result.result.to_string()));
+                        }
+                        
+                        let step = AgentStep {
                             id: Uuid::new_v4().to_string(),
                             step_type: StepType::Tool,
                             input: all_messages.clone(),
-                            output: Some(Message {
-                                role: Role::Assistant,
-                                content: response.content.clone().unwrap_or_default(),
-                                metadata: None,
-                                name: None,
-                            }),
-                            tool_calls,
-                            tool_results: tool_results.clone(),
+                            output: Some(response.message.clone()),
+                            tool_calls: tool_calls,
+                            tool_results: tool_results,
                             metadata: HashMap::new(),
                         };
+                        steps.push(step);
                         
-                        steps.push(tool_step);
-                        
-                        // Add assistant message with function calls
-                        all_messages.push(Message {
-                            role: Role::Assistant,
-                            content: response.content.unwrap_or_default(),
-                            metadata: None,
-                            name: None,
-                        });
-                        
-                        // Add tool results to messages
-                        for result in tool_results {
-                            let content = format!("Tool result from {}: {}", 
-                                result.name, 
-                                serde_json::to_string_pretty(&result.result).unwrap_or_else(|_| "Error serializing result".to_string())
-                            );
-                            
-                            all_messages.push(tool_message(content));
-                        }
-                        
-                        continue; // Continue the loop for the next step
+                        // Continue to next iteration to get final response
+                        continue;
+                    } else {
+                        // No function calls, this is the final response
+                        final_response = response.message;
+                        break;
+                    }
+                } else {
+                    // No tools available, generate normally
+                    let llm_start_time = std::time::Instant::now();
+                    let response = self.llm.generate(&all_messages, &options.llm_options).await?;
+                    let llm_duration = llm_start_time.elapsed();
+                    
+                    // Update token usage if available
+                    if let Some(usage) = &response.usage {
+                        total_tokens.prompt_tokens += usage.prompt_tokens;
+                        total_tokens.completion_tokens += usage.completion_tokens;
+                        total_tokens.total_tokens += usage.total_tokens;
                     }
                     
-                    // No function calls, this is the final response
-                    let content = response.content.unwrap_or_default();
-                    let final_step = AgentStep {
-                        id: Uuid::new_v4().to_string(),
-                        step_type: StepType::Final,
-                        input: all_messages.clone(),
-                        output: Some(Message {
-                            role: Role::Assistant,
-                            content: content.clone(),
-                            metadata: None,
-                            name: None,
-                        }),
-                        tool_calls: Vec::new(),
-                        tool_results: Vec::new(),
-                        metadata: HashMap::new(),
-                    };
+                    // Record LLM call in trace
+                    if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                        let mut llm_step = TraceStep::new(
+                            "Final LLM call (no tools)".to_string(),
+                            TraceStepType::LlmCall,
+                        );
+                        llm_step.duration_ms = llm_duration.as_millis() as u64;
+                        llm_step.success = true;
+                        llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.message.len())));
+                        if let Some(usage) = &response.usage {
+                            llm_step.metadata.insert("tokens_used".to_string(), serde_json::Value::Number(serde_json::Number::from(usage.total_tokens)));
+                        }
+                        llm_step.output = Some(serde_json::Value::String(response.message.clone()));
+                        
+                        let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
+                    }
                     
-                    steps.push(final_step);
-                    final_response = content;
-                    break;
-                } else {
-                    // No tools available, fall back to regular generation
-                    let llm_options = options.llm_options.clone();
-                    let response = self.llm.generate_with_messages(&all_messages, &llm_options).await?;
-                    
-                    let final_step = AgentStep {
-                        id: Uuid::new_v4().to_string(),
-                        step_type: StepType::Final,
-                        input: all_messages.clone(),
-                        output: Some(Message {
-                            role: Role::Assistant,
-                            content: response.clone(),
-                            metadata: None,
-                            name: None,
-                        }),
-                        tool_calls: Vec::new(),
-                        tool_results: Vec::new(),
-                        metadata: HashMap::new(),
-                    };
-                    
-                    steps.push(final_step);
-                    final_response = response;
+                    final_response = response.message;
                     break;
                 }
             } else {
-                // Use traditional regex-based tool calling
-                let llm_options = options.llm_options.clone();
-                let response = self.llm.generate_with_messages(&all_messages, &llm_options).await?;
+                // Use legacy regex-based tool calling
+                let response = self.llm.generate(&all_messages, &options.llm_options).await?;
                 
-                // Parse the response to see if it contains tool calls
-                let tool_calls = self.parse_tool_calls(&response);
+                // Update token usage if available
+                if let Some(usage) = &response.usage {
+                    total_tokens.prompt_tokens += usage.prompt_tokens;
+                    total_tokens.completion_tokens += usage.completion_tokens;
+                    total_tokens.total_tokens += usage.total_tokens;
+                }
                 
-                if let Ok(calls) = tool_calls {
-                    if calls.is_empty() {
-                        // No tool calls, this is the final response
-                        let final_step = AgentStep {
-                            id: Uuid::new_v4().to_string(),
-                            step_type: StepType::Final,
-                            input: all_messages.clone(),
-                            output: Some(Message {
-                                role: Role::Assistant,
-                                content: response.clone(),
-                                metadata: None,
-                                name: None,
-                            }),
-                            tool_calls: Vec::new(),
-                            tool_results: Vec::new(),
-                            metadata: HashMap::new(),
-                        };
+                // Record legacy LLM call in trace
+                if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                    let mut llm_step = TraceStep::new(
+                        format!("Legacy LLM call - step {}", current_step),
+                        TraceStepType::LlmCall,
+                    );
+                    llm_step.duration_ms = step_start_time.elapsed().as_millis() as u64;
+                    llm_step.success = true;
+                    llm_step.metadata.insert("mode".to_string(), serde_json::Value::String("legacy_regex".to_string()));
+                    llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.message.len())));
+                    if let Some(usage) = &response.usage {
+                        llm_step.metadata.insert("tokens_used".to_string(), serde_json::Value::Number(serde_json::Number::from(usage.total_tokens)));
+                    }
+                    llm_step.output = Some(serde_json::Value::String(response.message.clone()));
+                    
+                    let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
+                }
+                
+                let tool_calls = self.parse_tool_calls(&response.message);
+                
+                if !tool_calls.is_empty() {
+                    // Execute tools found in response text
+                    let mut tool_results = Vec::new();
+                    total_tool_calls += tool_calls.len();
+                    if let Some(ref mut metrics) = agent_metrics {
+                        metrics.tool_calls_count += tool_calls.len();
+                    }
+                    
+                    for call in &tool_calls {
+                        let tool_start_time = std::time::Instant::now();
                         
-                        steps.push(final_step);
-                        final_response = response;
-                        break;
-                    } else {
-                        // We have tool calls, execute them
-                        let mut tool_results = Vec::new();
-                        
-                        for call in &calls {
-                            let result = match self.execute_tool_call(call).await {
-                                Ok(result) => ToolResult {
+                        let result = match self.execute_tool_call(call).await {
+                            Ok(result) => {
+                                let execution_time = tool_start_time.elapsed();
+                                
+                                // Record successful legacy tool metrics
+                                if let Some(metrics_collector) = &self.metrics_collector {
+                                    let tool_metrics = crate::telemetry::ToolMetrics {
+                                        tool_name: call.name.clone(),
+                                        execution_time_ms: execution_time.as_millis() as u64,
+                                        success: true,
+                                        error: None,
+                                        input_size_bytes: serde_json::to_string(&call.arguments).unwrap_or_default().len(),
+                                        output_size_bytes: serde_json::to_string(&result).unwrap_or_default().len(),
+                                        timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                                    };
+                                    
+                                    let _ = metrics_collector.record_tool_execution(tool_metrics).await;
+                                }
+                                
+                                // Record legacy tool call in trace
+                                if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                                    let mut step = TraceStep::new(
+                                        format!("Legacy tool call: {} - Success", call.name),
+                                        TraceStepType::ToolCall,
+                                    );
+                                    step.metadata.insert("mode".to_string(), serde_json::Value::String("legacy_regex".to_string()));
+                                    step.metadata.insert("tool_name".to_string(), serde_json::Value::String(call.name.clone()));
+                                    step.metadata.insert("success".to_string(), serde_json::Value::Bool(true));
+                                    step.duration_ms = execution_time.as_millis() as u64;
+                                    step.success = true;
+                                    step.input = Some(serde_json::to_value(&call.arguments).unwrap_or_default());
+                                    step.output = Some(serde_json::to_value(&result).unwrap_or_default());
+                                    
+                                    let _ = trace_collector.add_trace_step(trace_id, step).await;
+                                }
+                                
+                                ToolResult {
                                     call_id: call.id.clone(),
                                     name: call.name.clone(),
                                     result,
                                     status: ToolResultStatus::Success,
-                                },
-                                Err(e) => ToolResult {
+                                }
+                            },
+                            Err(e) => {
+                                let execution_time = tool_start_time.elapsed();
+                                total_errors += 1;
+                                if let Some(ref mut metrics) = agent_metrics {
+                                    metrics.record_error();
+                                }
+                                
+                                // Record failed legacy tool metrics
+                                if let Some(metrics_collector) = &self.metrics_collector {
+                                    let tool_metrics = crate::telemetry::ToolMetrics {
+                                        tool_name: call.name.clone(),
+                                        execution_time_ms: execution_time.as_millis() as u64,
+                                        success: false,
+                                        error: Some(e.to_string()),
+                                        input_size_bytes: serde_json::to_string(&call.arguments).unwrap_or_default().len(),
+                                        output_size_bytes: 0,
+                                        timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                                    };
+                                    
+                                    let _ = metrics_collector.record_tool_execution(tool_metrics).await;
+                                }
+                                
+                                // Record failed legacy tool call in trace
+                                if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                                    let mut step = TraceStep::new(
+                                        format!("Legacy tool call: {} - Failed", call.name),
+                                        TraceStepType::ToolCall,
+                                    );
+                                    step.metadata.insert("mode".to_string(), serde_json::Value::String("legacy_regex".to_string()));
+                                    step.metadata.insert("tool_name".to_string(), serde_json::Value::String(call.name.clone()));
+                                    step.metadata.insert("success".to_string(), serde_json::Value::Bool(false));
+                                    step.metadata.insert("error".to_string(), serde_json::Value::String(e.to_string()));
+                                    step.duration_ms = execution_time.as_millis() as u64;
+                                    step.success = false;
+                                    step.error = Some(e.to_string());
+                                    step.input = Some(serde_json::to_value(&call.arguments).unwrap_or_default());
+                                    
+                                    let _ = trace_collector.add_trace_step(trace_id, step).await;
+                                }
+                                
+                                ToolResult {
                                     call_id: call.id.clone(),
                                     name: call.name.clone(),
                                     result: Value::String(format!("Error: {}", e)),
                                     status: ToolResultStatus::Error,
-                                },
-                            };
-                            
-                            tool_results.push(result);
-                        }
-                        
-                        // Create a tool step
-                        let tool_step = AgentStep {
-                            id: Uuid::new_v4().to_string(),
-                            step_type: StepType::Tool,
-                            input: all_messages.clone(),
-                            output: Some(Message {
-                                role: Role::Assistant,
-                                content: response,
-                                metadata: None,
-                                name: None,
-                            }),
-                            tool_calls: calls,
-                            tool_results: tool_results.clone(),
-                            metadata: HashMap::new(),
+                                }
+                            }
                         };
                         
-                        steps.push(tool_step);
+                        tool_results.push(result);
+                    }
+                    
+                    // Format tool results and add to messages
+                    let mut updated_response = response.message.clone();
+                    for (call, result) in tool_calls.iter().zip(tool_results.iter()) {
+                        let result_text = match &result.status {
+                            ToolResultStatus::Success => format!("结果: {}", result.result),
+                            ToolResultStatus::Error => format!("错误: {}", result.result),
+                        };
                         
-                        // Add tool results to messages
-                        for result in tool_results {
-                            let content = format!("Tool result from {}: {}", 
-                                result.name, 
-                                serde_json::to_string_pretty(&result.result).unwrap_or_else(|_| "Error serializing result".to_string())
-                            );
-                            
-                            all_messages.push(tool_message(content));
+                        // Replace the tool call in the response with the result
+                        let tool_pattern = format!(r"工具: {}\s*参数: [^\n]*", regex::escape(&call.name));
+                        if let Ok(re) = Regex::new(&tool_pattern) {
+                            updated_response = re.replace(&updated_response, &format!("工具: {}\n参数: {}\n{}", 
+                                call.name, 
+                                serde_json::to_string(&call.arguments).unwrap_or_else(|_| "{}".to_string()),
+                                result_text
+                            )).to_string();
                         }
                     }
-                } else {
-                    // Error parsing tool calls, treat as final response
-                    let final_step = AgentStep {
+                    
+                    all_messages.push(Message {
+                        role: Role::Assistant,
+                        content: updated_response.clone(),
+                    });
+                    
+                    let step = AgentStep {
                         id: Uuid::new_v4().to_string(),
-                        step_type: StepType::Final,
+                        step_type: StepType::Tool,
                         input: all_messages.clone(),
-                        output: Some(Message {
-                            role: Role::Assistant,
-                            content: response.clone(),
-                            metadata: None,
-                            name: None,
-                        }),
-                        tool_calls: Vec::new(),
-                        tool_results: Vec::new(),
+                        output: Some(updated_response.clone()),
+                        tool_calls,
+                        tool_results,
                         metadata: HashMap::new(),
                     };
+                    steps.push(step);
                     
-                    steps.push(final_step);
-                    final_response = response;
+                    final_response = updated_response;
+                } else {
+                    // No tool calls found, this is the final response
+                    final_response = response.message;
                     break;
                 }
             }
         }
         
-        // If we've reached the maximum number of steps without a final response, use the last response
-        if current_step >= max_steps && final_response.is_empty() {
-            if let Some(last_step) = steps.last() {
-                if let Some(output) = &last_step.output {
-                    final_response = output.content.clone();
-                }
-            }
-        }
-        
-        // Create a token usage estimate (this would be provided by the actual LLM in a real implementation)
-        let usage = TokenUsage {
-            prompt_tokens: all_messages.iter().map(|m| m.content.len() / 4).sum(),
-            completion_tokens: final_response.len() / 4,
-            total_tokens: all_messages.iter().map(|m| m.content.len() / 4).sum::<usize>() + final_response.len() / 4,
-        };
-        
-        // Calculate execution metrics
+        // Calculate total execution time
         let end_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
+        let total_execution_time = end_time - start_time;
         
-        let execution_time_ms = end_time - start_time;
-        let success = !final_response.is_empty();
-        
-        // Count tool calls and memory operations
-        let tool_calls_count = steps.iter()
-            .map(|step| step.tool_calls.len())
-            .sum::<usize>();
-        
-        let memory_operations = if self.memory.is_some() || self.working_memory.is_some() { 
-            current_step as usize // Approximate based on steps 
-        } else { 
-            0 
-        };
-        
-        // Record metrics
-        if let Some(metrics_collector) = &self.metrics_collector {
-            let agent_metrics = AgentMetrics {
-                agent_name: self.name.clone(),
-                execution_id: run_id.clone(),
-                start_time,
-                end_time,
-                execution_time_ms,
-                success,
-                token_usage: TelemetryTokenUsage {
-                    prompt_tokens: usage.prompt_tokens as u32,
-                    completion_tokens: usage.completion_tokens as u32,
-                    total_tokens: usage.total_tokens as u32,
-                },
-                tool_calls_count,
-                memory_operations,
-                error_count: if success { 0 } else { 1 },
-                custom_metrics: {
-                    let mut custom = HashMap::new();
-                    custom.insert("steps_count".to_string(), crate::telemetry::MetricValue::Integer(current_step as i64));
-                    custom.insert("max_steps".to_string(), crate::telemetry::MetricValue::Integer(max_steps as i64));
-                    custom.insert("response_length".to_string(), crate::telemetry::MetricValue::Integer(final_response.len() as i64));
-                    custom
-                },
-                context: ExecutionContext {
-                    session_id: options.thread_id.clone(),
-                    user_id: None,
-                    request_id: Some(run_id.clone()),
-                    environment: "development".to_string(),
-                    version: Some("1.0.0".to_string()),
-                },
-            };
+        // Finalize agent metrics
+        if let Some(mut metrics) = agent_metrics {
+            metrics.end_timing();
+            metrics.set_token_usage(total_tokens);
+            metrics.set_success(total_errors == 0);
             
-            if let Err(e) = metrics_collector.record_agent_execution(agent_metrics).await {
-                self.logger().warn(&format!("Failed to record agent metrics: {}", e), None);
+            // Add custom metrics
+            metrics.add_custom_metric("total_steps".to_string(), crate::telemetry::MetricValue::Integer(current_step as i64));
+            metrics.add_custom_metric("function_calling_mode".to_string(), crate::telemetry::MetricValue::Boolean(use_function_calling));
+            metrics.add_custom_metric("response_length".to_string(), crate::telemetry::MetricValue::Integer(final_response.len() as i64));
+            
+            // Record the agent execution metrics
+            if let Some(metrics_collector) = &self.metrics_collector {
+                if let Err(e) = metrics_collector.record_agent_execution(metrics).await {
+                    self.logger().warn(&format!("Failed to record agent metrics: {}", e), None);
+                }
             }
         }
         
         // Complete execution trace
         if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-            // Add final step to trace
-            let mut step = TraceStep::new(
-                format!("Agent {} generation complete", self.name),
-                TraceStepType::LlmCall,
+            // Add final completion step
+            let mut completion_step = TraceStep::new(
+                "Agent execution completed".to_string(),
+                TraceStepType::DataProcessing,
             );
-            step.metadata.insert("final_response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(final_response.len())));
-            step.metadata.insert("total_steps".to_string(), serde_json::Value::Number(serde_json::Number::from(current_step)));
-            step.metadata.insert("success".to_string(), serde_json::Value::Bool(success));
-            step.duration_ms = execution_time_ms;
-            step.success = success;
+            completion_step.metadata.insert("total_steps".to_string(), serde_json::Value::Number(serde_json::Number::from(current_step)));
+            completion_step.metadata.insert("total_tool_calls".to_string(), serde_json::Value::Number(serde_json::Number::from(total_tool_calls)));
+            completion_step.metadata.insert("total_errors".to_string(), serde_json::Value::Number(serde_json::Number::from(total_errors)));
+            completion_step.metadata.insert("execution_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(total_execution_time)));
+            completion_step.success = total_errors == 0;
+            completion_step.duration_ms = 0;
+            completion_step.output = Some(serde_json::json!({
+                "response": final_response,
+                "response_length": final_response.len(),
+                "success": total_errors == 0
+            }));
             
-            if let Err(e) = trace_collector.add_trace_step(trace_id, step).await {
-                self.logger().warn(&format!("Failed to add final trace step: {}", e), None);
-            }
+            let _ = trace_collector.add_trace_step(&trace_id, completion_step).await;
             
-            // Complete the trace
-            if let Err(e) = trace_collector.end_trace(trace_id, success).await {
-                self.logger().warn(&format!("Failed to complete trace: {}", e), None);
+            // End the trace
+            if let Err(e) = trace_collector.end_trace(&trace_id, total_errors == 0).await {
+                self.logger().warn(&format!("Failed to end trace: {}", e), None);
+            } else {
+                self.logger().debug(&format!("Completed execution trace: {}", trace_id), None);
             }
         }
         
-        // Record telemetry metrics (legacy support)
-        if let Some(telemetry) = &self.telemetry {
-            let _guard = telemetry.start_span("agent_generate", None);
-            
-            telemetry.record("agent_name", &self.name);
-            telemetry.record("run_id", &run_id);
-            telemetry.record("total_steps", &current_step);
-            telemetry.record("max_steps", &max_steps);
-            telemetry.record("final_response_length", &final_response.len());
-            
-            // Record token usage
-            telemetry.record("prompt_tokens", &usage.prompt_tokens);
-            telemetry.record("completion_tokens", &usage.completion_tokens);
-            telemetry.record("total_tokens", &usage.total_tokens);
-        }
+        // Create final step
+        let final_step = AgentStep {
+            id: Uuid::new_v4().to_string(),
+            step_type: StepType::Response,
+            input: all_messages.clone(),
+            output: Some(final_response.clone()),
+            tool_calls: Vec::new(),
+            tool_results: Vec::new(),
+            metadata: HashMap::new(),
+        };
+        steps.push(final_step);
+        
+        self.logger().info(&format!("Agent '{}' completed execution in {}ms with {} steps, {} tool calls, {} errors", 
+            self.name, total_execution_time, current_step, total_tool_calls, total_errors), None);
         
         Ok(AgentGenerateResult {
             response: final_response,
             steps,
-            usage,
-            metadata,
+            usage: TokenUsage {
+                prompt_tokens: total_tokens.prompt_tokens,
+                completion_tokens: total_tokens.completion_tokens,
+                total_tokens: total_tokens.total_tokens,
+            },
+            messages: all_messages,
         })
     }
     
@@ -1000,25 +1117,107 @@ impl Agent for BasicAgent {
         messages: &'a [Message], 
         options: &'a AgentStreamOptions
     ) -> Result<BoxStream<'a, Result<String>>> {
+        let stream_start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+        
+        let run_id = options.run_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
+        
+        // Record streaming start in trace
+        let trace_id = if let Some(trace_collector) = &self.trace_collector {
+            match trace_collector.start_trace(
+                format!("agent_{}_stream", self.name),
+                {
+                    let mut metadata = HashMap::new();
+                    metadata.insert("run_id".to_string(), serde_json::Value::String(run_id.clone()));
+                    metadata.insert("agent_name".to_string(), serde_json::Value::String(self.name.clone()));
+                    metadata.insert("streaming_mode".to_string(), serde_json::Value::Bool(true));
+                    metadata.insert("messages_count".to_string(), serde_json::Value::Number(serde_json::Number::from(messages.len())));
+                    metadata
+                }
+            ).await {
+                Ok(id) => {
+                    self.logger().debug(&format!("Started streaming trace: {}", id), None);
+                    Some(id)
+                },
+                Err(e) => {
+                    self.logger().warn(&format!("Failed to start streaming trace: {}", e), None);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        
         // Check if we should use function calling for streaming
         let use_function_calling = self.enable_function_calling && 
                                   self.llm.supports_function_calling() &&
                                   !self.tools.lock().map(|tools| tools.is_empty()).unwrap_or(true);
         
+        self.logger().info(&format!("Starting streaming generation (function_calling: {}, run_id: {})", use_function_calling, run_id), None);
+        
+        // Record streaming mode determination in trace
+        if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+            let mut mode_step = TraceStep::new(
+                "Streaming mode determined".to_string(),
+                TraceStepType::DataProcessing,
+            );
+            mode_step.metadata.insert("function_calling_enabled".to_string(), serde_json::Value::Bool(use_function_calling));
+            mode_step.metadata.insert("tools_available".to_string(), serde_json::Value::Number(serde_json::Number::from(self.tools.lock().map(|t| t.len()).unwrap_or(0))));
+            mode_step.success = true;
+            mode_step.duration_ms = 0;
+            
+            let _ = trace_collector.add_trace_step(trace_id, mode_step).await;
+        }
+        
         if use_function_calling {
             // For function calling, we need to process the complete response first
             // then stream the results (since function calls need to be executed)
+            
+            // Add trace step for function calling execution
+            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                let mut fc_step = TraceStep::new(
+                    "Function calling execution started".to_string(),
+                    TraceStepType::DataProcessing,
+                );
+                fc_step.metadata.insert("mode".to_string(), serde_json::Value::String("function_calling".to_string()));
+                fc_step.success = true;
+                fc_step.duration_ms = 0;
+                
+                let _ = trace_collector.add_trace_step(trace_id, fc_step).await;
+            }
+            
+            let generation_start = std::time::Instant::now();
             let result = self.generate(messages, &AgentGenerateOptions {
                 instructions: options.instructions.clone(),
                 context: options.context.clone(),
                 memory_options: options.memory_options.clone(),
                 thread_id: options.thread_id.clone(),
                 resource_id: options.resource_id.clone(),
-                run_id: options.run_id.clone(),
+                run_id: Some(run_id.clone()),
                 max_steps: options.max_steps,
                 tool_choice: options.tool_choice.clone(),
                 llm_options: options.llm_options.clone(),
+                session_id: options.session_id.clone(),
+                user_id: options.user_id.clone(),
             }).await?;
+            let generation_time = generation_start.elapsed();
+            
+            // Record generation completion in trace
+            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                let mut gen_step = TraceStep::new(
+                    "Function calling generation completed".to_string(),
+                    TraceStepType::DataProcessing,
+                );
+                gen_step.metadata.insert("generation_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(generation_time.as_millis() as u64)));
+                gen_step.metadata.insert("steps_executed".to_string(), serde_json::Value::Number(serde_json::Number::from(result.steps.len())));
+                gen_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(result.response.len())));
+                gen_step.success = true;
+                gen_step.duration_ms = generation_time.as_millis() as u64;
+                
+                let _ = trace_collector.add_trace_step(trace_id, gen_step).await;
+            }
             
             // Stream the function call steps and final response
             let mut stream_items = Vec::new();
@@ -1056,10 +1255,38 @@ impl Agent for BasicAgent {
                     _ => {
                         // Handle other step types
                         if let Some(output) = &step.output {
-                            stream_items.push(output.content.clone());
+                            let output_chunks = output.content
+                                .chars()
+                                .collect::<Vec<_>>()
+                                .chunks(20)
+                                .map(|c| c.iter().collect::<String>())
+                                .collect::<Vec<_>>();
+                            stream_items.extend(output_chunks);
                         }
                     }
                 }
+            }
+            
+            // Record streaming completion in trace
+            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                let stream_time = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64 - stream_start_time;
+                
+                let mut stream_step = TraceStep::new(
+                    "Streaming output prepared".to_string(),
+                    TraceStepType::DataProcessing,
+                );
+                stream_step.metadata.insert("stream_chunks".to_string(), serde_json::Value::Number(serde_json::Number::from(stream_items.len())));
+                stream_step.metadata.insert("total_streaming_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(stream_time)));
+                stream_step.success = true;
+                stream_step.duration_ms = stream_time;
+                
+                let _ = trace_collector.add_trace_step(trace_id, stream_step).await;
+                
+                // End the streaming trace
+                let _ = trace_collector.end_trace(trace_id, true).await;
             }
             
             let stream = stream::iter(stream_items)
@@ -1069,17 +1296,49 @@ impl Agent for BasicAgent {
             Ok(stream)
         } else {
             // Fallback to regular streaming without function calling
+            
+            // Add trace step for legacy mode
+            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                let mut legacy_step = TraceStep::new(
+                    "Legacy streaming execution started".to_string(),
+                    TraceStepType::DataProcessing,
+                );
+                legacy_step.metadata.insert("mode".to_string(), serde_json::Value::String("legacy_regex".to_string()));
+                legacy_step.success = true;
+                legacy_step.duration_ms = 0;
+                
+                let _ = trace_collector.add_trace_step(trace_id, legacy_step).await;
+            }
+            
+            let generation_start = std::time::Instant::now();
             let result = self.generate(messages, &AgentGenerateOptions {
                 instructions: options.instructions.clone(),
                 context: options.context.clone(),
                 memory_options: options.memory_options.clone(),
                 thread_id: options.thread_id.clone(),
                 resource_id: options.resource_id.clone(),
-                run_id: options.run_id.clone(),
+                run_id: Some(run_id.clone()),
                 max_steps: options.max_steps,
                 tool_choice: options.tool_choice.clone(),
                 llm_options: options.llm_options.clone(),
+                session_id: options.session_id.clone(),
+                user_id: options.user_id.clone(),
             }).await?;
+            let generation_time = generation_start.elapsed();
+            
+            // Record legacy generation completion in trace
+            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                let mut gen_step = TraceStep::new(
+                    "Legacy generation completed".to_string(),
+                    TraceStepType::DataProcessing,
+                );
+                gen_step.metadata.insert("generation_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(generation_time.as_millis() as u64)));
+                gen_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(result.response.len())));
+                gen_step.success = true;
+                gen_step.duration_ms = generation_time.as_millis() as u64;
+                
+                let _ = trace_collector.add_trace_step(trace_id, gen_step).await;
+            }
             
             // Split the response into chunks for streaming simulation
             let chunks = result.response
@@ -1088,6 +1347,28 @@ impl Agent for BasicAgent {
                 .chunks(20)
                 .map(|c| c.iter().collect::<String>())
                 .collect::<Vec<_>>();
+            
+            // Record streaming completion in trace
+            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
+                let stream_time = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64 - stream_start_time;
+                
+                let mut stream_step = TraceStep::new(
+                    "Legacy streaming output prepared".to_string(),
+                    TraceStepType::DataProcessing,
+                );
+                stream_step.metadata.insert("stream_chunks".to_string(), serde_json::Value::Number(serde_json::Number::from(chunks.len())));
+                stream_step.metadata.insert("total_streaming_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(stream_time)));
+                stream_step.success = true;
+                stream_step.duration_ms = stream_time;
+                
+                let _ = trace_collector.add_trace_step(trace_id, stream_step).await;
+                
+                // End the streaming trace
+                let _ = trace_collector.end_trace(trace_id, true).await;
+            }
             
             let stream = stream::iter(chunks)
                 .map(Ok)

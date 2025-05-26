@@ -1,0 +1,1212 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::net::TcpListener;
+use tokio::sync::RwLock;
+use actix_web::{web, App, HttpServer, HttpResponse, Responder, middleware, Result as ActixResult};
+use actix_files as fs;
+use actix_cors::Cors;
+use serde::{Serialize, Deserialize};
+use colored::Colorize;
+
+use lumosai_core::telemetry::metrics::{
+    MetricsCollector, AgentMetrics, ToolMetrics, MemoryMetrics, 
+    MetricsSummary, AgentPerformance, TimeRange
+};
+use lumosai_core::telemetry::collectors::InMemoryMetricsCollector;
+use lumosai_core::telemetry::trace::{TraceCollector, ExecutionTrace};
+use crate::error::{CliResult, CliError};
+use crate::util::get_available_port;
+
+/// 监控服务器配置
+#[derive(Debug, Clone)]
+pub struct MonitoringServerConfig {
+    /// 服务器绑定地址
+    pub bind_address: String,
+    /// 服务器端口
+    pub port: u16,
+    /// 项目目录
+    pub project_dir: PathBuf,
+    /// 是否启用实时监控
+    pub enable_realtime: bool,
+    /// 指标刷新间隔（秒）
+    pub refresh_interval: u64,
+}
+
+impl Default for MonitoringServerConfig {
+    fn default() -> Self {
+        Self {
+            bind_address: "127.0.0.1".to_string(),
+            port: 4001,
+            project_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+            enable_realtime: true,
+            refresh_interval: 5,
+        }
+    }
+}
+
+impl MonitoringServerConfig {
+    /// 创建新配置
+    pub fn new(port: u16, project_dir: PathBuf) -> Self {
+        Self {
+            bind_address: "127.0.0.1".to_string(),
+            port,
+            project_dir,
+            enable_realtime: true,
+            refresh_interval: 5,
+        }
+    }
+
+    /// 获取完整绑定地址
+    pub fn get_bind_address(&self) -> String {
+        format!("{}:{}", self.bind_address, self.port)
+    }
+}
+
+/// 监控应用状态
+#[derive(Clone)]
+pub struct MonitoringAppState {
+    pub metrics_collector: Arc<dyn MetricsCollector>,
+    pub trace_collector: Arc<dyn TraceCollector>,
+    pub config: MonitoringServerConfig,
+    pub start_time: SystemTime,
+}
+
+/// 实时监控数据结构
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RealTimeMetrics {
+    /// 当前时间戳
+    pub timestamp: u64,
+    /// 系统运行时间（秒）
+    pub uptime_seconds: u64,
+    /// 代理概览统计
+    pub agent_overview: AgentOverview,
+    /// 活跃代理列表
+    pub active_agents: Vec<AgentStatus>,
+    /// 系统性能指标
+    pub system_metrics: SystemMetrics,
+    /// 最近错误
+    pub recent_errors: Vec<ErrorEvent>,
+    /// 工具使用统计
+    pub tool_usage: Vec<ToolUsageStats>,
+    /// 内存操作统计
+    pub memory_stats: MemoryStats,
+}
+
+/// 代理概览统计
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AgentOverview {
+    /// 总代理数
+    pub total_agents: u64,
+    /// 活跃代理数
+    pub active_agents: u64,
+    /// 总执行次数
+    pub total_executions: u64,
+    /// 成功执行次数
+    pub successful_executions: u64,
+    /// 成功率
+    pub success_rate: f64,
+    /// 平均响应时间（毫秒）
+    pub avg_response_time: f64,
+    /// 总Token使用量
+    pub total_tokens: u64,
+}
+
+/// 代理状态
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AgentStatus {
+    /// 代理名称
+    pub name: String,
+    /// 最后活动时间
+    pub last_activity: u64,
+    /// 是否活跃
+    pub is_active: bool,
+    /// 最近1小时执行次数
+    pub executions_last_hour: u64,
+    /// 平均响应时间
+    pub avg_response_time: f64,
+    /// 成功率
+    pub success_rate: f64,
+    /// 当前状态
+    pub status: String,
+}
+
+/// 系统性能指标
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SystemMetrics {
+    /// CPU使用率（百分比）
+    pub cpu_usage: f64,
+    /// 内存使用（MB）
+    pub memory_usage_mb: f64,
+    /// 活跃连接数
+    pub active_connections: u64,
+    /// 请求处理速率（每分钟）
+    pub requests_per_minute: f64,
+    /// 错误率
+    pub error_rate: f64,
+}
+
+/// 错误事件
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ErrorEvent {
+    /// 时间戳
+    pub timestamp: u64,
+    /// 代理名称
+    pub agent_name: String,
+    /// 错误类型
+    pub error_type: String,
+    /// 错误消息
+    pub error_message: String,
+    /// 严重程度
+    pub severity: String,
+}
+
+/// 工具使用统计
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ToolUsageStats {
+    /// 工具名称
+    pub tool_name: String,
+    /// 使用次数
+    pub usage_count: u64,
+    /// 平均执行时间
+    pub avg_execution_time: f64,
+    /// 成功率
+    pub success_rate: f64,
+    /// 最后使用时间
+    pub last_used: u64,
+}
+
+/// 内存操作统计
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MemoryStats {
+    /// 总操作次数
+    pub total_operations: u64,
+    /// 读操作次数
+    pub read_operations: u64,
+    /// 写操作次数
+    pub write_operations: u64,
+    /// 平均操作时间
+    pub avg_operation_time: f64,
+    /// 缓存命中率
+    pub cache_hit_rate: f64,
+    /// 存储使用量（MB）
+    pub storage_usage_mb: f64,
+}
+
+/// 监控API响应
+#[derive(Serialize, Deserialize)]
+pub struct MonitoringApiResponse<T> {
+    pub success: bool,
+    pub data: Option<T>,
+    pub error: Option<String>,
+    pub timestamp: u64,
+}
+
+impl<T> MonitoringApiResponse<T> {
+    pub fn success(data: T) -> Self {
+        Self {
+            success: true,
+            data: Some(data),
+            error: None,
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
+        }
+    }
+
+    pub fn error(message: String) -> Self {
+        Self {
+            success: false,
+            data: None,
+            error: Some(message),
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
+        }
+    }
+}
+
+/// 检查服务器端口是否可用
+async fn check_port_available(port: u16) -> bool {
+    TcpListener::bind(format!("127.0.0.1:{}", port)).await.is_ok()
+}
+
+/// 获取实时监控数据处理器
+async fn get_realtime_metrics(
+    data: web::Data<MonitoringAppState>,
+) -> ActixResult<impl Responder> {
+    let state = data.get_ref();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    
+    let uptime = now - state.start_time
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+
+    // 获取代理概览统计
+    let agent_overview = get_agent_overview(&state.metrics_collector).await;
+    
+    // 获取活跃代理列表
+    let active_agents = get_active_agents(&state.metrics_collector).await;
+    
+    // 获取系统性能指标
+    let system_metrics = get_system_metrics().await;
+    
+    // 获取最近错误
+    let recent_errors = get_recent_errors(&state.metrics_collector).await;
+    
+    // 获取工具使用统计
+    let tool_usage = get_tool_usage_stats(&state.metrics_collector).await;
+    
+    // 获取内存统计
+    let memory_stats = get_memory_stats(&state.metrics_collector).await;
+
+    let metrics = RealTimeMetrics {
+        timestamp: now,
+        uptime_seconds: uptime / 1000,
+        agent_overview,
+        active_agents,
+        system_metrics,
+        recent_errors,
+        tool_usage,
+        memory_stats,
+    };
+
+    Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(metrics)))
+}
+
+/// 获取代理概览统计
+async fn get_agent_overview(collector: &Arc<dyn MetricsCollector>) -> AgentOverview {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    
+    let twenty_four_hours_ago = now - (24 * 60 * 60 * 1000);
+    
+    // 获取最近24小时的统计
+    let summary = collector
+        .get_metrics_summary(None, Some(twenty_four_hours_ago), Some(now))
+        .await
+        .unwrap_or_else(|_| MetricsSummary {
+            total_executions: 0,
+            successful_executions: 0,
+            failed_executions: 0,
+            avg_execution_time_ms: 0.0,
+            min_execution_time_ms: 0,
+            max_execution_time_ms: 0,
+            total_tokens_used: 0,
+            avg_tokens_per_execution: 0.0,
+            tool_call_stats: HashMap::new(),
+            time_range: TimeRange {
+                start: twenty_four_hours_ago,
+                end: now,
+            },
+        });
+
+    let success_rate = if summary.total_executions > 0 {
+        summary.successful_executions as f64 / summary.total_executions as f64
+    } else {
+        0.0
+    };
+
+    AgentOverview {
+        total_agents: 5, // 示例数据，实际应从配置获取
+        active_agents: 3, // 示例数据
+        total_executions: summary.total_executions,
+        successful_executions: summary.successful_executions,
+        success_rate,
+        avg_response_time: summary.avg_execution_time_ms,
+        total_tokens: summary.total_tokens_used,
+    }
+}
+
+/// 获取活跃代理列表
+async fn get_active_agents(collector: &Arc<dyn MetricsCollector>) -> Vec<AgentStatus> {
+    // 示例数据，实际应从collector获取真实数据
+    vec![
+        AgentStatus {
+            name: "chat_agent".to_string(),
+            last_activity: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
+            is_active: true,
+            executions_last_hour: 15,
+            avg_response_time: 1200.0,
+            success_rate: 0.95,
+            status: "healthy".to_string(),
+        },
+        AgentStatus {
+            name: "research_agent".to_string(),
+            last_activity: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64 - 300000, // 5分钟前
+            is_active: true,
+            executions_last_hour: 8,
+            avg_response_time: 2800.0,
+            success_rate: 0.92,
+            status: "healthy".to_string(),
+        },
+    ]
+}
+
+/// 获取系统性能指标
+async fn get_system_metrics() -> SystemMetrics {
+    // 示例数据，实际应从系统获取真实指标
+    SystemMetrics {
+        cpu_usage: 45.2,
+        memory_usage_mb: 512.0,
+        active_connections: 25,
+        requests_per_minute: 120.0,
+        error_rate: 0.02,
+    }
+}
+
+/// 获取最近错误
+async fn get_recent_errors(collector: &Arc<dyn MetricsCollector>) -> Vec<ErrorEvent> {
+    // 示例数据，实际应从collector获取真实错误数据
+    vec![
+        ErrorEvent {
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64 - 120000, // 2分钟前
+            agent_name: "chat_agent".to_string(),
+            error_type: "timeout".to_string(),
+            error_message: "Request timeout after 30 seconds".to_string(),
+            severity: "warning".to_string(),
+        },
+    ]
+}
+
+/// 获取工具使用统计
+async fn get_tool_usage_stats(collector: &Arc<dyn MetricsCollector>) -> Vec<ToolUsageStats> {
+    // 示例数据，实际应从collector获取真实工具使用数据
+    vec![
+        ToolUsageStats {
+            tool_name: "web_search".to_string(),
+            usage_count: 45,
+            avg_execution_time: 2500.0,
+            success_rate: 0.93,
+            last_used: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
+        },
+        ToolUsageStats {
+            tool_name: "file_reader".to_string(),
+            usage_count: 28,
+            avg_execution_time: 800.0,
+            success_rate: 0.98,
+            last_used: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64 - 180000, // 3分钟前
+        },
+    ]
+}
+
+/// 获取内存统计
+async fn get_memory_stats(collector: &Arc<dyn MetricsCollector>) -> MemoryStats {
+    // 示例数据，实际应从collector获取真实内存统计
+    MemoryStats {
+        total_operations: 1250,
+        read_operations: 850,
+        write_operations: 400,
+        avg_operation_time: 25.0,
+        cache_hit_rate: 0.87,
+        storage_usage_mb: 128.0,
+    }
+}
+
+/// 获取代理性能统计处理器
+async fn get_agent_performance(
+    path: web::Path<String>,
+    data: web::Data<MonitoringAppState>,
+) -> ActixResult<impl Responder> {
+    let agent_name = path.into_inner();
+    let state = data.get_ref();
+
+    match state.metrics_collector.get_agent_performance(&agent_name).await {
+        Ok(performance) => {
+            Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(performance)))
+        }
+        Err(e) => {
+            Ok(HttpResponse::NotFound().json(MonitoringApiResponse::<()>::error(
+                format!("Agent '{}' not found: {}", agent_name, e)
+            )))
+        }
+    }
+}
+
+/// 获取指标摘要处理器
+async fn get_metrics_summary(
+    query: web::Query<HashMap<String, String>>,
+    data: web::Data<MonitoringAppState>,
+) -> ActixResult<impl Responder> {
+    let state = data.get_ref();
+    
+    let agent_name = query.get("agent").map(|s| s.as_str());
+    let from_time = query.get("from").and_then(|s| s.parse::<u64>().ok());
+    let to_time = query.get("to").and_then(|s| s.parse::<u64>().ok());
+
+    match state.metrics_collector.get_metrics_summary(agent_name, from_time, to_time).await {
+        Ok(summary) => {
+            Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(summary)))
+        }
+        Err(e) => {
+            Ok(HttpResponse::InternalServerError().json(MonitoringApiResponse::<()>::error(
+                format!("Failed to get metrics summary: {}", e)
+            )))
+        }
+    }
+}
+
+/// 获取系统健康状态处理器
+async fn get_health_status(
+    data: web::Data<MonitoringAppState>,
+) -> ActixResult<impl Responder> {
+    let state = data.get_ref();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    
+    let uptime = now - state.start_time
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+
+    let health_status = serde_json::json!({
+        "status": "healthy",
+        "uptime_ms": uptime,
+        "timestamp": now,
+        "services": {
+            "metrics_collector": "healthy",
+            "trace_collector": "healthy",
+            "api_server": "healthy"
+        },
+        "version": env!("CARGO_PKG_VERSION")
+    });
+
+    Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(health_status)))
+}
+
+/// 获取监控配置处理器
+async fn get_monitoring_config(
+    data: web::Data<MonitoringAppState>,
+) -> ActixResult<impl Responder> {
+    let state = data.get_ref();
+    
+    let config_info = serde_json::json!({
+        "port": state.config.port,
+        "bind_address": state.config.bind_address,
+        "enable_realtime": state.config.enable_realtime,
+        "refresh_interval": state.config.refresh_interval,
+        "project_dir": state.config.project_dir.display().to_string()
+    });
+
+    Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(config_info)))
+}
+
+/// 获取静态资源目录
+fn get_static_dir() -> PathBuf {
+    // 尝试多个可能的路径
+    let possible_paths = [
+        PathBuf::from("static/monitoring"),
+        PathBuf::from("lumosai_cli/static/monitoring"),
+        PathBuf::from("../lumosai_cli/static/monitoring"),
+        std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|p| p.join("static/monitoring")))
+            .unwrap_or_else(|| PathBuf::from("static/monitoring")),
+    ];
+
+    for path in &possible_paths {
+        if path.exists() && path.join("index.html").exists() {
+            return path.clone();
+        }
+    }
+
+    // 如果找不到，返回默认路径（稍后会创建）
+    PathBuf::from("static/monitoring")
+}
+
+/// 创建默认的dashboard HTML（如果静态文件不存在）
+async fn serve_dashboard() -> ActixResult<impl Responder> {
+    let static_dir = get_static_dir();
+    let dashboard_path = static_dir.join("index.html");
+    
+    if dashboard_path.exists() {
+        match tokio::fs::read_to_string(&dashboard_path).await {
+            Ok(content) => {
+                return Ok(HttpResponse::Ok().content_type("text/html").body(content));
+            }
+            Err(_) => {
+                // 如果读取失败，使用内嵌的HTML
+            }
+        }
+    }
+    
+    // 使用内嵌的HTML内容
+    let dashboard_html = r#"<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumosai 监控仪表板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-healthy {
+            background: #10b981;
+        }
+
+        .status-warning {
+            background: #f59e0b;
+        }
+
+        .status-error {
+            background: #ef4444;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #fecaca;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #64748b;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-left-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .refresh-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transition: all 0.2s;
+        }
+
+        .refresh-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .agent-list {
+            margin-top: 1rem;
+        }
+
+        .agent-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .agent-name {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .agent-status {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .timestamp {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Lumosai 监控仪表板</h1>
+        <p>实时监控AI代理的性能和健康状态</p>
+    </div>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            正在加载监控数据...
+        </div>
+
+        <div id="error-container" style="display: none;"></div>
+
+        <div id="dashboard" class="dashboard" style="display: none;">
+            <!-- 系统概览 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #dbeafe; color: #2563eb;">
+                        📊
+                    </div>
+                    <div class="card-title">系统概览</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">运行时间</span>
+                    <span class="metric-value" id="uptime">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">总代理数</span>
+                    <span class="metric-value" id="total-agents">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">活跃代理</span>
+                    <span class="metric-value" id="active-agents">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">总执行次数</span>
+                    <span class="metric-value" id="total-executions">-</span>
+                </div>
+            </div>
+
+            <!-- 性能指标 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #dcfce7; color: #059669;">
+                        ⚡
+                    </div>
+                    <div class="card-title">性能指标</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">成功率</span>
+                    <span class="metric-value" id="success-rate">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">平均响应时间</span>
+                    <span class="metric-value" id="avg-response-time">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Token使用量</span>
+                    <span class="metric-value" id="total-tokens">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">错误率</span>
+                    <span class="metric-value" id="error-rate">-</span>
+                </div>
+            </div>
+
+            <!-- 系统资源 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #fef3c7; color: #d97706;">
+                        💾
+                    </div>
+                    <div class="card-title">系统资源</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">CPU使用率</span>
+                    <span class="metric-value" id="cpu-usage">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">内存使用</span>
+                    <span class="metric-value" id="memory-usage">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">活跃连接</span>
+                    <span class="metric-value" id="active-connections">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">请求速率</span>
+                    <span class="metric-value" id="requests-per-minute">-</span>
+                </div>
+            </div>
+
+            <!-- 活跃代理 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #f3e8ff; color: #7c3aed;">
+                        🤖
+                    </div>
+                    <div class="card-title">活跃代理</div>
+                </div>
+                <div id="agent-list" class="agent-list">
+                    <!-- 代理列表将在这里动态生成 -->
+                </div>
+            </div>
+
+            <!-- 内存操作 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #ecfdf5; color: #059669;">
+                        🧠
+                    </div>
+                    <div class="card-title">内存操作</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">总操作数</span>
+                    <span class="metric-value" id="memory-total-ops">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">读操作</span>
+                    <span class="metric-value" id="memory-read-ops">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">写操作</span>
+                    <span class="metric-value" id="memory-write-ops">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">缓存命中率</span>
+                    <span class="metric-value" id="cache-hit-rate">-</span>
+                </div>
+            </div>
+
+            <!-- 最近错误 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #fef2f2; color: #dc2626;">
+                        ⚠️
+                    </div>
+                    <div class="card-title">最近错误</div>
+                </div>
+                <div id="recent-errors">
+                    <!-- 错误列表将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <div class="timestamp" id="last-update">
+            最后更新: -
+        </div>
+    </div>
+
+    <button class="refresh-button" onclick="loadDashboardData()" title="刷新数据">
+        🔄
+    </button>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let refreshInterval;
+
+        // 格式化时间
+        function formatDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}小时 ${minutes}分钟`;
+            } else if (minutes > 0) {
+                return `${minutes}分钟 ${secs}秒`;
+            } else {
+                return `${secs}秒`;
+            }
+        }
+
+        // 格式化百分比
+        function formatPercentage(value) {
+            return `${(value * 100).toFixed(1)}%`;
+        }
+
+        // 格式化时间（毫秒）
+        function formatTime(ms) {
+            if (ms >= 1000) {
+                return `${(ms / 1000).toFixed(2)}秒`;
+            } else {
+                return `${ms.toFixed(0)}毫秒`;
+            }
+        }
+
+        // 加载仪表板数据
+        async function loadDashboardData() {
+            try {
+                console.log('Loading dashboard data...');
+                const response = await fetch(`${API_BASE}/api/monitoring/realtime`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Received data:', data);
+                
+                if (!data.success) {
+                    throw new Error(data.error || '获取数据失败');
+                }
+                
+                updateDashboard(data.data);
+                showDashboard();
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showError(`加载监控数据失败: ${error.message}`);
+            }
+        }
+
+        // 更新仪表板
+        function updateDashboard(metrics) {
+            // 系统概览
+            document.getElementById('uptime').textContent = formatDuration(metrics.uptime_seconds);
+            document.getElementById('total-agents').textContent = metrics.agent_overview.total_agents;
+            document.getElementById('active-agents').textContent = metrics.agent_overview.active_agents;
+            document.getElementById('total-executions').textContent = metrics.agent_overview.total_executions;
+
+            // 性能指标
+            document.getElementById('success-rate').textContent = formatPercentage(metrics.agent_overview.success_rate);
+            document.getElementById('avg-response-time').textContent = formatTime(metrics.agent_overview.avg_response_time);
+            document.getElementById('total-tokens').textContent = metrics.agent_overview.total_tokens.toLocaleString();
+            document.getElementById('error-rate').textContent = formatPercentage(metrics.system_metrics.error_rate);
+
+            // 系统资源
+            document.getElementById('cpu-usage').textContent = `${metrics.system_metrics.cpu_usage.toFixed(1)}%`;
+            document.getElementById('memory-usage').textContent = `${metrics.system_metrics.memory_usage_mb.toFixed(1)} MB`;
+            document.getElementById('active-connections').textContent = metrics.system_metrics.active_connections;
+            document.getElementById('requests-per-minute').textContent = `${metrics.system_metrics.requests_per_minute.toFixed(1)}/分钟`;
+
+            // 活跃代理
+            const agentList = document.getElementById('agent-list');
+            agentList.innerHTML = '';
+            
+            if (metrics.active_agents.length === 0) {
+                agentList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 1rem;">暂无活跃代理</div>';
+            } else {
+                metrics.active_agents.forEach(agent => {
+                    const agentItem = document.createElement('div');
+                    agentItem.className = 'agent-item';
+                    agentItem.innerHTML = `
+                        <div class="agent-name">
+                            <span class="status-indicator status-${agent.is_active ? 'healthy' : 'warning'}"></span>
+                            ${agent.name}
+                        </div>
+                        <div class="agent-status">${agent.status}</div>
+                    `;
+                    agentList.appendChild(agentItem);
+                });
+            }
+
+            // 内存操作
+            document.getElementById('memory-total-ops').textContent = metrics.memory_stats.total_operations.toLocaleString();
+            document.getElementById('memory-read-ops').textContent = metrics.memory_stats.read_operations.toLocaleString();
+            document.getElementById('memory-write-ops').textContent = metrics.memory_stats.write_operations.toLocaleString();
+            document.getElementById('cache-hit-rate').textContent = formatPercentage(metrics.memory_stats.cache_hit_rate);
+
+            // 最近错误
+            const errorsContainer = document.getElementById('recent-errors');
+            errorsContainer.innerHTML = '';
+            
+            if (metrics.recent_errors.length === 0) {
+                errorsContainer.innerHTML = '<div style="text-align: center; color: #10b981; padding: 1rem;">✅ 无最近错误</div>';
+            } else {
+                metrics.recent_errors.forEach(error => {
+                    const errorItem = document.createElement('div');
+                    errorItem.className = 'metric';
+                    errorItem.innerHTML = `
+                        <div>
+                            <div style="font-weight: 500; color: #dc2626;">${error.error_type}</div>
+                            <div style="font-size: 0.8rem; color: #64748b;">${error.agent_name}</div>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #64748b;">
+                            ${new Date(error.timestamp).toLocaleTimeString()}
+                        </div>
+                    `;
+                    errorsContainer.appendChild(errorItem);
+                });
+            }
+
+            // 更新时间戳
+            document.getElementById('last-update').textContent = 
+                `最后更新: ${new Date().toLocaleTimeString()}`;
+        }
+
+        // 显示仪表板
+        function showDashboard() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-container').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'grid';
+        }
+
+        // 显示错误
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
+            
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.innerHTML = `
+                <div class="error-message">
+                    ${message}
+                    <br><br>
+                    <button onclick="loadDashboardData()" style="background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+                        重试
+                    </button>
+                </div>
+            `;
+            errorContainer.style.display = 'block';
+        }
+
+        // 启动自动刷新
+        function startAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            refreshInterval = setInterval(() => {
+                loadDashboardData();
+            }, 5000); // 每5秒刷新一次
+        }
+
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            loadDashboardData();
+            startAutoRefresh();
+        });
+
+        // 页面隐藏时停止刷新，显示时恢复
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            } else {
+                startAutoRefresh();
+                loadDashboardData();
+            }
+        });
+    </script>
+</body>
+</html>"#;
+    Ok(HttpResponse::Ok().content_type("text/html").body(dashboard_html))
+}
+
+/// 启动监控服务器
+pub async fn start_monitoring_server(
+    port: u16,
+    project_dir: PathBuf,
+    metrics_collector: Arc<dyn MetricsCollector>,
+    trace_collector: Arc<dyn TraceCollector>,
+) -> CliResult<()> {
+    // 检查端口是否可用
+    if !check_port_available(port).await {
+        let new_port = get_available_port(port).unwrap_or(port + 1);
+        println!("{}", format!("端口 {} 已被占用，使用端口 {}", port, new_port).bright_yellow());
+        
+        return start_monitoring_server(new_port, project_dir, metrics_collector, trace_collector).await;
+    }
+    
+    let config = MonitoringServerConfig::new(port, project_dir.clone());
+    let start_time = SystemTime::now();
+    
+    let app_state = MonitoringAppState {
+        metrics_collector,
+        trace_collector,
+        config: config.clone(),
+        start_time,
+    };
+    
+    println!("{}", "启动监控服务器...".bright_blue());
+    println!("{}", format!("项目目录: {}", project_dir.display()).bright_blue());
+    println!("{}", format!("绑定地址: {}", config.get_bind_address()).bright_blue());
+    println!("{}", format!("实时监控: {}", if config.enable_realtime { "启用" } else { "禁用" }).bright_blue());
+    
+    let state_data = web::Data::new(app_state);
+    
+    // 创建并启动HTTP服务器
+    let server = HttpServer::new(move || {
+        // 配置CORS
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .max_age(3600);
+        
+        App::new()
+            .wrap(middleware::Logger::default())
+            .wrap(cors)
+            .app_data(state_data.clone())
+            // 仪表板首页
+            .service(web::resource("/").route(web::get().to(serve_dashboard)))
+            .service(web::resource("/dashboard").route(web::get().to(serve_dashboard)))
+            // 健康检查端点
+            .service(web::resource("/health").route(web::get().to(get_health_status)))
+            // 实时监控数据端点
+            .service(web::resource("/api/monitoring/realtime").route(web::get().to(get_realtime_metrics)))
+            // 代理性能统计端点
+            .service(web::resource("/api/monitoring/agents/{name}/performance").route(web::get().to(get_agent_performance)))
+            // 指标摘要端点
+            .service(web::resource("/api/monitoring/metrics/summary").route(web::get().to(get_metrics_summary)))
+            // 监控配置端点
+            .service(web::resource("/api/monitoring/config").route(web::get().to(get_monitoring_config)))
+            // 静态资源（如果目录存在）
+            .service({
+                let static_dir = get_static_dir();
+                if static_dir.exists() {
+                    fs::Files::new("/static", static_dir).show_files_listing()
+                } else {
+                    fs::Files::new("/static", ".").show_files_listing() // 占位符
+                }
+            })
+    })
+    .bind(config.get_bind_address())
+    .map_err(|e| CliError::io(format!("无法绑定到端口: {}", config.port), e))?
+    .run();
+    
+    println!("{}", "监控服务器已启动".bright_green());
+    println!("{}", format!("仪表板: http://localhost:{}/", config.port).bright_green());
+    println!("{}", format!("健康检查: http://localhost:{}/health", config.port).bright_green());
+    println!("{}", format!("实时监控API: http://localhost:{}/api/monitoring/realtime", config.port).bright_green());
+    
+    // 等待服务器结束
+    server.await
+        .map_err(|e| CliError::io("启动监控服务器时出错", e))?;
+    
+    Ok(())
+}

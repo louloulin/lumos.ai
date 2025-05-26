@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use async_trait::async_trait;
@@ -10,6 +11,7 @@ use crate::logger::{Component, LogLevel};
 use crate::memory::{SemanticRecallConfig, Memory};
 use crate::llm::{Message, LlmProvider, LlmOptions, Role};
 use crate::vector::FilterCondition;
+use crate::telemetry::metrics::{MemoryMetrics, MetricsCollector};
 
 /// 语义记忆条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +46,8 @@ pub struct SemanticMemory<P: LlmProvider, E: EmbeddingProvider> {
     embedding_provider: Arc<E>,
     /// 记忆检索模板
     template: String,
+    /// 指标收集器
+    metrics_collector: Option<Arc<dyn MetricsCollector>>,
 }
 
 /// 嵌入向量提供者接口
@@ -73,106 +77,187 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
             llm,
             embedding_provider,
             template,
+            metrics_collector: None,
+        }
+    }
+    
+    /// 创建带有指标收集器的语义记忆
+    pub fn with_metrics_collector(config: SemanticRecallConfig, llm: Arc<P>, embedding_provider: Arc<E>, metrics_collector: Arc<dyn MetricsCollector>) -> Self {
+        let template = config.template.clone().unwrap_or_else(|| DEFAULT_TEMPLATE.to_string());
+        let component_config = ComponentConfig {
+            name: Some("SemanticMemory".to_string()),
+            component: Component::Memory,
+            log_level: Some(LogLevel::Info),
+        };
+        
+        Self {
+            base: BaseComponent::new(component_config),
+            config,
+            data: Mutex::new(Vec::new()),
+            llm,
+            embedding_provider,
+            template,
+            metrics_collector: Some(metrics_collector),
         }
     }
     
     /// 添加条目到语义记忆
     pub async fn add_entry(&self, content: String, metadata: Option<HashMap<String, Value>>) -> Result<SemanticMemoryEntry> {
-        let timestamp = current_timestamp();
-        let id = generate_id();
+        let start_time = SystemTime::now();
+        let data_size = content.len();
         
-        // 生成摘要
-        let summary = if self.config.generate_summaries {
-            Some(self.generate_summary(&content).await?)
-        } else {
-            None
-        };
-        
-        // 生成嵌入向量
-        let embedding = if self.config.use_embeddings {
-            Some(self.embedding_provider.embed(&content).await?)
-        } else {
-            None
-        };
-        
-        let entry = SemanticMemoryEntry {
-            id,
-            content,
-            summary,
-            embedding,
-            created_at: timestamp,
-            relevance: None,
-            metadata: metadata.unwrap_or_default(),
-        };
-        
-        let mut data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
-        
-        // 检查容量限制
-        if let Some(max_capacity) = self.config.max_capacity {
-            if data.len() >= max_capacity {
-                data.remove(0); // 移除最旧的条目
+        let result = async {
+            let timestamp = current_timestamp();
+            let id = generate_id();
+            
+            // 生成摘要
+            let summary = if self.config.generate_summaries {
+                Some(self.generate_summary(&content).await?)
+            } else {
+                None
+            };
+            
+            // 生成嵌入向量
+            let embedding = if self.config.use_embeddings {
+                Some(self.embedding_provider.embed(&content).await?)
+            } else {
+                None
+            };
+            
+            let entry = SemanticMemoryEntry {
+                id: id.clone(),
+                content,
+                summary,
+                embedding,
+                created_at: timestamp,
+                relevance: None,
+                metadata: metadata.unwrap_or_default(),
+            };
+            
+            let mut data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
+            
+            // 检查容量限制
+            if let Some(max_capacity) = self.config.max_capacity {
+                if data.len() >= max_capacity {
+                    data.remove(0); // 移除最旧的条目
+                }
             }
-        }
+            
+            data.push(entry.clone());
+            Ok(entry)
+        }.await;
         
-        data.push(entry.clone());
-        Ok(entry)
+        let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
+        let success = result.is_ok();
+        let entry_id = result.as_ref().ok().map(|entry| entry.id.clone());
+        
+        self.record_memory_metrics("add", execution_time, success, entry_id, Some(data_size)).await;
+        result
     }
     
     /// 获取所有条目
-    pub fn get_all_entries(&self) -> Result<Vec<SemanticMemoryEntry>> {
-        let data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
-        Ok(data.clone())
+    pub async fn get_all_entries(&self) -> Result<Vec<SemanticMemoryEntry>> {
+        let start_time = SystemTime::now();
+        
+        let result = async {
+            let data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
+            Ok(data.clone())
+        }.await;
+        
+        let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
+        let success = result.is_ok();
+        let data_size = result.as_ref().ok()
+            .and_then(|entries| serde_json::to_string(entries).ok().map(|s| s.len()));
+        let entries_count = result.as_ref().ok().map(|entries| entries.len()).unwrap_or(0);
+        
+        self.record_memory_metrics("get_all", execution_time, success, Some(format!("entries_count:{}", entries_count)), data_size).await;
+        result
     }
     
     /// 获取指定ID的条目
-    pub fn get_entry(&self, id: &str) -> Result<Option<SemanticMemoryEntry>> {
-        let data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
-        Ok(data.iter().find(|entry| entry.id == id).cloned())
+    pub async fn get_entry(&self, id: &str) -> Result<Option<SemanticMemoryEntry>> {
+        let start_time = SystemTime::now();
+        
+        let result = async {
+            let data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
+            Ok(data.iter().find(|entry| entry.id == id).cloned())
+        }.await;
+        
+        let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
+        let success = result.is_ok();
+        let data_size = result.as_ref().ok()
+            .and_then(|opt| opt.as_ref())
+            .and_then(|entry| serde_json::to_string(&entry.content).ok().map(|s| s.len()));
+        
+        self.record_memory_metrics("get", execution_time, success, Some(id.to_string()), data_size).await;
+        result
     }
     
     /// 删除条目
-    pub fn delete_entry(&self, id: &str) -> Result<bool> {
-        let mut data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
-        let initial_len = data.len();
-        data.retain(|entry| entry.id != id);
-        Ok(data.len() < initial_len)
+    pub async fn delete_entry(&self, id: &str) -> Result<bool> {
+        let start_time = SystemTime::now();
+        
+        let result = async {
+            let mut data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
+            let initial_len = data.len();
+            data.retain(|entry| entry.id != id);
+            Ok(data.len() < initial_len)
+        }.await;
+        
+        let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
+        let success = result.is_ok();
+        
+        self.record_memory_metrics("delete", execution_time, success, Some(id.to_string()), None).await;
+        result
     }
     
     /// 基于语义搜索相关条目
     pub async fn search(&self, query: &str, limit: Option<usize>) -> Result<Vec<SemanticMemoryEntry>> {
-        let limit = limit.unwrap_or_else(|| self.config.max_results.unwrap_or(5));
+        let start_time = SystemTime::now();
+        let query_size = query.len();
         
-        if !self.config.use_embeddings {
-            return Err(Error::Internal("Semantic search requires embeddings to be enabled".to_string()));
-        }
-        
-        let query_embedding = self.embedding_provider.embed(query).await?;
-        
-        let mut entries = self.get_all_entries()?;
-        
-        // 计算相关性分数
-        for entry in &mut entries {
-            if let Some(embedding) = &entry.embedding {
-                entry.relevance = Some(self.embedding_provider.similarity(&query_embedding, embedding));
-            } else {
-                entry.relevance = Some(0.0);
+        let result = async {
+            let limit = limit.unwrap_or_else(|| self.config.max_results.unwrap_or(5));
+            
+            if !self.config.use_embeddings {
+                return Err(Error::Internal("Semantic search requires embeddings to be enabled".to_string()));
             }
-        }
+            
+            let query_embedding = self.embedding_provider.embed(query).await?;
+            
+            let mut entries = self.get_all_entries().await?;
+            
+            // 计算相关性分数
+            for entry in &mut entries {
+                if let Some(embedding) = &entry.embedding {
+                    entry.relevance = Some(self.embedding_provider.similarity(&query_embedding, embedding));
+                } else {
+                    entry.relevance = Some(0.0);
+                }
+            }
+            
+            // 按相关性排序
+            entries.sort_by(|a, b| {
+                b.relevance.unwrap_or(0.0).partial_cmp(&a.relevance.unwrap_or(0.0)).unwrap_or(std::cmp::Ordering::Equal)
+            });
+            
+            // 限制结果数量
+            entries.truncate(limit);
+            
+            // 过滤低相关性结果
+            if let Some(threshold) = self.config.relevance_threshold {
+                entries.retain(|entry| entry.relevance.unwrap_or(0.0) >= threshold);
+            }
+            
+            Ok(entries)
+        }.await;
         
-        // 按相关性排序
-        entries.sort_by(|a, b| {
-            b.relevance.unwrap_or(0.0).partial_cmp(&a.relevance.unwrap_or(0.0)).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
+        let success = result.is_ok();
+        let results_count = result.as_ref().ok().map(|entries| entries.len()).unwrap_or(0);
         
-        // 限制结果数量
-        entries.truncate(limit);
-        
-        // 过滤低相关性结果
-        if let Some(threshold) = self.config.relevance_threshold {
-            entries.retain(|entry| entry.relevance.unwrap_or(0.0) >= threshold);
-        }
-        
-        Ok(entries)
+        self.record_memory_metrics("search", execution_time, success, Some(format!("query_results:{}", results_count)), Some(query_size)).await;
+        result
     }
     
     /// 生成内容摘要
@@ -222,6 +307,29 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
             name: Some("semantic_memory".to_string()),
             metadata: None,
         }])
+    }
+    
+    /// 记录内存操作指标的辅助方法
+    async fn record_memory_metrics(&self, operation_type: &str, execution_time_ms: u64, success: bool, key: Option<String>, data_size_bytes: Option<usize>) {
+        if let Some(collector) = &self.metrics_collector {
+            let metrics = MemoryMetrics {
+                operation_type: operation_type.to_string(),
+                execution_time_ms,
+                success,
+                key,
+                data_size_bytes,
+                timestamp: SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis() as u64,
+            };
+            
+            if let Err(e) = collector.record_memory_operation(metrics).await {
+                // 记录日志但不影响主要操作
+                let logger = self.logger();
+                logger.error(&format!("Failed to record memory metrics: {}", e), None);
+            }
+        }
     }
 }
 

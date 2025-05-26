@@ -1,5 +1,6 @@
 pub mod ui_server;
 pub mod api_server;
+pub mod monitoring_server;
 
 use crate::error::CliResult;
 use colored::Colorize;

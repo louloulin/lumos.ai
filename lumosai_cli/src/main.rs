@@ -38,6 +38,9 @@ enum Commands {
     
     /// 生成可视化图表
     Visualize(commands::visualize::VisualizeOptions),
+    
+    /// 启动监控服务器
+    Monitoring(commands::monitoring::MonitoringOptions),
 }
 
 #[derive(Args, Debug)]
@@ -150,6 +153,9 @@ async fn main() -> CliResult<()> {
         },
         Commands::Visualize(options) => {
             commands::visualize::run(options).await
+        },
+        Commands::Monitoring(options) => {
+            commands::monitoring::run(options).await
         },
     }
 }

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumosai 监控仪表板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-healthy {
+            background: #10b981;
+        }
+
+        .status-warning {
+            background: #f59e0b;
+        }
+
+        .status-error {
+            background: #ef4444;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            transition: width 0.3s ease;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #fecaca;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #64748b;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-left-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .refresh-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transition: all 0.2s;
+        }
+
+        .refresh-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .agent-list {
+            margin-top: 1rem;
+        }
+
+        .agent-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .agent-name {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .agent-status {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .timestamp {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Lumosai 监控仪表板</h1>
+        <p>实时监控AI代理的性能和健康状态</p>
+    </div>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            正在加载监控数据...
+        </div>
+
+        <div id="error-container" style="display: none;"></div>
+
+        <div id="dashboard" class="dashboard" style="display: none;">
+            <!-- 系统概览 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #dbeafe; color: #2563eb;">
+                        📊
+                    </div>
+                    <div class="card-title">系统概览</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">运行时间</span>
+                    <span class="metric-value" id="uptime">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">总代理数</span>
+                    <span class="metric-value" id="total-agents">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">活跃代理</span>
+                    <span class="metric-value" id="active-agents">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">总执行次数</span>
+                    <span class="metric-value" id="total-executions">-</span>
+                </div>
+            </div>
+
+            <!-- 性能指标 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #dcfce7; color: #059669;">
+                        ⚡
+                    </div>
+                    <div class="card-title">性能指标</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">成功率</span>
+                    <span class="metric-value" id="success-rate">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">平均响应时间</span>
+                    <span class="metric-value" id="avg-response-time">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Token使用量</span>
+                    <span class="metric-value" id="total-tokens">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">错误率</span>
+                    <span class="metric-value" id="error-rate">-</span>
+                </div>
+            </div>
+
+            <!-- 系统资源 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #fef3c7; color: #d97706;">
+                        💾
+                    </div>
+                    <div class="card-title">系统资源</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">CPU使用率</span>
+                    <span class="metric-value" id="cpu-usage">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">内存使用</span>
+                    <span class="metric-value" id="memory-usage">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">活跃连接</span>
+                    <span class="metric-value" id="active-connections">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">请求速率</span>
+                    <span class="metric-value" id="requests-per-minute">-</span>
+                </div>
+            </div>
+
+            <!-- 活跃代理 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #f3e8ff; color: #7c3aed;">
+                        🤖
+                    </div>
+                    <div class="card-title">活跃代理</div>
+                </div>
+                <div id="agent-list" class="agent-list">
+                    <!-- 代理列表将在这里动态生成 -->
+                </div>
+            </div>
+
+            <!-- 内存操作 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #ecfdf5; color: #059669;">
+                        🧠
+                    </div>
+                    <div class="card-title">内存操作</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">总操作数</span>
+                    <span class="metric-value" id="memory-total-ops">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">读操作</span>
+                    <span class="metric-value" id="memory-read-ops">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">写操作</span>
+                    <span class="metric-value" id="memory-write-ops">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">缓存命中率</span>
+                    <span class="metric-value" id="cache-hit-rate">-</span>
+                </div>
+            </div>
+
+            <!-- 最近错误 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #fef2f2; color: #dc2626;">
+                        ⚠️
+                    </div>
+                    <div class="card-title">最近错误</div>
+                </div>
+                <div id="recent-errors">
+                    <!-- 错误列表将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <div class="timestamp" id="last-update">
+            最后更新: -
+        </div>
+    </div>
+
+    <button class="refresh-button" onclick="loadDashboardData()" title="刷新数据">
+        🔄
+    </button>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let refreshInterval;
+
+        // 格式化时间
+        function formatDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}小时 ${minutes}分钟`;
+            } else if (minutes > 0) {
+                return `${minutes}分钟 ${secs}秒`;
+            } else {
+                return `${secs}秒`;
+            }
+        }
+
+        // 格式化百分比
+        function formatPercentage(value) {
+            return `${(value * 100).toFixed(1)}%`;
+        }
+
+        // 格式化时间（毫秒）
+        function formatTime(ms) {
+            if (ms >= 1000) {
+                return `${(ms / 1000).toFixed(2)}秒`;
+            } else {
+                return `${ms.toFixed(0)}毫秒`;
+            }
+        }
+
+        // 格式化字节
+        function formatBytes(bytes) {
+            if (bytes >= 1024 * 1024) {
+                return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+            } else if (bytes >= 1024) {
+                return `${(bytes / 1024).toFixed(1)} KB`;
+            } else {
+                return `${bytes} B`;
+            }
+        }
+
+        // 加载仪表板数据
+        async function loadDashboardData() {
+            try {
+                console.log('Loading dashboard data...');
+                const response = await fetch(`${API_BASE}/api/monitoring/realtime`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Received data:', data);
+                
+                if (!data.success) {
+                    throw new Error(data.error || '获取数据失败');
+                }
+                
+                updateDashboard(data.data);
+                showDashboard();
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showError(`加载监控数据失败: ${error.message}`);
+            }
+        }
+
+        // 更新仪表板
+        function updateDashboard(metrics) {
+            // 系统概览
+            document.getElementById('uptime').textContent = formatDuration(metrics.uptime_seconds);
+            document.getElementById('total-agents').textContent = metrics.agent_overview.total_agents;
+            document.getElementById('active-agents').textContent = metrics.agent_overview.active_agents;
+            document.getElementById('total-executions').textContent = metrics.agent_overview.total_executions;
+
+            // 性能指标
+            document.getElementById('success-rate').textContent = formatPercentage(metrics.agent_overview.success_rate);
+            document.getElementById('avg-response-time').textContent = formatTime(metrics.agent_overview.avg_response_time);
+            document.getElementById('total-tokens').textContent = metrics.agent_overview.total_tokens.toLocaleString();
+            document.getElementById('error-rate').textContent = formatPercentage(metrics.system_metrics.error_rate);
+
+            // 系统资源
+            document.getElementById('cpu-usage').textContent = `${metrics.system_metrics.cpu_usage.toFixed(1)}%`;
+            document.getElementById('memory-usage').textContent = `${metrics.system_metrics.memory_usage_mb.toFixed(1)} MB`;
+            document.getElementById('active-connections').textContent = metrics.system_metrics.active_connections;
+            document.getElementById('requests-per-minute').textContent = `${metrics.system_metrics.requests_per_minute.toFixed(1)}/分钟`;
+
+            // 活跃代理
+            const agentList = document.getElementById('agent-list');
+            agentList.innerHTML = '';
+            
+            if (metrics.active_agents.length === 0) {
+                agentList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 1rem;">暂无活跃代理</div>';
+            } else {
+                metrics.active_agents.forEach(agent => {
+                    const agentItem = document.createElement('div');
+                    agentItem.className = 'agent-item';
+                    agentItem.innerHTML = `
+                        <div class="agent-name">
+                            <span class="status-indicator status-${agent.is_active ? 'healthy' : 'warning'}"></span>
+                            ${agent.name}
+                        </div>
+                        <div class="agent-status">${agent.status}</div>
+                    `;
+                    agentList.appendChild(agentItem);
+                });
+            }
+
+            // 内存操作
+            document.getElementById('memory-total-ops').textContent = metrics.memory_stats.total_operations.toLocaleString();
+            document.getElementById('memory-read-ops').textContent = metrics.memory_stats.read_operations.toLocaleString();
+            document.getElementById('memory-write-ops').textContent = metrics.memory_stats.write_operations.toLocaleString();
+            document.getElementById('cache-hit-rate').textContent = formatPercentage(metrics.memory_stats.cache_hit_rate);
+
+            // 最近错误
+            const errorsContainer = document.getElementById('recent-errors');
+            errorsContainer.innerHTML = '';
+            
+            if (metrics.recent_errors.length === 0) {
+                errorsContainer.innerHTML = '<div style="text-align: center; color: #10b981; padding: 1rem;">✅ 无最近错误</div>';
+            } else {
+                metrics.recent_errors.forEach(error => {
+                    const errorItem = document.createElement('div');
+                    errorItem.className = 'metric';
+                    errorItem.innerHTML = `
+                        <div>
+                            <div style="font-weight: 500; color: #dc2626;">${error.error_type}</div>
+                            <div style="font-size: 0.8rem; color: #64748b;">${error.agent_name}</div>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #64748b;">
+                            ${new Date(error.timestamp).toLocaleTimeString()}
+                        </div>
+                    `;
+                    errorsContainer.appendChild(errorItem);
+                });
+            }
+
+            // 更新时间戳
+            document.getElementById('last-update').textContent = 
+                `最后更新: ${new Date().toLocaleTimeString()}`;
+        }
+
+        // 显示仪表板
+        function showDashboard() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-container').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'grid';
+        }
+
+        // 显示错误
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
+            
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.innerHTML = `
+                <div class="error-message">
+                    ${message}
+                    <br><br>
+                    <button onclick="loadDashboardData()" style="background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+                        重试
+                    </button>
+                </div>
+            `;
+            errorContainer.style.display = 'block';
+        }
+
+        // 启动自动刷新
+        function startAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            refreshInterval = setInterval(() => {
+                loadDashboardData();
+            }, 5000); // 每5秒刷新一次
+        }
+
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            loadDashboardData();
+            startAutoRefresh();
+        });
+
+        // 页面隐藏时停止刷新，显示时恢复
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            } else {
+                startAutoRefresh();
+                loadDashboardData();
+            }
+        });
+    </script>
+</body>
+</html>

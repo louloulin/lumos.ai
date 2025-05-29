@@ -285,7 +285,19 @@ impl TraceBuilder {
     
     /// Build the current trace without finishing it
     pub fn build(&self) -> ExecutionTrace {
-        self.trace.clone()
+        let mut trace = self.trace.clone();
+        
+        // Calculate success based on steps
+        if !trace.steps.is_empty() {
+            trace.success = trace.steps.iter().all(|step| step.success);
+        }
+        
+        // Update total duration if we have steps
+        if let (Some(first), Some(last)) = (trace.steps.first(), trace.steps.last()) {
+            trace.total_duration_ms = last.end_time - first.start_time;
+        }
+        
+        trace
     }
 }
 

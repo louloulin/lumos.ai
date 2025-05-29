@@ -6,6 +6,12 @@ pub mod executor;
 pub mod message_utils;
 pub mod types;
 pub mod streaming;
+pub mod websocket;
+
+#[cfg(feature = "demos")]
+pub mod websocket_demo;
+#[cfg(feature = "demos")]
+pub mod enhanced_streaming_demo;
 
 pub use config::AgentConfig;
 pub use trait_def::Agent;
@@ -19,6 +25,16 @@ pub use streaming::{
     StreamingConfig, 
     StreamingAgent, 
     IntoStreaming
+};
+
+// Re-export WebSocket streaming types
+pub use websocket::{
+    WebSocketMessage,
+    WebSocketConnection,
+    WebSocketConfig,
+    WebSocketManager,
+    WebSocketStreamingAgent,
+    IntoWebSocketStreaming
 };
 
 // Re-export agent types
@@ -165,4 +181,4 @@ mod tests {
         
         assert_eq!(result.response, "The tool returned: Echo: Hello from tool!");
     }
-} 
+}

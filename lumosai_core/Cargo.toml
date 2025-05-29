@@ -37,6 +37,10 @@ async-stream = "0.3"
 lumos_macro = { path = "../lumos_macro", optional = true }
 async-openai = "0.18.3"
 
+# WebSocket and streaming dependencies
+tokio-tungstenite = "0.21"
+tungstenite = "0.21"
+
 [dev-dependencies]
 tokio-test = "0.4"
 mockall = "0.11"

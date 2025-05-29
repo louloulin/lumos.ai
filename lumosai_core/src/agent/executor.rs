@@ -545,6 +545,8 @@ impl Agent for BasicAgent {
     }
 
     async fn execute_tool_call(&self, tool_call: &ToolCall) -> Result<Value> {
+        let start_time = std::time::Instant::now();
+        
         // First get a clone of the tool to avoid holding the lock across await
         let tool_clone = {
             let tools = match self.tools.lock() {
@@ -570,8 +572,36 @@ impl Agent for BasicAgent {
         
         let options = ToolExecutionOptions::default();
         
-        // Now we can safely await without holding the lock
-        tool_clone.execute(args_value, context, &options).await
+        // Execute tool and record metrics
+        let result = tool_clone.execute(args_value.clone(), context, &options).await;
+        let execution_time = start_time.elapsed();
+        
+        // Record tool metrics regardless of success/failure
+        if let Some(metrics_collector) = &self.metrics_collector {
+            let input_size = serde_json::to_string(&args_value).unwrap_or_default().len();
+            let (output_size, success, error) = match &result {
+                Ok(output) => (
+                    serde_json::to_string(output).unwrap_or_default().len(),
+                    true,
+                    None
+                ),
+                Err(e) => (0, false, Some(e.to_string())),
+            };
+            
+            let tool_metrics = crate::telemetry::ToolMetrics {
+                tool_name: tool_call.name.clone(),
+                execution_time_ms: execution_time.as_millis() as u64,
+                success,
+                error,
+                input_size_bytes: input_size,
+                output_size_bytes: output_size,
+                timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+            };
+            
+            let _ = metrics_collector.record_tool_execution(tool_metrics).await;
+        }
+        
+        result
     }
     
     fn format_messages(&self, messages: &[Message], options: &AgentGenerateOptions) -> Vec<Message> {
@@ -954,25 +984,15 @@ impl Agent for BasicAgent {
                     }
                 } else {
                     // No tools available, generate normally
-                    let llm_start_time = std::time::Instant::now();
-                    let response = self.llm.generate_with_messages(&all_messages, &options.llm_options).await?;
-                    let llm_duration = llm_start_time.elapsed();
-                    
-                    // Note: generate_with_messages returns String, no usage info available
-                    
-                    // Record LLM call in trace
-                    if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                        let mut llm_step = TraceStep::new(
-                            "Final LLM call (no tools)".to_string(),
-                            TraceStepType::LlmCall,
-                        );
-                        llm_step.duration_ms = llm_duration.as_millis() as u64;
-                        llm_step.success = true;
-                        llm_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.len())));
-                        llm_step.output = Some(serde_json::Value::String(response.clone()));
-                        
-                        let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
-                    }
+                    let response = call_llm_with_monitoring(
+                        self.llm.as_ref(),
+                        &self.trace_collector,
+                        &all_messages,
+                        &options.llm_options,
+                        &trace_id,
+                        "Final LLM call (no tools)",
+                        &mut agent_metrics,
+                    ).await?;
                     
                     final_response = response;
                     break;
@@ -1060,6 +1080,8 @@ impl Agent for BasicAgent {
                                 if let Some(ref mut metrics) = agent_metrics {
                                     metrics.record_error();
                                 }
+                                
+                                self.logger().error(&format!("Function call '{}' failed after {:?}: {}", call.name, execution_time, e), None);
                                 
                                 // Record failed legacy tool metrics
                                 if let Some(metrics_collector) = &self.metrics_collector {
@@ -1714,5 +1736,101 @@ impl AgentVoiceSender for BasicAgent {
             .boxed();
         
         Ok(output_stream)
+    }
+}
+
+/// Enhanced LLM call with comprehensive monitoring
+async fn call_llm_with_monitoring(
+    llm: &dyn LlmProvider,
+    trace_collector: &Option<Arc<dyn TraceCollector>>,
+    messages: &[Message],
+    llm_options: &LlmOptions,
+    trace_id: &Option<String>,
+    step_name: &str,
+    agent_metrics: &mut Option<AgentMetrics>,
+) -> Result<String> {
+    let llm_start_time = std::time::Instant::now();
+    
+    // Calculate input size for monitoring
+    let input_size = messages.iter()
+        .map(|m| m.content.len() + m.role.to_string().len())
+        .sum::<usize>();
+    
+    // Record LLM call start in trace
+    if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
+        let mut start_step = TraceStep::new(
+            format!("{} - Started", step_name),
+            TraceStepType::LlmCall,
+        );
+        start_step.metadata.insert("input_size_bytes".to_string(), serde_json::Value::Number(serde_json::Number::from(input_size)));
+        start_step.metadata.insert("message_count".to_string(), serde_json::Value::Number(serde_json::Number::from(messages.len())));
+        start_step.metadata.insert("has_tools".to_string(), serde_json::Value::Bool(false)); // LlmOptions doesn't have tools field
+        start_step.input = Some(serde_json::to_value(messages).unwrap_or_default());
+        start_step.duration_ms = 0;
+        start_step.success = true;
+        
+        let _ = trace_collector.add_trace_step(trace_id, start_step).await;
+    }
+    
+    // Make the LLM call
+    let result = llm.generate_with_messages(messages, llm_options).await;
+    let llm_duration = llm_start_time.elapsed();
+    
+    match result {
+        Ok(response) => {
+            let output_size = response.len();
+            
+            // Update agent metrics
+            if let Some(ref mut metrics) = agent_metrics {
+                // Note: We don't have token usage from generate_with_messages
+                // This would need to be enhanced in the LLM provider interface
+                // Use execution_time_ms field directly instead of add_execution_time method
+                metrics.execution_time_ms += llm_duration.as_millis() as u64;
+            }
+            
+            // Record successful LLM call in trace
+            if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
+                let mut success_step = TraceStep::new(
+                    format!("{} - Completed", step_name),
+                    TraceStepType::LlmCall,
+                );
+                success_step.duration_ms = llm_duration.as_millis() as u64;
+                success_step.success = true;
+                success_step.metadata.insert("output_size_bytes".to_string(), serde_json::Value::Number(serde_json::Number::from(output_size)));
+                success_step.metadata.insert("latency_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(llm_duration.as_millis() as u64)));
+                success_step.output = Some(serde_json::Value::String(response.clone()));
+                
+                let _ = trace_collector.add_trace_step(trace_id, success_step).await;
+            }
+            
+            // Note: Logging removed since we don't have access to logger in standalone function
+            
+            Ok(response)
+        },
+        Err(e) => {
+            // Update agent metrics for error
+            if let Some(ref mut metrics) = agent_metrics {
+                metrics.record_error();
+            }
+            
+            // Record failed LLM call in trace
+            if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
+                let mut error_step = TraceStep::new(
+                    format!("{} - Failed", step_name),
+                    TraceStepType::LlmCall,
+                );
+                error_step.duration_ms = llm_duration.as_millis() as u64;
+                error_step.success = false;
+                error_step.error = Some(e.to_string());
+                error_step.metadata.insert("error_type".to_string(), serde_json::Value::String("llm_error".to_string()));
+                
+                let _ = trace_collector.add_trace_step(trace_id, error_step).await;
+            }
+            
+            // TODO: Add logging capability to function or use tracing crate
+            // self.logger().error(&format!("LLM call '{}' failed after {:?}: {}", step_name, llm_duration, e), None);
+            
+            Err(e)
+        }
     }
 }

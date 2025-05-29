@@ -94,6 +94,9 @@ pub mod working;
 pub mod semantic;
 pub mod semantic_memory;
 pub mod basic;
+pub mod thread;
+pub mod session;
+pub mod storage;
 
 // 重新导出
 pub use working::{
@@ -110,6 +113,30 @@ pub use semantic_memory::{
     create_semantic_memory,
 };
 pub use basic::BasicMemory;
+pub use thread::{
+    MemoryThread,
+    MemoryThreadStorage,
+    MemoryThreadManager,
+    CreateThreadParams,
+    UpdateThreadParams,
+    GetMessagesParams,
+    MessageFilter,
+    MemoryOptions,
+    ThreadStats,
+};
+pub use session::{
+    Session,
+    SessionManager,
+    SessionState,
+    SessionContext,
+    SessionConfig,
+    CreateSessionParams,
+    UpdateSessionParams,
+    SessionStats,
+    ActionItem,
+    Priority,
+};
+pub use storage::InMemoryThreadStorage;
 
 /// 添加兼容函数，用于创建基本工作内存
 #[inline]

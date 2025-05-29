@@ -282,6 +282,11 @@ impl TraceBuilder {
     pub fn trace_id(&self) -> &str {
         &self.trace.trace_id
     }
+    
+    /// Build the current trace without finishing it
+    pub fn build(&self) -> ExecutionTrace {
+        self.trace.clone()
+    }
 }
 
 impl ExecutionTrace {

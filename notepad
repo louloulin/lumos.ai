@@ -35,3 +35,6 @@ LumosAI系统提供了两个默认账号:
 
 
 plan2.md 按照整个方案 阅读 mastra 目录下相关代码，同时参考 mastra 文档，基于rust实现 实现mastra功能迁移到 lumosai，实现后，增加单元测试，测试通过 更新 plan2.md 标记实现的功能
+
+
+按照 lumos2.md的计划实现相关的功能，增加测试验证通过后，实现后更新 lumos2.md标记实现的功能

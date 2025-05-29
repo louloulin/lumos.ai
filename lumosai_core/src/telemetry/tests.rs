@@ -134,7 +134,7 @@ async fn test_memory_metrics_collection() {
         execution_time_ms: 10,
         success: true,
         key: Some("test_key".to_string()),
-        data_size_bytes: 1024,
+        data_size_bytes: Some(1024),
         timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
     };
     
@@ -204,7 +204,7 @@ async fn test_trace_builder() {
     builder.end_step(true);
     
     // Build the trace
-    let trace = builder.build(true);
+    let trace = builder.build();
     
     assert_eq!(trace.agent_id, "test_agent");
     assert_eq!(trace.steps.len(), 2);
@@ -213,12 +213,12 @@ async fn test_trace_builder() {
     
     // Check first step
     assert!(matches!(trace.steps[0].step_type, StepType::LlmCall));
-    assert_eq!(trace.steps[0].description, "Starting LLM call");
+    assert_eq!(        trace.steps[0].name, "Starting LLM call");
     assert!(trace.steps[0].success);
     
     // Check second step
     assert!(matches!(trace.steps[1].step_type, StepType::ToolCall));
-    assert_eq!(trace.steps[1].description, "Tool execution");
+    assert_eq!(        trace.steps[1].name, "Tool execution");
     assert!(trace.steps[1].success);
 }
 
@@ -227,7 +227,7 @@ async fn test_filesystem_metrics_collector() {
     use tempfile::TempDir;
     
     let temp_dir = TempDir::new().unwrap();
-    let collector = FileSystemMetricsCollector::new(temp_dir.path().to_path_buf()).await.unwrap();
+    let collector = FileSystemMetricsCollector::new(temp_dir.path().to_path_buf()).unwrap();
     
     let agent_metrics = AgentMetrics {
         agent_name: "fs_test_agent".to_string(),
@@ -277,7 +277,35 @@ async fn test_otel_metrics_collector() {
     };
     
     let inner_collector = Arc::new(InMemoryMetricsCollector::new());
-    let otel_collector = OtelMetricsCollector::new(config, inner_collector.clone()).await.unwrap();
+    
+    // Create a mock exporter for testing
+    struct MockOtelExporter;
+    
+    #[async_trait::async_trait]
+    impl crate::telemetry::otel::OtelExporter for MockOtelExporter {
+        async fn export_spans(&self, _spans: Vec<crate::telemetry::otel::OtelSpan>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            Ok(())
+        }
+        
+        async fn export_metrics(&self, _metrics: Vec<crate::telemetry::otel::OtelMetric>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            Ok(())
+        }
+        
+        async fn force_flush(&self, _timeout: std::time::Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            Ok(())
+        }
+        
+        async fn shutdown(&self, _timeout: std::time::Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            Ok(())
+        }
+    }
+    
+    let mock_exporter = Box::new(MockOtelExporter);
+    let otel_collector = OtelMetricsCollector::new(
+        Box::new((*inner_collector).clone()),
+        mock_exporter,
+        config,
+    );
     
     let agent_metrics = AgentMetrics {
         agent_name: "otel_test_agent".to_string(),

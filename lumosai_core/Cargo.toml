@@ -33,6 +33,7 @@ regex = "1.10.2"
 schemars = "0.8"
 jsonschema = "0.17"
 rand = "0.8"
+async-stream = "0.3"
 lumos_macro = { path = "../lumos_macro", optional = true }
 async-openai = "0.18.3"
 

@@ -5,11 +5,21 @@ pub mod trait_def;
 pub mod executor;
 pub mod message_utils;
 pub mod types;
+pub mod streaming;
 
 pub use config::AgentConfig;
 pub use trait_def::Agent;
 pub use executor::BasicAgent;
 pub use message_utils::{system_message, user_message, assistant_message, tool_message};
+
+// Re-export streaming types
+pub use streaming::{
+    AgentEvent, 
+    MemoryOperation, 
+    StreamingConfig, 
+    StreamingAgent, 
+    IntoStreaming
+};
 
 // Re-export agent types
 pub use types::{

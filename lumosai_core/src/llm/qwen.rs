@@ -481,14 +481,20 @@ mod tests {
 
     #[test]
     fn test_qwen_provider() {
-        let provider = QwenProvider::new_with_defaults(
-            std::env::var("QWEN_API_KEY").unwrap_or_else(|_| "test_key".to_string()),
-            "qwen-turbo",
-        );
+        // Skip test if no API key is provided (this is a unit test, not an integration test)
+        let api_key = match std::env::var("QWEN_API_KEY") {
+            Ok(key) => key,
+            Err(_) => {
+                println!("Skipping test_qwen_provider as QWEN_API_KEY is not set");
+                return;
+            }
+        };
+
+        let provider = QwenProvider::new_with_defaults(api_key, "qwen-turbo");
 
         // Test basic prompt generation
         let result = block_on(provider.generate("Hello", &LlmOptions::default()));
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "Failed to generate text: {:?}", result.err());
 
         // Test message-based generation
         let messages = vec![
@@ -500,10 +506,10 @@ mod tests {
             },
         ];
         let result = block_on(provider.generate_with_messages(&messages, &LlmOptions::default()));
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "Failed to generate text with messages: {:?}", result.err());
 
         // Test embeddings
         let result = block_on(provider.get_embedding("Hello"));
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "Failed to get embedding: {:?}", result.err());
     }
 } 

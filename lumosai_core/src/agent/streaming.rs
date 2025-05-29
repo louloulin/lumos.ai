@@ -229,36 +229,73 @@ impl<T: Agent> StreamingAgent<T> {
         messages: &[Message],
         options: &AgentGenerateOptions,
         _run_id: &str,
-    ) -> std::result::Result<Pin<Box<dyn Stream<Item = std::result::Result<AgentEvent, Box<dyn std::error::Error + Send + Sync>>> + Send>>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> std::result::Result<Pin<Box<dyn Stream<Item = std::result::Result<AgentEvent, Box<dyn std::error::Error + Send + Sync>>> + Send + 'static>>, Box<dyn std::error::Error + Send + Sync>> {
         // For function calling, we need to:
         // 1. Stream initial LLM response
         // 2. Parse function calls from the response
         // 3. Execute tools and emit tool events
         // 4. Continue with follow-up generation if needed
         
-        Ok(Box::pin(stream! {
-            let step_id = Uuid::new_v4().to_string();
-            
-            // Stream initial LLM generation
-            match self.stream_llm_generation(messages, options, &step_id).await {
+        let step_id = Uuid::new_v4().to_string();
+        let messages = messages.to_vec();
+        let options = options.clone();
+        
+        // Clone all necessary data to make the stream 'static
+        let llm = self.base_agent.get_llm();
+        let text_buffer_size = self.config.text_buffer_size;
+        let text_delta_delay_ms = self.config.text_delta_delay_ms;
+        let llm_options = options.llm_options.clone();
+        let prompt = messages.last()
+            .map(|msg| msg.content.clone())
+            .unwrap_or_else(|| "".to_string());
+        
+        Ok(Box::pin(async_stream::stream! {
+            // Stream initial LLM generation directly here instead of calling self.stream_llm_generation
+            match llm.generate_stream(&prompt, &llm_options).await {
                 Ok(mut llm_stream) => {
                     let mut accumulated_response = String::new();
+                    let mut text_buffer = String::new();
                     
-                    while let Some(event_result) = llm_stream.next().await {
-                        match event_result {
-                            Ok(AgentEvent::TextDelta { delta, .. }) => {
-                                accumulated_response.push_str(&delta);
-                                yield Ok(AgentEvent::TextDelta { 
-                                    delta, 
-                                    step_id: Some(step_id.clone()) 
-                                });
+                    while let Some(chunk_result) = llm_stream.next().await {
+                        match chunk_result {
+                            Ok(chunk) => {
+                                accumulated_response.push_str(&chunk);
+                                text_buffer.push_str(&chunk);
+                                
+                                // Emit text deltas based on buffer size configuration
+                                while text_buffer.len() >= text_buffer_size {
+                                    let delta = text_buffer.chars()
+                                        .take(text_buffer_size)
+                                        .collect::<String>();
+                                    
+                                    text_buffer = text_buffer.chars()
+                                        .skip(text_buffer_size)
+                                        .collect();
+                                    
+                                    yield Ok(AgentEvent::TextDelta {
+                                        delta,
+                                        step_id: Some(step_id.clone()),
+                                    });
+                                    
+                                    // Optional delay for demonstration
+                                    if let Some(delay_ms) = text_delta_delay_ms {
+                                        tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                    }
+                                }
                             },
-                            Ok(other_event) => yield Ok(other_event),
                             Err(e) => {
-                                yield Err(e);
+                                yield Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
                                 return;
                             }
                         }
+                    }
+                    
+                    // Emit any remaining text in buffer
+                    if !text_buffer.is_empty() {
+                        yield Ok(AgentEvent::TextDelta {
+                            delta: text_buffer,
+                            step_id: Some(step_id.clone()),
+                        });
                     }
                     
                     // TODO: Parse function calls from accumulated_response
@@ -271,7 +308,7 @@ impl<T: Agent> StreamingAgent<T> {
                     });
                 },
                 Err(e) => {
-                    yield Err(e);
+                    yield Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
                 }
             }
         }))
@@ -283,29 +320,67 @@ impl<T: Agent> StreamingAgent<T> {
         messages: &[Message],
         options: &AgentGenerateOptions,
         _run_id: &str,
-    ) -> std::result::Result<Pin<Box<dyn Stream<Item = std::result::Result<AgentEvent, Box<dyn std::error::Error + Send + Sync>>> + Send>>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> std::result::Result<Pin<Box<dyn Stream<Item = std::result::Result<AgentEvent, Box<dyn std::error::Error + Send + Sync>>> + Send + 'static>>, Box<dyn std::error::Error + Send + Sync>> {
         let step_id = Uuid::new_v4().to_string();
+        let messages = messages.to_vec();
+        let options = options.clone();
         
-        Ok(Box::pin(stream! {
-            match self.stream_llm_generation(messages, options, &step_id).await {
+        // Clone all necessary data to make the stream 'static
+        let llm = self.base_agent.get_llm();
+        let text_buffer_size = self.config.text_buffer_size;
+        let text_delta_delay_ms = self.config.text_delta_delay_ms;
+        let llm_options = options.llm_options.clone();
+        let prompt = messages.last()
+            .map(|msg| msg.content.clone())
+            .unwrap_or_else(|| "".to_string());
+        
+        Ok(Box::pin(async_stream::stream! {
+            // Stream LLM generation directly here instead of calling self.stream_llm_generation
+            match llm.generate_stream(&prompt, &llm_options).await {
                 Ok(mut llm_stream) => {
                     let mut accumulated_response = String::new();
+                    let mut text_buffer = String::new();
                     
-                    while let Some(event_result) = llm_stream.next().await {
-                        match event_result {
-                            Ok(AgentEvent::TextDelta { delta, .. }) => {
-                                accumulated_response.push_str(&delta);
-                                yield Ok(AgentEvent::TextDelta { 
-                                    delta, 
-                                    step_id: Some(step_id.clone()) 
-                                });
+                    while let Some(chunk_result) = llm_stream.next().await {
+                        match chunk_result {
+                            Ok(chunk) => {
+                                accumulated_response.push_str(&chunk);
+                                text_buffer.push_str(&chunk);
+                                
+                                // Emit text deltas based on buffer size configuration
+                                while text_buffer.len() >= text_buffer_size {
+                                    let delta = text_buffer.chars()
+                                        .take(text_buffer_size)
+                                        .collect::<String>();
+                                    
+                                    text_buffer = text_buffer.chars()
+                                        .skip(text_buffer_size)
+                                        .collect();
+                                    
+                                    yield Ok(AgentEvent::TextDelta {
+                                        delta,
+                                        step_id: Some(step_id.clone()),
+                                    });
+                                    
+                                    // Optional delay for demonstration
+                                    if let Some(delay_ms) = text_delta_delay_ms {
+                                        tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                    }
+                                }
                             },
-                            Ok(other_event) => yield Ok(other_event),
                             Err(e) => {
-                                yield Err(e);
+                                yield Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
                                 return;
                             }
                         }
+                    }
+                    
+                    // Emit any remaining text in buffer
+                    if !text_buffer.is_empty() {
+                        yield Ok(AgentEvent::TextDelta {
+                            delta: text_buffer,
+                            step_id: Some(step_id.clone()),
+                        });
                     }
                     
                     yield Ok(AgentEvent::GenerationComplete {
@@ -314,75 +389,8 @@ impl<T: Agent> StreamingAgent<T> {
                     });
                 },
                 Err(e) => {
-                    yield Err(e);
+                    yield Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
                 }
-            }
-        }))
-    }
-    
-    /// Stream LLM generation with real-time text deltas
-    async fn stream_llm_generation(
-        &self,
-        messages: &[Message],
-        options: &AgentGenerateOptions,
-        step_id: &str,
-    ) -> std::result::Result<Pin<Box<dyn Stream<Item = std::result::Result<AgentEvent, Box<dyn std::error::Error + Send + Sync>>> + Send>>, Box<dyn std::error::Error + Send + Sync>> {
-        // Get LLM streaming response
-        let llm_options = &options.llm_options;
-        
-        // Convert messages to a single prompt for now 
-        // TODO: Add generate_stream_with_messages to LlmProvider trait
-        let prompt = messages.last()
-            .map(|msg| &msg.content)
-            .unwrap_or(&"".to_string())
-            .clone();
-            
-        let mut llm_stream = self.base_agent.get_llm()
-            .generate_stream(&prompt, llm_options)
-            .await?;
-        
-        Ok(Box::pin(stream! {
-            let mut text_buffer = String::new();
-            
-            while let Some(chunk_result) = llm_stream.next().await {
-                match chunk_result {
-                    Ok(chunk) => {
-                        text_buffer.push_str(&chunk);
-                        
-                        // Emit text deltas based on buffer size configuration
-                        while text_buffer.len() >= self.config.text_buffer_size {
-                            let delta = text_buffer.chars()
-                                .take(self.config.text_buffer_size)
-                                .collect::<String>();
-                            
-                            text_buffer = text_buffer.chars()
-                                .skip(self.config.text_buffer_size)
-                                .collect();
-                            
-                            yield Ok(AgentEvent::TextDelta {
-                                delta,
-                                step_id: Some(step_id.to_string()),
-                            });
-                            
-                            // Optional delay for demonstration
-                            if let Some(delay_ms) = self.config.text_delta_delay_ms {
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                            }
-                        }
-                    },
-                    Err(e) => {
-                        yield Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
-                        return;
-                    }
-                }
-            }
-            
-            // Emit any remaining text in buffer
-            if !text_buffer.is_empty() {
-                yield Ok(AgentEvent::TextDelta {
-                    delta: text_buffer,
-                    step_id: Some(step_id.to_string()),
-                });
             }
         }))
     }

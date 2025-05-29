@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::llm::Message;
 use crate::Result;
-use crate::error::LumosError;
+use crate::error::Error;
 
 /// Memory thread for managing conversation history and context
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -287,7 +287,7 @@ impl<S: MemoryThreadStorage> MemoryThreadManager<S> {
             Some(thread) => {
                 if let Some(resource_id) = resource_id {
                     if !thread.is_owned_by(resource_id) {
-                        return Err(LumosError::AccessDenied(format!(
+                        return Err(Error::AccessDenied(format!(
                             "Thread {} is not owned by resource {}",
                             thread_id, resource_id
                         )));
@@ -309,7 +309,7 @@ impl<S: MemoryThreadStorage> MemoryThreadManager<S> {
         let mut thread = self
             .get_thread(thread_id, resource_id)
             .await?
-            .ok_or_else(|| LumosError::NotFound(format!("Thread {} not found", thread_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Thread {} not found", thread_id)))?;
 
         thread.update(params)?;
         self.storage.update_thread(&thread).await

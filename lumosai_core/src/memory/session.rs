@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::llm::Message;
 use crate::Result;
-use crate::error::LumosError;
+use crate::error::Error;
 use super::thread::{MemoryThread, MemoryThreadManager, MemoryThreadStorage, CreateThreadParams, UpdateThreadParams};
 use super::MemoryConfig;
 
@@ -287,7 +287,7 @@ impl Session {
             (SessionState::Terminated, SessionState::Archived) => {},
             // Invalid transitions
             _ => {
-                return Err(LumosError::InvalidOperation(format!(
+                return Err(Error::InvalidOperation(format!(
                     "Cannot transition from {:?} to {:?}",
                     self.state, new_state
                 )));
@@ -323,7 +323,7 @@ impl Session {
             self.updated_at = Utc::now();
             Ok(())
         } else {
-            Err(LumosError::NotFound(format!(
+            Err(Error::NotFound(format!(
                 "Action item {} not found",
                 action_id
             )))

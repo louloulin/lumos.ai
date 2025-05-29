@@ -17,6 +17,7 @@ use crate::error::{Error, Result};
 use crate::logger::{Component, Logger};
 use crate::llm::{LlmProvider, LlmOptions, Message, Role, FunctionDefinition, ToolChoice as LlmToolChoice};
 use crate::memory::Memory;
+use crate::memory::thread;
 use crate::telemetry::{TelemetrySink, MetricsCollector, TraceCollector, AgentMetrics, ToolMetrics, MemoryMetrics, ExecutionContext, TraceBuilder, StepType as TraceStepType, TokenUsage as TelemetryTokenUsage, TraceStep};
 use crate::tool::{Tool, ToolExecutionOptions, ToolExecutionContext};
 use crate::llm::function_calling_utils;
@@ -1614,223 +1615,180 @@ impl Agent for BasicAgent {
             None => Err(Error::Memory("Working memory not initialized".to_string())),
         }
     }
-}
-
-impl Base for BasicAgent {
-    fn name(&self) -> Option<&str> {
-        self.base.name()
-    }
     
-    fn component(&self) -> Component {
-        self.base.component()
-    }
-    
-    fn logger(&self) -> Arc<dyn Logger> {
-        self.base.logger()
-    }
-    
-    fn set_logger(&mut self, logger: Arc<dyn Logger>) {
-        self.base.set_logger(logger);
-    }
-    
-    fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
-        self.base.telemetry()
-    }
-    
-    fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
-        self.base.set_telemetry(telemetry);
-    }
-}
-
-#[async_trait]
-impl AgentVoiceListener for BasicAgent {
-    async fn listen(&self, audio: impl AsyncRead + Send + Unpin + 'static, options: &ListenOptions) -> Result<String> {
-        match self.get_voice() {
-            Some(voice) => {
-                if let Some(listener) = voice.as_listener() {
-                    // 使用非泛型方法
-                    // 先将 AsyncRead 转换为 Vec<u8>
-                    use tokio::io::AsyncReadExt;
-                    let mut buffer = Vec::new();
-                    let mut reader = tokio::io::BufReader::new(audio);
-                    reader.read_to_end(&mut buffer).await?;
-                    
-                    // 然后调用非泛型的方法
-                    listener.listen(buffer, options).await
-                } else {
-                    Err(Error::Unsupported("The voice provider does not support speech recognition".to_string()))
-                }
-            },
-            None => Err(Error::Unsupported("No voice provider configured for this agent".to_string()))
-        }
-    }
-}
-
-#[async_trait]
-impl AgentStructuredOutput for BasicAgent {
-    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
-        &self, 
-        messages: &[Message], 
+    /// Generate a response with memory thread integration
+    async fn generate_with_memory(
+        &self,
+        messages: &[Message],
+        thread_id: Option<String>,
         options: &AgentGenerateOptions
-    ) -> Result<T> {
-        // Use the schema to generate structured output
-        let formatted_messages = self.format_messages(messages, options);
+    ) -> Result<AgentGenerateResult> {
+        // Setup metrics timing
+        let start_time = std::time::Instant::now();
         
-        // Add schema instruction if schema is available
-        let schema_messages = if let Some(schema) = &self.output_schema {
-            let schema_str = serde_json::to_string_pretty(schema)
-                .map_err(|e| Error::Parsing(format!("Failed to serialize schema: {}", e)))?;
-            
-            let mut new_messages = formatted_messages.clone();
-            let schema_instruction = format!(
-                "Your response must be valid JSON that conforms to this schema:\n\n```json\n{}\n```\n\nDo not include any explanation or additional text, just the JSON object.",
-                schema_str
-            );
-            
-            // Add schema instruction at the end of system message or create a new one
-            if let Some(pos) = new_messages.iter().position(|m| m.role == Role::System) {
-                let mut system_msg = new_messages[pos].clone();
-                system_msg.content = format!("{}\n\n{}", system_msg.content, schema_instruction);
-                new_messages[pos] = system_msg;
+        // Create a new options object that includes the thread_id
+        let mut memory_options = options.clone();
+        if let Some(tid) = thread_id.as_ref() {
+            memory_options.thread_id = Some(tid.clone());
+        }
+        
+        // Initialize thread-related variables
+        let thread_manager = if let Some(memory) = self.memory.as_ref() {
+            if let Some(thread_storage) = memory.as_thread_storage() {
+                // Create a thread manager from storage
+                Some(crate::memory::thread::MemoryThreadManager::new(thread_storage.clone()))
             } else {
-                new_messages.insert(0, system_message(schema_instruction));
+                self.logger().warn("Memory does not support thread storage, continuing without thread integration", None);
+                None
             }
-            
-            new_messages
         } else {
-            formatted_messages
+            self.logger().warn("No memory configured for agent, continuing without thread integration", None);
+            None
         };
         
-        let json_response = self.llm.generate_with_messages(&schema_messages, &options.llm_options).await?;
+        let mut context_messages = Vec::new();
+        let mut thread = None;
         
-        // Parse the JSON response
-        serde_json::from_str::<T>(&json_response)
-            .map_err(|e| Error::Parsing(format!("Failed to parse structured output: {}", e)))
-    }
-}
-
-#[async_trait]
-impl AgentVoiceSender for BasicAgent {
-    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>> {
-        // 获取声音提供者
-        let voice_provider = self.get_voice().ok_or_else(|| {
-            Error::Unsupported("No voice provider configured for this agent".to_string())
-        })?;
-        
-        // 使用声音提供者生成语音数据
-        let mut buffer = Vec::new();
-        
-        // 先生成完整的语音数据
-        let stream = voice_provider.speak(text, options).await?;
-        futures::pin_mut!(stream);
-        while let Some(chunk) = stream.next().await {
-            if let Ok(data) = chunk {
-                buffer.push(data);
+        // Create or retrieve memory thread if we have thread_id and manager
+        if let (Some(tid), Some(manager)) = (thread_id.as_ref(), thread_manager.as_ref()) {
+            // Try to get existing thread first
+            match manager.get_thread(tid, memory_options.resource_id.as_deref()).await {
+                Ok(Some(existing_thread)) => {
+                    thread = Some(existing_thread);
+                    self.logger().debug(&format!("Found existing memory thread: {}", tid), None);
+                },
+                Ok(None) => {
+                    // Thread doesn't exist, create a new one
+                    let title = if let Some(first_msg) = messages.iter().find(|m| m.role == crate::llm::Role::User) {
+                        match self.generate_title(first_msg).await {
+                            Ok(title) => title,
+                            Err(_) => "New Conversation".to_string(),
+                        }
+                    } else {
+                        "New Conversation".to_string()
+                    };
+                    
+                    let thread_params = crate::memory::thread::CreateThreadParams {
+                        id: Some(tid.clone()),
+                        title,
+                        agent_id: Some(self.name.clone()),
+                        resource_id: memory_options.resource_id.clone(),
+                        metadata: None,
+                    };
+                    
+                    match manager.create_thread(thread_params).await {
+                        Ok(new_thread) => {
+                            thread = Some(new_thread);
+                            self.logger().debug(&format!("Created new memory thread: {}", tid), None);
+                        },
+                        Err(e) => {
+                            self.logger().error(&format!("Failed to create memory thread: {}", e), None);
+                        }
+                    }
+                },
+                Err(e) => {
+                    self.logger().error(&format!("Error accessing memory thread: {}", e), None);
+                }
+            }
+            
+            // Load context from thread if available
+            if let Some(thread_ref) = thread.as_ref() {
+                // Setup parameters for retrieving messages
+                let memory_thread_options = crate::memory::thread::MemoryOptions {
+                    save_to_memory: true,
+                    load_context: true,
+                    context_limit: Some(memory_options.context_window.unwrap_or(10)),
+                    use_semantic_search: false,
+                    working_memory: None,
+                };
+                
+                let get_params = crate::memory::thread::GetMessagesParams {
+                    limit: memory_thread_options.context_limit,
+                    cursor: None,
+                    filter: None,
+                    include_content: true,
+                    reverse_order: false,
+                };
+                
+                // Retrieve previous messages from thread
+                match manager.get_messages(&thread_ref.id, &get_params, memory_options.resource_id.as_deref()).await {
+                    Ok(thread_messages) if !thread_messages.is_empty() => {
+                        self.logger().debug(
+                            &format!("Loaded {} messages from memory thread", thread_messages.len()), 
+                            None
+                        );
+                        context_messages = thread_messages;
+                    },
+                    Ok(_) => {
+                        self.logger().debug("No previous messages found in memory thread", None);
+                    },
+                    Err(e) => {
+                        self.logger().warn(&format!("Failed to retrieve messages from memory thread: {}", e), None);
+                    }
+                }
             }
         }
         
-        // 创建一个新的流，包含所有语音数据
-        // 这个流不依赖于voice_provider的生命周期
-        let output_stream = stream::iter(buffer)
-            .map(Ok)
-            .boxed();
+        // Combine context messages with new messages, preserving order
+        let mut all_messages = Vec::new();
         
-        Ok(output_stream)
-    }
-}
-
-/// Enhanced LLM call with comprehensive monitoring
-async fn call_llm_with_monitoring(
-    llm: &dyn LlmProvider,
-    trace_collector: &Option<Arc<dyn TraceCollector>>,
-    messages: &[Message],
-    llm_options: &LlmOptions,
-    trace_id: &Option<String>,
-    step_name: &str,
-    agent_metrics: &mut Option<AgentMetrics>,
-) -> Result<String> {
-    let llm_start_time = std::time::Instant::now();
-    
-    // Calculate input size for monitoring
-    let input_size = messages.iter()
-        .map(|m| m.content.len() + m.role.to_string().len())
-        .sum::<usize>();
-    
-    // Record LLM call start in trace
-    if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
-        let mut start_step = TraceStep::new(
-            format!("{} - Started", step_name),
-            TraceStepType::LlmCall,
-        );
-        start_step.metadata.insert("input_size_bytes".to_string(), serde_json::Value::Number(serde_json::Number::from(input_size)));
-        start_step.metadata.insert("message_count".to_string(), serde_json::Value::Number(serde_json::Number::from(messages.len())));
-        start_step.metadata.insert("has_tools".to_string(), serde_json::Value::Bool(false)); // LlmOptions doesn't have tools field
-        start_step.input = Some(serde_json::to_value(messages).unwrap_or_default());
-        start_step.duration_ms = 0;
-        start_step.success = true;
-        
-        let _ = trace_collector.add_trace_step(trace_id, start_step).await;
-    }
-    
-    // Make the LLM call
-    let result = llm.generate_with_messages(messages, llm_options).await;
-    let llm_duration = llm_start_time.elapsed();
-    
-    match result {
-        Ok(response) => {
-            let output_size = response.len();
-            
-            // Update agent metrics
-            if let Some(ref mut metrics) = agent_metrics {
-                // Note: We don't have token usage from generate_with_messages
-                // This would need to be enhanced in the LLM provider interface
-                // Use execution_time_ms field directly instead of add_execution_time method
-                metrics.execution_time_ms += llm_duration.as_millis() as u64;
-            }
-            
-            // Record successful LLM call in trace
-            if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
-                let mut success_step = TraceStep::new(
-                    format!("{} - Completed", step_name),
-                    TraceStepType::LlmCall,
-                );
-                success_step.duration_ms = llm_duration.as_millis() as u64;
-                success_step.success = true;
-                success_step.metadata.insert("output_size_bytes".to_string(), serde_json::Value::Number(serde_json::Number::from(output_size)));
-                success_step.metadata.insert("latency_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(llm_duration.as_millis() as u64)));
-                success_step.output = Some(serde_json::Value::String(response.clone()));
-                
-                let _ = trace_collector.add_trace_step(trace_id, success_step).await;
-            }
-            
-            // Note: Logging removed since we don't have access to logger in standalone function
-            
-            Ok(response)
-        },
-        Err(e) => {
-            // Update agent metrics for error
-            if let Some(ref mut metrics) = agent_metrics {
-                metrics.record_error();
-            }
-            
-            // Record failed LLM call in trace
-            if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
-                let mut error_step = TraceStep::new(
-                    format!("{} - Failed", step_name),
-                    TraceStepType::LlmCall,
-                );
-                error_step.duration_ms = llm_duration.as_millis() as u64;
-                error_step.success = false;
-                error_step.error = Some(e.to_string());
-                error_step.metadata.insert("error_type".to_string(), serde_json::Value::String("llm_error".to_string()));
-                
-                let _ = trace_collector.add_trace_step(trace_id, error_step).await;
-            }
-            
-            // TODO: Add logging capability to function or use tracing crate
-            // self.logger().error(&format!("LLM call '{}' failed after {:?}: {}", step_name, llm_duration, e), None);
-            
-            Err(e)
+        // First add system message from options if present
+        if let Some(system_msg) = options.system_message.as_ref() {
+            all_messages.push(system_msg.clone());
         }
+        
+        // Then add context messages, filtering out any system messages to avoid conflicts
+        for msg in context_messages.iter().filter(|m| m.role != crate::llm::Role::System) {
+            all_messages.push(msg.clone());
+        }
+        
+        // Finally add the new messages, also filtering out system messages if we already have one
+        let has_system_msg = all_messages.iter().any(|m| m.role == crate::llm::Role::System);
+        for msg in messages.iter().filter(|m| !has_system_msg || m.role != crate::llm::Role::System) {
+            all_messages.push(msg.clone());
+        }
+        
+        // Generate response using the combined messages
+        let generation_result = self.generate(&all_messages, &memory_options).await?;
+        
+        // Store the new messages in the thread if available
+        if let (Some(tid), Some(manager)) = (thread_id.as_ref(), thread_manager.as_ref()) {
+            // Store each new message
+            for msg in messages {
+                if let Err(e) = manager.add_message(tid, msg, memory_options.resource_id.as_deref()).await {
+                    self.logger().warn(&format!("Failed to store message in memory thread: {}", e), None);
+                }
+            }
+            
+            // Store the assistant's response
+            if let Some(response_msg) = generation_result.message.as_ref() {
+                if let Err(e) = manager.add_message(tid, response_msg, memory_options.resource_id.as_deref()).await {
+                    self.logger().warn(&format!("Failed to store assistant response in memory thread: {}", e), None);
+                }
+            }
+        }
+        
+        // Record memory metrics
+        if let Some(metrics_collector) = &self.metrics_collector {
+            let context_load_time = start_time.elapsed();
+            let memory_metrics = crate::telemetry::MemoryMetrics {
+                memory_type: "thread".to_string(),
+                load_time_ms: context_load_time.as_millis() as u64,
+                context_message_count: context_messages.len() as u64,
+                thread_id: thread_id.clone(),
+                success: thread.is_some(),
+                error: None,
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64,
+            };
+            
+            let _ = metrics_collector.record_memory_operation(memory_metrics).await;
+        }
+        
+        Ok(generation_result)
     }
+    
+    // ...existing code...
 }

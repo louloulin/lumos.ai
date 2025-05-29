@@ -82,6 +82,10 @@ pub struct ToolData {
 /// Options for generating responses with an agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentGenerateOptions {
+    /// Override the system message
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_message: Option<Message>,
+    
     /// Optional instructions to override the agent's default instructions
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instructions: Option<String>,
@@ -114,6 +118,10 @@ pub struct AgentGenerateOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<ToolChoice>,
     
+    /// Maximum number of context messages to include from memory
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context_window: Option<usize>,
+    
     /// LLM options
     #[serde(flatten)]
     pub llm_options: LlmOptions,
@@ -122,6 +130,7 @@ pub struct AgentGenerateOptions {
 impl Default for AgentGenerateOptions {
     fn default() -> Self {
         Self {
+            system_message: None,
             instructions: None,
             context: None,
             memory_options: None,
@@ -130,6 +139,7 @@ impl Default for AgentGenerateOptions {
             run_id: Some(Uuid::new_v4().to_string()),
             max_steps: Some(5),
             tool_choice: Some(ToolChoice::Auto),
+            context_window: Some(10),
             llm_options: LlmOptions::default(),
         }
     }
@@ -321,4 +331,4 @@ pub fn tool_message(content: impl Into<String>) -> Message {
         metadata: None,
         name: None,
     }
-} 
+}

@@ -1,5 +1,6 @@
 //! Memory module for storing and retrieving context information
 
+use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::llm::Message;
 use crate::Result;
@@ -87,6 +88,11 @@ pub trait Memory: Send + Sync {
     
     /// Retrieve messages from memory
     async fn retrieve(&self, config: &MemoryConfig) -> Result<Vec<Message>>;
+
+    /// Get the memory as a thread storage if supported
+    fn as_thread_storage(&self) -> Option<Arc<dyn thread::MemoryThreadStorage>> {
+        None // Default implementation returns None
+    }
 }
 
 // 模块声明
@@ -96,7 +102,6 @@ pub mod semantic_memory;
 pub mod basic;
 pub mod thread;
 pub mod session;
-pub mod storage;
 
 // 重新导出
 pub use working::{
@@ -136,10 +141,9 @@ pub use session::{
     ActionItem,
     Priority,
 };
-pub use storage::InMemoryThreadStorage;
 
 /// 添加兼容函数，用于创建基本工作内存
 #[inline]
 pub fn create_basic_working_memory(config: &WorkingMemoryConfig) -> Result<Box<dyn WorkingMemory>> {
     create_working_memory(config)
-} 
+}

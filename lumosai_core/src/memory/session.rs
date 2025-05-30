@@ -444,7 +444,7 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         let mut session = self
             .get_session(session_id)
             .await?
-            .ok_or_else(|| LumosError::NotFound(format!("Session {} not found", session_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Session {} not found", session_id)))?;
 
         session.update(params)?;
 
@@ -479,10 +479,10 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         let mut session = self
             .get_session(session_id)
             .await?
-            .ok_or_else(|| LumosError::NotFound(format!("Session {} not found", session_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Session {} not found", session_id)))?;
 
         if !session.is_active() {
-            return Err(LumosError::InvalidOperation(
+            return Err(Error::InvalidOperation(
                 "Cannot add message to inactive session".to_string(),
             ));
         }
@@ -511,7 +511,7 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         let session = self
             .get_session(session_id)
             .await?
-            .ok_or_else(|| LumosError::NotFound(format!("Session {} not found", session_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Session {} not found", session_id)))?;
 
         let params = super::thread::GetMessagesParams {
             limit,
@@ -564,7 +564,7 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         let session = self
             .get_session(session_id)
             .await?
-            .ok_or_else(|| LumosError::NotFound(format!("Session {} not found", session_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Session {} not found", session_id)))?;
 
         let thread_stats = self
             .thread_manager

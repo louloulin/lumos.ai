@@ -8,17 +8,14 @@ use futures::stream::{self, BoxStream, StreamExt};
 use regex::Regex;
 use serde_json::{Value, Map};
 use uuid::Uuid;
-use serde::de::DeserializeOwned;
 use tokio::sync::watch;
-use tokio::io::AsyncRead;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
 use crate::logger::{Component, Logger};
 use crate::llm::{LlmProvider, LlmOptions, Message, Role, FunctionDefinition, ToolChoice as LlmToolChoice};
 use crate::memory::Memory;
-use crate::memory::thread;
-use crate::telemetry::{TelemetrySink, MetricsCollector, TraceCollector, AgentMetrics, ToolMetrics, MemoryMetrics, ExecutionContext, TraceBuilder, StepType as TraceStepType, TokenUsage as TelemetryTokenUsage, TraceStep};
+use crate::telemetry::{TelemetrySink, MetricsCollector, TraceCollector, AgentMetrics, ExecutionContext, StepType as TraceStepType, TokenUsage as TelemetryTokenUsage, TraceStep};
 use crate::tool::{Tool, ToolExecutionOptions, ToolExecutionContext};
 use crate::llm::function_calling_utils;
 use crate::agent::types::{
@@ -32,8 +29,8 @@ use crate::agent::types::{
     TokenUsage,
     AgentStep,
 };
-use crate::agent::trait_def::{Agent, AgentStructuredOutput, AgentVoiceListener, AgentVoiceSender};
-use crate::voice::{VoiceProvider, VoiceOptions, ListenOptions};
+use crate::agent::trait_def::Agent;
+use crate::voice::VoiceProvider;
 use crate::memory::{WorkingMemory, create_working_memory};
 use crate::agent::AgentConfig;
 use crate::agent::types::{system_message, tool_message};
@@ -288,6 +285,82 @@ impl BasicAgent {
         }
         
         tool_calls
+    }
+}
+
+/// Call LLM with monitoring and telemetry
+async fn call_llm_with_monitoring(
+    llm: &dyn LlmProvider,
+    trace_collector: &Option<Arc<dyn TraceCollector>>,
+    messages: &[Message],
+    options: &LlmOptions,
+    trace_id: &Option<String>,
+    step_name: &str,
+    agent_metrics: &mut Option<AgentMetrics>,
+) -> Result<String> {
+    let start_time = std::time::Instant::now();
+    
+    // Record LLM call start in trace
+    if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
+        let mut llm_step = TraceStep::new(
+            step_name.to_string(),
+            TraceStepType::LlmCall,
+        );
+        llm_step.metadata.insert("messages_count".to_string(), Value::from(messages.len()));
+        if let Some(model) = &options.model {
+            llm_step.metadata.insert("model".to_string(), Value::from(model.clone()));
+        }
+        let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
+    }
+    
+    // Make the LLM call
+    let response = llm.generate_with_messages(messages, options).await?;
+    let execution_time = start_time.elapsed();
+    
+    // Update agent metrics if available
+    if let Some(metrics) = agent_metrics {
+        // Note: LLM provider returns String, so we can't get usage info here
+        // Usage tracking would need to be handled by the provider implementation
+        metrics.execution_time_ms += execution_time.as_millis() as u64;
+    }
+    
+    // Record LLM call completion in trace
+    if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
+        let mut completion_step = TraceStep::new(
+            format!("{} completed", step_name),
+            TraceStepType::DataProcessing,
+        );
+        completion_step.metadata.insert("execution_time_ms".to_string(), Value::from(execution_time.as_millis() as u64));
+        completion_step.metadata.insert("response_length".to_string(), Value::from(response.len()));
+        let _ = trace_collector.add_trace_step(trace_id, completion_step).await;
+    }
+    
+    Ok(response)
+}
+
+impl Base for BasicAgent {
+    fn name(&self) -> Option<&str> {
+        self.base.name()
+    }
+    
+    fn component(&self) -> Component {
+        self.base.component()
+    }
+    
+    fn logger(&self) -> Arc<dyn Logger> {
+        self.base.logger()
+    }
+    
+    fn set_logger(&mut self, logger: Arc<dyn Logger>) {
+        self.base.set_logger(logger);
+    }
+    
+    fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
+        self.base.telemetry()
+    }
+    
+    fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
     }
 }
 
@@ -1344,6 +1417,7 @@ impl Agent for BasicAgent {
             
             let generation_start = std::time::Instant::now();
             let result = self.generate(messages, &AgentGenerateOptions {
+                system_message: None,
                 instructions: options.instructions.clone(),
                 context: options.context.clone(),
                 memory_options: options.memory_options.clone(),
@@ -1352,6 +1426,7 @@ impl Agent for BasicAgent {
                 run_id: Some(run_id.clone()),
                 max_steps: options.max_steps,
                 tool_choice: options.tool_choice.clone(),
+                context_window: None,
                 llm_options: options.llm_options.clone(),
             }).await?;
             let generation_time = generation_start.elapsed();
@@ -1464,6 +1539,7 @@ impl Agent for BasicAgent {
             
             let generation_start = std::time::Instant::now();
             let result = self.generate(messages, &AgentGenerateOptions {
+                system_message: None,
                 instructions: options.instructions.clone(),
                 context: options.context.clone(),
                 memory_options: options.memory_options.clone(),
@@ -1472,6 +1548,7 @@ impl Agent for BasicAgent {
                 run_id: Some(run_id.clone()),
                 max_steps: options.max_steps,
                 tool_choice: options.tool_choice.clone(),
+                context_window: None,
                 llm_options: options.llm_options.clone(),
             }).await?;
             let generation_time = generation_start.elapsed();
@@ -1538,6 +1615,7 @@ impl Agent for BasicAgent {
     ) -> Result<BoxStream<'a, Result<String>>> {
         // 直接生成结果，而不是在后台任务中
         let generate_result = self.generate(messages, &AgentGenerateOptions {
+            system_message: None,
             instructions: options.instructions.clone(),
             context: options.context.clone(),
             memory_options: options.memory_options.clone(),
@@ -1546,6 +1624,7 @@ impl Agent for BasicAgent {
             run_id: options.run_id.clone(),
             max_steps: options.max_steps,
             tool_choice: options.tool_choice.clone(),
+            context_window: None,
             llm_options: options.llm_options.clone(),
             ..Default::default()
         }).await?;
@@ -1635,8 +1714,8 @@ impl Agent for BasicAgent {
         // Initialize thread-related variables
         let thread_manager = if let Some(memory) = self.memory.as_ref() {
             if let Some(thread_storage) = memory.as_thread_storage() {
-                // Create a thread manager from storage
-                Some(crate::memory::thread::MemoryThreadManager::new(thread_storage.clone()))
+                // We need to create a simple wrapper that works with Arc<dyn MemoryThreadStorage>
+                Some(thread_storage)
             } else {
                 self.logger().warn("Memory does not support thread storage, continuing without thread integration", None);
                 None
@@ -1652,7 +1731,7 @@ impl Agent for BasicAgent {
         // Create or retrieve memory thread if we have thread_id and manager
         if let (Some(tid), Some(manager)) = (thread_id.as_ref(), thread_manager.as_ref()) {
             // Try to get existing thread first
-            match manager.get_thread(tid, memory_options.resource_id.as_deref()).await {
+            match manager.get_thread(tid).await {
                 Ok(Some(existing_thread)) => {
                     thread = Some(existing_thread);
                     self.logger().debug(&format!("Found existing memory thread: {}", tid), None);
@@ -1676,9 +1755,10 @@ impl Agent for BasicAgent {
                         metadata: None,
                     };
                     
-                    match manager.create_thread(thread_params).await {
-                        Ok(new_thread) => {
-                            thread = Some(new_thread);
+                    let new_thread = crate::memory::thread::MemoryThread::new(thread_params);
+                    match manager.create_thread(&new_thread).await {
+                        Ok(created_thread) => {
+                            thread = Some(created_thread);
                             self.logger().debug(&format!("Created new memory thread: {}", tid), None);
                         },
                         Err(e) => {
@@ -1711,7 +1791,7 @@ impl Agent for BasicAgent {
                 };
                 
                 // Retrieve previous messages from thread
-                match manager.get_messages(&thread_ref.id, &get_params, memory_options.resource_id.as_deref()).await {
+                match manager.get_messages(&thread_ref.id, &get_params).await {
                     Ok(thread_messages) if !thread_messages.is_empty() => {
                         self.logger().debug(
                             &format!("Loaded {} messages from memory thread", thread_messages.len()), 
@@ -1755,16 +1835,20 @@ impl Agent for BasicAgent {
         if let (Some(tid), Some(manager)) = (thread_id.as_ref(), thread_manager.as_ref()) {
             // Store each new message
             for msg in messages {
-                if let Err(e) = manager.add_message(tid, msg, memory_options.resource_id.as_deref()).await {
+                if let Err(e) = manager.add_message(tid, msg).await {
                     self.logger().warn(&format!("Failed to store message in memory thread: {}", e), None);
                 }
             }
             
             // Store the assistant's response
-            if let Some(response_msg) = generation_result.message.as_ref() {
-                if let Err(e) = manager.add_message(tid, response_msg, memory_options.resource_id.as_deref()).await {
-                    self.logger().warn(&format!("Failed to store assistant response in memory thread: {}", e), None);
-                }
+            let assistant_msg = Message {
+                role: crate::llm::Role::Assistant,
+                content: generation_result.response.clone(),
+                metadata: None,
+                name: None,
+            };
+            if let Err(e) = manager.add_message(tid, &assistant_msg).await {
+                self.logger().warn(&format!("Failed to store assistant response in memory thread: {}", e), None);
             }
         }
         
@@ -1772,12 +1856,11 @@ impl Agent for BasicAgent {
         if let Some(metrics_collector) = &self.metrics_collector {
             let context_load_time = start_time.elapsed();
             let memory_metrics = crate::telemetry::MemoryMetrics {
-                memory_type: "thread".to_string(),
-                load_time_ms: context_load_time.as_millis() as u64,
-                context_message_count: context_messages.len() as u64,
-                thread_id: thread_id.clone(),
+                operation_type: "thread_load".to_string(),
+                execution_time_ms: context_load_time.as_millis() as u64,
                 success: thread.is_some(),
-                error: None,
+                key: thread_id.clone(),
+                data_size_bytes: Some(context_messages.len() * 256), // Rough estimate
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()

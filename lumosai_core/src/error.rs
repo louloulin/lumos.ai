@@ -99,4 +99,12 @@ pub enum Error {
     /// Invalid parameters
     #[error("Invalid parameters: {0}")]
     InvalidParams(String),
+    
+    /// Access denied errors
+    #[error("Access denied: {0}")]
+    AccessDenied(String),
+    
+    /// Invalid operation errors
+    #[error("Invalid operation: {0}")]
+    InvalidOperation(String),
 } 

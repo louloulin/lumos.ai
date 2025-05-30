@@ -409,12 +409,15 @@ impl<T: Agent> WebSocketStreamingAgent<T> {
                         }
                     },
                     Err(e) => {
-                        // Forward the error
-                        yield Err(e.clone());
+                        // Create error string for forwarding
+                        let error_msg = e.to_string();
+                        
+                        // Forward the error by creating a new Error from the string
+                        yield Err(crate::Error::InvalidOperation(error_msg.clone()).into());
                         
                         // Send error via WebSocket
                         let error_message = WebSocketMessage::Error {
-                            error: e.to_string(),
+                            error: error_msg,
                             session_id: Some(session_id.clone()),
                             timestamp: std::time::SystemTime::now()
                                 .duration_since(std::time::UNIX_EPOCH)

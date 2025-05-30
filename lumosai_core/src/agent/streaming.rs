@@ -11,6 +11,7 @@ use async_stream::stream;
 use futures::Stream;
 use futures::StreamExt;
 use serde::{Serialize, Deserialize};
+use serde_json::Value;
 use uuid::Uuid;
 
 use crate::agent::trait_def::Agent;
@@ -309,10 +310,13 @@ impl<T: Agent> StreamingAgent<T> {
                         // In a real implementation, you would parse the JSON response
                         // and extract actual function calls
                         
+                        let mut arguments = HashMap::new();
+                        arguments.insert("placeholder".to_string(), Value::Bool(true));
+                        
                         let placeholder_tool_call = ToolCall {
                             id: Uuid::new_v4().to_string(),
                             name: "parsed_function".to_string(),
-                            arguments: "{\"placeholder\": true}".to_string(),
+                            arguments,
                         };
                         
                         yield Ok(AgentEvent::ToolCallStart {
@@ -322,9 +326,10 @@ impl<T: Agent> StreamingAgent<T> {
                         
                         // Execute tool (placeholder implementation)
                         let tool_result = ToolResult {
+                            name: placeholder_tool_call.name.clone(),
                             call_id: placeholder_tool_call.id.clone(),
-                            output: "Tool executed successfully (placeholder)".to_string(),
-                            is_error: false,
+                            result: Value::String("Tool executed successfully (placeholder)".to_string()),
+                            status: crate::agent::types::ToolResultStatus::Success,
                         };
                         
                         yield Ok(AgentEvent::ToolCallComplete {

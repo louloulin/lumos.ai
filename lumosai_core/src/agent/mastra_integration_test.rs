@@ -16,7 +16,8 @@ mod tests {
     use crate::tool::Tool;
 
     fn create_test_logger() -> Arc<dyn crate::logger::Logger> {
-        Arc::new(create_logger("test", Component::Agent, LogLevel::Debug))
+        // create_logger already returns Arc<dyn Logger>, so we don't need to wrap it again
+        create_logger("test", Component::Agent, LogLevel::Debug)
     }
 
     fn create_test_messages() -> Vec<Message> {
@@ -135,7 +136,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_relevance_metric_basic() {
-        let logger = Arc::new(create_test_logger());
+        let logger = create_test_logger();
         let metric = RelevanceMetric::new(logger, 0.3);
         let context = RuntimeContext::new();
         
@@ -160,7 +161,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_length_metric_basic() {
-        let logger = Arc::new(create_test_logger());
+        let logger = create_test_logger();
         let metric = LengthMetric::new(logger, 10, 50);
         let context = RuntimeContext::new();
         
@@ -185,16 +186,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_processor_basic() {
-        let logger = Arc::new(create_test_logger());
+        let logger = create_test_logger();
         let messages = create_test_messages();
         let options = MemoryProcessorOptions::default();
-        
+
         // Test message limit processor
         let limit_processor = MessageLimitProcessor::new(3, logger.clone());
         let result = limit_processor.process(messages.clone(), &options).await.unwrap();
         assert_eq!(result.len(), 3);
         assert_eq!(limit_processor.processor_name(), "MessageLimitProcessor");
-        
+
         // Test deduplication processor
         let dedup_processor = DeduplicationProcessor::new(logger.clone());
         let result = dedup_processor.process(messages.clone(), &options).await.unwrap();

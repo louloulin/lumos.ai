@@ -63,6 +63,16 @@ mod tests {
         async fn generate(&self, messages: &[Message], _options: &crate::agent::AgentGenerateOptions) -> Result<AgentGenerateResult> {
             (self.generate_fn)(messages)
         }
+
+        async fn generate_with_memory(
+            &self,
+            messages: &[Message],
+            _thread_id: Option<String>,
+            options: &crate::agent::AgentGenerateOptions,
+        ) -> Result<AgentGenerateResult> {
+            // For mock agent, just delegate to generate
+            self.generate(messages, options).await
+        }
         
         fn get_name(&self) -> &str {
             "MockAgent"

@@ -102,6 +102,10 @@ pub mod semantic_memory;
 pub mod basic;
 pub mod thread;
 pub mod session;
+pub mod processor;
+
+// #[cfg(test)]
+// mod processor_tests;
 
 // 重新导出
 pub use working::{
@@ -140,6 +144,15 @@ pub use session::{
     SessionStats,
     ActionItem,
     Priority,
+};
+pub use processor::{
+    MemoryProcessor,
+    MemoryProcessorOptions,
+    MessageLimitProcessor,
+    RoleFilterProcessor,
+    DeduplicationProcessor,
+    CompositeProcessor,
+    create_default_processor_chain,
 };
 
 /// 添加兼容函数，用于创建基本工作内存

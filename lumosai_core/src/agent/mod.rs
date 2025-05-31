@@ -3,6 +3,7 @@
 pub mod config;
 pub mod trait_def;
 pub mod executor;
+pub mod evaluation;
 pub mod message_utils;
 pub mod types;
 pub mod streaming;
@@ -12,6 +13,9 @@ pub mod websocket;
 pub mod websocket_demo;
 #[cfg(feature = "demos")]
 pub mod enhanced_streaming_demo;
+
+#[cfg(test)]
+mod mastra_integration_test;
 
 pub use config::AgentConfig;
 pub use trait_def::Agent;
@@ -39,13 +43,26 @@ pub use websocket::{
 
 // Re-export agent types
 pub use types::{
-    AgentGenerateOptions, 
-    AgentStreamOptions, 
-    AgentGenerateResult, 
-    AgentStep, 
+    AgentGenerateOptions,
+    AgentStreamOptions,
+    AgentGenerateResult,
+    AgentStep,
     AgentToolCall,
     VoiceConfig,
     TelemetrySettings,
+    RuntimeContext,
+    DynamicArgument,
+    ToolsInput,
+    ToolsetsInput,
+};
+
+// Re-export evaluation types
+pub use evaluation::{
+    EvaluationMetric,
+    EvaluationResult,
+    RelevanceMetric,
+    LengthMetric,
+    CompositeMetric,
 };
 
 /// Create a basic agent with default configuration

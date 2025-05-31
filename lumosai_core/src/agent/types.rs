@@ -332,3 +332,79 @@ pub fn tool_message(content: impl Into<String>) -> Message {
         name: None,
     }
 }
+
+/// Runtime context for dynamic tool and instruction resolution
+#[derive(Debug, Clone)]
+pub struct RuntimeContext {
+    /// Context variables that can be used in dynamic resolution
+    pub variables: HashMap<String, serde_json::Value>,
+    /// Request-specific metadata
+    pub metadata: HashMap<String, String>,
+    /// Execution timestamp
+    pub timestamp: std::time::SystemTime,
+}
+
+impl Default for RuntimeContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RuntimeContext {
+    /// Create a new runtime context
+    pub fn new() -> Self {
+        Self {
+            variables: HashMap::new(),
+            metadata: HashMap::new(),
+            timestamp: std::time::SystemTime::now(),
+        }
+    }
+
+    /// Set a variable in the context
+    pub fn set_variable(&mut self, key: impl Into<String>, value: serde_json::Value) {
+        self.variables.insert(key.into(), value);
+    }
+
+    /// Get a variable from the context
+    pub fn get_variable(&self, key: &str) -> Option<&serde_json::Value> {
+        self.variables.get(key)
+    }
+
+    /// Set metadata
+    pub fn set_metadata(&mut self, key: impl Into<String>, value: impl Into<String>) {
+        self.metadata.insert(key.into(), value.into());
+    }
+
+    /// Get metadata
+    pub fn get_metadata(&self, key: &str) -> Option<&str> {
+        self.metadata.get(key).map(|s| s.as_str())
+    }
+}
+
+/// Dynamic argument that can be resolved at runtime
+pub type DynamicArgument<T> = Box<dyn Fn(&RuntimeContext) -> T + Send + Sync>;
+
+/// Tools input type supporting both static and dynamic tools
+pub enum ToolsInput {
+    /// Static tools
+    Static(HashMap<String, Box<dyn Tool>>),
+    /// Dynamic tools resolved at runtime
+    Dynamic(DynamicArgument<HashMap<String, Box<dyn Tool>>>),
+}
+
+/// Toolsets input for organizing tools into groups
+pub type ToolsetsInput = HashMap<String, HashMap<String, Box<dyn Tool>>>;
+
+/// Evaluation metric trait for agent performance measurement
+pub trait EvaluationMetric: Send + Sync {
+    /// Name of the metric
+    fn name(&self) -> &str;
+
+    /// Evaluate the agent's performance
+    fn evaluate(&self, input: &str, output: &str, context: &RuntimeContext) -> f64;
+
+    /// Get metric description
+    fn description(&self) -> Option<&str> {
+        None
+    }
+}

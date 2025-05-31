@@ -719,8 +719,19 @@ impl Agent for BasicAgent {
         Ok(title)
     }
     
-    async fn generate(&self, 
-        messages: &[Message], 
+    async fn generate_with_memory(&self,
+        messages: &[Message],
+        thread_id: Option<String>,
+        options: &AgentGenerateOptions
+    ) -> Result<AgentGenerateResult> {
+        // For now, delegate to regular generate method
+        // TODO: Implement proper memory thread integration
+        self.logger().debug(&format!("generate_with_memory called with thread_id: {:?}", thread_id), None);
+        self.generate(messages, options).await
+    }
+
+    async fn generate(&self,
+        messages: &[Message],
         options: &AgentGenerateOptions
     ) -> Result<AgentGenerateResult> {
         let mut steps = Vec::new();
@@ -1344,6 +1355,8 @@ impl Agent for BasicAgent {
         messages: &'a [Message], 
         options: &'a AgentStreamOptions
     ) -> Result<BoxStream<'a, Result<String>>> {
+
+        
         let stream_start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -1351,258 +1364,151 @@ impl Agent for BasicAgent {
         
         let run_id = options.run_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
         
-        // Record streaming start in trace
-        let trace_id = if let Some(trace_collector) = &self.trace_collector {
-            match trace_collector.start_trace(
-                format!("agent_{}_stream", self.name),
-                {
-                    let mut metadata = HashMap::new();
-                    metadata.insert("run_id".to_string(), serde_json::Value::String(run_id.clone()));
-                    metadata.insert("agent_name".to_string(), serde_json::Value::String(self.name.clone()));
-                    metadata.insert("streaming_mode".to_string(), serde_json::Value::Bool(true));
-                    metadata.insert("messages_count".to_string(), serde_json::Value::Number(serde_json::Number::from(messages.len())));
-                    metadata
-                }
-            ).await {
-                Ok(id) => {
-                    self.logger().debug(&format!("Started streaming trace: {}", id), None);
-                    Some(id)
-                },
-                Err(e) => {
-                    self.logger().warn(&format!("Failed to start streaming trace: {}", e), None);
-                    None
-                }
+        self.logger().info(&format!("Starting enhanced streaming generation (run_id: {})", run_id), None);
+        
+        // Use legacy streaming mode for now
+        // TODO: Implement advanced streaming
+        
+        // Legacy mode fallback - simplified implementation
+        let run_id = options.run_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
+
+        // Generate complete response first
+        let result = self.generate(messages, &AgentGenerateOptions {
+            system_message: None,
+            instructions: options.instructions.clone(),
+            context: options.context.clone(),
+            memory_options: options.memory_options.clone(),
+            thread_id: options.thread_id.clone(),
+            resource_id: options.resource_id.clone(),
+            run_id: Some(run_id.clone()),
+            max_steps: options.max_steps,
+            tool_choice: options.tool_choice.clone(),
+            context_window: None,
+            llm_options: options.llm_options.clone(),
+            ..Default::default()
+        }).await?;
+
+        // Create streaming-like experience by chunking the response
+        let response_chunks = result.response
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(3)
+            .map(|c| c.iter().collect::<String>())
+            .collect::<Vec<_>>();
+
+        let stream = stream::iter(response_chunks)
+            .map(Ok)
+            .boxed();
+
+        Ok(stream)
+    }
+
+    /// 流式输出带回调
+    async fn stream_with_callbacks<'a>(
+        &'a self,
+        messages: &'a [Message],
+        options: &'a AgentStreamOptions,
+        on_step_finish: Option<Box<dyn FnMut(AgentStep) + Send + 'a>>,
+        on_finish: Option<Box<dyn FnOnce(AgentGenerateResult) + Send + 'a>>
+    ) -> Result<BoxStream<'a, Result<String>>> {
+        // 直接生成结果，而不是在后台任务中
+        let generate_result = self.generate(messages, &AgentGenerateOptions {
+            system_message: None,
+            instructions: options.instructions.clone(),
+            context: options.context.clone(),
+            memory_options: options.memory_options.clone(),
+            thread_id: options.thread_id.clone(),
+            resource_id: options.resource_id.clone(),
+            run_id: options.run_id.clone(),
+            max_steps: options.max_steps,
+            tool_choice: options.tool_choice.clone(),
+            context_window: None,
+            llm_options: options.llm_options.clone(),
+            ..Default::default()
+        }).await?;
+
+        // 为每个步骤触发回调
+        if let Some(mut on_step) = on_step_finish {
+            for step in &generate_result.steps {
+                on_step(step.clone());
             }
-        } else {
-            None
-        };
-        
-        // Check if we should use function calling for streaming
-        let use_function_calling = self.enable_function_calling && 
-                                  self.llm.supports_function_calling() &&
-                                  !self.tools.lock().map(|tools| tools.is_empty()).unwrap_or(true);
-        
-        self.logger().info(&format!("Starting streaming generation (function_calling: {}, run_id: {})", use_function_calling, run_id), None);
-        
-        // Record streaming mode determination in trace
-        if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-            let mut mode_step = TraceStep::new(
-                "Streaming mode determined".to_string(),
-                TraceStepType::DataProcessing,
-            );
-            mode_step.metadata.insert("function_calling_enabled".to_string(), serde_json::Value::Bool(use_function_calling));
-            mode_step.metadata.insert("tools_available".to_string(), serde_json::Value::Number(serde_json::Number::from(self.tools.lock().map(|t| t.len()).unwrap_or(0))));
-            mode_step.success = true;
-            mode_step.duration_ms = 0;
-            
-            let _ = trace_collector.add_trace_step(trace_id, mode_step).await;
         }
-        
-        if use_function_calling {
-            // For function calling, we need to process the complete response first
-            // then stream the results (since function calls need to be executed)
-            
-            // Add trace step for function calling execution
-            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                let mut fc_step = TraceStep::new(
-                    "Function calling execution started".to_string(),
-                    TraceStepType::DataProcessing,
-                );
-                fc_step.metadata.insert("mode".to_string(), serde_json::Value::String("function_calling".to_string()));
-                fc_step.success = true;
-                fc_step.duration_ms = 0;
-                
-                let _ = trace_collector.add_trace_step(trace_id, fc_step).await;
-            }
-            
-            let generation_start = std::time::Instant::now();
-            let result = self.generate(messages, &AgentGenerateOptions {
-                system_message: None,
-                instructions: options.instructions.clone(),
-                context: options.context.clone(),
-                memory_options: options.memory_options.clone(),
-                thread_id: options.thread_id.clone(),
-                resource_id: options.resource_id.clone(),
-                run_id: Some(run_id.clone()),
-                max_steps: options.max_steps,
-                tool_choice: options.tool_choice.clone(),
-                context_window: None,
-                llm_options: options.llm_options.clone(),
-            }).await?;
-            let generation_time = generation_start.elapsed();
-            
-            // Record generation completion in trace
-            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                let mut gen_step = TraceStep::new(
-                    "Function calling generation completed".to_string(),
-                    TraceStepType::DataProcessing,
-                );
-                gen_step.metadata.insert("generation_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(generation_time.as_millis() as u64)));
-                gen_step.metadata.insert("steps_executed".to_string(), serde_json::Value::Number(serde_json::Number::from(result.steps.len())));
-                gen_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(result.response.len())));
-                gen_step.success = true;
-                gen_step.duration_ms = generation_time.as_millis() as u64;
-                
-                let _ = trace_collector.add_trace_step(trace_id, gen_step).await;
-            }
-            
-            // Stream the function call steps and final response
-            let mut stream_items = Vec::new();
-            
-            // Add step-by-step streaming for better UX
-            for step in &result.steps {
-                match step.step_type {
-                    StepType::Tool => {
-                        stream_items.push(format!("🔧 Executing {} tool call(s)...\n", step.tool_calls.len()));
-                        for tool_call in &step.tool_calls {
-                            stream_items.push(format!("  • Calling {}\n", tool_call.name));
-                        }
-                        for tool_result in &step.tool_results {
-                            match tool_result.status {
-                                ToolResultStatus::Success => {
-                                    stream_items.push(format!("  ✅ {} completed\n", tool_result.name));
-                                },
-                                ToolResultStatus::Error => {
-                                    stream_items.push(format!("  ❌ {} failed\n", tool_result.name));
-                                }
-                            }
-                        }
-                    },
-                    StepType::Final => {
-                        // Stream the final response in chunks
-                        let response_chunks = result.response
-                            .chars()
-                            .collect::<Vec<_>>()
-                            .chunks(20)
-                            .map(|c| c.iter().collect::<String>())
-                            .collect::<Vec<_>>();
-                        
-                        stream_items.extend(response_chunks);
-                    },
-                    _ => {
-                        // Handle other step types
-                        if let Some(output) = &step.output {
-                            let output_chunks = output.content
-                                .chars()
-                                .collect::<Vec<_>>()
-                                .chunks(20)
-                                .map(|c| c.iter().collect::<String>())
-                                .collect::<Vec<_>>();
-                            stream_items.extend(output_chunks);
-                        }
-                    }
-                }
-            }
-            
-            // Record streaming completion in trace
-            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                let stream_time = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis() as u64 - stream_start_time;
-                
-                let mut stream_step = TraceStep::new(
-                    "Streaming output prepared".to_string(),
-                    TraceStepType::DataProcessing,
-                );
-                stream_step.metadata.insert("stream_chunks".to_string(), serde_json::Value::Number(serde_json::Number::from(stream_items.len())));
-                stream_step.metadata.insert("total_streaming_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(stream_time)));
-                stream_step.success = true;
-                stream_step.duration_ms = stream_time;
-                
-                let _ = trace_collector.add_trace_step(trace_id, stream_step).await;
-                
-                // End the streaming trace
-                let _ = trace_collector.end_trace(trace_id, true).await;
-            }
-            
-            let stream = stream::iter(stream_items)
-                .map(Ok)
-                .boxed();
-            
-            Ok(stream)
-        } else {
-            // Fallback to regular streaming without function calling
-            
-            // Add trace step for legacy mode
-            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                let mut legacy_step = TraceStep::new(
-                    "Legacy streaming execution started".to_string(),
-                    TraceStepType::DataProcessing,
-                );
-                legacy_step.metadata.insert("mode".to_string(), serde_json::Value::String("legacy_regex".to_string()));
-                legacy_step.success = true;
-                legacy_step.duration_ms = 0;
-                
-                let _ = trace_collector.add_trace_step(trace_id, legacy_step).await;
-            }
-            
-            let generation_start = std::time::Instant::now();
-            let result = self.generate(messages, &AgentGenerateOptions {
-                system_message: None,
-                instructions: options.instructions.clone(),
-                context: options.context.clone(),
-                memory_options: options.memory_options.clone(),
-                thread_id: options.thread_id.clone(),
-                resource_id: options.resource_id.clone(),
-                run_id: Some(run_id.clone()),
-                max_steps: options.max_steps,
-                tool_choice: options.tool_choice.clone(),
-                context_window: None,
-                llm_options: options.llm_options.clone(),
-            }).await?;
-            let generation_time = generation_start.elapsed();
-            
-            // Record legacy generation completion in trace
-            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                let mut gen_step = TraceStep::new(
-                    "Legacy generation completed".to_string(),
-                    TraceStepType::DataProcessing,
-                );
-                gen_step.metadata.insert("generation_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(generation_time.as_millis() as u64)));
-                gen_step.metadata.insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(result.response.len())));
-                gen_step.success = true;
-                gen_step.duration_ms = generation_time.as_millis() as u64;
-                
-                let _ = trace_collector.add_trace_step(trace_id, gen_step).await;
-            }
-            
-            // Split the response into chunks for streaming simulation
-            let chunks = result.response
-                .chars()
-                .collect::<Vec<_>>()
-                .chunks(20)
-                .map(|c| c.iter().collect::<String>())
-                .collect::<Vec<_>>();
-            
-            // Record streaming completion in trace
-            if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                let stream_time = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis() as u64 - stream_start_time;
-                
-                let mut stream_step = TraceStep::new(
-                    "Legacy streaming output prepared".to_string(),
-                    TraceStepType::DataProcessing,
-                );
-                stream_step.metadata.insert("stream_chunks".to_string(), serde_json::Value::Number(serde_json::Number::from(chunks.len())));
-                stream_step.metadata.insert("total_streaming_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(stream_time)));
-                stream_step.success = true;
-                stream_step.duration_ms = stream_time;
-                
-                let _ = trace_collector.add_trace_step(trace_id, stream_step).await;
-                
-                // End the streaming trace
-                let _ = trace_collector.end_trace(trace_id, true).await;
-            }
-            
-            let stream = stream::iter(chunks)
-                .map(Ok)
-                .boxed();
-            
-            Ok(stream)
+
+        // 触发完成回调
+        if let Some(on_finish_cb) = on_finish {
+            on_finish_cb(generate_result.clone());
         }
+
+        // 将回复分成块返回
+        let response = generate_result.response;
+        let chunks = response
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(20)
+            .map(|c| c.iter().collect::<String>())
+            .collect::<Vec<_>>();
+
+        let stream = stream::iter(chunks)
+            .map(Ok)
+            .boxed();
+
+        Ok(stream)
+    }
+
+    /// 获取语音提供者
+    fn get_voice(&self) -> Option<Arc<dyn VoiceProvider>> {
+        self.voice.clone()
+    }
+
+    /// 设置语音提供者
+    fn set_voice(&mut self, voice: Arc<dyn VoiceProvider>) {
+        self.voice = Some(voice);
+    }
+
+    fn get_working_memory(&self) -> Option<Arc<dyn WorkingMemory>> {
+        // We can't return an Arc from a Box, so we'll return None for now
+        // This is a limitation that would need refactoring to fix properly
+        None
+    }
+}
+
+impl BasicAgent {
+    /// Legacy mode fallback for LLMs that don't support streaming
+    async fn stream_legacy_mode<'a>(&'a self,
+        messages: &'a [Message],
+        options: &'a AgentStreamOptions
+    ) -> Result<BoxStream<'a, Result<String>>> {
+        let run_id = options.run_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+
+        // Generate complete response first
+        let result = self.generate(messages, &AgentGenerateOptions {
+            system_message: None,
+            instructions: options.instructions.clone(),
+            context: options.context.clone(),
+            memory_options: options.memory_options.clone(),
+            thread_id: options.thread_id.clone(),
+            resource_id: options.resource_id.clone(),
+            run_id: Some(run_id.clone()),
+            max_steps: options.max_steps,
+            tool_choice: options.tool_choice.clone(),
+            context_window: None,
+            llm_options: options.llm_options.clone(),
+            ..Default::default()
+        }).await?;
+
+        // Create streaming-like experience by chunking the response
+        let response_chunks = result.response
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(3)
+            .map(|c| c.iter().collect::<String>())
+            .collect::<Vec<_>>();
+
+        let stream = stream::iter(response_chunks)
+            .map(Ok)
+            .boxed();
+
+        Ok(stream)
     }
 
     /// 流式输出带回调
@@ -1694,184 +1600,5 @@ impl Agent for BasicAgent {
             None => Err(Error::Memory("Working memory not initialized".to_string())),
         }
     }
-    
-    /// Generate a response with memory thread integration
-    async fn generate_with_memory(
-        &self,
-        messages: &[Message],
-        thread_id: Option<String>,
-        options: &AgentGenerateOptions
-    ) -> Result<AgentGenerateResult> {
-        // Setup metrics timing
-        let start_time = std::time::Instant::now();
-        
-        // Create a new options object that includes the thread_id
-        let mut memory_options = options.clone();
-        if let Some(tid) = thread_id.as_ref() {
-            memory_options.thread_id = Some(tid.clone());
-        }
-        
-        // Initialize thread-related variables
-        let thread_manager = if let Some(memory) = self.memory.as_ref() {
-            if let Some(thread_storage) = memory.as_thread_storage() {
-                // We need to create a simple wrapper that works with Arc<dyn MemoryThreadStorage>
-                Some(thread_storage)
-            } else {
-                self.logger().warn("Memory does not support thread storage, continuing without thread integration", None);
-                None
-            }
-        } else {
-            self.logger().warn("No memory configured for agent, continuing without thread integration", None);
-            None
-        };
-        
-        let mut context_messages = Vec::new();
-        let mut thread = None;
-        
-        // Create or retrieve memory thread if we have thread_id and manager
-        if let (Some(tid), Some(manager)) = (thread_id.as_ref(), thread_manager.as_ref()) {
-            // Try to get existing thread first
-            match manager.get_thread(tid).await {
-                Ok(Some(existing_thread)) => {
-                    thread = Some(existing_thread);
-                    self.logger().debug(&format!("Found existing memory thread: {}", tid), None);
-                },
-                Ok(None) => {
-                    // Thread doesn't exist, create a new one
-                    let title = if let Some(first_msg) = messages.iter().find(|m| m.role == crate::llm::Role::User) {
-                        match self.generate_title(first_msg).await {
-                            Ok(title) => title,
-                            Err(_) => "New Conversation".to_string(),
-                        }
-                    } else {
-                        "New Conversation".to_string()
-                    };
-                    
-                    let thread_params = crate::memory::thread::CreateThreadParams {
-                        id: Some(tid.clone()),
-                        title,
-                        agent_id: Some(self.name.clone()),
-                        resource_id: memory_options.resource_id.clone(),
-                        metadata: None,
-                    };
-                    
-                    let new_thread = crate::memory::thread::MemoryThread::new(thread_params);
-                    match manager.create_thread(&new_thread).await {
-                        Ok(created_thread) => {
-                            thread = Some(created_thread);
-                            self.logger().debug(&format!("Created new memory thread: {}", tid), None);
-                        },
-                        Err(e) => {
-                            self.logger().error(&format!("Failed to create memory thread: {}", e), None);
-                        }
-                    }
-                },
-                Err(e) => {
-                    self.logger().error(&format!("Error accessing memory thread: {}", e), None);
-                }
-            }
-            
-            // Load context from thread if available
-            if let Some(thread_ref) = thread.as_ref() {
-                // Setup parameters for retrieving messages
-                let memory_thread_options = crate::memory::thread::MemoryOptions {
-                    save_to_memory: true,
-                    load_context: true,
-                    context_limit: Some(memory_options.context_window.unwrap_or(10)),
-                    use_semantic_search: false,
-                    working_memory: None,
-                };
-                
-                let get_params = crate::memory::thread::GetMessagesParams {
-                    limit: memory_thread_options.context_limit,
-                    cursor: None,
-                    filter: None,
-                    include_content: true,
-                    reverse_order: false,
-                };
-                
-                // Retrieve previous messages from thread
-                match manager.get_messages(&thread_ref.id, &get_params).await {
-                    Ok(thread_messages) if !thread_messages.is_empty() => {
-                        self.logger().debug(
-                            &format!("Loaded {} messages from memory thread", thread_messages.len()), 
-                            None
-                        );
-                        context_messages = thread_messages;
-                    },
-                    Ok(_) => {
-                        self.logger().debug("No previous messages found in memory thread", None);
-                    },
-                    Err(e) => {
-                        self.logger().warn(&format!("Failed to retrieve messages from memory thread: {}", e), None);
-                    }
-                }
-            }
-        }
-        
-        // Combine context messages with new messages, preserving order
-        let mut all_messages = Vec::new();
-        
-        // First add system message from options if present
-        if let Some(system_msg) = options.system_message.as_ref() {
-            all_messages.push(system_msg.clone());
-        }
-        
-        // Then add context messages, filtering out any system messages to avoid conflicts
-        for msg in context_messages.iter().filter(|m| m.role != crate::llm::Role::System) {
-            all_messages.push(msg.clone());
-        }
-        
-        // Finally add the new messages, also filtering out system messages if we already have one
-        let has_system_msg = all_messages.iter().any(|m| m.role == crate::llm::Role::System);
-        for msg in messages.iter().filter(|m| !has_system_msg || m.role != crate::llm::Role::System) {
-            all_messages.push(msg.clone());
-        }
-        
-        // Generate response using the combined messages
-        let generation_result = self.generate(&all_messages, &memory_options).await?;
-        
-        // Store the new messages in the thread if available
-        if let (Some(tid), Some(manager)) = (thread_id.as_ref(), thread_manager.as_ref()) {
-            // Store each new message
-            for msg in messages {
-                if let Err(e) = manager.add_message(tid, msg).await {
-                    self.logger().warn(&format!("Failed to store message in memory thread: {}", e), None);
-                }
-            }
-            
-            // Store the assistant's response
-            let assistant_msg = Message {
-                role: crate::llm::Role::Assistant,
-                content: generation_result.response.clone(),
-                metadata: None,
-                name: None,
-            };
-            if let Err(e) = manager.add_message(tid, &assistant_msg).await {
-                self.logger().warn(&format!("Failed to store assistant response in memory thread: {}", e), None);
-            }
-        }
-        
-        // Record memory metrics
-        if let Some(metrics_collector) = &self.metrics_collector {
-            let context_load_time = start_time.elapsed();
-            let memory_metrics = crate::telemetry::MemoryMetrics {
-                operation_type: "thread_load".to_string(),
-                execution_time_ms: context_load_time.as_millis() as u64,
-                success: thread.is_some(),
-                key: thread_id.clone(),
-                data_size_bytes: Some(context_messages.len() * 256), // Rough estimate
-                timestamp: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis() as u64,
-            };
-            
-            let _ = metrics_collector.record_memory_operation(memory_metrics).await;
-        }
-        
-        Ok(generation_result)
-    }
-    
-    // ...existing code...
+
 }

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::llm::{AnthropicProvider, LlmOptions, LlmProvider, Message, OpenAiProvider, Role};
+    use crate::llm::{AnthropicProvider, DeepSeekProvider, LlmOptions, LlmProvider, Message, OpenAiProvider, Role};
 
     // 这些测试使用内联的测试数据，不依赖于外部HTTP模拟库
     
@@ -35,17 +35,34 @@ mod tests {
             "fake-api-key".to_string(),
             "claude-2".to_string(),
         );
-        
+
         // 调用嵌入方法
         let result = provider.get_embedding("Hello").await;
-        
+
         // 验证错误
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("does not provide an embedding API"));
     }
+
+    // 测试DeepSeek嵌入错误
+    #[tokio::test]
+    async fn test_deepseek_embedding_error() {
+        // DeepSeek没有嵌入API，所以这应该返回一个错误
+        let provider = DeepSeekProvider::new(
+            "fake-api-key".to_string(),
+            None,
+        );
+
+        // 调用嵌入方法
+        let result = provider.get_embedding("Hello").await;
+
+        // 验证错误
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("DeepSeek does not provide embedding API"));
+    }
     
     // 以下测试需要实际的API密钥才能运行，所以默认被忽略
-    // 要运行这些测试，需要设置环境变量OPENAI_API_KEY和ANTHROPIC_API_KEY
+    // 要运行这些测试，需要设置环境变量OPENAI_API_KEY、ANTHROPIC_API_KEY和DEEPSEEK_API_KEY
     
     #[tokio::test]
     #[ignore]
@@ -119,4 +136,56 @@ mod tests {
         assert!(response.is_ok());
         println!("Anthropic response: {}", response.unwrap());
     }
-} 
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_deepseek_integration() {
+        // 只有在提供API密钥时才运行此测试
+        let api_key = std::env::var("DEEPSEEK_API_KEY").expect("需要设置DEEPSEEK_API_KEY环境变量");
+
+        let provider = DeepSeekProvider::new(
+            api_key,
+            None, // 使用默认模型
+        );
+
+        // 创建请求选项
+        let options = LlmOptions::default()
+            .with_temperature(0.7)
+            .with_max_tokens(50);
+
+        // 调用生成方法
+        let response = provider.generate("Say hello", &options).await;
+
+        // 验证响应成功
+        assert!(response.is_ok());
+        println!("DeepSeek response: {}", response.unwrap());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_deepseek_integration_with_messages() {
+        // 只有在提供API密钥时才运行此测试
+        let api_key = std::env::var("DEEPSEEK_API_KEY").expect("需要设置DEEPSEEK_API_KEY环境变量");
+
+        let provider = DeepSeekProvider::new(
+            api_key,
+            Some("deepseek-chat".to_string()),
+        );
+
+        // 创建请求选项
+        let options = LlmOptions::default()
+            .with_temperature(0.7)
+            .with_max_tokens(50);
+
+        let messages = vec![
+            Message::new(Role::User, "Say hello".to_string(), None, None),
+        ];
+
+        // 调用生成方法
+        let response = provider.generate_with_messages(&messages, &options).await;
+
+        // 验证响应成功
+        assert!(response.is_ok());
+        println!("DeepSeek response: {}", response.unwrap());
+    }
+}

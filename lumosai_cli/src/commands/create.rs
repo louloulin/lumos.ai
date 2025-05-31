@@ -94,6 +94,7 @@ pub async fn run(
             let choices = &[
                 "openai - OpenAI (GPT-4, GPT-3.5)",
                 "anthropic - Anthropic (Claude)",
+                "deepseek - DeepSeek (DeepSeek-Chat, DeepSeek-Reasoner)",
                 "gemini - Google Gemini",
                 "local - 本地模型",
             ];

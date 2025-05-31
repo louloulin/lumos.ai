@@ -76,6 +76,7 @@ Lumosai 设计了灵活的模型适配层，支持多种 LLM 提供商和模型�
 |--------|----------|----------|
 | OpenAI | GPT-3.5/4 系列 | API 集成 |
 | Anthropic | Claude 系列 | API 集成 |
+| DeepSeek | DeepSeek-Chat, DeepSeek-Reasoner | API 集成 |
 | 本地模型 | LLaMA, Mistral, Qwen | 直接集成 |
 | HuggingFace | 各类开源模型 | API/直接集成 |
 | 自定义模型 | - | 适配器接口 |

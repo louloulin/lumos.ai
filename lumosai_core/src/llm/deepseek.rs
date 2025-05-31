@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::{Error, Result};
 use super::provider::{LlmProvider, FunctionCallingResponse};
-use super::types::{LlmOptions, Message};
+use super::types::{LlmOptions, Message, Role};
 use super::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
 
 /// DeepSeek API response structures (compatible with OpenAI format)
@@ -298,11 +298,35 @@ impl LlmProvider for DeepSeekProvider {
         let api_messages: Vec<serde_json::Value> = messages
             .iter()
             .map(|msg| {
-                serde_json::json!({
+                let mut message = serde_json::json!({
                     "role": msg.role.as_str(),
                     "content": msg.content.clone(),
-                    "name": msg.name.clone(),
-                })
+                });
+
+                // Add name if present
+                if let Some(name) = &msg.name {
+                    message["name"] = serde_json::Value::String(name.clone());
+                }
+
+                // Add tool_call_id for tool messages (required by DeepSeek API)
+                if msg.role == Role::Tool {
+                    if let Some(metadata) = &msg.metadata {
+                        if let Some(tool_call_id) = metadata.get("tool_call_id") {
+                            message["tool_call_id"] = tool_call_id.clone();
+                        }
+                    }
+                }
+
+                // Add tool_calls for assistant messages (if they contain function calls)
+                if msg.role == Role::Assistant {
+                    if let Some(metadata) = &msg.metadata {
+                        if let Some(tool_calls) = metadata.get("tool_calls") {
+                            message["tool_calls"] = tool_calls.clone();
+                        }
+                    }
+                }
+
+                message
             })
             .collect();
 

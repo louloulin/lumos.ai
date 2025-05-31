@@ -87,6 +87,15 @@ const agent = new Agent({
   })
 });
 
+// DeepSeek 配置
+const agent = new Agent({
+  llmProvider: new DeepSeekAdapter({
+    apiKey: "your-deepseek-api-key",
+    model: "deepseek-chat",
+    baseUrl: "https://api.deepseek.com" // 可选，自定义端点
+  })
+});
+
 // 本地模型配置
 const agent = new Agent({
   llmProvider: new LocalModelAdapter({

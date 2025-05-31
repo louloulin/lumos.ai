@@ -94,7 +94,7 @@ pnpm desktop:build
        "language": "zh-CN"
      },
      "llm": {
-       "provider": "openai",
+       "provider": "openai", // 支持 "openai", "anthropic", "deepseek", "local"
        "apiKey": "sk-xxxxxxxxxxxx",
        "defaultModel": "gpt-4"
      },
@@ -325,12 +325,21 @@ docker run -d \
 helm repo add lumosai https://charts.lumosai.org
 helm repo update
 
-# 安装 Chart
+# 安装 Chart (使用 OpenAI)
 helm install lumosai lumosai/lumosai \
   --namespace lumosai \
   --create-namespace \
   --set llm.provider=openai \
   --set llm.apiKey=your_openai_api_key \
+  --set storage.postgres.enabled=true \
+  --set storage.postgres.password=your_secure_password
+
+# 或者使用 DeepSeek
+helm install lumosai lumosai/lumosai \
+  --namespace lumosai \
+  --create-namespace \
+  --set llm.provider=deepseek \
+  --set llm.apiKey=your_deepseek_api_key \
   --set storage.postgres.enabled=true \
   --set storage.postgres.password=your_secure_password
 ```
@@ -342,7 +351,7 @@ helm install lumosai lumosai/lumosai \
 replicaCount: 3
 
 llm:
-  provider: openai
+  provider: openai  # 或 "deepseek", "anthropic", "local"
   apiKey: your_openai_api_key
   defaultModel: gpt-4
 

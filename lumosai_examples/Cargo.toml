@@ -92,3 +92,7 @@ path = "src/macro_tool_example.rs"
 [[example]]
 name = "function_calling_enhancement_demo"
 path = "src/function_calling_enhancement_demo.rs"
+
+[[example]]
+name = "deepseek_agent_demo"
+path = "src/deepseek_agent_demo.rs"

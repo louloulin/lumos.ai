@@ -1032,16 +1032,46 @@ impl Agent for BasicAgent {
                             tool_results.push(result);
                         }
                         
-                        // Add tool results to messages and continue
-                        all_messages.push(Message {
+                        // Add assistant message with tool calls to conversation
+                        let mut assistant_metadata = HashMap::new();
+
+                        // Convert function calls to tool_calls format for the message
+                        if !response.function_calls.is_empty() {
+                            let tool_calls_json: Vec<serde_json::Value> = response.function_calls
+                                .iter()
+                                .map(|fc| {
+                                    serde_json::json!({
+                                        "id": fc.id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+                                        "type": "function",
+                                        "function": {
+                                            "name": fc.name,
+                                            "arguments": fc.arguments
+                                        }
+                                    })
+                                })
+                                .collect();
+                            assistant_metadata.insert("tool_calls".to_string(), serde_json::Value::Array(tool_calls_json));
+                        }
+
+                        let assistant_msg = Message {
                             role: Role::Assistant,
                             content: response.content.clone().unwrap_or_default(),
-                            metadata: None,
+                            metadata: if assistant_metadata.is_empty() { None } else { Some(assistant_metadata) },
                             name: None,
-                        });
-                        
+                        };
+                        all_messages.push(assistant_msg);
+
+                        // Add tool result messages
                         for result in &tool_results {
-                            all_messages.push(tool_message(&result.result.to_string()));
+                            // Create tool message with proper metadata for function calling
+                            let mut tool_msg = tool_message(&result.result.to_string());
+
+                            // Add tool_call_id to metadata for DeepSeek/OpenAI compatibility
+                            let mut metadata = HashMap::new();
+                            metadata.insert("tool_call_id".to_string(), serde_json::Value::String(result.call_id.clone()));
+                            tool_msg.metadata = Some(metadata);
+
+                            all_messages.push(tool_msg);
                         }
                         
                         let step = AgentStep {

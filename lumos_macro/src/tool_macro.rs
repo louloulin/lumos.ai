@@ -137,7 +137,7 @@ impl Parse for ToolExecuteArgs {
                     let _: Option<Token![,]> = content.parse()?;
                 },
                 "params" => {
-                    let params_str: LitStr;
+                    let _params_str: LitStr; // 标记为未使用
                     let inner_content;
                     let _ = syn::braced!(inner_content in content);
                     
@@ -165,7 +165,7 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
     let fn_name = &input.sig.ident;
     let fn_params = &input.sig.inputs;
     let fn_body = &input.block;
-    let fn_output = &input.sig.output;
+    let _fn_output = &input.sig.output; // 标记为未使用
     
     let tool_name = attrs.name.value();
     let tool_description = attrs.description.value();
@@ -175,7 +175,7 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
     for param in fn_params.iter() {
         if let syn::FnArg::Typed(pat_type) = param {
             if let syn::Pat::Ident(pat_ident) = &*pat_type.pat {
-                let param_name = &pat_ident.ident;
+                let _param_name = &pat_ident.ident; // 标记为未使用
                 
                 // Find parameter attributes
                 for attr in &pat_ident.attrs {

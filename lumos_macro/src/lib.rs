@@ -1,7 +1,7 @@
 extern crate proc_macro;
 use proc_macro::TokenStream;
 use syn::{Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
-use syn::spanned::Spanned;
+// use syn::spanned::Spanned; // 暂时未使用
 
 mod parser;
 mod tool_macro;

@@ -124,16 +124,16 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     
     let app_name = &app_def.name;
     let app_name_str = app_name.value();
-    let app_var_name = format_ident!("{}", app_name_str.to_lowercase().replace("-", "_"));
-    
+    let _app_var_name = format_ident!("{}", app_name_str.to_lowercase().replace("-", "_")); // 标记为未使用
+
     // 描述
-    let description = match &app_def.description {
+    let _description = match &app_def.description {
         Some(desc) => quote! { .with_description(#desc) },
         None => quote! {},
     };
-    
+
     // 处理代理
-    let agent_registrations = if let Some(agents) = &app_def.agents {
+    let _agent_registrations = if let Some(agents) = &app_def.agents {
         let agent_statements = agents.items.iter().map(|item| {
             let agent_name = &item.name;
             
@@ -155,7 +155,7 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     };
     
     // 处理工具
-    let tool_registrations = if let Some(tools) = &app_def.tools {
+    let _tool_registrations = if let Some(tools) = &app_def.tools {
         let tool_statements = tools.items.iter().map(|item| {
             let tool_name = &item.name;
             
@@ -177,7 +177,7 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     };
     
     // 处理RAG
-    let rag_registrations = if let Some(rags) = &app_def.rags {
+    let _rag_registrations = if let Some(rags) = &app_def.rags {
         let rag_statements = rags.items.iter().map(|item| {
             let rag_name = &item.name;
             
@@ -199,7 +199,7 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     };
     
     // 处理工作流
-    let workflow_registrations = if let Some(workflows) = &app_def.workflows {
+    let _workflow_registrations = if let Some(workflows) = &app_def.workflows {
         let workflow_statements = workflows.items.iter().map(|item| {
             let workflow_name = &item.name;
             
@@ -221,7 +221,7 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     };
     
     // 处理MCP端点
-    let mcp_config = if let Some(endpoints) = &app_def.mcp_endpoints {
+    let _mcp_config = if let Some(endpoints) = &app_def.mcp_endpoints {
         quote! {
             app.set_mcp_endpoints(#endpoints);
         }

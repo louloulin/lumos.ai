@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use quote::{quote, format_ident};
 use syn::{parse_macro_input, DeriveInput, Ident, LitStr, Token, parse::{Parse, ParseStream}};
 use syn::{Data, DataStruct, Fields};
-use syn::spanned::Spanned;
+// use syn::spanned::Spanned; // 暂时未使用
 
 // 代理属性解析
 pub struct AgentAttributes {
@@ -102,7 +102,7 @@ pub fn agent_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     let struct_name = &input.ident;
     let agent_name = attrs.name.value();
     let instructions = attrs.instructions.value();
-    let model = attrs.model.value(); 
+    let _model = attrs.model.value(); // 标记为未使用
     
     // Extract tool fields
     let mut tools = Vec::new();

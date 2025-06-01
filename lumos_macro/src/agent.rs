@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, braced, bracketed, Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
+use syn::{parse_macro_input, Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
 
 /// 简化的Agent定义结构 - 使用syn直接解析
 struct SimpleAgentDef {

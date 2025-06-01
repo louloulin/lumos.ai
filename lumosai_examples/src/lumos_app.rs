@@ -243,25 +243,14 @@ fn create_deepseek_provider() -> DeepSeekLlmAdapter {
     DeepSeekLlmAdapter::new(api_key)
 }
 
-// 使用agent!宏定义一个股票助手代理
+// 使用优化后的agent!宏 - 新的简化语法
 fn create_stock_agent() -> impl lumosai_core::Agent {
-    // 暂时使用手动创建，直到agent!宏修复完成
-    use lumosai_core::agent::create_basic_agent;
-    use std::sync::Arc;
-
-    let provider = Arc::new(create_deepseek_provider());
-
-    let mut agent = create_basic_agent(
-        "stock_agent".to_string(),
-        "你是一个专业的股票分析师和投资顾问，擅长分析股票价格、市场趋势和相关新闻。你可以使用专业工具来获取实时股票数据和新闻信息，为用户提供准确、及时的投资建议。请用中文回答，并在适当时候调用相应的工具。".to_string(),
-        provider
-    );
-
-    // 添加工具
-    agent.add_tool(stock_price()).expect("Failed to add stock_price tool");
-    agent.add_tool(stock_news()).expect("Failed to add stock_news tool");
-
-    agent
+    agent! {
+        name: "stock_agent",
+        instructions: "你是一个专业的股票分析师和投资顾问，擅长分析股票价格、市场趋势和相关新闻。你可以使用专业工具来获取实时股票数据和新闻信息，为用户提供准确、及时的投资建议。请用中文回答，并在适当时候调用相应的工具。",
+        provider: create_deepseek_provider(),
+        tools: [stock_price, stock_news]
+    }
 }
 
 #[tokio::main]
@@ -283,7 +272,7 @@ async fn main() -> Result<()> {
 
     println!("✅ 正在初始化Lumos股票助手...");
 
-    // 创建股票助手代理
+    // 暂时直接使用agent，不使用lumos!宏
     let mut app = create_stock_agent();
 
     println!("✅ 应用初始化完成！");

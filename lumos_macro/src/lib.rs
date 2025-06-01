@@ -3,6 +3,7 @@ use proc_macro::TokenStream;
 use syn::{Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
 use syn::spanned::Spanned;
 
+mod parser;
 mod tool_macro;
 mod agent_macro;
 mod workflow;
@@ -503,36 +504,66 @@ pub fn tools(input: TokenStream) -> TokenStream {
     tools::tools(input)
 }
 
-/// 配置整个Lumos应用，参考Mastra的应用级API
-/// 
+/// 基于nom的tool!宏 - 新的语法设计
+///
 /// # 示例
-/// 
+///
+/// ```rust
+/// tool! {
+///     name: "calculator",
+///     description: "执行基本的数学运算",
+///     parameters: [
+///         {
+///             name: "operation",
+///             description: "要执行的操作: add, subtract, multiply, divide",
+///             type: "string",
+///             required: true
+///         },
+///         {
+///             name: "a",
+///             description: "第一个数字",
+///             type: "number",
+///             required: true
+///         }
+///     ],
+///     handler: handle_calculator
+/// }
+/// ```
+#[proc_macro]
+pub fn tool_nom(input: TokenStream) -> TokenStream {
+    tool_macro::tool_nom_macro(input)
+}
+
+/// 配置整个Lumos应用，参考Mastra的应用级API
+///
+/// # 示例
+///
 /// ```rust
 /// let app = lumos! {
 ///     name: "stock_assistant",
 ///     description: "一个能够提供股票信息的AI助手",
-///     
+///
 ///     agents: {
 ///         stockAgent
 ///     },
-///     
+///
 ///     tools: {
 ///         stockPriceTool,
 ///         stockInfoTool
 ///     },
-///     
+///
 ///     rags: {
 ///         stockKnowledgeBase
 ///     },
-///     
+///
 ///     workflows: {
 ///         stockAnalysisWorkflow
 ///     },
-///     
+///
 ///     mcp_endpoints: vec!["https://api.example.com/mcp"]
 /// };
 /// ```
 #[proc_macro]
 pub fn lumos(input: TokenStream) -> TokenStream {
     lumos::lumos(input)
-} 
+}

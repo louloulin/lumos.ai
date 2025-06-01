@@ -1,243 +1,109 @@
 use proc_macro::TokenStream;
-use quote::{quote, format_ident};
-use syn::{parse_macro_input, braced, Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
-use syn::punctuated::Punctuated;
+use quote::quote;
+use syn::{parse_macro_input, braced, bracketed, Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
 
-// LLM配置
-struct LlmConfig {
-    provider: Expr,
-    model: LitStr,
-}
-
-impl Parse for LlmConfig {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        let _ = braced!(content in input);
-        
-        let mut provider = None;
-        let mut model = None;
-        
-        while !content.is_empty() {
-            let key: Ident = content.parse()?;
-            let _: Token![:] = content.parse()?;
-            
-            match key.to_string().as_str() {
-                "provider" => {
-                    provider = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
-                },
-                "model" => {
-                    model = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
-                },
-                _ => return Err(syn::Error::new(key.span(), "Unknown field in LLM config, expected 'provider' or 'model'")),
-            }
-        }
-        
-        let provider = provider.ok_or_else(|| syn::Error::new(input.span(), "Missing 'provider' field in LLM config"))?;
-        let model = model.ok_or_else(|| syn::Error::new(input.span(), "Missing 'model' field in LLM config"))?;
-        
-        Ok(LlmConfig { provider, model })
-    }
-}
-
-// 内存配置
-struct MemoryConfig {
-    store_type: LitStr,
-    capacity: Option<Expr>,
-}
-
-impl Parse for MemoryConfig {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        let _ = braced!(content in input);
-        
-        let mut store_type = None;
-        let mut capacity = None;
-        
-        while !content.is_empty() {
-            let key: Ident = content.parse()?;
-            let _: Token![:] = content.parse()?;
-            
-            match key.to_string().as_str() {
-                "store_type" => {
-                    store_type = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
-                },
-                "capacity" => {
-                    capacity = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
-                },
-                _ => return Err(syn::Error::new(key.span(), "Unknown field in memory config")),
-            }
-        }
-        
-        let store_type = store_type.ok_or_else(|| syn::Error::new(input.span(), "Missing 'store_type' field in memory config"))?;
-        
-        Ok(MemoryConfig { store_type, capacity })
-    }
-}
-
-// 工具配置
-struct ToolItem {
-    name: Ident,
-    options: Option<Expr>,
-}
-
-impl Parse for ToolItem {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let name: Ident = input.parse()?;
-        
-        let options = if input.peek(Token![:]) || input.peek(Token![=]) {
-            let _: Token![:] = input.parse()?;
-            Some(input.parse()?)
-        } else {
-            None
-        };
-        
-        Ok(ToolItem { name, options })
-    }
-}
-
-// 工具集合
-struct ToolsConfig {
-    tools: Punctuated<ToolItem, Token![,]>,
-}
-
-impl Parse for ToolsConfig {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        let _ = braced!(content in input);
-        
-        let tools = Punctuated::parse_terminated(&content)?;
-        
-        Ok(ToolsConfig { tools })
-    }
-}
-
-// 代理配置
-struct AgentDef {
+/// 简化的Agent定义结构 - 使用syn直接解析
+struct SimpleAgentDef {
     name: LitStr,
     instructions: LitStr,
-    llm: LlmConfig,
-    memory: Option<MemoryConfig>,
-    tools: ToolsConfig,
+    provider: Expr,
+    tools: Vec<Ident>,
 }
 
-impl Parse for AgentDef {
+impl Parse for SimpleAgentDef {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        let _ = braced!(content in input);
-        
         let mut name = None;
         let mut instructions = None;
-        let mut llm = None;
-        let mut memory = None;
-        let mut tools = None;
-        
-        while !content.is_empty() {
-            let key: Ident = content.parse()?;
-            let _: Token![:] = content.parse()?;
-            
+        let mut provider = None;
+        let mut tools = Vec::new();
+
+        // 直接解析字段，不需要额外的花括号
+        while !input.is_empty() {
+            let key: Ident = input.parse()?;
+            let _: Token![:] = input.parse()?;
+
             match key.to_string().as_str() {
                 "name" => {
-                    name = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
+                    name = Some(input.parse::<LitStr>()?);
                 },
                 "instructions" => {
-                    instructions = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
+                    instructions = Some(input.parse::<LitStr>()?);
                 },
-                "llm" => {
-                    llm = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
-                },
-                "memory" => {
-                    memory = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
+                "provider" => {
+                    provider = Some(input.parse::<Expr>()?);
                 },
                 "tools" => {
-                    tools = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
+                    // 解析工具数组 [tool1, tool2, ...]
+                    let tools_content;
+                    let _ = syn::bracketed!(tools_content in input);
+
+                    while !tools_content.is_empty() {
+                        tools.push(tools_content.parse::<Ident>()?);
+
+                        // 处理逗号
+                        if tools_content.peek(Token![,]) {
+                            let _: Token![,] = tools_content.parse()?;
+                        }
+                    }
                 },
-                _ => return Err(syn::Error::new(key.span(), "Unknown field in agent definition")),
+                _ => {
+                    return Err(syn::Error::new(key.span(), format!("Unknown field '{}' in agent definition", key)));
+                }
+            }
+
+            // 处理可选的逗号
+            if input.peek(Token![,]) {
+                let _: Token![,] = input.parse()?;
             }
         }
-        
-        let name = name.ok_or_else(|| syn::Error::new(content.span(), "Missing 'name' field in agent definition"))?;
-        let instructions = instructions.ok_or_else(|| syn::Error::new(content.span(), "Missing 'instructions' field in agent definition"))?;
-        let llm = llm.ok_or_else(|| syn::Error::new(content.span(), "Missing 'llm' field in agent definition"))?;
-        let tools = tools.ok_or_else(|| syn::Error::new(content.span(), "Missing 'tools' field in agent definition"))?;
-        
-        Ok(AgentDef {
+
+        // 验证必需字段
+        let name = name.ok_or_else(|| syn::Error::new(input.span(), "Missing 'name' field"))?;
+        let instructions = instructions.ok_or_else(|| syn::Error::new(input.span(), "Missing 'instructions' field"))?;
+        let provider = provider.ok_or_else(|| syn::Error::new(input.span(), "Missing 'provider' field"))?;
+
+        Ok(SimpleAgentDef {
             name,
             instructions,
-            llm,
-            memory,
+            provider,
             tools,
         })
     }
 }
 
-/// 实现agent!宏
+/// 简化的agent!宏实现 - 回到syn解析
+///
+/// 语法：
+/// ```
+/// agent! {
+///     name: "agent_name",
+///     instructions: "instructions",
+///     provider: provider_expr,
+///     tools: [tool1, tool2, ...]
+/// }
+/// ```
 pub fn agent(input: TokenStream) -> TokenStream {
-    let agent_def = parse_macro_input!(input as AgentDef);
-    
+    let agent_def = parse_macro_input!(input as SimpleAgentDef);
+
     let agent_name = &agent_def.name;
-    let agent_name_str = agent_name.value();
-    let agent_var_name = format_ident!("{}", agent_name_str.to_lowercase().replace("-", "_"));
-    
     let instructions = &agent_def.instructions;
-    
-    let llm_provider = &agent_def.llm.provider;
-    let llm_model = &agent_def.llm.model;
-    
-    // 处理内存配置
-    let memory_config = if let Some(memory) = &agent_def.memory {
-        let store_type = &memory.store_type;
-        
-        let capacity = if let Some(cap) = &memory.capacity {
-            quote! {
-                .with_capacity(#cap)
-            }
-        } else {
-            quote! {}
-        };
-        
+    let provider_expr = &agent_def.provider;
+
+    // 生成工具注册代码
+    let tool_registrations: Vec<_> = agent_def.tools.iter().map(|tool_name| {
         quote! {
-            let memory_config = lumosai_core::memory::MemoryConfig::new(#store_type)
-                #capacity;
-            
-            agent_config.with_memory_config(memory_config);
+            agent.add_tool(#tool_name()).expect(&format!("Failed to add tool '{}' to agent", stringify!(#tool_name)));
         }
-    } else {
-        quote! {}
-    };
-    
-    // 处理工具
-    let mut tool_registrations = Vec::new();
-    for tool in agent_def.tools.tools.iter() {
-        let tool_name = &tool.name;
-        
-        if let Some(options) = &tool.options {
-            tool_registrations.push(quote! {
-                agent.add_tool_with_options(#tool_name(), #options).expect("Failed to add tool to agent");
-            });
-        } else {
-            tool_registrations.push(quote! {
-                agent.add_tool(#tool_name()).expect("Failed to add tool to agent");
-            });
-        }
-    }
-    
+    }).collect();
+
     let expanded = quote! {
         {
-            use lumosai_core::agent::{Agent, create_basic_agent};
+            use lumosai_core::agent::create_basic_agent;
             use lumosai_core::llm::LlmProvider;
             use std::sync::Arc;
 
             // 创建LLM提供者
-            let llm_provider: Arc<dyn LlmProvider> = Arc::new(#llm_provider);
+            let llm_provider: Arc<dyn LlmProvider> = Arc::new(#provider_expr);
 
             // 创建代理
             let mut agent = create_basic_agent(
@@ -249,10 +115,9 @@ pub fn agent(input: TokenStream) -> TokenStream {
             // 添加工具
             #(#tool_registrations)*
 
-            let #agent_var_name = agent;
-            #agent_var_name
+            agent
         }
     };
-    
+
     TokenStream::from(expanded)
-} 
+}

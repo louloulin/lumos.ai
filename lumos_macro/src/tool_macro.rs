@@ -8,6 +8,8 @@ use syn::spanned::Spanned;
 use proc_macro2::Span;
 use std::str::FromStr;
 
+use crate::parser::{parse_tool_macro, ToolDef};
+
 // 工具属性解析
 pub struct ToolAttributes {
     pub name: LitStr,
@@ -228,13 +230,93 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+// 基于nom的tool!宏实现
+pub fn tool_nom_macro(input: TokenStream) -> TokenStream {
+    // 将TokenStream转换为字符串
+    let input_str = input.to_string();
+
+    // 使用nom解析器解析输入
+    let tool_def = match parse_tool_macro(&input_str) {
+        Ok(def) => def,
+        Err(e) => {
+            let error_msg = format!("Failed to parse tool macro: {}", e);
+            return quote! {
+                compile_error!(#error_msg);
+            }.into();
+        }
+    };
+
+    // 生成代码
+    generate_tool_code(tool_def)
+}
+
+/// 生成tool代码
+fn generate_tool_code(tool_def: ToolDef) -> TokenStream {
+    let tool_name = &tool_def.name;
+    let tool_description = &tool_def.description;
+    let handler_expr = &tool_def.handler;
+
+    // 解析handler表达式
+    let handler_tokens: proc_macro2::TokenStream = match handler_expr.parse() {
+        Ok(tokens) => tokens,
+        Err(e) => {
+            let error_msg = format!("Invalid handler expression: {}", e);
+            return quote! {
+                compile_error!(#error_msg);
+            }.into();
+        }
+    };
+
+    // 生成参数schema
+    let parameters: Vec<proc_macro2::TokenStream> = tool_def.parameters.iter().map(|param| {
+        let name = &param.name;
+        let description = &param.description;
+        let param_type = &param.param_type;
+        let required = param.required;
+
+        quote! {
+            ParameterSchema {
+                name: #name.to_string(),
+                description: #description.to_string(),
+                r#type: #param_type.to_string(),
+                required: #required,
+                properties: None,
+                default: None,
+            }
+        }
+    }).collect();
+
+    let expanded = quote! {
+        pub fn #handler_tokens() -> Box<dyn Tool> {
+            Box::new(FunctionTool::new(
+                #tool_name.to_string(),
+                #tool_description.to_string(),
+                ToolSchema {
+                    parameters: vec![
+                        #(#parameters),*
+                    ]
+                },
+                |params| {
+                    // 这里需要实际的处理器实现
+                    // 暂时返回一个占位符
+                    Box::pin(async move {
+                        Ok("Tool executed successfully".to_string())
+                    })
+                },
+            ))
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
 // lumos_execute_tool宏的实现
 pub fn lumos_execute_tool(input: TokenStream) -> TokenStream {
     let input_parsed = parse_macro_input!(input as ToolExecuteArgs);
-    
+
     let tool_name = &input_parsed.tool;
     let params = &input_parsed.params;
-    
+
     let expanded = quote! {
         {
             let mut params_map = HashMap::new();
@@ -244,6 +326,6 @@ pub fn lumos_execute_tool(input: TokenStream) -> TokenStream {
             tool.execute(params_map, &options).await.expect("Tool execution failed")
         }
     };
-    
+
     TokenStream::from(expanded)
-} 
+}

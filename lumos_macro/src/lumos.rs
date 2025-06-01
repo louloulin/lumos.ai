@@ -229,14 +229,20 @@ pub fn lumos(input: TokenStream) -> TokenStream {
         quote! {}
     };
     
-    let expanded = quote! {
-        {
-            // 简化的应用实现，返回第一个代理
-            #agent_registrations
-
-            // 返回代理作为应用的简化实现
-            #app_var_name
+    // 简化的应用实现，返回第一个代理
+    let expanded = if let Some(agents) = &app_def.agents {
+        if let Some(first_agent) = agents.items.first() {
+            let agent_name = &first_agent.name;
+            let agent_expr = match &first_agent.expr {
+                Some(expr) => quote! { #expr },
+                None => quote! { #agent_name() },
+            };
+            quote! { #agent_expr }
+        } else {
+            quote! { compile_error!("Lumos app must have at least one agent") }
         }
+    } else {
+        quote! { compile_error!("Lumos app must have at least one agent") }
     };
     
     TokenStream::from(expanded)

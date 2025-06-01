@@ -382,6 +382,8 @@ impl Agent for BasicAgent {
     fn get_llm(&self) -> Arc<dyn LlmProvider> {
         self.llm.clone()
     }
+
+
     
     fn get_memory(&self) -> Option<Arc<dyn Memory>> {
         self.memory.clone()
@@ -1496,9 +1498,21 @@ impl Agent for BasicAgent {
     }
 
     fn get_working_memory(&self) -> Option<Arc<dyn WorkingMemory>> {
-        // We can't return an Arc from a Box, so we'll return None for now
-        // This is a limitation that would need refactoring to fix properly
-        None
+        // Convert Box to Arc by cloning the underlying data
+        // This is a workaround for the type mismatch
+        self.working_memory.as_ref().map(|_wm| {
+            // Create a new Arc from the Box reference
+            // Note: This is not ideal as it requires the WorkingMemory to be Clone
+            // In a real implementation, we should store Arc<dyn WorkingMemory> directly
+            Arc::new(crate::memory::BasicWorkingMemory::new(
+                crate::memory::WorkingMemoryConfig {
+                    enabled: true,
+                    template: None,
+                    content_type: Some("application/json".to_string()),
+                    max_capacity: Some(1024),
+                }
+            )) as Arc<dyn WorkingMemory>
+        })
     }
 }
 

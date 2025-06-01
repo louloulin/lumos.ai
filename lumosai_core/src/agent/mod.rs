@@ -80,6 +80,10 @@ pub fn create_basic_agent(
         telemetry: None,
         working_memory: None,
         enable_function_calling: Some(true),
+        context: None,
+        metadata: None,
+        max_tool_calls: None,
+        tool_timeout: None,
     };
     
     BasicAgent::new(_config, llm)
@@ -172,6 +176,10 @@ mod tests {
             telemetry: None,
             working_memory: None,
             enable_function_calling: Some(true),
+            context: None,
+            metadata: None,
+            max_tool_calls: None,
+            tool_timeout: None,
         };
         
         let mock_llm = Arc::new(MockLlmProvider::new(vec![

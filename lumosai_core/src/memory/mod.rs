@@ -103,6 +103,7 @@ pub mod basic;
 pub mod thread;
 pub mod session;
 pub mod processor;
+pub mod enhanced;
 
 // #[cfg(test)]
 // mod processor_tests;
@@ -153,6 +154,13 @@ pub use processor::{
     DeduplicationProcessor,
     CompositeProcessor,
     create_default_processor_chain,
+};
+pub use enhanced::{
+    EnhancedMemory,
+    MemoryEntry,
+    MemoryEntryType,
+    MemoryQueryOptions,
+    ImportanceProcessor,
 };
 
 /// 添加兼容函数，用于创建基本工作内存

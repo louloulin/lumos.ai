@@ -6,6 +6,17 @@ use std::sync::Arc;
 use crate::rag::RagPipeline;
 use crate::workflow::basic::Workflow;
 
+pub mod enhanced;
+
+pub use enhanced::{
+    EnhancedApp,
+    EnhancedAppConfig,
+    ToolsConfig,
+    RagConfig,
+    ChunkingConfig,
+    AppStats,
+};
+
 /// Lumosai应用主类，用于整合代理、工具、RAG和MCP等组件
 pub struct LumosApp {
     name: String,

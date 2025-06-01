@@ -116,13 +116,17 @@ impl LlmProvider for MockLlmProvider {
     
     async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
         let mut embeddings = self.embeddings.lock().unwrap();
-        
+
         if embeddings.is_empty() {
             Err(Error::Unavailable("No embeddings available".to_string()))
         } else {
             // 总是移除并返回第一个嵌入向量
             Ok(embeddings.remove(0))
         }
+    }
+
+    fn supports_function_calling(&self) -> bool {
+        true
     }
 }
 

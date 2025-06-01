@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::memory::MemoryConfig;
@@ -30,6 +31,18 @@ pub struct AgentConfig {
     /// Enable function calling (if provider supports it)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_function_calling: Option<bool>,
+    /// Runtime context for the agent
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context: Option<HashMap<String, serde_json::Value>>,
+    /// Agent metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<HashMap<String, String>>,
+    /// Maximum number of tool calls per generation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_tool_calls: Option<u32>,
+    /// Tool execution timeout in seconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_timeout: Option<u64>,
 }
 
 impl Default for AgentConfig {
@@ -43,6 +56,10 @@ impl Default for AgentConfig {
             telemetry: None,
             working_memory: None,
             enable_function_calling: Some(true), // Default to enabled
+            context: None,
+            metadata: None,
+            max_tool_calls: Some(10),
+            tool_timeout: Some(30),
         }
     }
 }

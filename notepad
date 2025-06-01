@@ -65,3 +65,34 @@ Based on the macro implementation issues and fix plan documented in marco.md, co
    - Update the implementation status and next steps
 
 Focus on getting the basic macro functionality working first, then optimize for better syntax and features later. The goal is to have a working example that demonstrates the macro-based approach with real DeepSeek AI integration.
+
+请按照以下步骤系统性地实现和完善 Lumosai 项目：
+
+1. **分析现状**：
+   - 仔细阅读 lumos2.md 中的功能规划和待实现项目
+   - 分析当前代码库中已实现的功能模块
+   - 识别尚未实现或需要优化的功能点
+
+2. **功能实现**：
+   - 按照 lumos2.md 中的优先级顺序实现缺失的功能
+   - 确保新实现的功能与现有架构保持一致
+   - 遵循项目的编码规范和设计模式
+
+3. **测试验证**：
+   - 为每个新实现的功能编写相应的单元测试
+   - 确保所有测试能够编译并通过
+   - 验证功能的正确性和稳定性
+
+4. **文档更新**：
+   - 在功能实现并测试通过后，更新 lumos2.md 文档
+   - 在已完成的功能项目前添加 ✅ 标记
+   - 更新功能描述，包含实现细节和使用示例
+
+5. **代码提交**：
+   - 使用清晰的提交信息提交代码
+   - 确保提交包含功能实现、测试和文档更新
+
+请使用中文进行所有说明、注释和文档编写。
+
+
+

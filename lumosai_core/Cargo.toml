@@ -45,4 +45,29 @@ tungstenite = "0.21"
 [dev-dependencies]
 tokio-test = "0.4"
 mockall = "0.11"
-tempfile = "3.8" 
+tempfile = "3.8"
+
+# 明确定义集成测试
+[[test]]
+name = "agent_memory_test"
+path = "tests/agent_memory_test.rs"
+
+[[test]]
+name = "function_calling"
+path = "tests/function_calling.rs"
+
+[[test]]
+name = "llm_qwen_test"
+path = "tests/llm_qwen_test.rs"
+
+[[test]]
+name = "mastra_integration_comprehensive_test"
+path = "tests/mastra_integration_comprehensive_test.rs"
+
+[[test]]
+name = "mastra_validation_test"
+path = "tests/mastra_validation_test.rs"
+
+[[test]]
+name = "websocket_streaming_tests"
+path = "tests/websocket_streaming_tests.rs"

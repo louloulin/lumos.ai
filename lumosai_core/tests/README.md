@@ -91,12 +91,56 @@ cargo test --package lumosai_core --test mastra_integration_comprehensive_test t
    - Tool ID: calculator
 ```
 
+## 完整测试列表
+
+### 单元测试 (84 个)
+- **Agent 模块**: 18 个测试
+- **LLM 模块**: 20 个测试
+- **Memory 模块**: 12 个测试
+- **Storage 模块**: 3 个测试
+- **Telemetry 模块**: 12 个测试
+- **Tool 模块**: 5 个测试
+- **Vector 模块**: 6 个测试
+- **Workflow 模块**: 3 个测试
+- **其他**: 5 个测试
+
+### 集成测试 (34 个)
+- **agent_memory_test.rs**: 7 个测试
+- **function_calling.rs**: 4 个测试
+- **llm_qwen_test.rs**: 4 个测试
+- **mastra_integration_comprehensive_test.rs**: 5 个测试
+- **mastra_validation_test.rs**: 5 个测试
+- **websocket_streaming_tests.rs**: 9 个测试
+
+### 文档测试 (1 个)
+- **FunctionSchema 文档示例**: 1 个测试
+
+## 运行所有测试
+
+```bash
+# 运行所有测试（单元测试 + 集成测试 + 文档测试）
+cargo test --package lumosai_core
+
+# 只运行单元测试
+cargo test --package lumosai_core --lib
+
+# 只运行集成测试
+cargo test --package lumosai_core --tests
+
+# 运行特定的集成测试文件
+cargo test --package lumosai_core --test mastra_integration_comprehensive_test
+
+# 列出所有测试
+cargo test --package lumosai_core -- --list
+```
+
 ## 注意事项
 
 - 测试使用模拟组件，不需要真实的 AI 服务
 - 所有测试都应该快速执行且可重复
 - 测试覆盖了错误处理和边界情况
 - 测试验证了 API 的正确性和一致性
+- 总计 **119 个测试**，确保代码质量和功能完整性
 
 ## 贡献
 
@@ -105,3 +149,4 @@ cargo test --package lumosai_core --test mastra_integration_comprehensive_test t
 2. 包含必要的断言和验证
 3. 使用模拟组件避免外部依赖
 4. 添加适当的错误处理测试
+5. 在 Cargo.toml 中正确配置集成测试

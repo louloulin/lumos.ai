@@ -74,7 +74,8 @@ mod tests {
         let options = AgentGenerateOptions::default();
         
         // Test that stream method exists and works
-        let stream_result = agent.stream(&messages, &options).await;
+        let stream_options = lumosai_core::agent::AgentStreamOptions::default();
+        let stream_result = agent.stream(&messages, &stream_options).await;
         assert!(stream_result.is_ok(), "Streaming should work");
 
         println!("✅ Phase 2 (Streaming) validation passed");
@@ -106,9 +107,9 @@ mod tests {
         // Test memory operations
         if let Some(memory) = agent.get_working_memory() {
             // Test memory set/get operations
-            memory.set("test_key", serde_json::Value::String("test_value".to_string())).await?;
-            
-            let retrieved = memory.get("test_key").await?;
+            memory.set_value("test_key", serde_json::Value::String("test_value".to_string())).await?;
+
+            let retrieved = memory.get_value("test_key").await?;
             assert!(retrieved.is_some(), "Should retrieve stored value");
             
             println!("✅ Memory operations working correctly");
@@ -188,13 +189,14 @@ mod tests {
         assert!(!result.response.is_empty(), "Should generate comprehensive response");
 
         // Test streaming
-        let stream_result = agent.stream(&messages, &options).await;
+        let stream_options = lumosai_core::agent::AgentStreamOptions::default();
+        let stream_result = agent.stream(&messages, &stream_options).await;
         assert!(stream_result.is_ok(), "Should support streaming");
 
         // Test memory if available
         if let Some(memory) = agent.get_working_memory() {
-            memory.set("integration_test", serde_json::Value::Bool(true)).await?;
-            let retrieved = memory.get("integration_test").await?;
+            memory.set_value("integration_test", serde_json::Value::Bool(true)).await?;
+            let retrieved = memory.get_value("integration_test").await?;
             assert!(retrieved.is_some(), "Memory should work in integration");
         }
 

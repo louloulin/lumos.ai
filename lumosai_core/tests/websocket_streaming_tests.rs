@@ -202,7 +202,7 @@ async fn test_websocket_streaming_execution() {
     let options = AgentGenerateOptions {
         llm_options: LlmOptions::default(),
         max_steps: Some(1),
-        tools_config: None,
+        ..Default::default()
     };
     
     let mut stream = ws_agent.execute_with_websocket(
@@ -218,10 +218,12 @@ async fn test_websocket_streaming_execution() {
         // Collect messages for a short time
         let timeout = tokio::time::timeout(Duration::from_millis(500), async {
             while let Some(message) = rx.recv().await {
+                // Check for session end before moving the message
+                let is_session_end = matches!(message, WebSocketMessage::SessionEnd { .. });
                 messages.push(message);
-                
+
                 // Break on session end
-                if matches!(message, WebSocketMessage::SessionEnd { .. }) {
+                if is_session_end {
                     break;
                 }
             }
@@ -279,8 +281,8 @@ async fn test_websocket_manager_broadcast() {
     let config = WebSocketConfig::default();
     let manager = lumosai_core::agent::websocket::WebSocketManager::new(config);
     
-    let (tx1, mut rx1) = tokio::sync::mpsc::unbounded_channel();
-    let (tx2, mut rx2) = tokio::sync::mpsc::unbounded_channel();
+    let (tx1, mut _rx1) = tokio::sync::mpsc::unbounded_channel();
+    let (tx2, mut _rx2) = tokio::sync::mpsc::unbounded_channel();
     
     // Add two connections
     let _ = manager.add_connection("client1".to_string(), "session1".to_string(), tx1).await;

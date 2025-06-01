@@ -232,24 +232,23 @@ pub fn agent(input: TokenStream) -> TokenStream {
     
     let expanded = quote! {
         {
-            use lumosai_core::agent::{Agent, AgentConfig};
+            use lumosai_core::agent::{Agent, create_basic_agent};
             use lumosai_core::llm::LlmProvider;
             use std::sync::Arc;
-            
-            let mut agent_config = AgentConfig::new(#agent_name, #instructions);
-            
-            // 配置内存
-            #memory_config
-            
+
             // 创建LLM提供者
             let llm_provider: Arc<dyn LlmProvider> = Arc::new(#llm_provider);
-            
+
             // 创建代理
-            let mut agent = lumosai_core::agent::create_basic_agent(agent_config, llm_provider);
-            
+            let mut agent = create_basic_agent(
+                #agent_name.to_string(),
+                #instructions.to_string(),
+                llm_provider
+            );
+
             // 添加工具
             #(#tool_registrations)*
-            
+
             let #agent_var_name = agent;
             #agent_var_name
         }

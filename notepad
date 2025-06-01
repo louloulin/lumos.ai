@@ -38,3 +38,30 @@ plan2.md 按照整个方案 阅读 mastra 目录下相关代码，同时参考 m
 
 
 按照 lumos2.md的计划实现相关的功能，增加测试验证通过后，实现后更新 lumos2.md标记实现的功能
+
+
+Based on the macro implementation issues and fix plan documented in marco.md, continue implementing the remaining fixes in the following order:
+
+1. **Fix remaining compilation errors in lumos_app.rs**:
+   - Convert async tool handlers to synchronous functions (remove `async move` blocks)
+   - Fix agent! macro syntax to use proper braced structure expected by the parser
+   - Fix lumos! macro syntax to match the parser expectations
+
+2. **Complete macro implementation fixes**:
+   - Fix tools! macro to properly handle synchronous function handlers
+   - Ensure agent! macro generates correct code for tool registration
+   - Verify lumos! macro returns the correct type (agent vs application)
+
+3. **Test and validate the fixes**:
+   - Compile the lumos_app.rs example successfully without errors
+   - Run the example with a test DeepSeek API key to verify functionality
+   - Test that tools are properly registered and callable
+   - Verify that the agent responds correctly to queries
+
+4. **Update documentation**:
+   - Mark completed fixes in marco.md with ✅ status
+   - Document any remaining issues or limitations
+   - Add notes about the final working macro syntax
+   - Update the implementation status and next steps
+
+Focus on getting the basic macro functionality working first, then optimize for better syntax and features later. The goal is to have a working example that demonstrates the macro-based approach with real DeepSeek AI integration.

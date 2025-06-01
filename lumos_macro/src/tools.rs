@@ -39,7 +39,7 @@ impl Parse for ToolParameter {
                     description = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
                 },
-                "type" => {
+                "type" | "r#type" => {
                     type_ = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
                 },
@@ -192,22 +192,20 @@ pub fn tools(input: TokenStream) -> TokenStream {
         }).collect::<Vec<_>>();
         
         let tool_def = quote! {
-            pub fn #tool_fn_name() -> impl lumosai_core::tool::Tool {
+            pub fn #tool_fn_name() -> Box<dyn lumosai_core::tool::Tool> {
                 use serde_json::json;
                 use lumosai_core::tool::{FunctionTool, ParameterSchema, ToolSchema};
-                
-                let schema = ToolSchema {
-                    parameters: vec![
-                        #(#parameter_defs),*
-                    ]
-                };
-                
-                FunctionTool::new(
+
+                let schema = ToolSchema::new(vec![
+                    #(#parameter_defs),*
+                ]);
+
+                Box::new(FunctionTool::new(
                     #name.to_string(),
                     #description.to_string(),
                     schema,
                     #handler
-                )
+                ))
             }
         };
         

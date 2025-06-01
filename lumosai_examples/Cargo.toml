@@ -28,7 +28,7 @@ chrono = { version = "0.4", features = ["serde"] }
 regex = "1.10"
 
 [features]
-default = ["rag", "evals"]
+default = ["rag", "evals", "macros"]
 rag = ["lumosai_rag"]
 evals = ["lumosai_evals"]
 macros = ["lumos_macro"]
@@ -96,3 +96,7 @@ path = "src/function_calling_enhancement_demo.rs"
 [[example]]
 name = "deepseek_agent_demo"
 path = "src/deepseek_agent_demo.rs"
+
+[[example]]
+name = "deepseek_app"
+path = "src/deepseek_app.rs"

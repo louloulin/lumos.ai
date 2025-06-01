@@ -231,27 +231,10 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     
     let expanded = quote! {
         {
-            use lumosai_core::app::LumosApp;
-            
-            let mut app = LumosApp::new(#app_name)
-                #description;
-                
-            // 注册代理
+            // 简化的应用实现，返回第一个代理
             #agent_registrations
-            
-            // 注册工具
-            #tool_registrations
-            
-            // 注册RAG
-            #rag_registrations
-            
-            // 注册工作流
-            #workflow_registrations
-            
-            // 配置MCP端点
-            #mcp_config
-            
-            let #app_var_name = app;
+
+            // 返回代理作为应用的简化实现
             #app_var_name
         }
     };

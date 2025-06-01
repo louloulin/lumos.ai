@@ -100,3 +100,7 @@ path = "src/deepseek_agent_demo.rs"
 [[example]]
 name = "deepseek_app"
 path = "src/deepseek_app.rs"
+
+[[example]]
+name = "advanced_tools_demo"
+path = "examples/advanced_tools_demo.rs"

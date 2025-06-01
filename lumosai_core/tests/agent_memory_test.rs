@@ -2,11 +2,12 @@
 #[cfg(test)]
 mod tests {
     use lumosai_core::agent::{BasicAgent, AgentConfig, Agent};
-    use lumosai_core::agent::types::{AgentGenerateOptions, MemoryConfig};
+    use lumosai_core::agent::types::AgentGenerateOptions;
     use lumosai_core::llm::{MockLlmProvider, LlmOptions, Message, Role};
-    use lumosai_core::memory::{Memory, WorkingMemory, create_working_memory, MemoryConfig as CoreMemoryConfig};
-    use lumosai_core::memory::thread::{MemoryThread, MemoryThreadManager, MemoryThreadStorage, CreateThreadParams, GetMessagesParams};
+    use lumosai_core::memory::{Memory, MemoryConfig as CoreMemoryConfig};
+    use lumosai_core::memory::thread::{MemoryThread, MemoryThreadStorage, CreateThreadParams, GetMessagesParams};
     use lumosai_core::base::Base;
+    use lumosai_core::logger::Component;
     use lumosai_core::Result;
     use std::sync::Arc;
     use std::collections::HashMap;
@@ -82,7 +83,7 @@ mod tests {
             Ok(messages.get(thread_id).unwrap_or(&Vec::new()).clone())
         }
 
-        async fn delete_messages(&self, thread_id: &str, message_ids: &[String]) -> Result<lumosai_core::memory::thread::MessageOperationResult> {
+        async fn delete_messages(&self, thread_id: &str, _message_ids: &[String]) -> Result<lumosai_core::memory::thread::MessageOperationResult> {
             // For mock implementation, just remove all messages for simplicity
             let mut messages = self.messages.lock().unwrap();
             if let Some(thread_messages) = messages.get_mut(thread_id) {
@@ -124,8 +125,9 @@ mod tests {
             let thread = threads.get(thread_id)
                 .ok_or_else(|| lumosai_core::error::Error::NotFound(format!("Thread {} not found", thread_id)))?;
                 
-            let thread_messages = messages.get(thread_id).unwrap_or(&Vec::new());
-            
+            let empty_vec = Vec::new();
+            let thread_messages = messages.get(thread_id).unwrap_or(&empty_vec);
+
             let user_count = thread_messages.iter().filter(|m| m.role == Role::User).count();
             let assistant_count = thread_messages.iter().filter(|m| m.role == Role::Assistant).count();
             
@@ -144,9 +146,16 @@ mod tests {
     }
 
     // Mock memory implementation that supports thread storage
-    #[derive(Debug)]
     struct MockMemoryWithThreads {
         thread_storage: Arc<dyn MemoryThreadStorage>,
+    }
+
+    impl std::fmt::Debug for MockMemoryWithThreads {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("MockMemoryWithThreads")
+                .field("thread_storage", &"<dyn MemoryThreadStorage>")
+                .finish()
+        }
     }
 
     impl MockMemoryWithThreads {
@@ -180,7 +189,11 @@ mod tests {
         ]));
         
         // Create basic agent config
-        let config = AgentConfig::new("test_agent".to_string(), "You are a helpful assistant.".to_string());
+        let config = AgentConfig {
+            name: "test_agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
         
         // Create memory with thread storage support
         let memory = Arc::new(MockMemoryWithThreads::new());
@@ -203,12 +216,14 @@ mod tests {
             system_message: None,
             instructions: None,
             context: None,
-            memory_options: Some(MemoryConfig {
-                store_type: "memory".to_string(),
-                last_messages: Some(10),
-                semantic_recall: None,
+            memory_options: Some(CoreMemoryConfig {
+                store_id: None,
+                namespace: None,
+                enabled: true,
                 working_memory: None,
-                threads: None,
+                semantic_recall: None,
+                last_messages: Some(10),
+                query: None,
             }),
             thread_id: Some("test_thread_123".to_string()),
             resource_id: Some("test_user_456".to_string()),
@@ -238,21 +253,27 @@ mod tests {
             "Your name is Alice, as you mentioned earlier.".to_string(),
         ]));
         
-        let config = AgentConfig::new("test_agent".to_string(), "You are a helpful assistant.".to_string());
+        let config = AgentConfig {
+            name: "test_agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
         let memory = Arc::new(MockMemoryWithThreads::new());
-        let agent = BasicAgent::new(config, llm)?;
+        let agent = BasicAgent::new(config, llm);
         
         let thread_id = "conversation_test_123".to_string();
         let options = AgentGenerateOptions {
             system_message: None,
             instructions: None,
             context: None,
-            memory_options: Some(MemoryConfig {
-                store_type: "memory".to_string(),
-                last_messages: Some(10),
-                semantic_recall: None,
+            memory_options: Some(CoreMemoryConfig {
+                store_id: None,
+                namespace: None,
+                enabled: true,
                 working_memory: None,
-                threads: None,
+                semantic_recall: None,
+                last_messages: Some(10),
+                query: None,
             }),
             thread_id: Some(thread_id.clone()),
             resource_id: Some("test_user_456".to_string()),
@@ -299,9 +320,13 @@ mod tests {
             "Hello! How can I help you?".to_string(),
         ]));
         
-        let config = AgentConfig::new("test_agent".to_string(), "You are a helpful assistant.".to_string());
+        let config = AgentConfig {
+            name: "test_agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
         let memory = Arc::new(MockMemoryWithThreads::new());
-        let agent = BasicAgent::new(config, llm)?;
+        let agent = BasicAgent::new(config, llm);
         
         let messages = vec![
             Message::new(
@@ -341,10 +366,14 @@ mod tests {
             "Hello! I don't have memory.".to_string(),
         ]));
         
-        let config = AgentConfig::new("test_agent".to_string(), "You are a helpful assistant.".to_string());
+        let config = AgentConfig {
+            name: "test_agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
         
         // Create agent without memory
-        let agent = BasicAgent::new(config, llm)?;
+        let agent = BasicAgent::new(config, llm);
         
         let messages = vec![
             Message::new(
@@ -383,14 +412,18 @@ mod tests {
         let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
         
         // Create basic agent config
-        let config = AgentConfig::new("test_agent".to_string(), "You are a test agent.".to_string());
+        let config = AgentConfig {
+            name: "test_agent".to_string(),
+            instructions: "You are a test agent.".to_string(),
+            ..Default::default()
+        };
         
         // Create basic agent
-        let agent = BasicAgent::new(config, llm)?;
+        let agent = BasicAgent::new(config, llm);
         
         // Test Base trait methods
-        assert_eq!(agent.name(), "test_agent");
-        assert_eq!(agent.component(), "agent");
+        assert_eq!(agent.name(), Some("test_agent"));
+        assert_eq!(agent.component(), Component::Agent);
         
         // Test that logger and telemetry setters work
         // (We can't test much more without actual implementations)

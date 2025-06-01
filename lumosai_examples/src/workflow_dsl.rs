@@ -1,6 +1,6 @@
 use lumosai_core::Result;
-use lumosai_core::agent::{Agent, MockAgent};
-use lumosai_core::tool::MockTool;
+use lumosai_core::agent::{Agent, BasicAgent, create_basic_agent};
+use lumosai_core::tool::{Tool, FunctionTool, ToolSchema};
 use lumos_macro::workflow;
 
 #[tokio::main]

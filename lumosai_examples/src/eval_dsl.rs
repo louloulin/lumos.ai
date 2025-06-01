@@ -1,6 +1,6 @@
 use lumosai_core::Result;
-use lumosai_core::agent::{Agent, MockAgent};
-use lumosai_core::eval::{EvalSuite, Metric};
+use lumosai_core::agent::{Agent, BasicAgent, create_basic_agent};
+use lumosai_evals::{EvalSuite, Metric};
 use lumos_macro::eval_suite;
 
 struct AccuracyMetric;

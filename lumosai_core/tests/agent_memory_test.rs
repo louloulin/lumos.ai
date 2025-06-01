@@ -196,7 +196,7 @@ mod tests {
         };
         
         // Create memory with thread storage support
-        let memory = Arc::new(MockMemoryWithThreads::new());
+        let _memory = Arc::new(MockMemoryWithThreads::new());
         
         // Create basic agent with memory
         let agent = BasicAgent::new(config, llm);
@@ -258,7 +258,7 @@ mod tests {
             instructions: "You are a helpful assistant.".to_string(),
             ..Default::default()
         };
-        let memory = Arc::new(MockMemoryWithThreads::new());
+        let _memory = Arc::new(MockMemoryWithThreads::new());
         let agent = BasicAgent::new(config, llm);
         
         let thread_id = "conversation_test_123".to_string();
@@ -325,7 +325,7 @@ mod tests {
             instructions: "You are a helpful assistant.".to_string(),
             ..Default::default()
         };
-        let memory = Arc::new(MockMemoryWithThreads::new());
+        let _memory = Arc::new(MockMemoryWithThreads::new());
         let agent = BasicAgent::new(config, llm);
         
         let messages = vec![

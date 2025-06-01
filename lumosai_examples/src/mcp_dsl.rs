@@ -1,17 +1,18 @@
 use lumosai_core::{Result, Error};
-use lumosai_core::agent::{Agent, SimpleAgent};
-use lumosai_core::llm::{LlmProvider, OpenAiAdapter};
+use lumosai_core::agent::{Agent, BasicAgent, create_basic_agent};
+use lumosai_core::llm::{LlmProvider, MockLlmProvider};
 use lumosai_mcp::{MCPConfiguration, ServerDefinition};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Create an LLM adapter for the agent
-    let llm = Arc::new(OpenAiAdapter::new(
-        "your-api-key",  // Replace with your actual API key
-        "gpt-4",         // Or another suitable model
-    ));
+    // Create a mock LLM provider for demonstration
+    let mock_responses = vec![
+        "I'll help you get the stock price and weather information.".to_string(),
+        "Based on the tools available, I can provide that information.".to_string(),
+    ];
+    let llm = Arc::new(MockLlmProvider::new(mock_responses));
     
     // Define server configurations
     let mut servers = HashMap::new();
@@ -45,9 +46,9 @@ async fn main() -> Result<()> {
     println!("Creating agent...");
     
     // Create an agent that can use the tools
-    let mut agent = SimpleAgent::new(
-        "stock_weather_agent",
-        "You are a helpful assistant that provides current stock prices and weather information. When asked about a stock, use the stockPrice_getStockPrice tool. When asked about weather, use the weather_getWeather tool.",
+    let mut agent = create_basic_agent(
+        "stock_weather_agent".to_string(),
+        "You are a helpful assistant that provides current stock prices and weather information. When asked about a stock, use the stockPrice_getStockPrice tool. When asked about weather, use the weather_getWeather tool.".to_string(),
         llm,
     );
     
@@ -70,9 +71,20 @@ async fn main() -> Result<()> {
     println!("Running agent...");
     
     // Run the agent with a query
-    let response = agent.run("What is the current stock price of Apple (AAPL) and what is the weather in Seattle?").await?;
+    use lumosai_core::llm::{Message, Role};
+    use lumosai_core::agent::AgentGenerateOptions;
+
+    let message = Message {
+        role: Role::User,
+        content: "What is the current stock price of Apple (AAPL) and what is the weather in Seattle?".to_string(),
+        metadata: None,
+        name: None,
+    };
+
+    let options = AgentGenerateOptions::default();
+    let response = agent.generate(&[message], &options).await?;
     
-    println!("Agent response: {}", response);
+    println!("Agent response: {}", response.response);
     
     // Disconnect from the MCP servers
     mcp.disconnect().await.map_err(|e| Error::Other(format!("Failed to disconnect: {:?}", e)))?;

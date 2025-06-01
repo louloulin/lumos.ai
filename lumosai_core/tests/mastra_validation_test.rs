@@ -71,7 +71,7 @@ mod tests {
 
         // Test streaming capability
         let messages = vec![lumosai_core::agent::message_utils::user_message("Test streaming")];
-        let options = AgentGenerateOptions::default();
+        let _options = AgentGenerateOptions::default();
         
         // Test that stream method exists and works
         let stream_options = lumosai_core::agent::AgentStreamOptions::default();

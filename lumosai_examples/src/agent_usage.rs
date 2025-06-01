@@ -7,7 +7,7 @@ use lumosai_core::{
     Error, Result as LumosaiResult,
     create_basic_agent
 };
-use lumosai_core::tool::{FunctionTool, ParameterSchema, ToolSchema, ToolExecutionOptions};
+use lumosai_core::tool::{FunctionTool, ParameterSchema, ToolSchema, ToolExecutionOptions, SchemaFormat};
 use lumosai_core::llm::LlmOptions;
 
 // 创建一个简单的计算器工具
@@ -39,6 +39,9 @@ fn create_calculator_tool() -> Box<dyn Tool> {
                 default: None,
             },
         ],
+        json_schema: None,
+        format: SchemaFormat::Parameters,
+        output_schema: None,
     };
     
     Box::new(FunctionTool::new(
@@ -81,6 +84,9 @@ fn create_weather_tool() -> Box<dyn Tool> {
                 default: None,
             },
         ],
+        json_schema: None,
+        format: SchemaFormat::Parameters,
+        output_schema: None,
     };
     
     Box::new(FunctionTool::new(

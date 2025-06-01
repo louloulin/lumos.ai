@@ -37,6 +37,7 @@ rand = "0.8"
 async-stream = "0.3"
 lumos_macro = { path = "../lumos_macro", optional = true }
 async-openai = "0.18.3"
+url = "2.4"
 
 # WebSocket and streaming dependencies
 tokio-tungstenite = "0.21"

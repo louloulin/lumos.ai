@@ -60,7 +60,7 @@ mod tests {
     
     #[async_trait::async_trait]
     impl Agent for MockAgent {
-        async fn generate(&self, messages: &[Message], _options: &crate::agent::AgentGenerateOptions) -> Result<AgentGenerateResult> {
+        async fn generate(&self, messages: &[Message], _options: &crate::agent::types::AgentGenerateOptions) -> Result<AgentGenerateResult> {
             (self.generate_fn)(messages)
         }
 
@@ -68,7 +68,7 @@ mod tests {
             &self,
             messages: &[Message],
             _thread_id: Option<String>,
-            options: &crate::agent::AgentGenerateOptions,
+            options: &crate::agent::types::AgentGenerateOptions,
         ) -> Result<AgentGenerateResult> {
             // For mock agent, just delegate to generate
             self.generate(messages, options).await
@@ -122,7 +122,7 @@ mod tests {
             Ok(json!({}))
         }
         
-        fn format_messages(&self, messages: &[Message], _options: &crate::agent::AgentGenerateOptions) -> Vec<Message> {
+        fn format_messages(&self, messages: &[Message], _options: &crate::agent::types::AgentGenerateOptions) -> Vec<Message> {
             messages.to_vec()
         }
         

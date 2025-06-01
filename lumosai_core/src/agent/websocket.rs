@@ -8,10 +8,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::pin::Pin;
 use async_stream::stream;
-use futures::{Stream, StreamExt, SinkExt};
+use futures::{Stream, StreamExt};
 use serde::{Serialize, Deserialize};
 use tokio::sync::{broadcast, RwLock, mpsc};
-use uuid::Uuid;
 
 use crate::agent::streaming::{AgentEvent, StreamingAgent, StreamingConfig};
 use crate::agent::trait_def::Agent;

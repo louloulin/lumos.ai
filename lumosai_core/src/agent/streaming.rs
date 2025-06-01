@@ -300,9 +300,9 @@ impl<T: Agent> StreamingAgent<T> {
                     }
                     
                     // Parse and execute function calls from accumulated_response
-                    let mut current_messages = messages;
+                    let _current_messages = messages;
                     let mut total_steps = 1;
-                    let mut final_response = accumulated_response.clone();
+                    let final_response = accumulated_response.clone();
                     
                     // Check if response contains function calls (basic JSON detection)
                     if accumulated_response.contains("function_call") || accumulated_response.contains("tool_calls") {

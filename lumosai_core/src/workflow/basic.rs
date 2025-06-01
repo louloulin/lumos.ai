@@ -4,7 +4,8 @@ use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 
-use crate::agent::{Agent, AgentGenerateOptions};
+use crate::agent::Agent;
+use crate::agent::types::AgentGenerateOptions;
 use crate::error::Result;
 use crate::llm::{Message, Role};
 

@@ -2488,6 +2488,7 @@ dependencies = [
  "tokio-tungstenite",
  "tracing",
  "tungstenite",
+ "url",
  "uuid",
 ]
 

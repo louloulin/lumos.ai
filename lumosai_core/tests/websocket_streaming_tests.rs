@@ -5,10 +5,11 @@ use futures::StreamExt;
 use tokio::time::{sleep, Duration};
 
 use lumosai_core::agent::{
-    AgentConfig, BasicAgent, AgentGenerateOptions,
-    StreamingConfig, WebSocketConfig, 
+    AgentConfig, BasicAgent,
+    StreamingConfig, WebSocketConfig,
     IntoWebSocketStreaming, WebSocketMessage, AgentEvent
 };
+use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::llm::{MockLlmProvider, LlmOptions};
 use lumosai_core::memory::WorkingMemoryConfig;
 use lumosai_core::agent::message_utils::user_message;

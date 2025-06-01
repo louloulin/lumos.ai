@@ -8,6 +8,7 @@ pub mod message_utils;
 pub mod types;
 pub mod streaming;
 pub mod websocket;
+pub mod runtime_context;
 
 #[cfg(feature = "demos")]
 pub mod websocket_demo;
@@ -17,10 +18,11 @@ pub mod enhanced_streaming_demo;
 #[cfg(test)]
 mod mastra_integration_test;
 
-pub use config::AgentConfig;
+pub use config::{AgentConfig, AgentGenerateOptions};
 pub use trait_def::Agent;
 pub use executor::BasicAgent;
 pub use message_utils::{system_message, user_message, assistant_message, tool_message};
+pub use runtime_context::{RuntimeContext, ContextManager, ToolCallRecord, create_context_manager};
 
 // Re-export streaming types
 pub use streaming::{
@@ -43,14 +45,12 @@ pub use websocket::{
 
 // Re-export agent types
 pub use types::{
-    AgentGenerateOptions,
     AgentStreamOptions,
     AgentGenerateResult,
     AgentStep,
     AgentToolCall,
     VoiceConfig,
     TelemetrySettings,
-    RuntimeContext,
     DynamicArgument,
     ToolsInput,
     ToolsetsInput,
@@ -202,7 +202,7 @@ mod tests {
             name: None,
         };
         
-        let result = agent.generate(&[user_message], &AgentGenerateOptions::default()).await.unwrap();
+        let result = agent.generate(&[user_message], &types::AgentGenerateOptions::default()).await.unwrap();
         
         assert_eq!(result.response, "The tool returned: Echo: Hello from tool!");
     }

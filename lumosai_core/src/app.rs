@@ -119,7 +119,7 @@ impl LumosApp {
             };
             
             // 调用代理
-            let result = agent.generate(&[user_message], &crate::agent::AgentGenerateOptions::default()).await?;
+            let result = agent.generate(&[user_message], &crate::agent::types::AgentGenerateOptions::default()).await?;
             
             Ok(result.response)
         } else {

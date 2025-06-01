@@ -407,12 +407,12 @@ pub fn rag_pipeline_impl(input: TokenStream) -> TokenStream {
             };
             
             quote! {
-                let query_config = lumosai_core::rag::QueryConfig::new()
+                let query_config = QueryConfig::new()
                     #rerank
                     #top_k
                     #filter;
-                    
-                pipeline.with_query_config(query_config);
+
+                pipeline_builder = pipeline_builder.with_query_config(query_config);
             }
         },
         None => quote! {},
@@ -423,28 +423,28 @@ pub fn rag_pipeline_impl(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         {
             use lumosai_core::rag::*;
-            
+
             let chunk_config = ChunkConfig::new(#chunk_size)
                 #chunk_overlap
                 #separator
                 #strategy;
-                
+
             let embed_config = EmbedConfig::new(#embed_model)
                 #dimensions
                 #max_retries;
-                
+
             let store_config = StoreConfig::new(#db_type, #collection_name)
                 #connection_string;
-                
-            let mut pipeline = RagPipeline::new(#name)
-                .with_source(#source)
+
+            let mut pipeline_builder = RagPipelineBuilder::new(#name)
+                .add_source(#source)
                 .with_chunk_config(chunk_config)
                 .with_embed_config(embed_config)
                 .with_store_config(store_config);
-                
+
             #query_options
-            
-            let #name_ident = pipeline;
+
+            let #name_ident = pipeline_builder;
             #name_ident
         }
     };

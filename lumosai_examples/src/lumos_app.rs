@@ -1,11 +1,11 @@
 use lumosai_core::{Result, Agent};
 use lumosai_core::llm::{DeepSeekProvider, LlmOptions, LlmProvider, Message, Role};
 use lumosai_core::agent::AgentGenerateOptions;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use async_trait::async_trait;
-use lumos_macro::{tools, agent, lumos, LlmAdapter};
+use lumos_macro::{tools, agent};
 
 // 创建DeepSeek适配器，包装DeepSeekProvider以符合宏要求
 // #[derive(LlmAdapter)] // 暂时禁用宏，使用手动实现
@@ -273,7 +273,7 @@ async fn main() -> Result<()> {
     println!("✅ 正在初始化Lumos股票助手...");
 
     // 暂时直接使用agent，不使用lumos!宏
-    let mut app = create_stock_agent();
+    let app = create_stock_agent();
 
     println!("✅ 应用初始化完成！");
     println!("📱 应用名称: Lumos股票助手");

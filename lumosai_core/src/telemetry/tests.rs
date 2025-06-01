@@ -224,7 +224,7 @@ async fn test_trace_builder() {
     assert_eq!(trace.agent_id, "test_agent");
     assert_eq!(trace.steps.len(), 2);
     assert!(trace.success);
-    assert!(trace.total_duration_ms >= 0); // Changed to >= 0 to be more forgiving
+    // assert!(trace.total_duration_ms >= 0); // 移除无用的比较，因为u64总是>=0
     
     // Check first step
     assert!(matches!(trace.steps[0].step_type, StepType::LlmCall));

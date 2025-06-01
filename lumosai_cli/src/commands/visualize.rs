@@ -471,11 +471,22 @@ fn extract_name_from_use(line: &str) -> Option<String> {
 /// 从函数声明中提取函数名
 fn extract_function_name(line: &str) -> Option<String> {
     let line = line.trim();
-    if line.starts_with("fn ") {
-        let name_end = line.find('(').unwrap_or(line.len());
-        let name = line[3..name_end].trim();
-        return Some(name.to_string());
+
+    // 跳过注释行
+    if line.starts_with("//") {
+        return None;
     }
+
+    // 查找 "fn " 关键字的位置
+    if let Some(fn_pos) = line.find("fn ") {
+        let after_fn = &line[fn_pos + 3..];
+        let name_end = after_fn.find('(').unwrap_or(after_fn.len());
+        let name = after_fn[..name_end].trim();
+        if !name.is_empty() {
+            return Some(name.to_string());
+        }
+    }
+
     None
 }
 

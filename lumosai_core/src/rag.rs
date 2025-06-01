@@ -17,6 +17,149 @@ pub enum DocumentSource {
     Url(String),
     /// 从文本字符串加载文档
     Text(String),
+    /// 从数据库加载文档
+    Database(String),
+}
+
+impl DocumentSource {
+    /// 从目录创建文档源
+    pub fn from_directory(path: impl Into<String>) -> Self {
+        Self::Directory(path.into())
+    }
+
+    /// 从URL创建文档源
+    pub fn from_url(url: impl Into<String>) -> Self {
+        Self::Url(url.into())
+    }
+
+    /// 从文本创建文档源
+    pub fn from_text(text: impl Into<String>) -> Self {
+        Self::Text(text.into())
+    }
+
+    /// 从数据库连接字符串创建文档源
+    pub fn from_database(connection_string: impl Into<String>) -> Self {
+        Self::Database(connection_string.into())
+    }
+}
+
+/// 分块配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChunkConfig {
+    pub chunk_size: usize,
+    pub chunk_overlap: Option<usize>,
+    pub separator: Option<String>,
+    pub strategy: Option<String>,
+}
+
+impl ChunkConfig {
+    pub fn new(chunk_size: usize) -> Self {
+        Self {
+            chunk_size,
+            chunk_overlap: None,
+            separator: None,
+            strategy: None,
+        }
+    }
+
+    pub fn with_overlap(mut self, overlap: usize) -> Self {
+        self.chunk_overlap = Some(overlap);
+        self
+    }
+
+    pub fn with_separator(mut self, separator: impl Into<String>) -> Self {
+        self.separator = Some(separator.into());
+        self
+    }
+
+    pub fn with_strategy(mut self, strategy: impl Into<String>) -> Self {
+        self.strategy = Some(strategy.into());
+        self
+    }
+}
+
+/// 嵌入配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbedConfig {
+    pub model: String,
+    pub dimensions: Option<usize>,
+    pub max_retries: Option<usize>,
+}
+
+impl EmbedConfig {
+    pub fn new(model: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+            dimensions: None,
+            max_retries: None,
+        }
+    }
+
+    pub fn with_dimensions(mut self, dimensions: usize) -> Self {
+        self.dimensions = Some(dimensions);
+        self
+    }
+
+    pub fn with_max_retries(mut self, max_retries: usize) -> Self {
+        self.max_retries = Some(max_retries);
+        self
+    }
+}
+
+/// 存储配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreConfig {
+    pub db: String,
+    pub collection: String,
+    pub connection_string: Option<String>,
+}
+
+impl StoreConfig {
+    pub fn new(db: impl Into<String>, collection: impl Into<String>) -> Self {
+        Self {
+            db: db.into(),
+            collection: collection.into(),
+            connection_string: None,
+        }
+    }
+
+    pub fn with_connection_string(mut self, connection_string: impl Into<String>) -> Self {
+        self.connection_string = Some(connection_string.into());
+        self
+    }
+}
+
+/// 查询配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueryConfig {
+    pub rerank: Option<bool>,
+    pub top_k: Option<usize>,
+    pub filter: Option<String>,
+}
+
+impl QueryConfig {
+    pub fn new() -> Self {
+        Self {
+            rerank: None,
+            top_k: None,
+            filter: None,
+        }
+    }
+
+    pub fn with_rerank(mut self, rerank: bool) -> Self {
+        self.rerank = Some(rerank);
+        self
+    }
+
+    pub fn with_top_k(mut self, top_k: usize) -> Self {
+        self.top_k = Some(top_k);
+        self
+    }
+
+    pub fn with_filter(mut self, filter: impl Into<String>) -> Self {
+        self.filter = Some(filter.into());
+        self
+    }
 }
 
 /// 查询结果
@@ -152,6 +295,10 @@ impl RagPipeline for BasicRagPipeline {
             DocumentSource::Url(url) => {
                 // 简单实现，实际项目中可能需要使用reqwest等库
                 Err(crate::error::Error::Other(format!("URL document source not implemented yet: {}", url)))
+            },
+            DocumentSource::Database(connection_string) => {
+                // 简单实现，实际项目中需要连接数据库
+                Err(crate::error::Error::Other(format!("Database document source not implemented yet: {}", connection_string)))
             }
         }
     }
@@ -236,4 +383,79 @@ pub fn create_basic_rag_pipeline(
     embedding_fn: impl Fn(&str) -> Result<Vec<f32>> + Send + Sync + 'static,
 ) -> impl RagPipeline {
     BasicRagPipeline::new(name, embedding_fn)
-} 
+}
+
+/// 配置化的RAG管道结构体（用于宏生成）
+pub struct RagPipelineBuilder {
+    pub name: String,
+    pub sources: Vec<DocumentSource>,
+    pub chunk_config: Option<ChunkConfig>,
+    pub embed_config: Option<EmbedConfig>,
+    pub store_config: Option<StoreConfig>,
+    pub query_config: Option<QueryConfig>,
+}
+
+impl RagPipelineBuilder {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            sources: Vec::new(),
+            chunk_config: None,
+            embed_config: None,
+            store_config: None,
+            query_config: None,
+        }
+    }
+
+    pub fn add_source(mut self, source: DocumentSource) -> Self {
+        self.sources.push(source);
+        self
+    }
+
+    pub fn with_chunk_config(mut self, config: ChunkConfig) -> Self {
+        self.chunk_config = Some(config);
+        self
+    }
+
+    pub fn with_embed_config(mut self, config: EmbedConfig) -> Self {
+        self.embed_config = Some(config);
+        self
+    }
+
+    pub fn with_store_config(mut self, config: StoreConfig) -> Self {
+        self.store_config = Some(config);
+        self
+    }
+
+    pub fn with_query_config(mut self, config: QueryConfig) -> Self {
+        self.query_config = Some(config);
+        self
+    }
+
+    pub async fn build(self) -> Result<BasicRagPipeline> {
+        // 创建一个简单的嵌入函数（实际项目中应该使用真实的嵌入模型）
+        let embedding_fn = |text: &str| -> Result<Vec<f32>> {
+            // 简单的哈希嵌入，实际项目中应该使用真实的嵌入模型
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            use std::hash::{Hash, Hasher};
+            text.hash(&mut hasher);
+            let hash = hasher.finish();
+
+            // 生成1536维的伪嵌入向量
+            let mut embedding = vec![0.0; 1536];
+            for i in 0..1536 {
+                embedding[i] = ((hash.wrapping_add(i as u64)) as f32) / (u64::MAX as f32);
+            }
+            Ok(embedding)
+        };
+
+        let mut pipeline = BasicRagPipeline::new(self.name, embedding_fn);
+
+        // 处理所有文档源
+        for source in self.sources {
+            pipeline.process_documents(source).await?;
+        }
+
+        Ok(pipeline)
+    }
+}

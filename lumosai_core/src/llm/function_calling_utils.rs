@@ -288,7 +288,7 @@ fn format_tool_description(tool: &Box<dyn Tool>, format: &ToolDescriptionFormat)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::function_calling::FunctionDefinition;
+    // use crate::llm::function_calling::FunctionDefinition; // 暂时未使用
     use serde_json::json;
     
     #[test]

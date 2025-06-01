@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 use lumosai_core::{
-    Lumosai, LumosaiConfig, LogLevel, LogComponent,
+    Lumosai, LumosaiConfig, LogLevel,
     Base, create_memory_vector_storage, SimilarityMetric
 };
 
@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         disable_logger: false,
     };
     
-    let mut lumosai = Lumosai::new(config);
+    let lumosai = Lumosai::new(config);
     
     // 创建一个向量存储
     let vector_storage = create_memory_vector_storage();

@@ -2,11 +2,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use lumosai_core::{
-    Agent, AgentConfig, AgentGenerateOptions, BasicAgent,
-    Message, Role, Tool, 
+    Agent, AgentConfig, BasicAgent,
+    Message, Role, Tool,
     Error, Result as LumosaiResult,
     create_basic_agent
 };
+use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::tool::{FunctionTool, ParameterSchema, ToolSchema, ToolExecutionOptions, SchemaFormat};
 use lumosai_core::llm::LlmOptions;
 

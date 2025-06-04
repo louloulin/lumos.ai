@@ -1,6 +1,6 @@
 use lumosai_core::{Result, Agent};
 use lumosai_core::llm::{DeepSeekProvider, LlmOptions, LlmProvider, Message, Role};
-use lumosai_core::agent::AgentGenerateOptions;
+use lumosai_core::agent::types::AgentGenerateOptions;
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;

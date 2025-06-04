@@ -72,7 +72,7 @@ async fn main() -> Result<()> {
     
     // Run the agent with a query
     use lumosai_core::llm::{Message, Role};
-    use lumosai_core::agent::AgentGenerateOptions;
+    use lumosai_core::agent::types::AgentGenerateOptions;
 
     let message = Message {
         role: Role::User,

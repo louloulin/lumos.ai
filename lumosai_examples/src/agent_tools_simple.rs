@@ -1,6 +1,7 @@
 use lumosai_core::Result;
 use lumosai_core::llm::{MockLlmProvider, Message, Role};
-use lumosai_core::agent::{Agent, AgentGenerateOptions, create_basic_agent};
+use lumosai_core::agent::{Agent, create_basic_agent};
+use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::tool::{Tool, ToolExecutionOptions, ToolSchema, ParameterSchema, ToolExecutionContext, SchemaFormat};
 use lumosai_core::base::{Base, BaseComponent, ComponentConfig};
 use lumosai_core::logger::{Component, Logger};

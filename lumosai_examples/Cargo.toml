@@ -104,3 +104,11 @@ path = "src/deepseek_app.rs"
 [[example]]
 name = "advanced_tools_demo"
 path = "examples/advanced_tools_demo.rs"
+
+[[example]]
+name = "simplified_api_demo"
+path = "src/simplified_api_demo.rs"
+
+[[example]]
+name = "run_simplified_demo"
+path = "examples/run_simplified_demo.rs"

@@ -84,7 +84,7 @@ pub trait Agent: Base + Send + Sync {
     fn remove_tool(&mut self, tool_name: &str) -> Result<()>;
     
     /// Get a specific tool by name
-    fn get_tool(&self, tool_name: &str) -> Option<&Box<dyn Tool>>;
+    fn get_tool(&self, tool_name: &str) -> Option<Box<dyn Tool>>;
     
     /// Parse the LLM response to extract tool calls
     fn parse_tool_calls(&self, response: &str) -> Result<Vec<ToolCall>>;

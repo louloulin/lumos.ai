@@ -9,6 +9,7 @@ pub mod types;
 pub mod streaming;
 pub mod websocket;
 pub mod runtime_context;
+pub mod builder;
 
 #[cfg(feature = "demos")]
 pub mod websocket_demo;
@@ -23,6 +24,9 @@ pub use trait_def::Agent;
 pub use executor::BasicAgent;
 pub use message_utils::{system_message, user_message, assistant_message, tool_message};
 pub use runtime_context::{RuntimeContext, ContextManager, ToolCallRecord, create_context_manager};
+
+// Re-export builder
+pub use builder::AgentBuilder;
 
 // Re-export streaming types
 pub use streaming::{

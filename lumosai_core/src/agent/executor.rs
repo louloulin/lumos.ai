@@ -441,10 +441,11 @@ impl Agent for BasicAgent {
         Ok(())
     }
     
-    #[allow(unused_variables)]
-    fn get_tool(&self, _tool_name: &str) -> Option<&Box<dyn Tool>> {
-        None // We can't return a reference to a locked Mutex, so we'll return None
-        // This is a limitation of the current design and would need refactoring
+    fn get_tool(&self, tool_name: &str) -> Option<Box<dyn Tool>> {
+        match self.tools.lock() {
+            Ok(tools) => tools.get(tool_name).cloned(),
+            Err(_) => None,
+        }
     }
     
     fn parse_tool_calls(&self, response: &str) -> Result<Vec<ToolCall>> {

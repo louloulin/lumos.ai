@@ -1,6 +1,7 @@
 use lumosai_core::{Result, Base, BaseComponent, LogComponent};
 use lumosai_core::llm::{Message, Role, MockLlmProvider};
-use lumosai_core::agent::{Agent, AgentGenerateOptions, create_basic_agent};
+use lumosai_core::agent::{Agent, create_basic_agent};
+use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::tool::{Tool, ToolExecutionOptions, ToolExecutionContext, ToolSchema, ParameterSchema, SchemaFormat};
 use lumosai_core::logger::Logger;
 use lumosai_core::telemetry::TelemetrySink;

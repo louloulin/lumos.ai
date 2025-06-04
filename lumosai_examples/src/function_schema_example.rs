@@ -4,11 +4,12 @@
 //! OpenAI function calling schemas from Rust structs.
 
 use lumosai_core::{
-    agent::{Agent, BasicAgent, AgentConfig, AgentGenerateOptions},
+    agent::{Agent, BasicAgent, AgentConfig},
     llm::{LlmOptions, Message, Role},
     tool::FunctionSchema,
     Result,
 };
+use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_derive::FunctionSchema;
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;

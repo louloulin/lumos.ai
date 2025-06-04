@@ -6,6 +6,7 @@ pub mod function;
 mod context;
 pub mod registry;
 pub mod builtin;
+pub mod builder;
 
 #[cfg(test)]
 mod tests;
@@ -20,3 +21,4 @@ pub use builtin::{
     BuiltinToolsConfig, FileOpsConfig, HttpClientConfig, DataProcessingConfig,
     get_tool_categories, get_tool_info, ToolInfo
 };
+pub use builder::{ToolBuilder, create_tool};

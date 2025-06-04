@@ -85,11 +85,16 @@ impl Commands {
             );
             
             let category_filter = category.as_ref().and_then(|c| match c.as_str() {
-                "web" => Some(ToolCategory::Network),
-                "file" => Some(ToolCategory::FileSystem),
-                "data" => Some(ToolCategory::DataProcessing),
-                "system" => Some(ToolCategory::Network), // Use Network as fallback
-                "math" => Some(ToolCategory::DataProcessing), // Use DataProcessing as fallback
+                "web" => Some(ToolCategory::Web),
+                "file" => Some(ToolCategory::File),
+                "data" => Some(ToolCategory::Data),
+                "system" => Some(ToolCategory::System),
+                "math" => Some(ToolCategory::Math),
+                "ai" => Some(ToolCategory::AI),
+                "crypto" => Some(ToolCategory::Crypto),
+                "database" => Some(ToolCategory::Database),
+                "api" => Some(ToolCategory::API),
+                "utility" => Some(ToolCategory::Utility),
                 _ => None,
             });
             
@@ -157,15 +162,15 @@ impl Commands {
         }
         
         // Connect to marketplace to get tool info
-        let marketplace = Marketplace::new(
+        let mut marketplace = Marketplace::new(
             "https://marketplace.lumos.ai".to_string(),
             PathBuf::from(".lumos/cache")
         );
-        
+
         let tools = marketplace.search(name, None).await?;
         let tool_info = tools.iter().find(|t| t.name == name)
             .ok_or_else(|| crate::Error::Other(format!("Tool '{}' not found in marketplace", name)))?;
-        
+
         // Install the tool
         marketplace.install(&tool_info.name, version.as_deref()).await?;
         

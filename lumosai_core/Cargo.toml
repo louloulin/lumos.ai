@@ -50,8 +50,8 @@ tungstenite = "0.21"
 
 [dev-dependencies]
 tokio-test = "0.4"
-mockall = "0.11"
 tempfile = "3.8"
+mockall = "0.11"
 
 # 明确定义集成测试
 [[test]]

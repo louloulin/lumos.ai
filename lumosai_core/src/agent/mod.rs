@@ -10,6 +10,7 @@ pub mod streaming;
 pub mod websocket;
 pub mod runtime_context;
 pub mod builder;
+pub mod mastra_compat;
 
 #[cfg(feature = "demos")]
 pub mod websocket_demo;

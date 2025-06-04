@@ -107,4 +107,16 @@ pub enum Error {
     /// Invalid operation errors
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
-} 
+}
+
+impl From<&str> for Error {
+    fn from(err: &str) -> Self {
+        Error::Configuration(err.to_string())
+    }
+}
+
+impl From<String> for Error {
+    fn from(err: String) -> Self {
+        Error::Configuration(err)
+    }
+}

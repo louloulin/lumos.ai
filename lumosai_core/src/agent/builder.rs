@@ -184,13 +184,15 @@ impl AgentBuilder {
     }
 
     /// Add multiple tools to the agent
-    pub fn tools<I>(mut self, tools: I) -> Self 
+    pub fn tools<I>(mut self, tools: I) -> Self
     where
         I: IntoIterator<Item = Box<dyn Tool>>,
     {
         self.tools.extend(tools);
         self
     }
+
+
 
     /// Build the agent
     pub fn build(self) -> Result<BasicAgent> {

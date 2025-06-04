@@ -89,28 +89,77 @@ impl Default for DataProcessingConfig {
     }
 }
 
+// Import the new tool modules
+pub mod web;
+pub mod file;
+pub mod data;
+pub mod system;
+pub mod math;
+
+// Re-export tool creation functions
+pub use web::*;
+pub use file::*;
+pub use data::*;
+pub use system::*;
+pub use math::*;
+
 /// 创建所有内置工具
 ///
 /// 根据配置创建并返回所有可用的内置工具
 pub fn create_all_builtin_tools(_config: &BuiltinToolsConfig) -> Vec<Box<dyn Tool>> {
-    // 暂时返回空的工具列表，等待具体工具实现
-    Vec::new()
+    vec![
+        // Web tools
+        Box::new(create_http_request_tool()),
+        Box::new(create_web_scraper_tool()),
+        Box::new(create_json_api_tool()),
+        Box::new(create_url_validator_tool()),
+
+        // File tools
+        Box::new(create_file_reader_tool()),
+        Box::new(create_file_writer_tool()),
+        Box::new(create_directory_lister_tool()),
+        Box::new(create_file_info_tool()),
+
+        // Data tools
+        Box::new(create_json_parser_tool()),
+        Box::new(create_csv_parser_tool()),
+        Box::new(create_data_transformer_tool()),
+
+        // System tools
+        Box::new(create_datetime_tool()),
+        Box::new(create_uuid_generator_tool()),
+        Box::new(create_hash_generator_tool()),
+
+        // Math tools
+        Box::new(create_calculator_tool()),
+        Box::new(create_statistics_tool()),
+    ]
 }
 
 /// 创建安全的内置工具集
 ///
 /// 创建一个安全配置的工具集，适用于生产环境
 pub fn create_safe_builtin_tools(_workspace_path: PathBuf) -> Vec<Box<dyn Tool>> {
-    // 暂时返回空的工具列表
-    Vec::new()
+    vec![
+        // Safe tools for production
+        Box::new(create_json_parser_tool()),
+        Box::new(create_csv_parser_tool()),
+        Box::new(create_data_transformer_tool()),
+        Box::new(create_datetime_tool()),
+        Box::new(create_uuid_generator_tool()),
+        Box::new(create_calculator_tool()),
+        Box::new(create_statistics_tool()),
+        // Note: File and web tools excluded for security
+    ]
 }
 
 /// 创建开发环境的内置工具集
 ///
 /// 创建一个适用于开发环境的工具集，权限较为宽松
 pub fn create_dev_builtin_tools() -> Vec<Box<dyn Tool>> {
-    // 暂时返回空的工具列表
-    Vec::new()
+    // Include all tools for development
+    let config = BuiltinToolsConfig::default();
+    create_all_builtin_tools(&config)
 }
 
 /// 获取工具的分类信息

@@ -8,6 +8,7 @@ mod types;
 mod client;
 mod configuration;
 mod transport;
+mod enhanced;
 #[cfg(test)]
 mod tests;
 
@@ -15,4 +16,5 @@ pub use error::{MCPError, Result};
 pub use types::*;
 pub use client::MCPClient;
 pub use configuration::{MCPConfiguration, ServerDefinition};
-pub use transport::{StdioTransport, SSETransport, Transport}; 
+pub use transport::{StdioTransport, SSETransport, Transport};
+pub use enhanced::{EnhancedMCPManager, HealthStatus, PerformanceMetrics, ManagerConfig};

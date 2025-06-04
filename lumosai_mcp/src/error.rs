@@ -41,6 +41,15 @@ pub enum MCPError {
     #[error("Duplicate configuration detected: {0}")]
     DuplicateConfiguration(String),
 
+    #[error("Client not found: {0}")]
+    ClientNotFound(String),
+
+    #[error("Tool not found: {0}")]
+    ToolNotFound(String),
+
+    #[error("Unexpected response: {0}")]
+    UnexpectedResponse(String),
+
     #[error("Other error: {0}")]
     Other(String),
 }

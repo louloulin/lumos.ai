@@ -39,6 +39,11 @@ lumos_macro = { path = "../lumos_macro", optional = true }
 async-openai = "0.18.3"
 url = "2.4"
 
+# CLI dependencies
+clap = { version = "4.0", features = ["derive"] }
+toml = "0.8"
+notify = "6.0"
+
 # WebSocket and streaming dependencies
 tokio-tungstenite = "0.21"
 tungstenite = "0.21"

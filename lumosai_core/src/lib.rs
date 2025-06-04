@@ -22,6 +22,7 @@ pub mod debug;
 pub mod logging;
 pub mod marketplace;
 pub mod bindings;
+pub mod cli;
 
 /// Re-export common types and traits
 pub use error::{Error, Result};

@@ -122,6 +122,14 @@ pub enum MCPMessage {
     ListResourcesResult {
         resources: Vec<Resource>,
     },
+    ListTools {},
+    ListToolsResult {
+        tools: Vec<Tool>,
+    },
+    GetCapabilities {},
+    GetCapabilitiesResult {
+        capabilities: ServerCapabilities,
+    },
     ExecuteTool(ExecuteToolRequest),
     ExecuteToolResult {
         result: String,
@@ -136,7 +144,88 @@ pub enum MCPMessage {
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
+    ReadResource {
+        uri: String,
+    },
+    ReadResourceResult {
+        contents: Vec<ResourceContent>,
+    },
+    SubscribeResource {
+        uri: String,
+    },
+    UnsubscribeResource {
+        uri: String,
+    },
+    ResourceUpdated {
+        uri: String,
+        contents: Vec<ResourceContent>,
+    },
+    Ping {
+        id: String,
+    },
+    Pong {
+        id: String,
+    },
     Error {
         error: String,
     },
-} 
+}
+
+/// Server capabilities
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerCapabilities {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<ToolsCapability>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resources: Option<ResourcesCapability>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logging: Option<LoggingCapability>,
+    #[serde(skip_serializing_if = "HashMap::is_empty", default)]
+    pub extensions: HashMap<String, serde_json::Value>,
+}
+
+/// Tools capability
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolsCapability {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub list_changed: Option<bool>,
+}
+
+/// Resources capability
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourcesCapability {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subscribe: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub list_changed: Option<bool>,
+}
+
+/// Logging capability
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct LoggingCapability {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+}
+
+/// Tool definition for MCP
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Tool {
+    pub name: String,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_schema: Option<serde_json::Value>,
+}
+
+/// Resource content
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceContent {
+    pub uri: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mime_type: Option<String>,
+    pub text: Option<String>,
+    pub blob: Option<String>,
+}

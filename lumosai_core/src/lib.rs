@@ -18,6 +18,9 @@ pub mod workflow;
 pub mod app;
 pub mod rag;
 pub mod voice;
+pub mod debug;
+pub mod logging;
+pub mod marketplace;
 
 /// Re-export common types and traits
 pub use error::{Error, Result};

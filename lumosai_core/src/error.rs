@@ -1,5 +1,7 @@
 //! Error types for the Lumosai framework
 
+pub mod friendly;
+
 use thiserror::Error;
 
 /// Result type for Lumosai operations
@@ -107,6 +109,22 @@ pub enum Error {
     /// Invalid operation errors
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
+
+    /// Authentication errors
+    #[error("Authentication error: {0}")]
+    Authentication(String),
+
+    /// Network errors
+    #[error("Network error: {0}")]
+    Network(String),
+
+    /// Validation errors
+    #[error("Validation error: {0}")]
+    Validation(String),
+
+    /// Serialization errors
+    #[error("Serialization error: {0}")]
+    Serialization(String),
 }
 
 impl From<&str> for Error {

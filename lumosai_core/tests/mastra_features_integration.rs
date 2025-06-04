@@ -2,8 +2,9 @@
 //! 
 //! This test suite validates the implementation of features inspired by Mastra
 
-use lumosai_core::agent::{AgentBuilder, mastra_compat};
+use lumosai_core::agent::{AgentBuilder, mastra_compat, Agent};
 use lumosai_core::llm::MockLlmProvider;
+use lumosai_core::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
 use lumosai_core::tool::builtin::{
     create_all_builtin_tools, create_safe_builtin_tools, create_dev_builtin_tools,
     BuiltinToolsConfig
@@ -81,7 +82,9 @@ async fn test_builtin_tools_creation() {
     assert!(all_tools.len() >= 15); // Should have at least 15 tools
     
     // Test tool names
-    let tool_names: Vec<String> = all_tools.iter().map(|t| t.name().to_string()).collect();
+    let tool_names: Vec<String> = all_tools.iter()
+        .filter_map(|t| t.name().map(|n| n.to_string()))
+        .collect();
     assert!(tool_names.contains(&"http_request".to_string()));
     assert!(tool_names.contains(&"file_reader".to_string()));
     assert!(tool_names.contains(&"calculator".to_string()));
@@ -93,20 +96,24 @@ async fn test_builtin_tools_creation() {
 async fn test_safe_vs_dev_tools() {
     // Test safe tools (production environment)
     let safe_tools = create_safe_builtin_tools(PathBuf::from("/tmp"));
-    let safe_tool_names: Vec<String> = safe_tools.iter().map(|t| t.name().to_string()).collect();
-    
+    let safe_tool_names: Vec<String> = safe_tools.iter()
+        .filter_map(|t| t.name().map(|n| n.to_string()))
+        .collect();
+
     // Safe tools should not include file or web tools
     assert!(!safe_tool_names.contains(&"file_reader".to_string()));
     assert!(!safe_tool_names.contains(&"http_request".to_string()));
-    
+
     // But should include data and math tools
     assert!(safe_tool_names.contains(&"calculator".to_string()));
     assert!(safe_tool_names.contains(&"json_parser".to_string()));
-    
+
     // Test dev tools (development environment)
     let dev_tools = create_dev_builtin_tools();
-    let dev_tool_names: Vec<String> = dev_tools.iter().map(|t| t.name().to_string()).collect();
-    
+    let dev_tool_names: Vec<String> = dev_tools.iter()
+        .filter_map(|t| t.name().map(|n| n.to_string()))
+        .collect();
+
     // Dev tools should include everything
     assert!(dev_tool_names.contains(&"file_reader".to_string()));
     assert!(dev_tool_names.contains(&"http_request".to_string()));
@@ -181,13 +188,16 @@ async fn test_tool_execution() {
     
     // Find and test the calculator tool
     let calculator = tools.into_iter()
-        .find(|t| t.name() == "calculator")
+        .find(|t| t.name() == Some("calculator"))
         .expect("Calculator tool not found");
-    
-    let mut params = std::collections::HashMap::new();
-    params.insert("expression".to_string(), serde_json::json!("2 + 3"));
-    
-    let result = calculator.execute(&params).await;
+
+    let params = serde_json::json!({
+        "expression": "2 + 3"
+    });
+
+    let context = ToolExecutionContext::default();
+    let options = ToolExecutionOptions::default();
+    let result = calculator.execute(params, context, &options).await;
     assert!(result.is_ok());
     
     let response = result.unwrap();

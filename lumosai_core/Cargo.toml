@@ -48,6 +48,10 @@ notify = "6.0"
 tokio-tungstenite = "0.21"
 tungstenite = "0.21"
 
+# Authentication dependencies
+base64 = "0.21"
+urlencoding = "2.1"
+
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.8"

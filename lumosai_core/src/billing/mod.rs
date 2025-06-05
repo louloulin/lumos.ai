@@ -14,14 +14,14 @@ pub mod billing_engine;
 pub mod payment_processor;
 pub mod resource_manager;
 
-#[cfg(test)]
-mod tests;
-
 pub use subscription::*;
 pub use usage_tracking::*;
 pub use billing_engine::*;
 pub use payment_processor::*;
 pub use resource_manager::*;
+
+#[cfg(test)]
+mod tests;
 
 /// 计费错误类型
 #[derive(Debug, thiserror::Error)]

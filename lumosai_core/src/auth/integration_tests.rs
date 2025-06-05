@@ -285,14 +285,14 @@ async fn test_error_handling() {
 async fn run_all_integration_tests() {
     println!("🚀 Running comprehensive authentication system integration tests...\n");
     
-    test_complete_auth_workflow().await;
-    test_jwt_token_lifecycle().await;
-    test_rbac_system().await;
-    test_api_key_management().await;
-    test_session_management().await;
-    test_oauth2_flow().await;
-    test_multi_tenant_functionality().await;
-    test_error_handling().await;
+    test_complete_auth_workflow();
+    test_jwt_token_lifecycle();
+    test_rbac_system();
+    test_api_key_management();
+    test_session_management();
+    test_oauth2_flow();
+    test_multi_tenant_functionality();
+    test_error_handling();
     
     println!("\n🎉 All authentication system integration tests passed!");
     println!("✨ Enterprise-grade authentication and authorization system is fully functional!");

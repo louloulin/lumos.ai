@@ -302,7 +302,9 @@ mod tests {
         params.insert("path".to_string(), json!("test.txt"));
         params.insert("encoding".to_string(), json!("utf-8"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -318,7 +320,9 @@ mod tests {
         params.insert("path".to_string(), json!("output.txt"));
         params.insert("content".to_string(), json!("Hello, World!"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -335,7 +339,9 @@ mod tests {
         params.insert("path".to_string(), json!("/tmp"));
         params.insert("recursive".to_string(), json!(false));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();

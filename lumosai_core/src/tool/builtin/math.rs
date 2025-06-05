@@ -315,7 +315,9 @@ mod tests {
         params.insert("expression".to_string(), json!("2 + 3"));
         params.insert("precision".to_string(), json!(2));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -331,7 +333,9 @@ mod tests {
         params.insert("data".to_string(), json!([1, 2, 3, 4, 5]));
         params.insert("operations".to_string(), json!(["mean", "median"]));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();

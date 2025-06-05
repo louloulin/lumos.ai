@@ -254,7 +254,9 @@ mod tests {
         params.insert("url".to_string(), json!("https://api.example.com/data"));
         params.insert("method".to_string(), json!("GET"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -271,7 +273,9 @@ mod tests {
         params.insert("url".to_string(), json!("https://example.com"));
         params.insert("selector".to_string(), json!("h1"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -286,7 +290,9 @@ mod tests {
         let mut params = HashMap::new();
         params.insert("url".to_string(), json!("https://example.com"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();

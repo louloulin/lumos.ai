@@ -312,7 +312,9 @@ mod tests {
         params.insert("json_string".to_string(), json!(r#"{"name": "test", "value": 42}"#));
         params.insert("path".to_string(), json!("$.name"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -329,7 +331,9 @@ mod tests {
         params.insert("csv_data".to_string(), json!(csv_data));
         params.insert("has_headers".to_string(), json!(true));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -346,7 +350,9 @@ mod tests {
         params.insert("data".to_string(), json!({"items": [1, 2, 3]}));
         params.insert("operation".to_string(), json!("filter"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();

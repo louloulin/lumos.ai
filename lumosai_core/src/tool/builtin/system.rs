@@ -355,7 +355,9 @@ mod tests {
         let mut params = HashMap::new();
         params.insert("operation".to_string(), json!("now"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -372,7 +374,9 @@ mod tests {
         params.insert("count".to_string(), json!(3));
         params.insert("format".to_string(), json!("standard"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -389,7 +393,9 @@ mod tests {
         params.insert("input".to_string(), json!("hello world"));
         params.insert("algorithm".to_string(), json!("sha256"));
 
-        let result = tool.execute(&params).await;
+        let context = crate::tool::context::ToolExecutionContext::new();
+        let options = crate::tool::schema::ToolExecutionOptions::new();
+        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
         assert!(result.is_ok());
         
         let response = result.unwrap();

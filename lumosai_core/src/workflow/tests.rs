@@ -110,7 +110,7 @@ mod tests {
             Ok(())
         }
         
-        fn get_tool(&self, _tool_name: &str) -> Option<&Box<dyn crate::tool::Tool>> {
+        fn get_tool(&self, _tool_name: &str) -> Option<Box<dyn crate::tool::Tool>> {
             None
         }
         

@@ -10,10 +10,10 @@ use std::time::Duration;
 use tokio::time::sleep;
 use uuid::Uuid;
 
-use crate::agent::{Agent, AgentConfig, Base, Component};
+use crate::agent::{executor::BasicAgent, config::AgentConfig};
 use crate::memory::{BasicWorkingMemory, SemanticMemory, WorkingMemory};
 use crate::llm::{LlmProvider, LlmConfig, LlmResponse};
-use crate::tools::{Tool, ToolResult};
+use crate::tool::{Tool, ToolResult};
 use crate::telemetry::{
     AgentMetrics, ToolMetrics, MemoryMetrics, ExecutionContext, MetricValue,
     TokenUsage, MetricsCollector, TraceCollector, ExecutionTrace, TraceStep, StepType,
@@ -107,13 +107,18 @@ impl Tool for MockTool {
         "Mock tool for testing"
     }
     
-    async fn execute(&self, _input: serde_json::Value) -> ToolResult {
+    async fn execute(
+        &self,
+        _input: serde_json::Value,
+        _context: crate::tool::context::ToolExecutionContext,
+        _options: &crate::tool::schema::ToolExecutionOptions
+    ) -> ToolResult {
         sleep(Duration::from_millis(self.delay_ms)).await;
-        
+
         if self.should_fail {
             return ToolResult::error("Mock tool failure");
         }
-        
+
         ToolResult::success(serde_json::json!({
             "result": "mock tool output",
             "tool": self.name
@@ -136,15 +141,15 @@ async fn test_agent_execution_with_telemetry() {
     tools.insert("weather".to_string(), Box::new(MockTool::new("weather").with_delay(75)) as Box<dyn Tool>);
     
     // Create agent with telemetry
-    let mut agent = Agent::new(AgentConfig {
+    let mut agent = BasicAgent::new(AgentConfig {
         name: "test_agent".to_string(),
         description: "Test agent for telemetry integration".to_string(),
         llm_config: LlmConfig::default(),
         max_iterations: 3,
         memory_config: None,
-    });
-    
-    agent.set_llm_provider(llm_provider);
+        working_memory: None,
+    }, llm_provider);
+
     agent.set_tools(tools);
     agent.set_logger(logger.clone());
     agent.set_metrics_collector(collector.clone());
@@ -251,7 +256,7 @@ async fn test_concurrent_executions_with_telemetry() {
                 Box::new(MockTool::new(&format!("tool_{}", i)).with_delay(30)) as Box<dyn Tool>
             );
             
-            let mut agent = Agent::new(AgentConfig {
+            let mut agent = BasicAgent::new(AgentConfig {
                 name: format!("agent_{}", i),
                 description: format!("Test agent {} for concurrent telemetry", i),
                 llm_config: LlmConfig::default(),
@@ -311,7 +316,7 @@ async fn test_error_scenarios_with_telemetry() {
     let mut tools = HashMap::new();
     tools.insert("test_tool".to_string(), Box::new(MockTool::new("test_tool")) as Box<dyn Tool>);
     
-    let mut agent = Agent::new(AgentConfig {
+    let mut agent = BasicAgent::new(AgentConfig {
         name: "failing_agent".to_string(),
         description: "Agent that fails for testing".to_string(),
         llm_config: LlmConfig::default(),
@@ -344,7 +349,7 @@ async fn test_error_scenarios_with_telemetry() {
         Box::new(MockTool::new("failing_tool").with_failure(true)) as Box<dyn Tool>
     );
     
-    let mut agent2 = Agent::new(AgentConfig {
+    let mut agent2 = BasicAgent::new(AgentConfig {
         name: "tool_failing_agent".to_string(),
         description: "Agent with failing tool".to_string(),
         llm_config: LlmConfig::default(),

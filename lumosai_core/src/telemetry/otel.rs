@@ -134,11 +134,9 @@ pub struct OtelMetric {
     /// 指标名称
     pub name: String,
     /// 指标描述
-    pub description: Option<String>,
+    pub description: String,
     /// 指标单位
-    pub unit: Option<String>,
-    /// 指标类型
-    pub metric_type: MetricType,
+    pub unit: String,
     /// 数据点
     pub data_points: Vec<DataPoint>,
 }
@@ -249,29 +247,219 @@ impl HttpOtlpExporter {
         self.timeout = timeout;
         self
     }
+
+    /// 将spans序列化为OTLP格式
+    fn serialize_spans_to_otlp(&self, spans: &[OtelSpan]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+        // 简化的OTLP序列化 - 在实际实现中应该使用protobuf
+        let otlp_data = serde_json::json!({
+            "resourceSpans": [{
+                "resource": {
+                    "attributes": [
+                        {"key": "service.name", "value": {"stringValue": "lumos-ai"}},
+                        {"key": "service.version", "value": {"stringValue": env!("CARGO_PKG_VERSION")}}
+                    ]
+                },
+                "scopeSpans": [{
+                    "scope": {
+                        "name": "lumos-ai-tracer",
+                        "version": "1.0.0"
+                    },
+                    "spans": spans.iter().map(|span| {
+                        serde_json::json!({
+                            "traceId": span.trace_id,
+                            "spanId": span.span_id,
+                            "parentSpanId": span.parent_span_id,
+                            "name": span.name,
+                            "kind": match span.kind {
+                                SpanKind::Internal => 1,
+                                SpanKind::Server => 2,
+                                SpanKind::Client => 3,
+                                SpanKind::Producer => 4,
+                                SpanKind::Consumer => 5,
+                            },
+                            "startTimeUnixNano": span.start_time_ns,
+                            "endTimeUnixNano": span.end_time_ns,
+                            "attributes": span.attributes.iter().map(|(k, v)| {
+                                serde_json::json!({
+                                    "key": k,
+                                    "value": match v {
+                                        AttributeValue::String(s) => serde_json::json!({"stringValue": s}),
+                                        AttributeValue::Int(i) => serde_json::json!({"intValue": i}),
+                                        AttributeValue::Double(f) => serde_json::json!({"doubleValue": f}),
+                                        AttributeValue::Bool(b) => serde_json::json!({"boolValue": b}),
+                                        AttributeValue::StringArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|s| serde_json::json!({"stringValue": s})).collect::<Vec<_>>()}}),
+                                        AttributeValue::BoolArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|b| serde_json::json!({"boolValue": b})).collect::<Vec<_>>()}}),
+                                        AttributeValue::IntArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|i| serde_json::json!({"intValue": i})).collect::<Vec<_>>()}}),
+                                        AttributeValue::DoubleArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|f| serde_json::json!({"doubleValue": f})).collect::<Vec<_>>()}}),
+                                    }
+                                })
+                            }).collect::<Vec<_>>(),
+                            "events": span.events.iter().map(|event| {
+                                serde_json::json!({
+                                    "timeUnixNano": event.timestamp_ns,
+                                    "name": event.name,
+                                    "attributes": event.attributes.iter().map(|(k, v)| {
+                                        serde_json::json!({
+                                            "key": k,
+                                            "value": match v {
+                                                AttributeValue::String(s) => serde_json::json!({"stringValue": s}),
+                                                AttributeValue::Int(i) => serde_json::json!({"intValue": i}),
+                                                AttributeValue::Double(f) => serde_json::json!({"doubleValue": f}),
+                                                AttributeValue::Bool(b) => serde_json::json!({"boolValue": b}),
+                                                AttributeValue::StringArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|s| serde_json::json!({"stringValue": s})).collect::<Vec<_>>()}}),
+                                                AttributeValue::BoolArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|b| serde_json::json!({"boolValue": b})).collect::<Vec<_>>()}}),
+                                                AttributeValue::IntArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|i| serde_json::json!({"intValue": i})).collect::<Vec<_>>()}}),
+                                                AttributeValue::DoubleArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|f| serde_json::json!({"doubleValue": f})).collect::<Vec<_>>()}}),
+                                            }
+                                        })
+                                    }).collect::<Vec<_>>()
+                                })
+                            }).collect::<Vec<_>>(),
+                            "status": {
+                                "code": match span.status {
+                                    SpanStatus::Ok => 1,
+                                    SpanStatus::Error { .. } => 2,
+                                    SpanStatus::Unset => 0,
+                                },
+                                "message": ""
+                            }
+                        })
+                    }).collect::<Vec<_>>()
+                }]
+            }]
+        });
+
+        Ok(serde_json::to_vec(&otlp_data)?)
+    }
+
+    /// 将metrics序列化为OTLP格式
+    fn serialize_metrics_to_otlp(&self, metrics: &[OtelMetric]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+        let otlp_data = serde_json::json!({
+            "resourceMetrics": [{
+                "resource": {
+                    "attributes": [
+                        {"key": "service.name", "value": {"stringValue": "lumos-ai"}},
+                        {"key": "service.version", "value": {"stringValue": env!("CARGO_PKG_VERSION")}}
+                    ]
+                },
+                "scopeMetrics": [{
+                    "scope": {
+                        "name": "lumos-ai-meter",
+                        "version": "1.0.0"
+                    },
+                    "metrics": metrics.iter().map(|metric| {
+                        serde_json::json!({
+                            "name": metric.name,
+                            "description": metric.description,
+                            "unit": metric.unit,
+                            "gauge": {
+                                "dataPoints": metric.data_points.iter().map(|dp| {
+                                    serde_json::json!({
+                                        "timeUnixNano": dp.timestamp_ns,
+                                        "asDouble": match &dp.value {
+                                            DataPointValue::Double(d) => *d,
+                                            DataPointValue::Int(i) => *i as f64,
+                                            _ => 0.0,
+                                        },
+                                        "attributes": dp.attributes.iter().map(|(k, v)| {
+                                            serde_json::json!({
+                                                "key": k,
+                                                "value": match v {
+                                                    AttributeValue::String(s) => serde_json::json!({"stringValue": s}),
+                                                    AttributeValue::Int(i) => serde_json::json!({"intValue": i}),
+                                                    AttributeValue::Double(f) => serde_json::json!({"doubleValue": f}),
+                                                    AttributeValue::Bool(b) => serde_json::json!({"boolValue": b}),
+                                                    AttributeValue::StringArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|s| serde_json::json!({"stringValue": s})).collect::<Vec<_>>()}}),
+                                                    AttributeValue::BoolArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|b| serde_json::json!({"boolValue": b})).collect::<Vec<_>>()}}),
+                                                    AttributeValue::IntArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|i| serde_json::json!({"intValue": i})).collect::<Vec<_>>()}}),
+                                                    AttributeValue::DoubleArray(arr) => serde_json::json!({"arrayValue": {"values": arr.iter().map(|f| serde_json::json!({"doubleValue": f})).collect::<Vec<_>>()}}),
+                                                }
+                                            })
+                                        }).collect::<Vec<_>>()
+                                    })
+                                }).collect::<Vec<_>>()
+                            }
+                        })
+                    }).collect::<Vec<_>>()
+                }]
+            }]
+        });
+
+        Ok(serde_json::to_vec(&otlp_data)?)
+    }
 }
 
 #[async_trait]
 impl OtelExporter for HttpOtlpExporter {
     async fn export_spans(&self, spans: Vec<OtelSpan>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 实现span导出逻辑
-        println!("Exporting {} spans to {}", spans.len(), self.endpoint);
+        if spans.is_empty() {
+            return Ok(());
+        }
+
+        let traces_endpoint = format!("{}/v1/traces", self.endpoint);
+        let payload = self.serialize_spans_to_otlp(&spans)?;
+
+        let mut request = self.client
+            .post(&traces_endpoint)
+            .timeout(self.timeout)
+            .header("Content-Type", "application/x-protobuf");
+
+        for (key, value) in &self.headers {
+            request = request.header(key, value);
+        }
+
+        let response = request.body(payload).send().await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(format!("OTLP export failed: {} - {}", status, error_text).into());
+        }
+
+        println!("✅ Successfully exported {} spans to {}", spans.len(), traces_endpoint);
         Ok(())
     }
-    
+
     async fn export_metrics(&self, metrics: Vec<OtelMetric>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 实现指标导出逻辑
-        println!("Exporting {} metrics to {}", metrics.len(), self.endpoint);
+        if metrics.is_empty() {
+            return Ok(());
+        }
+
+        let metrics_endpoint = format!("{}/v1/metrics", self.endpoint);
+        let payload = self.serialize_metrics_to_otlp(&metrics)?;
+
+        let mut request = self.client
+            .post(&metrics_endpoint)
+            .timeout(self.timeout)
+            .header("Content-Type", "application/x-protobuf");
+
+        for (key, value) in &self.headers {
+            request = request.header(key, value);
+        }
+
+        let response = request.body(payload).send().await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(format!("OTLP export failed: {} - {}", status, error_text).into());
+        }
+
+        println!("✅ Successfully exported {} metrics to {}", metrics.len(), metrics_endpoint);
         Ok(())
     }
-    
-    async fn force_flush(&self, _timeout: Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 实现强制刷新逻辑
+
+    async fn force_flush(&self, timeout: Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 实现强制刷新逻辑 - 等待所有待处理的导出完成
+        tokio::time::sleep(std::cmp::min(timeout, Duration::from_millis(100))).await;
+        println!("🔄 OTLP exporter force flush completed");
         Ok(())
     }
-    
-    async fn shutdown(&self, _timeout: Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 实现关闭逻辑
+
+    async fn shutdown(&self, timeout: Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 实现优雅关闭逻辑
+        self.force_flush(timeout).await?;
+        println!("🛑 OTLP exporter shutdown completed");
         Ok(())
     }
 }

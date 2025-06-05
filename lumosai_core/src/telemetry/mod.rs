@@ -12,9 +12,17 @@ pub mod collectors;
 pub mod otel;
 pub mod alerts;
 pub mod analyzer;
+pub mod alert_engine;
+pub mod performance_monitor;
 
 #[cfg(test)]
 pub mod tests;
+
+#[cfg(test)]
+pub mod integration_tests;
+
+#[cfg(test)]
+pub mod observability_tests;
 
 // Re-export core types for convenience
 pub use metrics::{
@@ -46,6 +54,22 @@ pub use analyzer::{
     PerformanceAnalyzer, PerformanceAnalysis, PerformanceTrend, BottleneckType,
     AnomalyType, OptimizationRecommendation, RecommendationType, DifficultyLevel,
     PerformancePrediction, PredictionModel, IntelligentPerformanceAnalyzer
+};
+
+pub use alert_engine::{
+    SmartAlertEngine, AlertEngineConfig, EscalationConfig, AutomationConfig,
+    AutomationAction, AutomationActionType, AlertContext, AlertActionResult,
+    ActionStatus, AlertStatistics, AutomationExecutor, DefaultAutomationExecutor
+};
+
+pub use performance_monitor::{
+    EnterprisePerformanceMonitor, PerformanceMonitorConfig, PerformanceThresholds,
+    PredictionConfig, AutoOptimizationConfig, OptimizationStrategy,
+    RealTimePerformanceMetrics, ResponseTimeMetrics, ThroughputMetrics,
+    ResourceUsageMetrics, ErrorMetrics, PerformanceTrend as MonitorPerformanceTrend,
+    PerformancePrediction as MonitorPerformancePrediction,
+    PerformanceOptimizationSuggestion, DifficultyLevel as MonitorDifficultyLevel, RiskLevel,
+    PerformanceSummaryReport, MonitoringStatistics
 };
 
 /// Basic event type for legacy support

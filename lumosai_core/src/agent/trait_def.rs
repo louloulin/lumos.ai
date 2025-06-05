@@ -99,10 +99,27 @@ pub trait Agent: Base + Send + Sync {
     async fn generate_title(&self, user_message: &Message) -> Result<String>;
     
     /// Generate a response given a set of messages
-    async fn generate(&self, 
-        messages: &[Message], 
+    async fn generate(&self,
+        messages: &[Message],
         options: &AgentGenerateOptions
     ) -> Result<AgentGenerateResult>;
+
+    /// Generate a simple response from a text input (convenience method for plan4.md API)
+    async fn generate_simple(&self, input: &str) -> Result<String> {
+        use crate::llm::{Message, Role};
+
+        let message = Message {
+            role: Role::User,
+            content: input.to_string(),
+            metadata: None,
+            name: None,
+        };
+
+        let options = AgentGenerateOptions::default();
+        let result = self.generate(&[message], &options).await?;
+
+        Ok(result.response)
+    }
     
     /// Generate a response with memory thread integration
     async fn generate_with_memory(&self,

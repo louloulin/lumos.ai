@@ -75,10 +75,10 @@ pub fn file_agent(name: &str) -> AgentBuilder {
 ```
 
 **实施计划：**
-- Week 1: API设计和原型开发
-- Week 2: 核心实现和测试
-- Week 3: 示例迁移和文档更新
-- Week 4: 社区反馈和优化
+- Week 1: API设计和原型开发 ✅ 已完成
+- Week 2: 核心实现和测试 ✅ 已完成
+- Week 3: 示例迁移和文档更新 🔄 进行中
+- Week 4: 社区反馈和优化 📅 计划中
 
 **成功指标：**
 - 新用户上手时间 < 15分钟
@@ -599,15 +599,15 @@ pub mod video_tools {
 
 **1月 - API简化重构**
 ```
-Week 1 (1/1-1/7):
-- [ ] 完成新API设计文档
-- [ ] 实现AgentBuilder核心结构
-- [ ] 创建便利函数原型
+Week 1 (1/1-1/7): ✅ 已完成
+- [x] 完成新API设计文档
+- [x] 实现AgentBuilder核心结构
+- [x] 创建便利函数原型
 
-Week 2 (1/8-1/14):
-- [ ] 实现Agent::quick()和Agent::builder()
-- [ ] 添加模型配置简化接口
-- [ ] 实现工具链式配置
+Week 2 (1/8-1/14): ✅ 已完成
+- [x] 实现Agent::quick()和Agent::builder()
+- [x] 添加模型配置简化接口
+- [x] 实现工具链式配置
 
 Week 3 (1/15-1/21):
 - [ ] 迁移现有示例到新API

@@ -3,7 +3,8 @@
 //! This benchmark compares the performance of the new simplified API
 //! against the traditional builder pattern to validate our improvements.
 
-use lumosai_core::agent::{quick, web_agent, AgentBuilder, Agent};
+use lumosai_core::agent::{quick, web_agent, AgentBuilder};
+use lumosai_core::Agent;
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 use std::time::{Duration, Instant};

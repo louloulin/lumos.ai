@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::agent::Agent;
+use crate::agent::trait_def::Agent;
 use crate::tool::Tool;
 use std::collections::HashMap;
 use std::sync::Arc;

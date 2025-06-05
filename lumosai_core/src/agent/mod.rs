@@ -23,8 +23,11 @@ mod mastra_integration_test;
 #[cfg(test)]
 mod simplified_api_tests;
 
+#[cfg(test)]
+mod plan4_api_tests;
+
 pub use config::{AgentConfig, AgentGenerateOptions};
-pub use trait_def::Agent;
+pub use trait_def::Agent as AgentTrait;
 pub use executor::BasicAgent;
 pub use message_utils::{system_message, user_message, assistant_message, tool_message};
 pub use runtime_context::{RuntimeContext, ContextManager, ToolCallRecord, create_context_manager};
@@ -129,6 +132,59 @@ pub fn quick(name: &str, instructions: &str) -> AgentBuilder {
         .enable_smart_defaults()
 }
 
+/// AgentFactory struct with static methods for creation
+///
+/// This provides the plan4.md specified API: AgentFactory::quick() and AgentFactory::builder()
+pub struct AgentFactory;
+
+impl AgentFactory {
+    /// Create an agent with minimal configuration (plan4.md API)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::AgentFactory;
+    /// use lumosai_core::llm::MockLlmProvider;
+    /// use std::sync::Arc;
+    ///
+    /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    ///
+    /// let agent = AgentFactory::quick("assistant", "You are a helpful assistant")
+    ///     .model(llm)
+    ///     .build()
+    ///     .expect("Failed to create agent");
+    /// ```
+    pub fn quick(name: &str, instructions: &str) -> AgentBuilder {
+        AgentBuilder::new()
+            .name(name)
+            .instructions(instructions)
+            .enable_smart_defaults()
+    }
+
+    /// Create an agent with the builder pattern (plan4.md API)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::AgentFactory;
+    /// use lumosai_core::llm::MockLlmProvider;
+    /// use std::sync::Arc;
+    ///
+    /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    ///
+    /// let agent = AgentFactory::builder()
+    ///     .name("research_agent")
+    ///     .instructions("You are a research assistant")
+    ///     .model(llm)
+    ///     .max_tool_calls(10)
+    ///     .build()
+    ///     .expect("Failed to create agent");
+    /// ```
+    pub fn builder() -> AgentBuilder {
+        AgentBuilder::new()
+    }
+}
+
 /// Create a web-enabled agent with common web tools
 ///
 /// # Example
@@ -219,6 +275,57 @@ pub fn data_agent(name: &str, instructions: &str) -> AgentBuilder {
             Box::new(create_data_transformer_tool()),
         ])
         .enable_smart_defaults()
+}
+
+// Plan4.md specified convenience functions
+impl AgentFactory {
+    /// Create a web-enabled agent with pre-configured web tools (plan4.md API)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::AgentFactory;
+    /// use lumosai_core::llm::MockLlmProvider;
+    /// use std::sync::Arc;
+    ///
+    /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    ///
+    /// let agent = AgentFactory::web_agent("web_helper")
+    ///     .instructions("You can browse the web")
+    ///     .model(llm)
+    ///     .build()
+    ///     .expect("Failed to create agent");
+    /// ```
+    pub fn web_agent(name: &str) -> AgentBuilder {
+        AgentBuilder::new()
+            .name(name)
+            .with_web_tools()
+            .enable_smart_defaults()
+    }
+
+    /// Create a file-enabled agent with pre-configured file tools (plan4.md API)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::AgentFactory;
+    /// use lumosai_core::llm::MockLlmProvider;
+    /// use std::sync::Arc;
+    ///
+    /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    ///
+    /// let agent = AgentFactory::file_agent("file_helper")
+    ///     .instructions("You can manage files")
+    ///     .model(llm)
+    ///     .build()
+    ///     .expect("Failed to create agent");
+    /// ```
+    pub fn file_agent(name: &str) -> AgentBuilder {
+        AgentBuilder::new()
+            .name(name)
+            .with_file_tools()
+            .enable_smart_defaults()
+    }
 }
 
 #[cfg(test)]

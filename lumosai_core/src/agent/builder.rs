@@ -11,7 +11,8 @@ use crate::{Result, Error};
 use crate::llm::LlmProvider;
 use crate::tool::Tool;
 use crate::memory::{MemoryConfig, WorkingMemoryConfig};
-use super::{AgentConfig, BasicAgent, Agent};
+use super::{AgentConfig, BasicAgent};
+use super::trait_def::Agent;
 use super::types::{VoiceConfig, TelemetrySettings};
 
 /// Builder for creating agents with a fluent API

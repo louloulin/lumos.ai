@@ -30,7 +30,7 @@ pub mod billing;
 pub use error::{Error, Result};
 pub use llm::{LlmProvider, LlmOptions, Message, Role};
 pub use llm::{OpenAiProvider, AnthropicProvider, QwenProvider, MockLlmProvider};
-pub use agent::{Agent, AgentConfig, BasicAgent, create_basic_agent, AgentGenerateOptions, AgentStreamOptions};
+pub use agent::{AgentTrait as Agent, AgentConfig, BasicAgent, create_basic_agent, AgentGenerateOptions, AgentStreamOptions, AgentFactory};
 pub use base::{Base, ComponentConfig, BaseComponent};
 pub use logger::{Logger, LogLevel, Component as LogComponent, create_logger, create_noop_logger};
 pub use lumosai::{Lumosai, LumosaiConfig};

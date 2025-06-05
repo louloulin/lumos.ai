@@ -3,7 +3,8 @@
 //! This example shows how to use the new Mastra-like API for creating agents
 //! with minimal boilerplate while maintaining Rust's performance advantages.
 
-use lumosai_core::agent::{quick, web_agent, file_agent, data_agent, AgentBuilder, Agent};
+use lumosai_core::agent::{quick, web_agent, file_agent, data_agent, AgentBuilder};
+use lumosai_core::Agent;
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 use tokio;

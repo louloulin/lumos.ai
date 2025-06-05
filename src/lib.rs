@@ -7,7 +7,7 @@ pub use lumosai_core as core;
 
 // Re-export core types for convenience
 pub use lumosai_core::{
-    agent::{Agent, BasicAgent, AgentConfig, AgentGenerateOptions},
+    agent::{AgentTrait as Agent, BasicAgent, AgentConfig, AgentGenerateOptions, AgentFactory},
     llm::{LlmProvider, Message, Role},
     tool::{Tool, FunctionTool},
     error::{Error, Result},

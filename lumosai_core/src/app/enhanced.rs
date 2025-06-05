@@ -9,7 +9,7 @@ use serde_json::Value;
 
 use crate::error::Result;
 use crate::base::{Base, BaseComponent, ComponentConfig};
-use crate::agent::{Agent, AgentConfig};
+use crate::agent::{trait_def::Agent, AgentConfig};
 use crate::tool::{Tool, ToolRegistry, ToolMetadata, ToolCategory};
 use crate::memory::{Memory, MemoryConfig};
 use crate::llm::{LlmProvider, Message};

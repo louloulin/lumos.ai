@@ -8,19 +8,37 @@ use crate::llm::{LlmProvider, OpenAiProvider, AnthropicProvider, QwenProvider};
 use crate::Result;
 
 /// Create an OpenAI provider with simplified configuration
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use lumosai_core::agent::convenience::openai;
-/// 
+///
 /// let provider = openai("gpt-4").expect("Failed to create OpenAI provider");
 /// ```
 pub fn openai(model: &str) -> Result<Arc<dyn LlmProvider>> {
     let api_key = std::env::var("OPENAI_API_KEY")
         .map_err(|_| crate::Error::Configuration("OPENAI_API_KEY environment variable not set".to_string()))?;
-    
+
     Ok(Arc::new(OpenAiProvider::new(api_key, model.to_string())))
+}
+
+/// Create an OpenAI provider with configuration builder (plan4.md API)
+///
+/// # Example
+///
+/// ```rust
+/// use lumosai_core::agent::convenience::openai_builder;
+///
+/// let provider = openai_builder("gpt-4")
+///     .temperature(0.7)
+///     .max_tokens(1000)
+///     .build()
+///     .expect("Failed to create OpenAI provider");
+/// ```
+pub fn openai_builder(model: &str) -> Result<ModelBuilder> {
+    let provider = openai(model)?;
+    Ok(ModelBuilder::new(provider))
 }
 
 /// Create an OpenAI provider with custom API key
@@ -66,19 +84,36 @@ pub fn anthropic_with_key(api_key: &str, model: &str) -> Arc<dyn LlmProvider> {
 }
 
 /// Create a DeepSeek provider with simplified configuration
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use lumosai_core::agent::convenience::deepseek;
-/// 
+///
 /// let provider = deepseek("deepseek-chat").expect("Failed to create DeepSeek provider");
 /// ```
 pub fn deepseek(model: &str) -> Result<Arc<dyn LlmProvider>> {
     let api_key = std::env::var("DEEPSEEK_API_KEY")
         .map_err(|_| crate::Error::Configuration("DEEPSEEK_API_KEY environment variable not set".to_string()))?;
-    
+
     Ok(Arc::new(QwenProvider::new(api_key, model.to_string(), "https://dashscope.aliyuncs.com/compatible-mode/v1")))
+}
+
+/// Create a DeepSeek provider with configuration builder (plan4.md API)
+///
+/// # Example
+///
+/// ```rust
+/// use lumosai_core::agent::convenience::deepseek_builder;
+///
+/// let provider = deepseek_builder("deepseek-chat")
+///     .temperature(0.7)
+///     .build()
+///     .expect("Failed to create DeepSeek provider");
+/// ```
+pub fn deepseek_builder(model: &str) -> Result<ModelBuilder> {
+    let provider = deepseek(model)?;
+    Ok(ModelBuilder::new(provider))
 }
 
 /// Create a DeepSeek provider with custom API key

@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use serde::{Serialize, Deserialize};
 
-use crate::agent::Agent;
+use crate::agent::trait_def::Agent;
 use crate::base::Base;
 use crate::error::{Error, Result};
 use crate::logger::{Component, Logger, LogLevel, create_logger, create_noop_logger};

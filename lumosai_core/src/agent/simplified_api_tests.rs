@@ -14,7 +14,7 @@ mod tests {
         // Test the quick API for simple agent creation
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello from quick agent!".to_string()]));
         
-        let agent = AgentFactory::quick("assistant", "You are a helpful assistant")
+        let agent = quick("assistant", "You are a helpful assistant")
             .model(llm)
             .build()
             .expect("Failed to create agent with quick API");
@@ -31,7 +31,7 @@ mod tests {
         // Test the builder API for more complex configuration
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello from builder agent!".to_string()]));
         
-        let agent = AgentFactory::builder()
+        let agent = AgentBuilder::new()
             .name("research_agent")
             .instructions("You are a research assistant")
             .model(llm)
@@ -49,7 +49,7 @@ mod tests {
         // Test the web agent convenience function
         let llm = Arc::new(MockLlmProvider::new(vec!["I can help with web tasks!".to_string()]));
         
-        let agent = AgentFactory::web_agent("web_helper", "You are a web-enabled assistant")
+        let agent = web_agent("web_helper", "You are a web-enabled assistant")
             .model(llm)
             .build()
             .expect("Failed to create web agent");
@@ -73,7 +73,7 @@ mod tests {
         // Test the file agent convenience function
         let llm = Arc::new(MockLlmProvider::new(vec!["I can help with file operations!".to_string()]));
         
-        let agent = AgentFactory::file_agent("file_helper", "You are a file management assistant")
+        let agent = file_agent("file_helper", "You are a file management assistant")
             .model(llm)
             .build()
             .expect("Failed to create file agent");
@@ -97,7 +97,7 @@ mod tests {
         // Test the data agent convenience function
         let llm = Arc::new(MockLlmProvider::new(vec!["I can help with data processing!".to_string()]));
         
-        let agent = AgentFactory::data_agent("data_helper", "You are a data processing assistant")
+        let agent = data_agent("data_helper", "You are a data processing assistant")
             .model(llm)
             .build()
             .expect("Failed to create data agent");
@@ -120,7 +120,7 @@ mod tests {
         // Test adding tool collections to a builder
         let llm = Arc::new(MockLlmProvider::new(vec!["I have many tools!".to_string()]));
         
-        let agent = AgentFactory::builder()
+        let agent = AgentBuilder::new()
             .name("multi_tool_agent")
             .instructions("You are a versatile assistant")
             .model(llm)
@@ -147,7 +147,7 @@ mod tests {
         // Test that smart defaults are applied correctly
         let llm = Arc::new(MockLlmProvider::new(vec!["Smart defaults work!".to_string()]));
         
-        let agent = AgentFactory::quick("smart_agent", "You are a smart assistant")
+        let agent = quick("smart_agent", "You are a smart assistant")
             .model(llm)
             .build()
             .expect("Failed to create agent with smart defaults");
@@ -182,10 +182,8 @@ mod tests {
             .build()
             .expect("Failed to create agent with old API");
         
-        // New way using AgentFactory::builder()
-        let new_agent = AgentFactory::builder()
-            .name("new_style_agent")
-            .instructions("You are a new-style agent")
+        // New way using quick function
+        let new_agent = quick("new_style_agent", "You are a new-style agent")
             .model(llm)
             .build()
             .expect("Failed to create agent with new API");
@@ -200,19 +198,19 @@ mod tests {
         // Test error handling for missing required fields
         
         // Missing name
-        let result = AgentFactory::quick("", "You are an assistant")
+        let result = quick("", "You are an assistant")
             .build();
         assert!(result.is_err());
-        
+
         // Missing instructions
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        let result = AgentFactory::quick("agent", "")
+        let result = quick("agent", "")
             .model(llm.clone())
             .build();
         assert!(result.is_err());
-        
+
         // Missing model
-        let result = AgentFactory::quick("agent", "You are an assistant")
+        let result = quick("agent", "You are an assistant")
             .build();
         assert!(result.is_err());
     }

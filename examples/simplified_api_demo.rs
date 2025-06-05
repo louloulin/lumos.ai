@@ -3,7 +3,7 @@
 //! This example shows how to use the new Mastra-like API for creating agents
 //! with minimal boilerplate while maintaining Rust's performance advantages.
 
-use lumosai_core::agent::{AgentFactory, Agent};
+use lumosai_core::agent::{quick, web_agent, file_agent, data_agent, AgentBuilder, Agent};
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 use tokio;
@@ -25,18 +25,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("---------------------------");
     
     // Example 1: Quick agent creation with minimal configuration
-    let quick_agent = AgentFactory::quick("assistant", "You are a helpful assistant")
+    let quick_agent = quick("assistant", "You are a helpful assistant")
         .model(llm.clone())
         .build()?;
-    
+
     println!("✅ Created quick agent: {}", quick_agent.get_name());
     println!("   Instructions: {}", quick_agent.get_instructions());
 
     println!("\n2. 🔧 Builder Pattern Agent");
     println!("----------------------------");
-    
+
     // Example 2: More detailed configuration using builder pattern
-    let builder_agent = AgentFactory::builder()
+    let builder_agent = AgentBuilder::new()
         .name("research_agent")
         .instructions("You are a research assistant specialized in data analysis")
         .model(llm.clone())
@@ -51,47 +51,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("------------------------");
     
     // Example 3: Web agent with pre-configured web tools
-    let web_agent = AgentFactory::web_agent("web_helper", "You are a web-enabled assistant")
+    let web_agent_instance = web_agent("web_helper", "You are a web-enabled assistant")
         .model(llm.clone())
         .build()?;
-    
-    println!("✅ Created web agent: {}", web_agent.get_name());
-    println!("   Available tools: {}", web_agent.get_tools().len());
-    
+
+    println!("✅ Created web agent: {}", web_agent_instance.get_name());
+    println!("   Available tools: {}", web_agent_instance.get_tools().len());
+
     // List available tools
-    for tool_name in web_agent.get_tools().keys() {
+    for tool_name in web_agent_instance.get_tools().keys() {
         println!("   - {}", tool_name);
     }
 
     println!("\n4. 📁 File-Enabled Agent");
     println!("-------------------------");
-    
+
     // Example 4: File agent with pre-configured file tools
-    let file_agent = AgentFactory::file_agent("file_helper", "You are a file management assistant")
+    let file_agent_instance = file_agent("file_helper", "You are a file management assistant")
         .model(llm.clone())
         .build()?;
-    
-    println!("✅ Created file agent: {}", file_agent.get_name());
-    println!("   Available tools: {}", file_agent.get_tools().len());
-    
+
+    println!("✅ Created file agent: {}", file_agent_instance.get_name());
+    println!("   Available tools: {}", file_agent_instance.get_tools().len());
+
     // List available tools
-    for tool_name in file_agent.get_tools().keys() {
+    for tool_name in file_agent_instance.get_tools().keys() {
         println!("   - {}", tool_name);
     }
 
     println!("\n5. 📊 Data Processing Agent");
     println!("----------------------------");
-    
+
     // Example 5: Data agent with pre-configured data tools
-    let data_agent = AgentFactory::data_agent("data_helper", "You are a data processing assistant")
+    let data_agent_instance = data_agent("data_helper", "You are a data processing assistant")
         .model(llm.clone())
         .build()?;
-    
-    println!("✅ Created data agent: {}", data_agent.get_name());
-    println!("   Available tools: {}", data_agent.get_tools().len());
-    
+
+    println!("✅ Created data agent: {}", data_agent_instance.get_name());
+    println!("   Available tools: {}", data_agent_instance.get_tools().len());
+
     // List available tools
-    for tool_name in data_agent.get_tools().keys() {
+    for tool_name in data_agent_instance.get_tools().keys() {
         println!("   - {}", tool_name);
     }
 
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("-----------------------");
     
     // Example 6: Agent with multiple tool collections
-    let multi_tool_agent = AgentFactory::builder()
+    let multi_tool_agent = AgentBuilder::new()
         .name("multi_tool_agent")
         .instructions("You are a versatile assistant with access to web, file, and data tools")
         .model(llm.clone())
@@ -115,7 +115,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("--------------------------");
     
     // Example 7: Demonstrate smart defaults
-    let smart_agent = AgentFactory::quick("smart_agent", "You are a smart assistant")
+    let smart_agent = quick("smart_agent", "You are a smart assistant")
         .model(llm.clone())
         .build()?;
     

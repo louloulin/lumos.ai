@@ -3,7 +3,7 @@
 //! This benchmark compares the performance of the new simplified API
 //! against the traditional builder pattern to validate our improvements.
 
-use lumosai_core::agent::{AgentFactory, AgentBuilder, Agent};
+use lumosai_core::agent::{quick, web_agent, AgentBuilder, Agent};
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let iterations = 1000;
     
     for i in 0..iterations {
-        let _agent = AgentFactory::quick(&format!("agent_{}", i), "You are a test agent")
+        let _agent = quick(&format!("agent_{}", i), "You are a test agent")
             .model(llm.clone())
             .build()?;
     }
@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let start = Instant::now();
     
     for i in 0..iterations {
-        let _agent = AgentFactory::quick(&format!("smart_agent_{}", i), "You are a smart agent")
+        let _agent = quick(&format!("smart_agent_{}", i), "You are a smart agent")
             .model(llm.clone())
             .build()?;
     }
@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let web_iterations = 100; // Fewer iterations due to tool creation overhead
     
     for i in 0..web_iterations {
-        let _agent = AgentFactory::web_agent(&format!("web_agent_{}", i), "You are a web agent")
+        let _agent = web_agent(&format!("web_agent_{}", i), "You are a web agent")
             .model(llm.clone())
             .build()?;
     }
@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let start = Instant::now();
     
     for i in 0..web_iterations {
-        let _agent = AgentFactory::builder()
+        let _agent = AgentBuilder::new()
             .name(&format!("multi_agent_{}", i))
             .instructions("You are a multi-tool agent")
             .model(llm.clone())
@@ -110,7 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let mut agents = Vec::new();
     for i in 0..100 {
-        let agent = AgentFactory::quick(&format!("memory_agent_{}", i), "You are a memory test agent")
+        let agent = quick(&format!("memory_agent_{}", i), "You are a memory test agent")
             .model(llm.clone())
             .build()?;
         agents.push(agent);
@@ -187,7 +187,7 @@ mod tests {
         let llm = Arc::new(MockLlmProvider::new(vec!["test".to_string()]));
         
         // Test that both APIs produce equivalent results
-        let quick_agent = AgentFactory::quick("test_agent", "You are a test agent")
+        let quick_agent = quick("test_agent", "You are a test agent")
             .model(llm.clone())
             .build()
             .expect("Failed to create quick agent");
@@ -208,7 +208,7 @@ mod tests {
     async fn test_smart_defaults_application() {
         let llm = Arc::new(MockLlmProvider::new(vec!["test".to_string()]));
         
-        let agent = AgentFactory::quick("smart_agent", "You are a smart agent")
+        let agent = quick("smart_agent", "You are a smart agent")
             .model(llm)
             .build()
             .expect("Failed to create smart agent");
@@ -228,7 +228,7 @@ mod tests {
         
         let start = Instant::now();
         
-        let _web_agent = AgentFactory::web_agent("web_test", "You are a web agent")
+        let _web_agent = web_agent("web_test", "You are a web agent")
             .model(llm.clone())
             .build()
             .expect("Failed to create web agent");
@@ -237,7 +237,7 @@ mod tests {
         
         let start = Instant::now();
         
-        let _multi_agent = AgentFactory::builder()
+        let _multi_agent = AgentBuilder::new()
             .name("multi_test")
             .instructions("You are a multi-tool agent")
             .model(llm)

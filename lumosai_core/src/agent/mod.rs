@@ -106,107 +106,119 @@ pub fn create_basic_agent(
     BasicAgent::new(_config, llm)
 }
 
-/// Simplified Agent API for quick creation
+/// Create an agent with minimal configuration (quick start)
 ///
-/// This provides a Mastra-like API for creating agents with minimal boilerplate
-pub struct AgentFactory;
-
-impl AgentFactory {
-    /// Create an agent with minimal configuration (quick start)
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use lumosai_core::agent::AgentFactory;
-    /// use lumosai_core::llm::MockLlmProvider;
-    /// use std::sync::Arc;
-    ///
-    /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-    ///
-    /// let agent = AgentFactory::quick("assistant", "You are a helpful assistant")
-    ///     .model(llm)
-    ///     .build()
-    ///     .expect("Failed to create agent");
-    /// ```
-    pub fn quick(name: &str, instructions: &str) -> AgentBuilder {
-        AgentBuilder::new()
-            .name(name)
-            .instructions(instructions)
-            .enable_smart_defaults()
-    }
-
-    /// Create an agent with the builder pattern
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use lumosai_core::agent::AgentFactory;
-    /// use lumosai_core::llm::MockLlmProvider;
-    /// use std::sync::Arc;
-    ///
-    /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-    ///
-    /// let agent = AgentFactory::builder()
-    ///     .name("research_agent")
-    ///     .instructions("You are a research assistant")
-    ///     .model(llm)
-    ///     .max_tool_calls(5)
-    ///     .build()
-    ///     .expect("Failed to create agent");
-    /// ```
-    pub fn builder() -> AgentBuilder {
-        AgentBuilder::new()
-    }
+/// # Example
+///
+/// ```rust
+/// use lumosai_core::agent::quick;
+/// use lumosai_core::llm::MockLlmProvider;
+/// use std::sync::Arc;
+///
+/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+///
+/// let agent = quick("assistant", "You are a helpful assistant")
+///     .model(llm)
+///     .build()
+///     .expect("Failed to create agent");
+/// ```
+pub fn quick(name: &str, instructions: &str) -> AgentBuilder {
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .enable_smart_defaults()
 }
 
-/// Convenience functions for creating specialized agents
-impl AgentFactory {
-    /// Create a web-enabled agent with common web tools
-    pub fn web_agent(name: &str, instructions: &str) -> AgentBuilder {
-        use crate::tool::builtin::web::*;
+/// Create a web-enabled agent with common web tools
+///
+/// # Example
+///
+/// ```rust
+/// use lumosai_core::agent::web_agent;
+/// use lumosai_core::llm::MockLlmProvider;
+/// use std::sync::Arc;
+///
+/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+///
+/// let agent = web_agent("web_helper", "You can browse the web")
+///     .model(llm)
+///     .build()
+///     .expect("Failed to create agent");
+/// ```
+pub fn web_agent(name: &str, instructions: &str) -> AgentBuilder {
+    use crate::tool::builtin::web::*;
 
-        AgentBuilder::new()
-            .name(name)
-            .instructions(instructions)
-            .tools(vec![
-                Box::new(create_http_request_tool()),
-                Box::new(create_web_scraper_tool()),
-                Box::new(create_json_api_tool()),
-                Box::new(create_url_validator_tool()),
-            ])
-            .enable_smart_defaults()
-    }
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .tools(vec![
+            Box::new(create_http_request_tool()),
+            Box::new(create_web_scraper_tool()),
+            Box::new(create_json_api_tool()),
+            Box::new(create_url_validator_tool()),
+        ])
+        .enable_smart_defaults()
+}
 
-    /// Create a file-enabled agent with common file tools
-    pub fn file_agent(name: &str, instructions: &str) -> AgentBuilder {
-        use crate::tool::builtin::file::*;
+/// Create a file-enabled agent with common file tools
+///
+/// # Example
+///
+/// ```rust
+/// use lumosai_core::agent::file_agent;
+/// use lumosai_core::llm::MockLlmProvider;
+/// use std::sync::Arc;
+///
+/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+///
+/// let agent = file_agent("file_helper", "You can manage files")
+///     .model(llm)
+///     .build()
+///     .expect("Failed to create agent");
+/// ```
+pub fn file_agent(name: &str, instructions: &str) -> AgentBuilder {
+    use crate::tool::builtin::file::*;
 
-        AgentBuilder::new()
-            .name(name)
-            .instructions(instructions)
-            .tools(vec![
-                Box::new(create_file_reader_tool()),
-                Box::new(create_file_writer_tool()),
-                Box::new(create_directory_lister_tool()),
-                Box::new(create_file_info_tool()),
-            ])
-            .enable_smart_defaults()
-    }
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .tools(vec![
+            Box::new(create_file_reader_tool()),
+            Box::new(create_file_writer_tool()),
+            Box::new(create_directory_lister_tool()),
+            Box::new(create_file_info_tool()),
+        ])
+        .enable_smart_defaults()
+}
 
-    /// Create a data processing agent with common data tools
-    pub fn data_agent(name: &str, instructions: &str) -> AgentBuilder {
-        use crate::tool::builtin::data::*;
+/// Create a data processing agent with common data tools
+///
+/// # Example
+///
+/// ```rust
+/// use lumosai_core::agent::data_agent;
+/// use lumosai_core::llm::MockLlmProvider;
+/// use std::sync::Arc;
+///
+/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+///
+/// let agent = data_agent("data_helper", "You can process data")
+///     .model(llm)
+///     .build()
+///     .expect("Failed to create agent");
+/// ```
+pub fn data_agent(name: &str, instructions: &str) -> AgentBuilder {
+    use crate::tool::builtin::data::*;
 
-        AgentBuilder::new()
-            .name(name)
-            .instructions(instructions)
-            .tools(vec![
-                Box::new(create_json_parser_tool()),
-                Box::new(create_csv_parser_tool()),
-                Box::new(create_data_transformer_tool()),
-            ])
-            .enable_smart_defaults()
-    }
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .tools(vec![
+            Box::new(create_json_parser_tool()),
+            Box::new(create_csv_parser_tool()),
+            Box::new(create_data_transformer_tool()),
+        ])
+        .enable_smart_defaults()
 }
 
 #[cfg(test)]

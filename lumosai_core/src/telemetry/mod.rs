@@ -10,6 +10,8 @@ pub mod metrics;
 pub mod trace;
 pub mod collectors;
 pub mod otel;
+pub mod alerts;
+pub mod analyzer;
 
 #[cfg(test)]
 pub mod tests;
@@ -29,7 +31,21 @@ pub use collectors::{
 };
 
 pub use otel::{
-    OtelConfig, OtelMetricsCollector, HttpOtlpExporter, OtelSpan, OtelMetric
+    OtelConfig, OtelMetricsCollector, HttpOtlpExporter, OtelSpan, OtelMetric,
+    OtelExporter, SpanStatus, SpanKind, AttributeValue, SpanEvent, MetricType,
+    DataPoint, DataPointValue, HistogramBucket
+};
+
+pub use alerts::{
+    AlertManager, AlertRule, AlertEvent, AlertSeverity, AlertStatus, AlertCondition,
+    AlertChannel, AlertChannelType, InMemoryAlertManager, DiagnosisInfo,
+    AutoFixSuggestion, ComparisonOperator
+};
+
+pub use analyzer::{
+    PerformanceAnalyzer, PerformanceAnalysis, PerformanceTrend, BottleneckType,
+    AnomalyType, OptimizationRecommendation, RecommendationType, DifficultyLevel,
+    PerformancePrediction, PredictionModel, IntelligentPerformanceAnalyzer
 };
 
 /// Basic event type for legacy support

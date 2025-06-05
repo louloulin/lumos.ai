@@ -1,128 +1,30 @@
-@lumosai.md 按照整个方案  阅读  @mastra   目录下相关代码，同时参考 @mastra  文档，基于rust实现  实现mastra功能迁移到 lumosai，实现后，增加单元测试，测试通过 更新 @lumosai.md 标记实现的功能
+请按照plan3.md文档中的战略升级计划，继续实现Lumos.ai框架的下一个高优先级功能模块。具体要求：
 
-@plan1.md     按照整个方案  阅读  @mastra   目录下相关代码，同时参考 @mastra  文档，基于rust实现  实现mastra功能迁移到 lumosai，实现后，增加单元测试，测试通过 更新  @plan1.md    标记实现的功能
+1. **功能选择与分析**：
+   - 查看plan3.md中标记为未完成的功能项
+   - 选择一个高优先级且具有重要战略意义的功能进行实现
+   - 分析该功能对提升Lumos.ai竞争力的价值
 
-@cloud.md     根据Mastra UI功能，实现改造lumos_ui
-@ui.md    参考Mastra UI ，实现lumos_ui模块，对接lumosai_core
-
-@agent_enhancement_plan.md 继续按照这个实现相关功能，增加相关测试验证，验证通过后 更新 @agent_enhancement_plan.md 标记实现的功能
-
-
-@dev.md 按照计划，参考 @mastra 的代码和 @mastra 和分析整个  @lumosai_cli 的代码，实现计划中的功能，增加单元测试，测试通过后，更新  @dev.md 
-
-
-
-@dev.md 按照计划，参考 @mastra 的代码和 @mastra 和分析整个  @lumosai_cli 的代码，实现计划中的功能，增加单元测试，测试通过后，更新  @dev.md ，中文说明
-
-
-结合 和 参考 @mastra ，同时分析lumosai整个代码  ，按照  @nui.md 的计划实现功能将代码写入  考虑基于tauri的跨平台性，增加测试用例，测试通过后更新 @nui.md 标记实现的功能 实现lumosai 云平台功能
-
-
-@playground-ui  参考 @mastra ，同时分析lumosai整个代码  ，按照  @nui.md 的计划实现功能将代码写入  考虑基于tauri的跨平台性，增加测试用例，测试通过后更新 @nui.md 标记实现的功能，实现lumosai 云平台功能
-
-
-
-LumosAI系统提供了两个默认账号:
-管理员账号:
-邮箱: admin@lumosai.com
-用户名: admin
-密码: password
-普通用户账号:
-邮箱: demo@lumosai.com
-用户名: demouser
-密码: password
-所有账号都使用同一个通用密码"password"。这些是系统内置的模拟账号，用
-
-
-plan2.md 按照整个方案 阅读 mastra 目录下相关代码，同时参考 mastra 文档，基于rust实现 实现mastra功能迁移到 lumosai，实现后，增加单元测试，测试通过 更新 plan2.md 标记实现的功能
-
-
-按照 lumos2.md的计划实现相关的功能，增加测试验证通过后，实现后更新 lumos2.md标记实现的功能
-
-
-Based on the macro implementation issues and fix plan documented in marco.md, continue implementing the remaining fixes in the following order:
-
-1. **Fix remaining compilation errors in lumos_app.rs**:
-   - Convert async tool handlers to synchronous functions (remove `async move` blocks)
-   - Fix agent! macro syntax to use proper braced structure expected by the parser
-   - Fix lumos! macro syntax to match the parser expectations
-
-2. **Complete macro implementation fixes**:
-   - Fix tools! macro to properly handle synchronous function handlers
-   - Ensure agent! macro generates correct code for tool registration
-   - Verify lumos! macro returns the correct type (agent vs application)
-
-3. **Test and validate the fixes**:
-   - Compile the lumos_app.rs example successfully without errors
-   - Run the example with a test DeepSeek API key to verify functionality
-   - Test that tools are properly registered and callable
-   - Verify that the agent responds correctly to queries
-
-4. **Update documentation**:
-   - Mark completed fixes in marco.md with ✅ status
-   - Document any remaining issues or limitations
-   - Add notes about the final working macro syntax
-   - Update the implementation status and next steps
-
-Focus on getting the basic macro functionality working first, then optimize for better syntax and features later. The goal is to have a working example that demonstrates the macro-based approach with real DeepSeek AI integration.
-
-请按照以下步骤系统性地实现和完善 Lumosai 项目：
-
-1. **分析现状**：
-   - 仔细阅读 lumos2.md 中的功能规划和待实现项目
-   - 分析当前代码库中已实现的功能模块
-   - 识别尚未实现或需要优化的功能点
-
-2. **功能实现**：
-   - 按照 lumos2.md 中的优先级顺序实现缺失的功能
-   - 确保新实现的功能与现有架构保持一致
-   - 遵循项目的编码规范和设计模式
+2. **实现要求**：
+   - 遵循Rust最佳实践和现有代码架构风格
+   - 实现完整的功能模块，包括核心逻辑、错误处理、类型安全
+   - 提供清晰的API接口和文档注释
+   - 确保与现有系统的兼容性和集成性
 
 3. **测试验证**：
-   - 为每个新实现的功能编写相应的单元测试
-   - 确保所有测试能够编译并通过
-   - 验证功能的正确性和稳定性
+   - 编写comprehensive单元测试和集成测试
+   - 创建功能演示程序验证核心用例
+   - 确保所有测试编译通过并成功运行
+   - 验证性能指标和错误处理机制
 
 4. **文档更新**：
-   - 在功能实现并测试通过后，更新 lumos2.md 文档
-   - 在已完成的功能项目前添加 ✅ 标记
-   - 更新功能描述，包含实现细节和使用示例
+   - 在plan3.md中将已完成的功能项标记为✅
+   - 添加实现详情、技术架构说明和测试结果
+   - 更新竞争力分析和技术指标
+   - 记录实现过程中的关键决策和技术亮点
 
 5. **代码提交**：
-   - 使用清晰的提交信息提交代码
-   - 确保提交包含功能实现、测试和文档更新
+   - 使用清晰的中文commit message描述实现的功能
+   - 包含功能概述、技术改进、测试验证和文档更新等信息
 
-请使用中文进行所有说明、注释和文档编写。
-
-@plan3.md 实现相关功能，参考mastra实现，实现后增加测试验证，验证通过后更新 @plan3.md 标记实现的功能
-
-
-请基于 @plan3.md 文档中列出的待实现功能，执行以下完整的开发流程：
-
-1. **功能分析与选择**：
-   - 查看 plan3.md 中标记为 "[ ]" (未完成) 的功能项
-   - 优先选择高价值、高影响力的功能进行实现
-   - 参考 Mastra AI 框架的相应功能设计和实现方式
-
-2. **功能实现**：
-   - 在 Lumos.ai 代码库中实现选定的功能
-   - 确保代码质量：遵循 Rust 最佳实践、添加详细注释、处理错误情况
-   - 保持与现有架构的一致性和兼容性
-
-3. **测试验证**：
-   - 为新实现的功能编写全面的单元测试
-   - 创建集成测试验证功能的端到端工作流程
-   - 确保所有测试通过，包括新测试和现有回归测试
-   - 验证功能的性能和稳定性
-
-4. **文档更新**：
-   - 在 plan3.md 中将已完成的功能项从 "[ ]" 更新为 "[x]"
-   - 添加实现细节、技术亮点和使用示例
-   - 更新竞争力分析，说明相比 Mastra 的优势
-   - 记录任何架构变更或新增的 API
-
-5. **代码提交**：
-   - 使用清晰的中文提交消息描述实现的功能
-   - 确保提交包含所有相关文件（代码、测试、文档）
-
-请按照这个流程系统性地推进 Lumos.ai 的功能完善，确保每个实现的功能都经过充分验证并正确记录。
+请优先考虑能够显著提升开发者体验、增强企业级功能或建立技术差异化优势的功能模块

@@ -15,16 +15,16 @@ use super::{AgentConfig, BasicAgent, Agent};
 use super::types::{VoiceConfig, TelemetrySettings};
 
 /// Builder for creating agents with a fluent API
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use lumosai_core::agent::AgentBuilder;
 /// use lumosai_core::llm::MockLlmProvider;
 /// use std::sync::Arc;
-/// 
+///
 /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-/// 
+///
 /// let agent = AgentBuilder::new()
 ///     .name("assistant")
 ///     .instructions("You are a helpful assistant")
@@ -48,6 +48,7 @@ pub struct AgentBuilder {
     max_tool_calls: Option<u32>,
     tool_timeout: Option<u64>,
     tools: Vec<Box<dyn Tool>>,
+    smart_defaults: bool,
 }
 
 impl Default for AgentBuilder {
@@ -74,7 +75,14 @@ impl AgentBuilder {
             max_tool_calls: None,
             tool_timeout: None,
             tools: Vec::new(),
+            smart_defaults: false,
         }
+    }
+
+    /// Enable smart defaults for easier configuration
+    pub fn enable_smart_defaults(mut self) -> Self {
+        self.smart_defaults = true;
+        self
     }
 
     /// Set the agent name
@@ -184,18 +192,54 @@ impl AgentBuilder {
     }
 
     /// Add multiple tools to the agent
-    pub fn tools<I>(mut self, tools: I) -> Self
-    where
-        I: IntoIterator<Item = Box<dyn Tool>>,
-    {
+    pub fn tools(mut self, tools: Vec<Box<dyn Tool>>) -> Self {
         self.tools.extend(tools);
         self
     }
 
+    /// Add tools from a tool collection
+    pub fn with_web_tools(self) -> Self {
+        use crate::tool::builtin::web::*;
+        self.tools(vec![
+            Box::new(create_http_request_tool()),
+            Box::new(create_web_scraper_tool()),
+            Box::new(create_json_api_tool()),
+            Box::new(create_url_validator_tool()),
+        ])
+    }
+
+    /// Add file operation tools
+    pub fn with_file_tools(self) -> Self {
+        use crate::tool::builtin::file::*;
+        self.tools(vec![
+            Box::new(create_file_reader_tool()),
+            Box::new(create_file_writer_tool()),
+            Box::new(create_directory_lister_tool()),
+            Box::new(create_file_info_tool()),
+        ])
+    }
+
+    /// Add data processing tools
+    pub fn with_data_tools(self) -> Self {
+        use crate::tool::builtin::data::*;
+        self.tools(vec![
+            Box::new(create_json_parser_tool()),
+            Box::new(create_csv_parser_tool()),
+            Box::new(create_data_transformer_tool()),
+        ])
+    }
+
+
+
 
 
     /// Build the agent
-    pub fn build(self) -> Result<BasicAgent> {
+    pub fn build(mut self) -> Result<BasicAgent> {
+        // Apply smart defaults if enabled
+        if self.smart_defaults {
+            self = self.apply_smart_defaults()?;
+        }
+
         // Validate required fields
         let name = self.name.ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
         let instructions = self.instructions.ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
@@ -226,6 +270,42 @@ impl AgentBuilder {
         }
 
         Ok(agent)
+    }
+
+    /// Apply smart defaults to simplify configuration
+    fn apply_smart_defaults(mut self) -> Result<Self> {
+        // Set default memory configuration if not specified
+        if self.memory_config.is_none() {
+            use crate::memory::MemoryConfig;
+            self.memory_config = Some(MemoryConfig::default());
+        }
+
+        // Set default working memory if not specified
+        if self.working_memory.is_none() {
+            use crate::memory::WorkingMemoryConfig;
+            self.working_memory = Some(WorkingMemoryConfig {
+                enabled: true,
+                template: None,
+                content_type: None,
+                max_capacity: Some(10),
+            });
+        }
+
+        // Enable function calling by default
+        if self.enable_function_calling.is_none() {
+            self.enable_function_calling = Some(true);
+        }
+
+        // Set reasonable defaults for tool execution
+        if self.max_tool_calls.is_none() {
+            self.max_tool_calls = Some(10);
+        }
+
+        if self.tool_timeout.is_none() {
+            self.tool_timeout = Some(30);
+        }
+
+        Ok(self)
     }
 }
 

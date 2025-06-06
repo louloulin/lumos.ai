@@ -184,10 +184,10 @@ impl Memory for SemanticMemory {
             };
             
             // 创建过滤条件
-            let filter = FilterCondition::Eq {
-                field_name: "namespace".to_string(),
-                value: Value::String(self.namespace.clone()),
-            };
+            let filter = FilterCondition::Eq(
+                "namespace".to_string(),
+                Value::String(self.namespace.clone()),
+            );
             
             // 查询向量数据库
             let results = match self.vector_storage.query(

@@ -40,10 +40,10 @@ pub struct QueryResult {
 }
 
 pub mod filter;
-pub use filter::FilterCondition;
+// pub use filter::FilterCondition; // Temporarily disabled to avoid conflict with types::FilterCondition
 
 /// Re-export types
-pub use types::{Vector, IndexConfig, EmbeddingService};
+pub use types::{Vector, IndexConfig, EmbeddingService, FilterCondition, SearchParams};
 
 /// Vector storage trait
 #[async_trait]
@@ -99,9 +99,11 @@ pub trait VectorStorage: Send + Sync {
 
 pub mod memory;
 pub mod types;
+// pub mod adapter; // Temporarily disabled due to dependency conflicts
 
 // Re-export memory implementation
 pub use memory::MemoryVectorStorage;
+// pub use adapter::VectorStorageAdapter;
 
 /// Create a new memory vector storage instance
 pub fn create_memory_vector_storage() -> MemoryVectorStorage {
@@ -135,6 +137,27 @@ pub enum VectorStorageConfig {
         /// Whether to use in-memory SQLite database
         in_memory: bool,
     },
+    /// Qdrant vector storage
+    Qdrant {
+        /// Qdrant server URL
+        url: String,
+        /// Optional API key
+        api_key: Option<String>,
+    },
+    /// MongoDB vector storage
+    MongoDB {
+        /// MongoDB connection string
+        connection_string: String,
+        /// Database name
+        database: String,
+    },
+    /// PostgreSQL vector storage with pgvector
+    PostgreSQL {
+        /// PostgreSQL connection string
+        connection_string: String,
+        /// Database name
+        database: String,
+    },
     /// Other type
     Other(Value),
 }
@@ -151,7 +174,7 @@ impl Default for VectorStorageConfig {
 /// Create a vector storage instance from configuration
 pub fn create_vector_storage(config: Option<VectorStorageConfig>) -> Result<Box<dyn VectorStorage>> {
     let config = config.unwrap_or_else(VectorStorageConfig::default);
-    
+
     match config {
         VectorStorageConfig::Memory { dimensions, capacity } => {
             let storage = memory::MemoryVectorStorage::new(dimensions, capacity);
@@ -164,7 +187,16 @@ pub fn create_vector_storage(config: Option<VectorStorageConfig>) -> Result<Box<
             } else {
                 Ok(Box::new(self::sqlite::create_sqlite_vector_storage(db_path)?))
             }
-        }
+        },
+        VectorStorageConfig::Qdrant { url: _, api_key: _ } => {
+            Err(Error::InvalidInput("Qdrant support temporarily disabled due to dependency conflicts".to_string()))
+        },
+        VectorStorageConfig::MongoDB { connection_string: _, database: _ } => {
+            Err(Error::InvalidInput("MongoDB support temporarily disabled due to dependency conflicts".to_string()))
+        },
+        VectorStorageConfig::PostgreSQL { connection_string: _, database: _ } => {
+            Err(Error::InvalidInput("PostgreSQL support temporarily disabled due to dependency conflicts".to_string()))
+        },
         _ => Err(Error::InvalidInput("Unsupported vector storage configuration".to_string())),
     }
 }

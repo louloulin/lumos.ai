@@ -204,10 +204,9 @@ async fn test_error_handling() {
 
     // This should handle the error gracefully
     let result = agent.generate_simple("This should fail").await;
-    // MockLlmProvider returns empty string when no responses are available, not an error
-    // So we check for empty response instead
+    // MockLlmProvider returns "Default mock response" when no responses are available
     match result {
-        Ok(response) => assert!(response.is_empty(), "Should return empty response for empty mock responses"),
+        Ok(response) => assert_eq!(response, "Default mock response", "Should return default mock response for empty mock responses"),
         Err(_) => (), // Error is also acceptable
     }
 }

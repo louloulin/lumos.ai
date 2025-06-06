@@ -19,6 +19,11 @@ sqlite = ["rusqlite"]
 vector_sqlite = ["rusqlite"]
 macros = ["lumos_macro"]
 demos = []
+# Vector storage features (temporarily disabled due to dependency conflicts)
+# qdrant = ["lumosai_stores", "lumosai_stores/qdrant"]
+# mongodb = ["lumosai_stores", "lumosai_stores/mongodb"]
+# postgres = ["lumosai_stores", "lumosai_stores/postgres"]
+# vector_stores = ["lumosai_stores"]
 
 [dependencies]
 tokio = { workspace = true }
@@ -42,6 +47,7 @@ async-stream = "0.3"
 lumos_macro = { path = "../lumos_macro", optional = true }
 async-openai = "0.18.3"
 url = "2.4"
+# lumosai_stores = { path = "../lumosai_stores", optional = true }
 
 # CLI dependencies
 clap = { version = "4.0", features = ["derive"] }

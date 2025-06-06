@@ -137,6 +137,12 @@ pub use crate::memory::{
     WorkingMemory, WorkingMemoryContent,
 };
 
+// Re-export vector storage types
+pub use crate::vector::{
+    VectorStorage, VectorStorageConfig, create_vector_storage,
+    SimilarityMetric, IndexStats, QueryResult, FilterCondition,
+};
+
 // Re-export common types
 pub use crate::llm::{Message, Role, LlmOptions};
 pub use crate::agent::{
@@ -206,6 +212,54 @@ pub fn data_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
         .with_data_tools()
         .with_math_tools()
 }
+
+// Vector storage convenience functions
+
+/// Create a memory vector storage (for development and testing)
+///
+/// # Example
+///
+/// ```rust
+/// use lumosai_core::prelude::*;
+///
+/// let storage = memory_vector_storage(1536, None)?;
+/// ```
+pub fn memory_vector_storage(dimensions: usize, capacity: Option<usize>) -> crate::Result<Box<dyn VectorStorage>> {
+    let config = VectorStorageConfig::Memory { dimensions, capacity };
+    create_vector_storage(Some(config))
+}
+
+// External vector storage convenience functions temporarily disabled due to dependency conflicts
+
+// /// Create a Qdrant vector storage
+// #[cfg(feature = "qdrant")]
+// pub fn qdrant_vector_storage(url: &str, api_key: Option<String>) -> crate::Result<Box<dyn VectorStorage>> {
+//     let config = VectorStorageConfig::Qdrant {
+//         url: url.to_string(),
+//         api_key
+//     };
+//     create_vector_storage(Some(config))
+// }
+
+// /// Create a MongoDB vector storage
+// #[cfg(feature = "mongodb")]
+// pub fn mongodb_vector_storage(connection_string: &str, database: &str) -> crate::Result<Box<dyn VectorStorage>> {
+//     let config = VectorStorageConfig::MongoDB {
+//         connection_string: connection_string.to_string(),
+//         database: database.to_string()
+//     };
+//     create_vector_storage(Some(config))
+// }
+
+// /// Create a PostgreSQL vector storage with pgvector
+// #[cfg(feature = "postgres")]
+// pub fn postgres_vector_storage(connection_string: &str, database: &str) -> crate::Result<Box<dyn VectorStorage>> {
+//     let config = VectorStorageConfig::PostgreSQL {
+//         connection_string: connection_string.to_string(),
+//         database: database.to_string()
+//     };
+//     create_vector_storage(Some(config))
+// }
 
 #[cfg(test)]
 mod tests {

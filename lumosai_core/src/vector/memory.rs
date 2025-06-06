@@ -5,8 +5,7 @@ use uuid::Uuid;
 use serde_json::Value;
 use float_cmp::approx_eq;
 
-use super::{VectorStorage, IndexStats, QueryResult, SimilarityMetric};
-use super::filter::{FilterCondition, FilterInterpreter};
+use super::{VectorStorage, IndexStats, QueryResult, SimilarityMetric, FilterCondition};
 use crate::error::{Error, Result};
 
 /// Vector index information
@@ -26,8 +25,6 @@ struct VectorIndex {
 pub struct MemoryVectorStorage {
     /// Indexes stored in memory
     indexes: RwLock<HashMap<String, VectorIndex>>,
-    /// Filter interpreter
-    filter_interpreter: FilterInterpreter,
 }
 
 impl MemoryVectorStorage {
@@ -41,7 +38,6 @@ impl MemoryVectorStorage {
         
         let result = Self {
             indexes,
-            filter_interpreter: FilterInterpreter::new(),
         };
         
         // Create a default index
@@ -109,6 +105,45 @@ impl MemoryVectorStorage {
                 1.0 / (1.0 + dist) // Convert distance to similarity score
             }
             SimilarityMetric::DotProduct => Self::dot_product(a, b),
+        }
+    }
+
+    /// Evaluate filter condition against metadata
+    fn evaluate_filter(&self, filter: &FilterCondition, metadata: &HashMap<String, Value>) -> bool {
+        match filter {
+            FilterCondition::Eq(field, value) => {
+                metadata.get(field).map_or(false, |v| v == value)
+            },
+            FilterCondition::Gt(field, value) => {
+                if let (Some(field_value), Some(filter_value)) = (metadata.get(field), value.as_f64()) {
+                    field_value.as_f64().map_or(false, |v| v > filter_value)
+                } else {
+                    false
+                }
+            },
+            FilterCondition::Lt(field, value) => {
+                if let (Some(field_value), Some(filter_value)) = (metadata.get(field), value.as_f64()) {
+                    field_value.as_f64().map_or(false, |v| v < filter_value)
+                } else {
+                    false
+                }
+            },
+            FilterCondition::In(field, values) => {
+                if let Some(field_value) = metadata.get(field) {
+                    values.contains(field_value)
+                } else {
+                    false
+                }
+            },
+            FilterCondition::And(conditions) => {
+                conditions.iter().all(|c| self.evaluate_filter(c, metadata))
+            },
+            FilterCondition::Or(conditions) => {
+                conditions.iter().any(|c| self.evaluate_filter(c, metadata))
+            },
+            FilterCondition::Not(condition) => {
+                !self.evaluate_filter(condition, metadata)
+            },
         }
     }
 }
@@ -235,7 +270,7 @@ impl VectorStorage for MemoryVectorStorage {
             .filter(|(id, _)| {
                 if let Some(filter) = &filter {
                     if let Some(metadata) = index.metadata.get(*id) {
-                        self.filter_interpreter.evaluate(filter, metadata)
+                        self.evaluate_filter(filter, metadata)
                     } else {
                         false
                     }

@@ -95,6 +95,9 @@ pub mod file;
 pub mod data;
 pub mod system;
 pub mod math;
+pub mod ai;
+pub mod database;
+pub mod communication;
 
 // Re-export tool creation functions
 pub use web::*;
@@ -102,6 +105,9 @@ pub use file::*;
 pub use data::*;
 pub use system::*;
 pub use math::*;
+pub use ai::*;
+pub use database::*;
+pub use communication::*;
 
 /// 创建所有内置工具
 ///
@@ -184,6 +190,9 @@ pub fn get_tool_categories() -> Vec<(&'static str, Vec<&'static str>)> {
         ]),
         ("系统工具", vec!["datetime", "uuid_generator", "hash_generator"]),
         ("数学计算", vec!["calculator", "statistics"]),
+        ("AI工具", vec!["image_analyzer", "text_summarizer", "sentiment_analyzer", "translation_tool", "ocr_tool"]),
+        ("数据库工具", vec!["sql_executor", "mongodb_client", "redis_client", "elasticsearch_client"]),
+        ("通信工具", vec!["email_sender", "slack_messenger", "webhook_caller", "sms_sender"]),
     ]
 }
 

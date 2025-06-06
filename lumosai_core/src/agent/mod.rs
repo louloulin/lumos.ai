@@ -12,6 +12,7 @@ pub mod runtime_context;
 pub mod builder;
 pub mod mastra_compat;
 pub mod convenience;
+pub mod simplified_api;
 
 #[cfg(feature = "demos")]
 pub mod websocket_demo;
@@ -83,6 +84,11 @@ pub use convenience::{
     deepseek, deepseek_with_key,
     qwen, qwen_with_key,
     ModelBuilder, LlmProviderExt,
+};
+
+// Re-export simplified API functions (plan4.md implementation)
+pub use simplified_api::{
+    Agent, // New simplified Agent struct
 };
 
 /// Create a basic agent with default configuration

@@ -230,6 +230,23 @@ impl AgentBuilder {
         ])
     }
 
+    /// Add mathematical computation tools
+    pub fn with_math_tools(self) -> Self {
+        use crate::tool::builtin::math::*;
+        self.tools(vec![
+            Box::new(create_calculator_tool()),
+            Box::new(create_statistics_tool()),
+        ])
+    }
+
+    /// Add system operation tools
+    pub fn with_system_tools(self) -> Self {
+        // TODO: Implement system tools when available
+        self
+    }
+
+
+
 
 
 

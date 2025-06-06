@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use futures::stream;
+// use futures::stream; // Unused
 use futures::stream::BoxStream;
 use async_openai::{
     types::{
@@ -12,17 +12,17 @@ use async_openai::{
         CreateChatCompletionRequestArgs,
         ChatCompletionRequestUserMessageContent,
         EmbeddingInput,
-        CreateChatCompletionStreamResponse,
+        // CreateChatCompletionStreamResponse, // Unused
     },
     error::OpenAIError,
     Client,
     config::OpenAIConfig,
 };
-use futures::{Stream, StreamExt, TryStreamExt};
+use futures::{/* Stream, StreamExt, */ TryStreamExt}; // Removed unused imports
 use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, json};
-use std::collections::HashMap;
+// use std::collections::HashMap; // Unused
 
 use crate::Result;
 use crate::Error;
@@ -240,7 +240,7 @@ impl QwenProvider {
         api_type: QwenApiType
     ) -> Self {
         let api_key_str = api_key.into();
-        let mut config = OpenAIConfig::new()
+        let config = OpenAIConfig::new()
             .with_api_key(api_key_str.clone())
             .with_api_base(base_url.into());
 
@@ -320,7 +320,8 @@ impl QwenProvider {
                         content: Some(msg.content.clone()),
                         name: msg.name.clone(),
                         tool_calls: None,
-                        function_call: None,
+                        #[allow(deprecated)]
+                        function_call: None, // Deprecated but still required
                     }
                 ),
                 _ => ChatCompletionRequestMessage::User(
@@ -430,7 +431,7 @@ impl LlmProvider for QwenProvider {
     async fn generate_stream<'a>(
         &'a self,
         prompt: &'a str,
-        options: &'a LlmOptions
+        _options: &'a LlmOptions // Prefixed with underscore to indicate unused
     ) -> Result<BoxStream<'a, Result<String>>> {
         let messages = vec![Message {
             role: Role::User,

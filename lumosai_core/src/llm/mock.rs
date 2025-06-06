@@ -4,9 +4,10 @@ use std::sync::Mutex;
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
 use futures::StreamExt;
-use float_cmp::approx_eq;
-use serde_json::Value;
-use std::sync::Arc;
+// Removed unused imports:
+// use float_cmp::approx_eq;
+// use serde_json::Value;
+// use std::sync::Arc;
 
 use crate::error::{Error, Result};
 use crate::llm::{LlmProvider, LlmOptions, Message};

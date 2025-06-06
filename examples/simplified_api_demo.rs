@@ -3,9 +3,9 @@
 //! This example shows how to use the new Mastra-like API for creating agents
 //! with minimal boilerplate while maintaining Rust's performance advantages.
 
-use lumosai_core::agent::{quick, web_agent, file_agent, data_agent, AgentBuilder};
-use lumosai_core::Agent;
+use lumosai_core::agent::{Agent, web_agent, file_agent, data_agent, AgentBuilder};
 use lumosai_core::llm::MockLlmProvider;
+use lumosai_core::Agent as AgentTrait;
 use std::sync::Arc;
 use tokio;
 
@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("---------------------------");
     
     // Example 1: Quick agent creation with minimal configuration
-    let quick_agent = quick("assistant", "You are a helpful assistant")
+    let quick_agent = Agent::quick("assistant", "You are a helpful assistant")
         .model(llm.clone())
         .build()?;
 
@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("------------------------");
     
     // Example 3: Web agent with pre-configured web tools
-    let web_agent_instance = web_agent("web_helper", "You are a web-enabled assistant")
+    let web_agent_instance = web_agent("web_helper", "You are a web assistant")
         .model(llm.clone())
         .build()?;
 
@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("-------------------------");
 
     // Example 4: File agent with pre-configured file tools
-    let file_agent_instance = file_agent("file_helper", "You are a file management assistant")
+    let file_agent_instance = file_agent("file_helper", "You are a file assistant")
         .model(llm.clone())
         .build()?;
 
@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("----------------------------");
 
     // Example 5: Data agent with pre-configured data tools
-    let data_agent_instance = data_agent("data_helper", "You are a data processing assistant")
+    let data_agent_instance = data_agent("data_helper", "You are a data assistant")
         .model(llm.clone())
         .build()?;
 
@@ -116,7 +116,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("--------------------------");
     
     // Example 7: Demonstrate smart defaults
-    let smart_agent = quick("smart_agent", "You are a smart assistant")
+    let smart_agent = Agent::quick("smart_agent", "You are a smart assistant")
         .model(llm.clone())
         .build()?;
     

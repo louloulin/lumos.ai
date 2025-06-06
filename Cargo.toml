@@ -7,6 +7,7 @@ members = [
     "lumosai_network",
     "lumos_macro",
     "lumosai_mcp",
+    "lumosai_marketplace",
     "lumosai_examples",
     "lumosai_derive"
 ]

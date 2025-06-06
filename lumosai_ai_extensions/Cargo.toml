@@ -35,8 +35,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 reqwest = { version = "0.11", features = ["json", "multipart", "stream"] }
 
 # Image processing
-image = { version = "0.24", features = ["png", "jpeg", "gif", "webp"] }
-imageproc = "0.23"
+image = { version = "0.24", features = ["png", "jpeg", "gif", "webp"], optional = true }
+imageproc = { version = "0.23", optional = true }
 
 # Audio processing
 rodio = { version = "0.17", optional = true }
@@ -54,7 +54,7 @@ candle-transformers = { version = "0.3", optional = true }
 
 # Natural language processing
 tokenizers = { version = "0.15", optional = true }
-text-splitter = "0.8"
+text-splitter = { version = "0.8", optional = true }
 
 # Knowledge graph
 neo4rs = { version = "0.7", optional = true }

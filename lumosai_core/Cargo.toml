@@ -9,9 +9,9 @@ license = "MIT"
 [lib]
 path = "src/lib.rs"
 
-[[bin]]
-name = "lumos"
-path = "src/bin/lumos.rs"
+# [[bin]]
+# name = "lumos"
+# path = "src/bin/lumos.rs"
 
 [features]
 default = ["macros"]

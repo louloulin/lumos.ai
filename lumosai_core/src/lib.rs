@@ -26,6 +26,7 @@ pub mod bindings;
 pub mod cli;
 pub mod auth;
 pub mod billing;
+pub mod prelude;
 
 /// Re-export common types and traits
 pub use error::{Error, Result};

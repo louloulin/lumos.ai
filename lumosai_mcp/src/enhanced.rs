@@ -15,7 +15,7 @@ use tokio::time::{interval, timeout};
 use serde_json::Value;
 
 use crate::{MCPClient, MCPConfiguration, Result, MCPError};
-use crate::types::Tool;
+use crate::types::{Tool, ToolDefinition, Resource, ServerCapabilities, MCPMessage};
 
 /// Enhanced MCP manager with connection pooling and advanced features
 pub struct EnhancedMCPManager {
@@ -361,6 +361,241 @@ impl EnhancedMCPManager {
         self.health_status.read().await.clone()
     }
 
+    /// Auto-discover tools from all connected servers
+    pub async fn auto_discover_tools(&self) -> Result<HashMap<String, Vec<ToolDefinition>>> {
+        let mut discovered_tools = HashMap::new();
+        let clients = self.clients.read().await;
+
+        for (server_name, client) in clients.iter() {
+            if self.is_client_healthy(server_name).await {
+                match self.discover_tools_from_server(server_name, client).await {
+                    Ok(tools) => {
+                        discovered_tools.insert(server_name.clone(), tools);
+                        println!("✅ Discovered {} tools from server '{}'",
+                               discovered_tools.get(server_name).unwrap().len(), server_name);
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Failed to discover tools from server '{}': {}", server_name, e);
+                        self.mark_client_unhealthy(server_name, &e.to_string()).await;
+                    }
+                }
+            }
+        }
+
+        Ok(discovered_tools)
+    }
+
+    /// Discover tools from a specific server
+    async fn discover_tools_from_server(&self, server_name: &str, client: &MCPClient) -> Result<Vec<ToolDefinition>> {
+        // First, try to get resources which contain tools
+        let resources = match client.resources().await {
+            Ok(resources) => resources,
+            Err(_) => {
+                // If resources fail, try direct tool listing
+                return self.get_tools_from_server_direct(server_name, client).await;
+            }
+        };
+
+        let mut all_tools = Vec::new();
+        for resource in resources.resources {
+            all_tools.extend(resource.tools);
+        }
+
+        // Update cache
+        {
+            let mut cache = self.tool_cache.write().await;
+            let tool_cache_entries: Vec<Tool> = all_tools.iter().map(|tool_def| Tool {
+                name: tool_def.name.clone(),
+                description: tool_def.description.clone(),
+                input_schema: tool_def.return_schema.clone(),
+            }).collect();
+            cache.insert(server_name.to_string(), tool_cache_entries);
+        }
+
+        Ok(all_tools)
+    }
+
+    /// Get tools directly from server (fallback method)
+    async fn get_tools_from_server_direct(&self, server_name: &str, client: &MCPClient) -> Result<Vec<ToolDefinition>> {
+        let tools_map = client.tools().await?;
+        let tools: Vec<ToolDefinition> = tools_map.into_iter().map(|(name, _tool)| {
+            ToolDefinition {
+                name: name.clone(),
+                description: format!("Tool '{}' from MCP server '{}'", name, server_name),
+                parameters: vec![], // Will be populated from actual tool schema
+                return_schema: None,
+            }
+        }).collect();
+
+        Ok(tools)
+    }
+
+    /// Register MCP server with enhanced configuration
+    pub async fn register_mcp_server(&self, server_name: String, config: MCPConfiguration) -> Result<()> {
+        // Check for duplicate registration
+        {
+            let configs = self.configurations.read().await;
+            if configs.contains_key(&server_name) {
+                return Err(MCPError::DuplicateConfiguration(server_name));
+            }
+        }
+
+        // Add the client
+        self.add_client(server_name.clone(), config).await?;
+
+        // Attempt initial connection
+        match self.connect_client(&server_name).await {
+            Ok(()) => {
+                println!("✅ Successfully registered and connected to MCP server '{}'", server_name);
+
+                // Perform initial tool discovery
+                if let Err(e) = self.discover_tools_from_server_by_name(&server_name).await {
+                    eprintln!("⚠️  Initial tool discovery failed for '{}': {}", server_name, e);
+                }
+            }
+            Err(e) => {
+                eprintln!("⚠️  Failed to connect to MCP server '{}': {}", server_name, e);
+                // Mark as unhealthy but keep registered for retry
+                self.mark_client_unhealthy(&server_name, &e.to_string()).await;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Discover tools from a server by name
+    async fn discover_tools_from_server_by_name(&self, server_name: &str) -> Result<()> {
+        let client = {
+            let clients = self.clients.read().await;
+            clients.get(server_name).cloned()
+                .ok_or_else(|| MCPError::ClientNotFound(server_name.to_string()))?
+        };
+
+        self.discover_tools_from_server(server_name, &client).await?;
+        Ok(())
+    }
+
+    /// Execute MCP tool with enhanced error handling and caching
+    pub async fn execute_mcp_tool(&self, tool_name: &str, params: HashMap<String, serde_json::Value>) -> Result<serde_json::Value> {
+        let start_time = Instant::now();
+
+        // Find the best server for this tool
+        let server_name = self.find_best_server_for_tool(tool_name).await?;
+        let client = {
+            let clients = self.clients.read().await;
+            clients.get(&server_name).cloned()
+                .ok_or_else(|| MCPError::ClientNotFound(server_name.clone()))?
+        };
+
+        // Execute with retry and circuit breaker logic
+        let mut attempts = 0;
+        let mut last_error = None;
+
+        while attempts < self.config.max_retry_attempts {
+            // Check if server is healthy before attempting
+            if !self.is_client_healthy(&server_name).await && attempts > 0 {
+                // Try to find alternative server
+                if let Ok(alt_server) = self.find_alternative_server_for_tool(tool_name, &server_name).await {
+                    return self.execute_on_server(&alt_server, tool_name, &params, start_time).await;
+                }
+            }
+
+            match self.execute_on_server(&server_name, tool_name, &params, start_time).await {
+                Ok(result) => {
+                    self.update_success_metrics(&server_name, tool_name, start_time.elapsed()).await;
+                    return Ok(result);
+                }
+                Err(e) => {
+                    last_error = Some(e);
+                    attempts += 1;
+
+                    if attempts < self.config.max_retry_attempts {
+                        // Exponential backoff
+                        let delay = Duration::from_millis(100 * (2_u64.pow(attempts as u32 - 1)));
+                        tokio::time::sleep(delay).await;
+                    }
+                }
+            }
+        }
+
+        // All attempts failed
+        let error = last_error.unwrap();
+        self.update_failure_metrics(&server_name, tool_name, &error).await;
+        self.mark_client_unhealthy(&server_name, &error.to_string()).await;
+        Err(error)
+    }
+
+    /// Execute tool on a specific server
+    async fn execute_on_server(&self, server_name: &str, tool_name: &str, params: &HashMap<String, serde_json::Value>, start_time: Instant) -> Result<serde_json::Value> {
+        let client = {
+            let clients = self.clients.read().await;
+            clients.get(server_name).cloned()
+                .ok_or_else(|| MCPError::ClientNotFound(server_name.to_string()))?
+        };
+
+        // Execute the tool
+        let result = client.execute_tool(
+            "default_resource", // TODO: Make this configurable
+            tool_name,
+            params.clone(),
+            false
+        ).await?;
+
+        // Try to parse as JSON, fallback to string
+        match serde_json::from_str::<serde_json::Value>(&result) {
+            Ok(json_result) => Ok(json_result),
+            Err(_) => Ok(serde_json::Value::String(result)),
+        }
+    }
+
+    /// Find the best server for a tool (load balancing)
+    async fn find_best_server_for_tool(&self, tool_name: &str) -> Result<String> {
+        let all_tools = self.get_all_tools().await?;
+        let mut candidates = Vec::new();
+
+        // Find all servers that have this tool
+        for (server_name, tools) in all_tools {
+            if tools.iter().any(|tool| tool.name == tool_name) {
+                if self.is_client_healthy(&server_name).await {
+                    candidates.push(server_name);
+                }
+            }
+        }
+
+        if candidates.is_empty() {
+            return Err(MCPError::ToolNotFound(tool_name.to_string()));
+        }
+
+        // Simple round-robin for now (could be enhanced with load metrics)
+        let health_status = self.health_status.read().await;
+        candidates.sort_by(|a, b| {
+            let a_response_time = health_status.get(a)
+                .and_then(|s| s.response_time)
+                .unwrap_or(Duration::from_secs(999));
+            let b_response_time = health_status.get(b)
+                .and_then(|s| s.response_time)
+                .unwrap_or(Duration::from_secs(999));
+            a_response_time.cmp(&b_response_time)
+        });
+
+        Ok(candidates[0].clone())
+    }
+
+    /// Find alternative server for a tool (excluding failed server)
+    async fn find_alternative_server_for_tool(&self, tool_name: &str, exclude_server: &str) -> Result<String> {
+        let all_tools = self.get_all_tools().await?;
+
+        for (server_name, tools) in all_tools {
+            if server_name != exclude_server &&
+               tools.iter().any(|tool| tool.name == tool_name) &&
+               self.is_client_healthy(&server_name).await {
+                return Ok(server_name);
+            }
+        }
+
+        Err(MCPError::ToolNotFound(format!("No alternative server found for tool '{}'", tool_name)))
+    }
+
     /// Start background health monitoring
     pub async fn start_health_monitoring(&self) {
         let clients = self.clients.clone();
@@ -406,7 +641,7 @@ impl EnhancedMCPManager {
             let clients_guard = clients.read().await;
             clients_guard.get(name).cloned()
         };
-        
+
         if let Some(client) = client {
             // Simple ping test
             match timeout(Duration::from_secs(5), client.tools()).await {
@@ -416,5 +651,227 @@ impl EnhancedMCPManager {
         } else {
             false
         }
+    }
+
+    /// Subscribe to resource updates from MCP servers
+    pub async fn subscribe_to_resource(&self, server_name: &str, resource_uri: &str) -> Result<()> {
+        let client = {
+            let clients = self.clients.read().await;
+            clients.get(server_name).cloned()
+                .ok_or_else(|| MCPError::ClientNotFound(server_name.to_string()))?
+        };
+
+        // Add to subscriptions tracking
+        {
+            let mut subscriptions = self.subscriptions.write().await;
+            subscriptions.entry(server_name.to_string())
+                .or_insert_with(Vec::new)
+                .push(resource_uri.to_string());
+        }
+
+        // TODO: Implement actual subscription via MCP protocol
+        // This would involve sending a SubscribeResource message
+        println!("📡 Subscribed to resource '{}' on server '{}'", resource_uri, server_name);
+
+        Ok(())
+    }
+
+    /// Unsubscribe from resource updates
+    pub async fn unsubscribe_from_resource(&self, server_name: &str, resource_uri: &str) -> Result<()> {
+        let client = {
+            let clients = self.clients.read().await;
+            clients.get(server_name).cloned()
+                .ok_or_else(|| MCPError::ClientNotFound(server_name.to_string()))?
+        };
+
+        // Remove from subscriptions tracking
+        {
+            let mut subscriptions = self.subscriptions.write().await;
+            if let Some(server_subscriptions) = subscriptions.get_mut(server_name) {
+                server_subscriptions.retain(|uri| uri != resource_uri);
+                if server_subscriptions.is_empty() {
+                    subscriptions.remove(server_name);
+                }
+            }
+        }
+
+        // TODO: Implement actual unsubscription via MCP protocol
+        println!("📡 Unsubscribed from resource '{}' on server '{}'", resource_uri, server_name);
+
+        Ok(())
+    }
+
+    /// Get all active subscriptions
+    pub async fn get_active_subscriptions(&self) -> HashMap<String, Vec<String>> {
+        self.subscriptions.read().await.clone()
+    }
+
+    /// Batch execute multiple tools across different servers
+    pub async fn batch_execute_tools(&self, requests: Vec<(String, HashMap<String, serde_json::Value>)>) -> Vec<Result<serde_json::Value>> {
+        let mut futures = Vec::new();
+
+        // Create futures for all requests
+        for (tool_name, params) in requests.into_iter() {
+            let self_clone = self.clone();
+            let future = async move {
+                self_clone.execute_mcp_tool(&tool_name, params).await
+            };
+            futures.push(future);
+        }
+
+        // Execute all futures concurrently
+        futures::future::join_all(futures).await
+    }
+
+    /// Get comprehensive server status report
+    pub async fn get_server_status_report(&self) -> HashMap<String, ServerStatus> {
+        let mut report = HashMap::new();
+        let clients = self.clients.read().await;
+        let health_status = self.health_status.read().await;
+        let tool_cache = self.tool_cache.read().await;
+        let subscriptions = self.subscriptions.read().await;
+
+        for (server_name, _client) in clients.iter() {
+            let health = health_status.get(server_name).cloned().unwrap_or_else(|| HealthStatus {
+                is_healthy: false,
+                last_check: Instant::now(),
+                consecutive_failures: 0,
+                last_error: Some("No health data available".to_string()),
+                response_time: None,
+            });
+
+            let tool_count = tool_cache.get(server_name).map(|tools| tools.len()).unwrap_or(0);
+            let subscription_count = subscriptions.get(server_name).map(|subs| subs.len()).unwrap_or(0);
+
+            report.insert(server_name.clone(), ServerStatus {
+                name: server_name.clone(),
+                health: health,
+                tool_count,
+                subscription_count,
+                last_activity: Instant::now(), // TODO: Track actual last activity
+            });
+        }
+
+        report
+    }
+
+    /// Refresh tool cache for all servers
+    pub async fn refresh_tool_cache(&self) -> Result<()> {
+        let clients = self.clients.read().await;
+        let mut refresh_tasks = Vec::new();
+
+        for (server_name, client) in clients.iter() {
+            if self.is_client_healthy(server_name).await {
+                let server_name = server_name.clone();
+                let client = client.clone();
+                let tool_cache = self.tool_cache.clone();
+
+                let task = tokio::spawn(async move {
+                    match Self::refresh_tools_for_server(&server_name, &client, &tool_cache).await {
+                        Ok(count) => {
+                            println!("🔄 Refreshed {} tools for server '{}'", count, server_name);
+                        }
+                        Err(e) => {
+                            eprintln!("❌ Failed to refresh tools for server '{}': {}", server_name, e);
+                        }
+                    }
+                });
+
+                refresh_tasks.push(task);
+            }
+        }
+
+        // Wait for all refresh tasks to complete
+        futures::future::join_all(refresh_tasks).await;
+
+        Ok(())
+    }
+
+    /// Refresh tools for a specific server
+    async fn refresh_tools_for_server(
+        server_name: &str,
+        client: &MCPClient,
+        tool_cache: &Arc<RwLock<HashMap<String, Vec<Tool>>>>
+    ) -> Result<usize> {
+        let tools_map = client.tools().await?;
+        let tools: Vec<Tool> = tools_map.into_iter().map(|(name, _tool)| {
+            Tool {
+                name: name.clone(),
+                description: format!("Tool '{}' from MCP server '{}'", name, server_name),
+                input_schema: None,
+            }
+        }).collect();
+
+        let tool_count = tools.len();
+
+        // Update cache
+        {
+            let mut cache = tool_cache.write().await;
+            cache.insert(server_name.to_string(), tools);
+        }
+
+        Ok(tool_count)
+    }
+
+    /// Start background tasks (health monitoring, cache refresh, etc.)
+    pub async fn start_background_tasks(&self) {
+        // Start health monitoring
+        self.start_health_monitoring().await;
+
+        // Start periodic tool cache refresh
+        self.start_cache_refresh_task().await;
+
+        println!("🚀 Started background tasks for MCP manager");
+    }
+
+    /// Start periodic cache refresh task
+    async fn start_cache_refresh_task(&self) {
+        let tool_cache = self.tool_cache.clone();
+        let clients = self.clients.clone();
+        let cache_ttl = self.config.tool_cache_ttl;
+
+        tokio::spawn(async move {
+            let mut interval = interval(cache_ttl);
+
+            loop {
+                interval.tick().await;
+
+                let client_names: Vec<String> = {
+                    let clients_guard = clients.read().await;
+                    clients_guard.keys().cloned().collect()
+                };
+
+                for server_name in client_names {
+                    let client = {
+                        let clients_guard = clients.read().await;
+                        clients_guard.get(&server_name).cloned()
+                    };
+
+                    if let Some(client) = client {
+                        if let Err(e) = Self::refresh_tools_for_server(&server_name, &client, &tool_cache).await {
+                            eprintln!("🔄 Cache refresh failed for '{}': {}", server_name, e);
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+/// Server status information
+#[derive(Debug, Clone)]
+pub struct ServerStatus {
+    pub name: String,
+    pub health: HealthStatus,
+    pub tool_count: usize,
+    pub subscription_count: usize,
+    pub last_activity: Instant,
+}
+
+impl std::fmt::Debug for EnhancedMCPManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EnhancedMCPManager")
+            .field("config", &self.config)
+            .finish_non_exhaustive()
     }
 }

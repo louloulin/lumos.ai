@@ -9,6 +9,8 @@ mod client;
 mod configuration;
 mod transport;
 mod enhanced;
+mod tool_adapter;
+mod discovery;
 #[cfg(test)]
 mod tests;
 
@@ -17,4 +19,6 @@ pub use types::*;
 pub use client::MCPClient;
 pub use configuration::{MCPConfiguration, ServerDefinition};
 pub use transport::{StdioTransport, SSETransport, Transport};
-pub use enhanced::{EnhancedMCPManager, HealthStatus, PerformanceMetrics, ManagerConfig};
+pub use enhanced::{EnhancedMCPManager, HealthStatus, PerformanceMetrics, ManagerConfig, ServerStatus};
+pub use tool_adapter::{MCPToolAdapter, MCPToolFactory, MCPIntegration};
+pub use discovery::{MCPServerRegistry, ServerConfig, ServerType, ConnectionConfig};

@@ -124,6 +124,12 @@ pub fn create_all_builtin_tools(_config: &BuiltinToolsConfig) -> Vec<Box<dyn Too
         Box::new(create_json_parser_tool()),
         Box::new(create_csv_parser_tool()),
         Box::new(create_data_transformer_tool()),
+        Box::new(create_excel_reader_tool()),
+        Box::new(create_pdf_parser_tool()),
+        Box::new(create_data_validator_tool()),
+        Box::new(create_data_cleaner_tool()),
+        Box::new(create_enhanced_data_transformer_tool()),
+        Box::new(create_schema_generator_tool()),
 
         // System tools
         Box::new(create_datetime_tool()),
@@ -145,6 +151,10 @@ pub fn create_safe_builtin_tools(_workspace_path: PathBuf) -> Vec<Box<dyn Tool>>
         Box::new(create_json_parser_tool()),
         Box::new(create_csv_parser_tool()),
         Box::new(create_data_transformer_tool()),
+        Box::new(create_data_validator_tool()),
+        Box::new(create_data_cleaner_tool()),
+        Box::new(create_enhanced_data_transformer_tool()),
+        Box::new(create_schema_generator_tool()),
         Box::new(create_datetime_tool()),
         Box::new(create_uuid_generator_tool()),
         Box::new(create_calculator_tool()),
@@ -165,9 +175,15 @@ pub fn create_dev_builtin_tools() -> Vec<Box<dyn Tool>> {
 /// 获取工具的分类信息
 pub fn get_tool_categories() -> Vec<(&'static str, Vec<&'static str>)> {
     vec![
-        ("文件操作", vec!["file_read", "file_write", "directory_list"]),
-        ("网络请求", vec!["http_request", "json_api"]),
-        ("数据处理", vec!["json_processor", "text_processor", "data_converter"]),
+        ("文件操作", vec!["file_reader", "file_writer", "directory_lister", "file_info"]),
+        ("网络请求", vec!["http_request", "web_scraper", "json_api", "url_validator"]),
+        ("数据处理", vec![
+            "json_parser", "csv_parser", "data_transformer", "excel_reader",
+            "pdf_parser", "data_validator", "data_cleaner", "enhanced_data_transformer",
+            "schema_generator"
+        ]),
+        ("系统工具", vec!["datetime", "uuid_generator", "hash_generator"]),
+        ("数学计算", vec!["calculator", "statistics"]),
     ]
 }
 
@@ -238,6 +254,54 @@ pub fn get_tool_info(tool_id: &str) -> Option<ToolInfo> {
             risk_level: "低",
             required_permissions: vec![],
         }),
+        "excel_reader" => Some(ToolInfo {
+            id: "excel_reader",
+            name: "Excel读取器",
+            description: "读取Excel文件(.xlsx, .xls)数据",
+            category: "数据处理",
+            risk_level: "低",
+            required_permissions: vec!["文件系统读取"],
+        }),
+        "pdf_parser" => Some(ToolInfo {
+            id: "pdf_parser",
+            name: "PDF解析器",
+            description: "从PDF文件提取文本、表格和元数据",
+            category: "数据处理",
+            risk_level: "低",
+            required_permissions: vec!["文件系统读取"],
+        }),
+        "data_validator" => Some(ToolInfo {
+            id: "data_validator",
+            name: "数据验证器",
+            description: "根据模式验证数据结构和类型",
+            category: "数据处理",
+            risk_level: "低",
+            required_permissions: vec![],
+        }),
+        "data_cleaner" => Some(ToolInfo {
+            id: "data_cleaner",
+            name: "数据清洗器",
+            description: "清洗和标准化数据",
+            category: "数据处理",
+            risk_level: "低",
+            required_permissions: vec![],
+        }),
+        "enhanced_data_transformer" => Some(ToolInfo {
+            id: "enhanced_data_transformer",
+            name: "增强数据转换器",
+            description: "执行复杂的数据转换和格式转换",
+            category: "数据处理",
+            risk_level: "低",
+            required_permissions: vec![],
+        }),
+        "schema_generator" => Some(ToolInfo {
+            id: "schema_generator",
+            name: "模式生成器",
+            description: "从样本数据自动生成数据模式",
+            category: "数据处理",
+            risk_level: "低",
+            required_permissions: vec![],
+        }),
         _ => None,
     }
 }
@@ -262,8 +326,8 @@ mod tests {
         let config = BuiltinToolsConfig::default();
         let tools = create_all_builtin_tools(&config);
 
-        // 应该包含所有16个内置工具
-        assert_eq!(tools.len(), 16);
+        // 应该包含所有22个内置工具
+        assert_eq!(tools.len(), 22);
     }
 
     #[test]
@@ -271,25 +335,27 @@ mod tests {
         let workspace = PathBuf::from("/tmp/test");
         let tools = create_safe_builtin_tools(workspace);
 
-        // 安全工具集应该包含7个工具（排除文件和网络工具）
-        assert_eq!(tools.len(), 7);
+        // 安全工具集应该包含11个工具（排除文件和网络工具）
+        assert_eq!(tools.len(), 11);
     }
 
     #[test]
     fn test_dev_builtin_tools() {
         let tools = create_dev_builtin_tools();
 
-        // 开发工具集应该包含所有16个工具
-        assert_eq!(tools.len(), 16);
+        // 开发工具集应该包含所有22个工具
+        assert_eq!(tools.len(), 22);
     }
 
     #[test]
     fn test_tool_categories() {
         let categories = get_tool_categories();
-        assert_eq!(categories.len(), 3);
+        assert_eq!(categories.len(), 5);
         assert_eq!(categories[0].0, "文件操作");
         assert_eq!(categories[1].0, "网络请求");
         assert_eq!(categories[2].0, "数据处理");
+        assert_eq!(categories[3].0, "系统工具");
+        assert_eq!(categories[4].0, "数学计算");
     }
 
     #[test]

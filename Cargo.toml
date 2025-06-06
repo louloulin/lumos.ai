@@ -10,7 +10,8 @@ members = [
     "lumosai_marketplace",
     "lumosai_examples",
     "lumosai_derive",
-    "lumosai_enterprise"
+    "lumosai_enterprise",
+    "lumosai_bindings"
 ]
 resolver = "2"
 

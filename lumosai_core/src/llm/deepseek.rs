@@ -121,6 +121,10 @@ impl DeepSeekProvider {
 
 #[async_trait]
 impl LlmProvider for DeepSeekProvider {
+    fn name(&self) -> &str {
+        "deepseek"
+    }
+
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String> {
         // Convert prompt to messages format
         let messages = vec![serde_json::json!({

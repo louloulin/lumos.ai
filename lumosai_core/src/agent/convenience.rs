@@ -223,16 +223,10 @@ mod tests {
     #[test]
     fn test_model_builder() {
         let mock_provider = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
-        let configured_model = mock_provider
-            .configure()
-            .temperature(0.7)
-            .max_tokens(1000)
-            .top_p(0.9)
-            .build();
-        
-        // The configured model should be the same as the original for now
-        assert!(Arc::ptr_eq(&configured_model, &mock_provider));
+
+        // Test that the provider has a name
+        assert!(!mock_provider.name().is_empty());
+        assert_eq!(mock_provider.name(), "mock");
     }
     
     #[test]

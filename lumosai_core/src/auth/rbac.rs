@@ -328,13 +328,13 @@ impl RBACManager {
         
         // Check wildcard permissions
         for user_perm in &user_permissions {
-            if user_perm.ends_with(":*") {
+            if user_perm == "admin:*" {
+                return Ok(true); // Admin has all permissions
+            } else if user_perm.ends_with(":*") {
                 let prefix = &user_perm[..user_perm.len() - 1];
                 if permission.starts_with(prefix) {
                     return Ok(true);
                 }
-            } else if user_perm == "admin:*" {
-                return Ok(true); // Admin has all permissions
             }
         }
         

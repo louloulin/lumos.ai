@@ -11,6 +11,7 @@ use notify::{Watcher, RecursiveMode, Event, EventKind};
 use std::sync::mpsc;
 use crate::Result;
 use super::{ProjectConfig, CliUtils};
+use super::web_interface::{WebInterface, WebInterfaceConfig};
 
 /// Development server configuration
 #[derive(Debug, Clone)]
@@ -28,15 +29,30 @@ pub struct DevServer {
     config: DevServerConfig,
     project_config: Arc<RwLock<ProjectConfig>>,
     is_running: Arc<RwLock<bool>>,
+    web_interface: Option<WebInterface>,
 }
 
 impl DevServer {
     /// Create a new development server
     pub fn new(config: DevServerConfig, project_config: ProjectConfig) -> Self {
+        // Create web interface if enabled
+        let web_interface = if config.port > 0 {
+            let web_config = WebInterfaceConfig {
+                port: config.port,
+                host: "localhost".to_string(),
+                enable_cors: true,
+                static_files_path: None,
+            };
+            Some(WebInterface::new(web_config, project_config.clone()))
+        } else {
+            None
+        };
+
         Self {
             config,
             project_config: Arc::new(RwLock::new(project_config)),
             is_running: Arc::new(RwLock::new(false)),
+            web_interface,
         }
     }
 
@@ -49,6 +65,11 @@ impl DevServer {
 
         CliUtils::success(&format!("Development server started on port {}", self.config.port));
         
+        // Start web interface if available
+        if let Some(ref web_interface) = self.web_interface {
+            web_interface.start().await?;
+        }
+
         // Start file watcher if hot reload is enabled
         if self.config.hot_reload {
             self.start_file_watcher().await?;

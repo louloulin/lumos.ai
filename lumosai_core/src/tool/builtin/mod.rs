@@ -262,8 +262,8 @@ mod tests {
         let config = BuiltinToolsConfig::default();
         let tools = create_all_builtin_tools(&config);
 
-        // 暂时测试空列表
-        assert_eq!(tools.len(), 0);
+        // 应该包含所有16个内置工具
+        assert_eq!(tools.len(), 16);
     }
 
     #[test]
@@ -271,16 +271,16 @@ mod tests {
         let workspace = PathBuf::from("/tmp/test");
         let tools = create_safe_builtin_tools(workspace);
 
-        // 暂时测试空列表
-        assert_eq!(tools.len(), 0);
+        // 安全工具集应该包含7个工具（排除文件和网络工具）
+        assert_eq!(tools.len(), 7);
     }
 
     #[test]
     fn test_dev_builtin_tools() {
         let tools = create_dev_builtin_tools();
 
-        // 暂时测试空列表
-        assert_eq!(tools.len(), 0);
+        // 开发工具集应该包含所有16个工具
+        assert_eq!(tools.len(), 16);
     }
 
     #[test]

@@ -9,6 +9,10 @@ license = "MIT"
 [lib]
 path = "src/lib.rs"
 
+[[bin]]
+name = "lumos"
+path = "src/bin/lumos.rs"
+
 [features]
 default = ["macros"]
 sqlite = ["rusqlite"]
@@ -43,6 +47,7 @@ url = "2.4"
 clap = { version = "4.0", features = ["derive"] }
 toml = "0.8"
 notify = "6.0"
+tracing-subscriber = "0.3"
 
 # WebSocket and streaming dependencies
 tokio-tungstenite = "0.21"

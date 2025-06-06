@@ -5,9 +5,9 @@ use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
 use futures::StreamExt;
 // Removed unused imports:
-// use float_cmp::approx_eq;
 // use serde_json::Value;
 // use std::sync::Arc;
+use float_cmp::approx_eq;
 
 use crate::error::{Error, Result};
 use crate::llm::{LlmProvider, LlmOptions, Message};
@@ -71,6 +71,10 @@ impl MockLlmProvider {
 
 #[async_trait]
 impl LlmProvider for MockLlmProvider {
+    fn name(&self) -> &str {
+        "mock"
+    }
+
     async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
         let mut responses = self.responses.lock().unwrap();
         

@@ -4,7 +4,8 @@
 //! to LumosAI is working correctly based on the plan2.md requirements.
 
 use std::sync::Arc;
-use lumosai_core::agent::{BasicAgent, AgentConfig, Agent};
+use lumosai_core::agent::{BasicAgent, AgentConfig};
+use lumosai_core::agent::trait_def::Agent;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::llm::mock::MockLlmProvider;
 use lumosai_core::error::Result;

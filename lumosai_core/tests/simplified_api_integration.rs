@@ -4,8 +4,8 @@
 //! the expected developer experience improvements.
 
 use lumosai_core::agent::{Agent, web_agent, file_agent, data_agent};
+use lumosai_core::agent::trait_def::Agent as AgentTrait;
 use lumosai_core::llm::MockLlmProvider;
-use lumosai_core::Agent as AgentTrait;
 use std::sync::Arc;
 
 #[tokio::test]
@@ -133,11 +133,20 @@ async fn test_agent_interaction() {
         .expect("Failed to create agent");
 
     // Test basic interaction
-    let response = agent.generate("Hello, can you introduce yourself?", None).await;
+    let messages = vec![
+        lumosai_core::llm::types::Message::new(
+            lumosai_core::llm::types::Role::User,
+            "Hello, can you introduce yourself?".to_string(),
+            None,
+            None
+        )
+    ];
+    let options = lumosai_core::agent::types::AgentGenerateOptions::default();
+    let response = agent.generate(&messages, &options).await;
     assert!(response.is_ok(), "Agent should respond successfully");
-    
-    let response_text = response.unwrap();
-    assert!(!response_text.is_empty(), "Response should not be empty");
+
+    let response_result = response.unwrap();
+    assert!(!response_result.response.is_empty(), "Response should not be empty");
 }
 
 #[tokio::test]
@@ -220,9 +229,12 @@ async fn test_error_handling_improvements() {
     
     assert!(result.is_err(), "Should fail without model");
     
-    let error = result.unwrap_err();
-    let error_msg = format!("{}", error);
-    
-    // Error message should be helpful (this is a basic check)
-    assert!(!error_msg.is_empty(), "Error message should not be empty");
+    match result {
+        Err(error) => {
+            let error_msg = format!("{}", error);
+            // Error message should be helpful (this is a basic check)
+            assert!(!error_msg.is_empty(), "Error message should not be empty");
+        }
+        Ok(_) => panic!("Should have failed without model"),
+    }
 }

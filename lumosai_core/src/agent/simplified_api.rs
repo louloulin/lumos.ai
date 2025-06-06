@@ -152,6 +152,7 @@ pub fn data_agent(name: &str) -> AgentBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::agent::trait_def::Agent as AgentTrait;
     use crate::llm::MockLlmProvider;
     use std::sync::Arc;
 

@@ -1,7 +1,8 @@
 // Test file for generate_with_memory implementation
 #[cfg(test)]
 mod tests {
-    use lumosai_core::agent::{BasicAgent, AgentConfig, Agent};
+    use lumosai_core::agent::{BasicAgent, AgentConfig};
+    use lumosai_core::agent::trait_def::Agent;
     use lumosai_core::agent::types::AgentGenerateOptions;
     use lumosai_core::llm::{MockLlmProvider, LlmOptions, Message, Role};
     use lumosai_core::memory::{Memory, MemoryConfig as CoreMemoryConfig};

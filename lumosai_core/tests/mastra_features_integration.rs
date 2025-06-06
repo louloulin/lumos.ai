@@ -3,6 +3,7 @@
 //! This test suite validates the implementation of features inspired by Mastra
 
 use lumosai_core::agent::{AgentBuilder, mastra_compat, Agent};
+use lumosai_core::agent::trait_def::Agent as AgentTrait;
 use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
 use lumosai_core::tool::builtin::{

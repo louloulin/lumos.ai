@@ -356,6 +356,10 @@ mod tests {
     
     #[async_trait]
     impl LlmProvider for MockLlmProvider {
+        fn name(&self) -> &str {
+            "mock"
+        }
+
         async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
             // Get the appropriate response based on the current state
             let messages = _options

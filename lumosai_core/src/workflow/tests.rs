@@ -3,7 +3,8 @@ mod tests {
     use crate::workflow::basic::{Workflow, StepCondition, WorkflowStep, BasicWorkflow};
     
     use crate::error::{Error, Result};
-    use crate::agent::{Agent, AgentGenerateResult, AgentStep, assistant_message};
+    use crate::agent::{AgentGenerateResult, AgentStep, assistant_message};
+    use crate::Agent;
     use crate::agent::types::{StepType, TokenUsage, ToolCall};
     use crate::llm::Message;
     use serde_json::{json, Value};

@@ -156,6 +156,10 @@ impl OpenAiProvider {
 
 #[async_trait]
 impl LlmProvider for OpenAiProvider {
+    fn name(&self) -> &str {
+        "openai"
+    }
+
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String> {
         // 准备请求数据
         let url = format!("{}/chat/completions", self.base_url);

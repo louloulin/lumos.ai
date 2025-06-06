@@ -338,6 +338,10 @@ impl QwenProvider {
 
 #[async_trait]
 impl LlmProvider for QwenProvider {
+    fn name(&self) -> &str {
+        "qwen"
+    }
+
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String> {
         let messages = vec![Message {
             role: Role::User,

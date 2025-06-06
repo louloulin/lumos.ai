@@ -3,7 +3,8 @@
 use std::sync::Arc;
 use serde_json::json;
 
-use lumosai_core::agent::{BasicAgent, AgentConfig, Agent, message_utils::user_message};
+use lumosai_core::agent::{BasicAgent, AgentConfig, message_utils::user_message};
+use lumosai_core::agent::trait_def::Agent;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::llm::mock::MockLlmProvider;
 use lumosai_core::tool::{GenericTool, ToolSchema, ParameterSchema};

@@ -8,6 +8,9 @@ use super::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
 /// Trait representing an LLM provider
 #[async_trait]
 pub trait LlmProvider: Send + Sync {
+    /// Get the name of the provider
+    fn name(&self) -> &str;
+
     /// Generate text from a prompt
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String>;
     

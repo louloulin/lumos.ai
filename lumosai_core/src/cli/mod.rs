@@ -19,6 +19,8 @@ pub mod commands;
 pub mod templates;
 pub mod dev_server;
 pub mod deployment;
+pub mod web_interface;
+pub mod enhanced_errors;
 
 /// Main CLI application
 #[derive(Parser)]

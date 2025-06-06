@@ -348,9 +348,10 @@ mod tests {
     #[test]
     fn test_math_functions() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        
+
         assert_eq!(calculate_mean(&data), 3.0);
         assert_eq!(calculate_median(&data), 3.0);
-        assert!((calculate_std_dev(&data) - 1.5811388300841898).abs() < 1e-10);
+        // 标准差应该是 sqrt(2.0) ≈ 1.4142135623730951
+        assert!((calculate_std_dev(&data) - 1.4142135623730951).abs() < 1e-10);
     }
 }

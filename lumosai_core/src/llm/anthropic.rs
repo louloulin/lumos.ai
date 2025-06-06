@@ -126,6 +126,10 @@ impl AnthropicProvider {
 
 #[async_trait]
 impl LlmProvider for AnthropicProvider {
+    fn name(&self) -> &str {
+        "anthropic"
+    }
+
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String> {
         // 构建完整提示
         let full_prompt = format!("Human: {}\n\nAssistant:", prompt);

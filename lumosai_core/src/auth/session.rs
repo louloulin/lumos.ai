@@ -213,9 +213,14 @@ impl SessionManager {
             if session.is_active {
                 session.invalidate();
                 self.stats.active_sessions = self.stats.active_sessions.saturating_sub(1);
+
+                // Remove from user sessions index
+                if let Some(user_session_list) = self.user_sessions.get_mut(&session.user_id) {
+                    user_session_list.retain(|id| id != session_id);
+                }
             }
         }
-        
+
         Ok(())
     }
     

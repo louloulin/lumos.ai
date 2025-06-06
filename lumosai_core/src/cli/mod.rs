@@ -22,6 +22,9 @@ pub mod deployment;
 pub mod web_interface;
 pub mod enhanced_errors;
 
+#[cfg(test)]
+pub mod tests;
+
 /// Main CLI application
 #[derive(Parser)]
 #[command(name = "lumos")]
@@ -46,6 +49,12 @@ pub enum Commands {
         #[arg(short, long)]
         directory: Option<PathBuf>,
     },
+    /// Initialize project interactively
+    Init {
+        /// Skip interactive prompts
+        #[arg(long)]
+        non_interactive: bool,
+    },
     /// Start development server
     Dev {
         /// Enable hot reload
@@ -63,6 +72,11 @@ pub enum Commands {
         #[command(subcommand)]
         action: ToolCommands,
     },
+    /// Model management commands
+    Models {
+        #[command(subcommand)]
+        action: ModelCommands,
+    },
     /// Build project for production
     Build {
         /// Build target
@@ -71,15 +85,9 @@ pub enum Commands {
         /// Output directory
         #[arg(short, long)]
         output: Option<PathBuf>,
-    },
-    /// Deploy to various platforms
-    Deploy {
-        /// Deployment platform
-        #[arg(short, long, default_value = "local")]
-        platform: String,
-        /// Configuration file
-        #[arg(short, long)]
-        config: Option<PathBuf>,
+        /// Enable optimizations
+        #[arg(long)]
+        optimize: bool,
     },
     /// Run tests
     Test {
@@ -89,6 +97,30 @@ pub enum Commands {
         /// Enable coverage
         #[arg(long)]
         coverage: bool,
+        /// Watch for changes
+        #[arg(short, long)]
+        watch: bool,
+    },
+    /// Format code
+    Format {
+        /// Check formatting without making changes
+        #[arg(long)]
+        check: bool,
+    },
+    /// Lint code
+    Lint {
+        /// Fix issues automatically
+        #[arg(long)]
+        fix: bool,
+    },
+    /// Deploy to various platforms
+    Deploy {
+        /// Deployment platform
+        #[arg(short, long, default_value = "local")]
+        platform: String,
+        /// Configuration file
+        #[arg(short, long)]
+        config: Option<PathBuf>,
     },
     /// Generate documentation
     Docs {
@@ -144,6 +176,41 @@ pub enum ToolCommands {
     },
 }
 
+/// Model management subcommands
+#[derive(Subcommand)]
+pub enum ModelCommands {
+    /// List available models
+    List {
+        /// Show only configured models
+        #[arg(long)]
+        configured: bool,
+        /// Filter by provider
+        #[arg(short, long)]
+        provider: Option<String>,
+    },
+    /// Add a model provider
+    Add {
+        /// Provider name (deepseek, openai, anthropic, ollama, groq)
+        provider: String,
+        /// Model name (optional, uses provider default)
+        #[arg(short, long)]
+        model: Option<String>,
+        /// API key (optional, can be set via environment)
+        #[arg(short, long)]
+        api_key: Option<String>,
+    },
+    /// Remove a model provider
+    Remove {
+        /// Provider name
+        provider: String,
+    },
+    /// Set default model
+    Default {
+        /// Model in format "provider:model" or just "provider"
+        model: String,
+    },
+}
+
 /// Project configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectConfig {
@@ -157,6 +224,10 @@ pub struct ProjectConfig {
     pub tools: Vec<ToolConfig>,
     pub build: BuildConfig,
     pub deployment: DeploymentConfig,
+    /// Default AI model to use
+    pub default_model: Option<String>,
+    /// Model configurations
+    pub models: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Tool configuration
@@ -238,6 +309,8 @@ impl Default for ProjectConfig {
                 platforms: HashMap::new(),
                 environment: HashMap::new(),
             },
+            default_model: Some("deepseek-chat".to_string()),
+            models: None,
         }
     }
 }

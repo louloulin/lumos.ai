@@ -57,6 +57,9 @@ tungstenite = "0.21"
 base64 = "0.21"
 urlencoding = "2.1"
 
+# Security dependencies
+ring = "0.17"
+
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.8"
@@ -90,3 +93,11 @@ path = "tests/websocket_streaming_tests.rs"
 [[test]]
 name = "enterprise_monitoring_tests"
 path = "tests/enterprise_monitoring_tests.rs"
+
+[[test]]
+name = "security_integration_tests"
+path = "tests/security_integration_tests.rs"
+
+[[example]]
+name = "security_demo"
+path = "examples/security_demo.rs"

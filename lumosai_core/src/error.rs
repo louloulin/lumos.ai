@@ -128,6 +128,10 @@ pub enum Error {
     /// Serialization errors
     #[error("Serialization error: {0}")]
     Serialization(String),
+
+    /// Security errors
+    #[error("Security error: {0}")]
+    SecurityError(String),
 }
 
 impl From<&str> for Error {

@@ -11,6 +11,7 @@ pub mod lumosai;
 pub mod memory;
 pub mod storage;
 pub mod telemetry;
+pub mod security;
 pub mod tool;
 pub mod types;
 pub mod vector;

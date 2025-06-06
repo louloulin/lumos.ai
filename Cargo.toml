@@ -12,7 +12,8 @@ members = [
     "lumosai_derive",
     "lumosai_enterprise",
     "lumosai_bindings",
-    "lumosai_cloud"
+    "lumosai_cloud",
+    "lumosai_ai_extensions"
 ]
 resolver = "2"
 

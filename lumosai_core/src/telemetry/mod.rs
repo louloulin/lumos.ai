@@ -15,6 +15,14 @@ pub mod analyzer;
 pub mod alert_engine;
 pub mod performance_monitor;
 
+// 企业级监控扩展模块
+pub mod enterprise;
+pub mod compliance_monitor;
+pub mod business_metrics;
+pub mod anomaly_detection;
+pub mod capacity_planning;
+pub mod sla_monitoring;
+
 #[cfg(test)]
 pub mod tests;
 

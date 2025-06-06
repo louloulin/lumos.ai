@@ -86,3 +86,7 @@ path = "tests/mastra_validation_test.rs"
 [[test]]
 name = "websocket_streaming_tests"
 path = "tests/websocket_streaming_tests.rs"
+
+[[test]]
+name = "enterprise_monitoring_tests"
+path = "tests/enterprise_monitoring_tests.rs"

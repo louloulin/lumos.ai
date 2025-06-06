@@ -7,6 +7,9 @@ use thiserror::Error;
 /// Result type for Lumosai operations
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Alias for backward compatibility
+pub type LumosError = Error;
+
 /// Error types that can occur in Lumosai
 #[derive(Error, Debug)]
 pub enum Error {

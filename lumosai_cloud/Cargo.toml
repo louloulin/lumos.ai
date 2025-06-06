@@ -1,0 +1,119 @@
+[package]
+name = "lumosai_cloud"
+version = "0.1.0"
+edition = "2021"
+description = "Lumos.ai cloud-native deployment and orchestration"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/lumosai/lumos.ai"
+homepage = "https://lumosai.com"
+
+[lib]
+name = "lumosai_cloud"
+path = "src/lib.rs"
+
+[dependencies]
+# Core Lumos.ai dependencies
+lumosai_core = { path = "../lumosai_core" }
+lumosai_enterprise = { path = "../lumosai_enterprise" }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+tokio-util = "0.7"
+
+# Kubernetes client
+kube = { version = "0.87", features = ["runtime", "derive", "client"] }
+k8s-openapi = { version = "0.20", features = ["v1_28"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# HTTP client and server
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+axum = { version = "0.7", features = ["ws", "headers"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Docker integration
+bollard = "0.15"
+
+# Configuration
+config = "0.14"
+clap = { version = "4.0", features = ["derive"] }
+
+# Utilities
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+futures = "0.3"
+bytes = "1.0"
+
+# Metrics and monitoring
+prometheus = { version = "0.13", optional = true }
+opentelemetry = "0.21"
+opentelemetry-prometheus = { version = "0.14", optional = true }
+opentelemetry-jaeger = { version = "0.20", optional = true }
+
+# Cloud provider SDKs
+aws-sdk-s3 = { version = "1.0", optional = true }
+aws-sdk-ec2 = { version = "1.0", optional = true }
+aws-sdk-eks = { version = "1.0", optional = true }
+azure_core = { version = "0.19", optional = true }
+azure_storage = { version = "0.19", optional = true }
+google-cloud-storage = { version = "0.15", optional = true }
+
+# Helm integration
+helm-rs = { version = "0.1", optional = true }
+
+# Security
+jsonwebtoken = "9.0"
+base64 = "0.21"
+
+[dev-dependencies]
+tempfile = "3.0"
+wiremock = "0.5"
+
+[features]
+default = ["kubernetes", "docker", "monitoring"]
+
+# Core features
+kubernetes = ["kube", "k8s-openapi"]
+docker = ["bollard"]
+monitoring = ["prometheus", "opentelemetry-prometheus"]
+
+# Cloud providers
+aws = ["aws-sdk-s3", "aws-sdk-ec2", "aws-sdk-eks"]
+azure = ["azure_core", "azure_storage"]
+gcp = ["google-cloud-storage"]
+
+# Additional features
+helm = ["helm-rs"]
+jaeger = ["opentelemetry-jaeger"]
+all-clouds = ["aws", "azure", "gcp"]
+
+[[bin]]
+name = "lumosai-operator"
+path = "src/bin/operator.rs"
+required-features = ["kubernetes"]
+
+[[bin]]
+name = "lumosai-deploy"
+path = "src/bin/deploy.rs"
+
+[[example]]
+name = "kubernetes_deployment"
+path = "examples/kubernetes_deployment.rs"
+required-features = ["kubernetes"]
+
+[[example]]
+name = "docker_deployment"
+path = "examples/docker_deployment.rs"
+required-features = ["docker"]

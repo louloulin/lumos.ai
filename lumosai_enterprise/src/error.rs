@@ -106,8 +106,12 @@ pub enum EnterpriseError {
     InsufficientResources(String),
     
     /// 配额超限
-    #[error("配额超限: {0}")]
-    QuotaExceeded(String),
+    #[error("配额超限: 租户 {tenant_id} 的 {resource_type} 资源请求 {requested} 超过限制")]
+    QuotaExceeded {
+        tenant_id: String,
+        resource_type: String,
+        requested: u64,
+    },
     
     /// 权限不足
     #[error("权限不足: {0}")]

@@ -14,6 +14,8 @@ pub struct MultiTenantArchitecture {
     isolation_engine: IsolationEngine,
     resource_allocator: ResourceAllocator,
     billing_manager: BillingManager,
+    quota_manager: QuotaManager,
+    auto_scaler: AutoScaler,
 }
 
 /// 租户管理器
@@ -733,22 +735,104 @@ impl MultiTenantArchitecture {
             isolation_engine: IsolationEngine::new().await?,
             resource_allocator: ResourceAllocator::new().await?,
             billing_manager: BillingManager::new().await?,
+            quota_manager: QuotaManager::new().await?,
+            auto_scaler: AutoScaler::new().await?,
         })
     }
-    
+
     /// 创建租户
     pub async fn create_tenant(&mut self, tenant: Tenant) -> Result<()> {
-        self.tenant_manager.create_tenant(tenant).await
+        // 创建租户
+        self.tenant_manager.create_tenant(tenant.clone()).await?;
+
+        // 设置配额
+        self.quota_manager.set_quota(&tenant.id, tenant.quotas.clone()).await?;
+
+        // 设置默认扩容策略
+        let scaling_policy = ScalingPolicy {
+            tenant_id: tenant.id.clone(),
+            min_instances: 1,
+            max_instances: match tenant.tenant_type {
+                TenantType::Individual => 3,
+                TenantType::SmallBusiness => 10,
+                TenantType::Enterprise => 50,
+                TenantType::Government => 100,
+                TenantType::Educational => 20,
+            },
+            cpu_threshold: 0.8,
+            memory_threshold: 0.8,
+            scale_up_cooldown_minutes: 5,
+            scale_down_cooldown_minutes: 10,
+        };
+        self.auto_scaler.set_scaling_policy(scaling_policy).await?;
+
+        Ok(())
     }
-    
+
     /// 获取租户
     pub async fn get_tenant(&self, tenant_id: &str) -> Result<Option<Tenant>> {
         self.tenant_manager.get_tenant(tenant_id).await
     }
-    
+
     /// 分配资源
     pub async fn allocate_resources(&mut self, tenant_id: &str, resource_type: &str, amount: u64) -> Result<String> {
-        self.resource_allocator.allocate(tenant_id, resource_type, amount).await
+        // 检查配额
+        if !self.quota_manager.check_quota(tenant_id, resource_type, amount).await? {
+            return Err(EnterpriseError::QuotaExceeded {
+                tenant_id: tenant_id.to_string(),
+                resource_type: resource_type.to_string(),
+                requested: amount,
+            });
+        }
+
+        // 分配资源
+        let allocation_id = self.resource_allocator.allocate(tenant_id, resource_type, amount).await?;
+
+        // 更新配额使用量
+        self.quota_manager.update_usage(tenant_id, resource_type, amount).await?;
+
+        // 记录计费
+        self.billing_manager.record_usage(tenant_id, resource_type, amount).await?;
+
+        Ok(allocation_id)
+    }
+
+    /// 检查自动扩容
+    pub async fn check_auto_scaling(&mut self, tenant_id: &str, cpu_usage: f64, memory_usage: f64) -> Result<Option<u32>> {
+        self.auto_scaler.check_scaling(tenant_id, cpu_usage, memory_usage).await
+    }
+
+    /// 获取租户配额使用情况
+    pub async fn get_quota_usage(&self, tenant_id: &str) -> Result<HashMap<String, (u64, u64)>> {
+        self.quota_manager.get_quota_usage(tenant_id).await
+    }
+
+    /// 获取租户账单
+    pub async fn get_tenant_bill(&self, tenant_id: &str) -> Result<f64> {
+        self.billing_manager.calculate_bill(tenant_id).await
+    }
+
+    /// 获取扩容历史
+    pub async fn get_scaling_history(&self, tenant_id: &str) -> Result<Vec<ScalingEvent>> {
+        self.auto_scaler.get_scaling_history(tenant_id).await
+    }
+
+    /// 暂停租户
+    pub async fn suspend_tenant(&mut self, tenant_id: &str) -> Result<()> {
+        if let Some(mut tenant) = self.tenant_manager.get_tenant(tenant_id).await? {
+            tenant.status = TenantStatus::Suspended;
+            self.tenant_manager.update_tenant(tenant).await?;
+        }
+        Ok(())
+    }
+
+    /// 恢复租户
+    pub async fn resume_tenant(&mut self, tenant_id: &str) -> Result<()> {
+        if let Some(mut tenant) = self.tenant_manager.get_tenant(tenant_id).await? {
+            tenant.status = TenantStatus::Active;
+            self.tenant_manager.update_tenant(tenant).await?;
+        }
+        Ok(())
     }
 }
 
@@ -760,14 +844,42 @@ impl TenantManager {
             tenant_configs: HashMap::new(),
         })
     }
-    
+
     async fn create_tenant(&mut self, tenant: Tenant) -> Result<()> {
         self.tenants.insert(tenant.id.clone(), tenant);
         Ok(())
     }
-    
+
     async fn get_tenant(&self, tenant_id: &str) -> Result<Option<Tenant>> {
         Ok(self.tenants.get(tenant_id).cloned())
+    }
+
+    async fn update_tenant(&mut self, tenant: Tenant) -> Result<()> {
+        self.tenants.insert(tenant.id.clone(), tenant);
+        Ok(())
+    }
+
+    /// 列出所有租户
+    pub async fn list_tenants(&self) -> Result<Vec<Tenant>> {
+        Ok(self.tenants.values().cloned().collect())
+    }
+
+    /// 删除租户
+    pub async fn delete_tenant(&mut self, tenant_id: &str) -> Result<()> {
+        self.tenants.remove(tenant_id);
+        self.tenant_configs.remove(tenant_id);
+        Ok(())
+    }
+
+    /// 设置租户配置
+    pub async fn set_tenant_config(&mut self, tenant_id: &str, config: TenantConfiguration) -> Result<()> {
+        self.tenant_configs.insert(tenant_id.to_string(), config);
+        Ok(())
+    }
+
+    /// 获取租户配置
+    pub async fn get_tenant_config(&self, tenant_id: &str) -> Result<Option<TenantConfiguration>> {
+        Ok(self.tenant_configs.get(tenant_id).cloned())
     }
 }
 
@@ -817,10 +929,352 @@ impl BillingManager {
             },
         })
     }
+
+    /// 记录使用量
+    pub async fn record_usage(&mut self, tenant_id: &str, resource_type: &str, amount: u64) -> Result<()> {
+        let meter_id = format!("{}_{}", tenant_id, resource_type);
+
+        if let Some(meter) = self.billing_engine.usage_meters.get_mut(&meter_id) {
+            meter.current_usage += amount;
+            meter.total_usage += amount;
+            meter.last_updated = Utc::now();
+        } else {
+            let meter = UsageMeter {
+                meter_id: meter_id.clone(),
+                tenant_id: tenant_id.to_string(),
+                resource_type: resource_type.to_string(),
+                current_usage: amount,
+                total_usage: amount,
+                last_updated: Utc::now(),
+            };
+            self.billing_engine.usage_meters.insert(meter_id, meter);
+        }
+
+        Ok(())
+    }
+
+    /// 获取租户使用量
+    pub async fn get_tenant_usage(&self, tenant_id: &str) -> Result<HashMap<String, u64>> {
+        let mut usage = HashMap::new();
+
+        for meter in self.billing_engine.usage_meters.values() {
+            if meter.tenant_id == tenant_id {
+                usage.insert(meter.resource_type.clone(), meter.current_usage);
+            }
+        }
+
+        Ok(usage)
+    }
+
+    /// 计算账单
+    pub async fn calculate_bill(&self, tenant_id: &str) -> Result<f64> {
+        let mut total_cost = 0.0;
+
+        for meter in self.billing_engine.usage_meters.values() {
+            if meter.tenant_id == tenant_id {
+                // 查找对应的计费规则
+                for rule in &self.billing_engine.billing_rules {
+                    if rule.resource_type == meter.resource_type {
+                        total_cost += meter.current_usage as f64 * rule.rate;
+                        break;
+                    }
+                }
+            }
+        }
+
+        Ok(total_cost)
+    }
 }
 
-#[cfg(test)]
-mod tests {
+/// 配额管理器实现
+pub struct QuotaManager {
+    /// 租户配额
+    tenant_quotas: HashMap<String, ResourceQuotas>,
+
+    /// 配额使用情况
+    quota_usage: HashMap<String, HashMap<String, u64>>,
+
+    /// 配额告警阈值
+    alert_thresholds: HashMap<String, f64>,
+}
+
+impl QuotaManager {
+    /// 创建新的配额管理器
+    pub async fn new() -> Result<Self> {
+        Ok(Self {
+            tenant_quotas: HashMap::new(),
+            quota_usage: HashMap::new(),
+            alert_thresholds: HashMap::new(),
+        })
+    }
+
+    /// 设置租户配额
+    pub async fn set_quota(&mut self, tenant_id: &str, quotas: ResourceQuotas) -> Result<()> {
+        self.tenant_quotas.insert(tenant_id.to_string(), quotas);
+        self.quota_usage.entry(tenant_id.to_string()).or_insert_with(HashMap::new);
+        Ok(())
+    }
+
+    /// 检查配额是否足够
+    pub async fn check_quota(&self, tenant_id: &str, resource_type: &str, requested_amount: u64) -> Result<bool> {
+        if let Some(quotas) = self.tenant_quotas.get(tenant_id) {
+            let current_usage = self.quota_usage
+                .get(tenant_id)
+                .and_then(|usage| usage.get(resource_type))
+                .unwrap_or(&0);
+
+            let quota_limit = match resource_type {
+                "cpu_cores" => quotas.cpu_cores.unwrap_or(0) as u64,
+                "memory_gb" => quotas.memory_gb.unwrap_or(0) as u64,
+                "storage_gb" => quotas.storage_gb.unwrap_or(0),
+                "api_calls" => quotas.api_calls_per_month.unwrap_or(0),
+                _ => quotas.custom_quotas.get(resource_type).unwrap_or(&0).clone(),
+            };
+
+            Ok(current_usage + requested_amount <= quota_limit)
+        } else {
+            Ok(false) // 没有配额定义，拒绝请求
+        }
+    }
+
+    /// 更新配额使用量
+    pub async fn update_usage(&mut self, tenant_id: &str, resource_type: &str, amount: u64) -> Result<()> {
+        let usage = self.quota_usage.entry(tenant_id.to_string()).or_insert_with(HashMap::new);
+        *usage.entry(resource_type.to_string()).or_insert(0) += amount;
+
+        // 检查是否需要告警
+        self.check_quota_alerts(tenant_id, resource_type).await?;
+
+        Ok(())
+    }
+
+    /// 检查配额告警
+    async fn check_quota_alerts(&self, tenant_id: &str, resource_type: &str) -> Result<()> {
+        if let Some(quotas) = self.tenant_quotas.get(tenant_id) {
+            if let Some(usage_map) = self.quota_usage.get(tenant_id) {
+                if let Some(current_usage) = usage_map.get(resource_type) {
+                    let quota_limit = match resource_type {
+                        "cpu_cores" => quotas.cpu_cores.unwrap_or(0) as u64,
+                        "memory_gb" => quotas.memory_gb.unwrap_or(0) as u64,
+                        "storage_gb" => quotas.storage_gb.unwrap_or(0),
+                        "api_calls" => quotas.api_calls_per_month.unwrap_or(0),
+                        _ => quotas.custom_quotas.get(resource_type).unwrap_or(&0).clone(),
+                    };
+
+                    if quota_limit > 0 {
+                        let usage_percentage = *current_usage as f64 / quota_limit as f64;
+                        let threshold = self.alert_thresholds.get(resource_type).unwrap_or(&0.8);
+
+                        if usage_percentage >= *threshold {
+                            tracing::warn!(
+                                "配额告警: 租户 {} 的 {} 使用率达到 {:.1}%",
+                                tenant_id, resource_type, usage_percentage * 100.0
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// 获取配额使用情况
+    pub async fn get_quota_usage(&self, tenant_id: &str) -> Result<HashMap<String, (u64, u64)>> {
+        let mut result = HashMap::new();
+
+        if let Some(quotas) = self.tenant_quotas.get(tenant_id) {
+            if let Some(usage_map) = self.quota_usage.get(tenant_id) {
+                for (resource_type, current_usage) in usage_map {
+                    let quota_limit = match resource_type.as_str() {
+                        "cpu_cores" => quotas.cpu_cores.unwrap_or(0) as u64,
+                        "memory_gb" => quotas.memory_gb.unwrap_or(0) as u64,
+                        "storage_gb" => quotas.storage_gb.unwrap_or(0),
+                        "api_calls" => quotas.api_calls_per_month.unwrap_or(0),
+                        _ => quotas.custom_quotas.get(resource_type).unwrap_or(&0).clone(),
+                    };
+
+                    result.insert(resource_type.clone(), (*current_usage, quota_limit));
+                }
+            }
+        }
+
+        Ok(result)
+    }
+}
+
+/// 自动扩容器实现
+pub struct AutoScaler {
+    /// 扩容策略
+    scaling_policies: HashMap<String, ScalingPolicy>,
+
+    /// 扩容历史
+    scaling_history: HashMap<String, Vec<ScalingEvent>>,
+
+    /// 当前实例数
+    current_instances: HashMap<String, u32>,
+
+    /// 最后扩容时间
+    last_scaling_time: HashMap<String, DateTime<Utc>>,
+}
+
+/// 扩容策略
+#[derive(Debug, Clone)]
+pub struct ScalingPolicy {
+    /// 租户ID
+    pub tenant_id: String,
+
+    /// 最小实例数
+    pub min_instances: u32,
+
+    /// 最大实例数
+    pub max_instances: u32,
+
+    /// CPU阈值
+    pub cpu_threshold: f64,
+
+    /// 内存阈值
+    pub memory_threshold: f64,
+
+    /// 扩容冷却时间（分钟）
+    pub scale_up_cooldown_minutes: i64,
+
+    /// 缩容冷却时间（分钟）
+    pub scale_down_cooldown_minutes: i64,
+}
+
+/// 扩容事件
+#[derive(Debug, Clone)]
+pub struct ScalingEvent {
+    /// 事件ID
+    pub event_id: String,
+
+    /// 租户ID
+    pub tenant_id: String,
+
+    /// 事件类型
+    pub event_type: ScalingEventType,
+
+    /// 原实例数
+    pub from_instances: u32,
+
+    /// 目标实例数
+    pub to_instances: u32,
+
+    /// 触发原因
+    pub reason: String,
+
+    /// 时间戳
+    pub timestamp: DateTime<Utc>,
+}
+
+/// 扩容事件类型
+#[derive(Debug, Clone)]
+pub enum ScalingEventType {
+    /// 扩容
+    ScaleUp,
+    /// 缩容
+    ScaleDown,
+}
+
+impl AutoScaler {
+    /// 创建新的自动扩容器
+    pub async fn new() -> Result<Self> {
+        Ok(Self {
+            scaling_policies: HashMap::new(),
+            scaling_history: HashMap::new(),
+            current_instances: HashMap::new(),
+            last_scaling_time: HashMap::new(),
+        })
+    }
+
+    /// 设置扩容策略
+    pub async fn set_scaling_policy(&mut self, policy: ScalingPolicy) -> Result<()> {
+        let tenant_id = policy.tenant_id.clone();
+        self.scaling_policies.insert(tenant_id.clone(), policy);
+        self.current_instances.entry(tenant_id).or_insert(1);
+        Ok(())
+    }
+
+    /// 检查是否需要扩容
+    pub async fn check_scaling(&mut self, tenant_id: &str, cpu_usage: f64, memory_usage: f64) -> Result<Option<u32>> {
+        if let Some(policy) = self.scaling_policies.get(tenant_id) {
+            let current_instances = *self.current_instances.get(tenant_id).unwrap_or(&1);
+            let now = Utc::now();
+
+            // 检查冷却时间
+            if let Some(last_time) = self.last_scaling_time.get(tenant_id) {
+                let cooldown_duration = chrono::Duration::minutes(policy.scale_up_cooldown_minutes);
+                if now - *last_time < cooldown_duration {
+                    return Ok(None); // 还在冷却期
+                }
+            }
+
+            // 检查是否需要扩容
+            if (cpu_usage > policy.cpu_threshold || memory_usage > policy.memory_threshold)
+                && current_instances < policy.max_instances {
+
+                let new_instances = (current_instances + 1).min(policy.max_instances);
+                self.execute_scaling(tenant_id, current_instances, new_instances, ScalingEventType::ScaleUp,
+                    format!("CPU: {:.1}%, Memory: {:.1}%", cpu_usage * 100.0, memory_usage * 100.0)).await?;
+
+                return Ok(Some(new_instances));
+            }
+
+            // 检查是否需要缩容
+            if cpu_usage < policy.cpu_threshold * 0.5 && memory_usage < policy.memory_threshold * 0.5
+                && current_instances > policy.min_instances {
+
+                let new_instances = (current_instances - 1).max(policy.min_instances);
+                self.execute_scaling(tenant_id, current_instances, new_instances, ScalingEventType::ScaleDown,
+                    format!("CPU: {:.1}%, Memory: {:.1}%", cpu_usage * 100.0, memory_usage * 100.0)).await?;
+
+                return Ok(Some(new_instances));
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// 执行扩容操作
+    async fn execute_scaling(&mut self, tenant_id: &str, from_instances: u32, to_instances: u32,
+                           event_type: ScalingEventType, reason: String) -> Result<()> {
+        let event = ScalingEvent {
+            event_id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            event_type: event_type.clone(),
+            from_instances,
+            to_instances,
+            reason,
+            timestamp: Utc::now(),
+        };
+
+        // 记录扩容事件
+        self.scaling_history.entry(tenant_id.to_string())
+            .or_insert_with(Vec::new)
+            .push(event);
+
+        // 更新当前实例数
+        self.current_instances.insert(tenant_id.to_string(), to_instances);
+        self.last_scaling_time.insert(tenant_id.to_string(), Utc::now());
+
+        tracing::info!(
+            "执行扩容操作: 租户 {} 从 {} 个实例调整到 {} 个实例 ({:?})",
+            tenant_id, from_instances, to_instances, event_type
+        );
+
+        Ok(())
+    }
+
+    /// 获取扩容历史
+    pub async fn get_scaling_history(&self, tenant_id: &str) -> Result<Vec<ScalingEvent>> {
+        Ok(self.scaling_history.get(tenant_id).cloned().unwrap_or_default())
+    }
+
+    /// 获取当前实例数
+    pub async fn get_current_instances(&self, tenant_id: &str) -> Result<u32> {
+        Ok(*self.current_instances.get(tenant_id).unwrap_or(&1))
+    }
+}
     use super::*;
     
     #[tokio::test]

@@ -27,10 +27,10 @@ tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
 # Monitoring and observability
-prometheus = "0.13"
+prometheus = { version = "0.13", optional = true }
 opentelemetry = "0.21"
-opentelemetry-prometheus = "0.14"
-opentelemetry-jaeger = "0.20"
+opentelemetry-prometheus = { version = "0.14", optional = true }
+opentelemetry-jaeger = { version = "0.20", optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-opentelemetry = "0.22"
@@ -43,9 +43,9 @@ rustls = "0.21"
 x509-parser = "0.15"
 
 # Machine learning for anomaly detection
-candle-core = "0.3"
-candle-nn = "0.3"
-candle-transformers = "0.3"
+candle-core = { version = "0.3", optional = true }
+candle-nn = { version = "0.3", optional = true }
+candle-transformers = { version = "0.3", optional = true }
 
 # Configuration and validation
 config = "0.14"
@@ -69,7 +69,7 @@ cron = "0.12"
 tokio-cron-scheduler = "0.9"
 
 # Email notifications
-lettre = "0.11"
+lettre = { version = "0.11", optional = true }
 
 # Metrics and statistics
 statrs = "0.16"
@@ -84,7 +84,7 @@ default = ["sqlite", "prometheus", "jaeger"]
 sqlite = ["sqlx/sqlite"]
 postgres = ["sqlx/postgres"]
 mysql = ["sqlx/mysql"]
-prometheus = ["opentelemetry-prometheus"]
+prometheus = ["opentelemetry-prometheus", "dep:prometheus"]
 jaeger = ["opentelemetry-jaeger"]
-ml-anomaly = ["candle-core", "candle-nn"]
+ml-anomaly = ["candle-core", "candle-nn", "candle-transformers"]
 email-alerts = ["lettre"]

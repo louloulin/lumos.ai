@@ -9,7 +9,8 @@ members = [
     "lumosai_mcp",
     "lumosai_marketplace",
     "lumosai_examples",
-    "lumosai_derive"
+    "lumosai_derive",
+    "lumosai_enterprise"
 ]
 resolver = "2"
 

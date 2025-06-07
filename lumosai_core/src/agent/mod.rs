@@ -13,6 +13,9 @@ pub mod builder;
 pub mod mastra_compat;
 pub mod convenience;
 pub mod simplified_api;
+pub mod session;
+pub mod orchestration;
+pub mod events;
 
 #[cfg(feature = "demos")]
 pub mod websocket_demo;
@@ -26,6 +29,10 @@ mod simplified_api_tests;
 
 #[cfg(test)]
 mod plan4_api_tests;
+#[cfg(test)]
+mod advanced_features_test;
+#[cfg(test)]
+mod simple_test;
 
 pub use config::{AgentConfig, AgentGenerateOptions};
 pub use trait_def::Agent as AgentTrait;
@@ -89,6 +96,26 @@ pub use convenience::{
 // Re-export simplified API functions (plan4.md implementation)
 pub use simplified_api::{
     Agent, // New simplified Agent struct
+};
+
+// Re-export session management
+pub use session::{
+    SessionManager, SessionStorage, MemorySessionStorage,
+    SessionData, SessionMetadata, SessionState, SessionQuery,
+    ToolCallHistory, ToolCallStatus,
+};
+
+// Re-export orchestration
+pub use orchestration::{
+    AgentOrchestrator, BasicOrchestrator, CollaborationSession,
+    CollaborationTask, OrchestrationPattern, AgentRole,
+    AgentExecutionState, VotingStrategy, RetryConfig,
+};
+
+// Re-export events
+pub use events::{
+    EventBus, EventHandler, EventFilter, AgentEvent,
+    LogEventHandler, MetricsEventHandler,
 };
 
 /// Create a basic agent with default configuration

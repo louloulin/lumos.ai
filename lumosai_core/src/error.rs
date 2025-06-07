@@ -132,6 +132,10 @@ pub enum Error {
     /// Security errors
     #[error("Security error: {0}")]
     SecurityError(String),
+
+    /// Event system errors
+    #[error("Event error: {0}")]
+    Event(String),
 }
 
 impl From<&str> for Error {

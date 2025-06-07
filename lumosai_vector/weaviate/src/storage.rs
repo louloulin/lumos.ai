@@ -9,7 +9,8 @@ use tracing::{debug, instrument, warn};
 use uuid::Uuid;
 
 use lumosai_vector_core::prelude::*;
-use crate::{WeaviateConfig, WeaviateError, WeaviateResult};
+use crate::{WeaviateConfig, WeaviateError};
+use crate::error::WeaviateResult;
 use crate::schema::{WeaviateClass, WeaviateProperty};
 use crate::filter::convert_filter_to_where;
 
@@ -41,7 +42,7 @@ impl WeaviateVectorStorage {
             default_headers.insert(
                 "Authorization",
                 format!("Bearer {}", api_key).parse()
-                    .map_err(|e| VectorError::InvalidInput(format!("Invalid API key: {}", e)))?
+                    .map_err(|e| VectorError::InvalidConfig(format!("Invalid API key: {}", e)))?
             );
         }
         
@@ -49,7 +50,7 @@ impl WeaviateVectorStorage {
             default_headers.insert(
                 "Authorization",
                 format!("Bearer {}", token).parse()
-                    .map_err(|e| VectorError::InvalidInput(format!("Invalid OIDC token: {}", e)))?
+                    .map_err(|e| VectorError::InvalidConfig(format!("Invalid OIDC token: {}", e)))?
             );
         }
         
@@ -58,14 +59,14 @@ impl WeaviateVectorStorage {
         let client = client_builder
             .default_headers(default_headers)
             .build()
-            .map_err(|e| VectorError::Connection(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| VectorError::ConnectionFailed(format!("Failed to create HTTP client: {}", e)))?;
         
         let base_url = config.api_url();
         
         // Test connection
         let health_url = format!("{}/meta", base_url);
         client.get(&health_url).send().await
-            .map_err(|e| VectorError::Connection(format!("Failed to connect to Weaviate: {}", e)))?;
+            .map_err(|e| VectorError::ConnectionFailed(format!("Failed to connect to Weaviate: {}", e)))?;
         
         Ok(Self {
             client,
@@ -262,10 +263,10 @@ impl VectorStorage for WeaviateVectorStorage {
             .json(&count_query)
             .send()
             .await
-            .map_err(|e| VectorError::IndexOperation(format!("Failed to get count: {}", e)))?;
+            .map_err(|e| VectorError::OperationFailed(format!("Failed to get count: {}", e)))?;
 
         let count_data: Value = count_response.json().await
-            .map_err(|e| VectorError::IndexOperation(format!("Failed to parse count response: {}", e)))?;
+            .map_err(|e| VectorError::OperationFailed(format!("Failed to parse count response: {}", e)))?;
 
         let vector_count = count_data["data"]["Aggregate"][class_name][0]["meta"]["count"]
             .as_u64()
@@ -304,7 +305,7 @@ impl VectorStorage for WeaviateVectorStorage {
                 ids.push(id.clone());
 
                 let mut properties = json!({
-                    "content": doc.content.unwrap_or_default(),
+                    "content": doc.content,
                     "metadata": doc.metadata
                 });
 
@@ -329,11 +330,11 @@ impl VectorStorage for WeaviateVectorStorage {
                 .json(&batch_request)
                 .send()
                 .await
-                .map_err(|e| VectorError::DocumentOperation(format!("Batch upsert failed: {}", e)))?;
+                .map_err(|e| VectorError::OperationFailed(format!("Batch upsert failed: {}", e)))?;
 
             if !response.status().is_success() {
                 let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-                return Err(VectorError::DocumentOperation(format!("Batch upsert failed: {}", error_text)));
+                return Err(VectorError::OperationFailed(format!("Batch upsert failed: {}", error_text)));
             }
         }
 
@@ -387,15 +388,15 @@ impl VectorStorage for WeaviateVectorStorage {
             .json(&query_request)
             .send()
             .await
-            .map_err(|e| VectorError::SearchOperation(format!("Search failed: {}", e)))?;
+            .map_err(|e| VectorError::OperationFailed(format!("Search failed: {}", e)))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(VectorError::SearchOperation(format!("Search failed: {}", error_text)));
+            return Err(VectorError::OperationFailed(format!("Search failed: {}", error_text)));
         }
 
         let response_data: Value = response.json().await
-            .map_err(|e| VectorError::SearchOperation(format!("Failed to parse search response: {}", e)))?;
+            .map_err(|e| VectorError::OperationFailed(format!("Failed to parse search response: {}", e)))?;
 
         // Parse results
         let mut results = Vec::new();
@@ -452,7 +453,7 @@ impl VectorStorage for WeaviateVectorStorage {
         for id in ids {
             let url = format!("{}/objects/{}/{}", self.base_url, class_name, id);
             let response = self.client.delete(&url).send().await
-                .map_err(|e| VectorError::DocumentOperation(format!("Failed to delete document: {}", e)))?;
+                .map_err(|e| VectorError::OperationFailed(format!("Failed to delete document: {}", e)))?;
 
             if !response.status().is_success() && response.status() != reqwest::StatusCode::NOT_FOUND {
                 let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
@@ -476,7 +477,7 @@ impl VectorStorage for WeaviateVectorStorage {
 
             let url = format!("{}/objects/{}/{}?include={}", self.base_url, class_name, id, fields);
             let response = self.client.get(&url).send().await
-                .map_err(|e| VectorError::DocumentOperation(format!("Failed to get document: {}", e)))?;
+                .map_err(|e| VectorError::OperationFailed(format!("Failed to get document: {}", e)))?;
 
             if response.status() == reqwest::StatusCode::NOT_FOUND {
                 continue; // Skip missing documents
@@ -484,11 +485,11 @@ impl VectorStorage for WeaviateVectorStorage {
 
             if !response.status().is_success() {
                 let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-                return Err(VectorError::DocumentOperation(format!("Failed to get document: {}", error_text)));
+                return Err(VectorError::OperationFailed(format!("Failed to get document: {}", error_text)));
             }
 
             let obj: Value = response.json().await
-                .map_err(|e| VectorError::DocumentOperation(format!("Failed to parse document: {}", e)))?;
+                .map_err(|e| VectorError::OperationFailed(format!("Failed to parse document: {}", e)))?;
 
             let content = obj["properties"]["content"].as_str().map(|s| s.to_string());
             let embedding = if include_vectors {
@@ -514,8 +515,12 @@ impl VectorStorage for WeaviateVectorStorage {
                 }
             }
 
-            let mut document = Document::new(id, content.unwrap_or_default())
-                .with_metadata_map(metadata);
+            let mut document = Document::new(id, content.unwrap_or_default());
+
+            // Add metadata individually
+            for (key, value) in metadata {
+                document = document.with_metadata(key, value);
+            }
 
             if let Some(emb) = embedding {
                 document = document.with_embedding(emb);
@@ -530,7 +535,7 @@ impl VectorStorage for WeaviateVectorStorage {
     async fn health_check(&self) -> Result<()> {
         let url = format!("{}/meta", self.base_url);
         self.client.get(&url).send().await
-            .map_err(|e| VectorError::Connection(format!("Health check failed: {}", e)))?;
+            .map_err(|e| VectorError::ConnectionFailed(format!("Health check failed: {}", e)))?;
         Ok(())
     }
 

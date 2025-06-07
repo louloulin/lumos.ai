@@ -34,13 +34,13 @@ pub type WeaviateResult<T> = Result<T, WeaviateError>;
 impl From<WeaviateError> for VectorError {
     fn from(err: WeaviateError) -> Self {
         match err {
-            WeaviateError::Http(e) => VectorError::Connection(e.to_string()),
+            WeaviateError::Http(e) => VectorError::ConnectionFailed(e.to_string()),
             WeaviateError::Json(e) => VectorError::Serialization(e.to_string()),
-            WeaviateError::Url(e) => VectorError::InvalidInput(e.to_string()),
-            WeaviateError::Api(msg) => VectorError::IndexOperation(msg),
-            WeaviateError::Schema(msg) => VectorError::IndexCreation(msg),
+            WeaviateError::Url(e) => VectorError::InvalidConfig(e.to_string()),
+            WeaviateError::Api(msg) => VectorError::OperationFailed(msg),
+            WeaviateError::Schema(msg) => VectorError::InvalidIndexConfig(msg),
             WeaviateError::ClassNotFound(msg) => VectorError::IndexNotFound(msg),
-            WeaviateError::Config(msg) => VectorError::InvalidInput(msg),
+            WeaviateError::Config(msg) => VectorError::InvalidConfig(msg),
         }
     }
 }

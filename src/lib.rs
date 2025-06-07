@@ -95,3 +95,4 @@ pub const FRAMEWORK_INFO: &str = "Lumos - 企业级AI应用开发框架";
 // 测试模块
 #[cfg(test)]
 mod simplified_api_test;
+mod vector_integration_test;

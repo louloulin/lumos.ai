@@ -12,8 +12,10 @@
 pub mod document;
 pub mod embedding;
 pub mod retriever;
+pub mod pipeline;
 pub mod types;
 pub mod error;
 
 pub use error::RagError;
-pub use types::*; 
+pub use types::*;
+pub use pipeline::{RagPipeline, RagPipelineBuilder};

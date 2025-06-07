@@ -8,4 +8,4 @@ mod chunker;
 
 pub use loader::{DocumentLoader, FileLoader};
 pub use parser::{DocumentParser, TextParser, MarkdownParser};
-pub use chunker::{DocumentChunker, TextChunker}; 
+pub use chunker::{DocumentChunker, TextChunker, EnhancedChunker};

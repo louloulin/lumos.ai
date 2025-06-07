@@ -64,6 +64,10 @@ impl OpenAIEmbeddingProvider {
 
 #[async_trait]
 impl EmbeddingProvider for OpenAIEmbeddingProvider {
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
+        self.embed_text(text).await
+    }
+
     async fn embed_text(&self, text: &str) -> Result<Vec<f32>> {
         let input = vec![text.to_string()];
         let embeddings = self.embed_batch(&input).await?;

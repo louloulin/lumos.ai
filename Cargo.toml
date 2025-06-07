@@ -4,6 +4,7 @@ members = [
     "lumosai_cli",
     "lumosai_evals",
     "lumosai_rag",
+    "lumosai_agent",
     "lumosai_network",
     "lumos_macro",
     "lumosai_mcp",

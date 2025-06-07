@@ -7,7 +7,12 @@ use crate::types::Document;
 #[async_trait]
 pub trait EmbeddingProvider: Send + Sync {
     /// Generate an embedding for a single text
-    async fn embed_text(&self, text: &str) -> Result<Vec<f32>>;
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>>;
+
+    /// Generate an embedding for a single text (alias for compatibility)
+    async fn embed_text(&self, text: &str) -> Result<Vec<f32>> {
+        self.generate_embedding(text).await
+    }
     
     /// Generate embeddings for multiple texts
     async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {

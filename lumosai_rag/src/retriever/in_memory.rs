@@ -215,6 +215,10 @@ mod tests {
     
     #[async_trait]
     impl EmbeddingProvider for MockEmbeddingProvider {
+        async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
+            self.embed_text(text).await
+        }
+
         async fn embed_text(&self, _text: &str) -> Result<Vec<f32>> {
             Ok(self.return_embedding.clone())
         }

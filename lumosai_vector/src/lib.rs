@@ -95,9 +95,11 @@ pub use lumosai_vector_core as core;
 #[cfg(feature = "memory")]
 pub use lumosai_vector_memory as memory;
 
-// TODO: Re-enable when API compatibility is fixed
-// #[cfg(feature = "qdrant")]
-// pub use lumosai_vector_qdrant as qdrant;
+#[cfg(feature = "qdrant")]
+pub use lumosai_vector_qdrant as qdrant;
+
+#[cfg(feature = "weaviate")]
+pub use lumosai_vector_weaviate as weaviate;
 
 #[cfg(feature = "postgres")]
 pub use lumosai_vector_postgres as postgres;
@@ -109,9 +111,11 @@ pub mod prelude {
     #[cfg(feature = "memory")]
     pub use crate::memory::MemoryVectorStorage;
 
-    // TODO: Re-enable when API compatibility is fixed
-    // #[cfg(feature = "qdrant")]
-    // pub use crate::qdrant::QdrantVectorStorage;
+    #[cfg(feature = "qdrant")]
+    pub use crate::qdrant::QdrantVectorStorage;
+
+    #[cfg(feature = "weaviate")]
+    pub use crate::weaviate::WeaviateVectorStorage;
 
     #[cfg(feature = "postgres")]
     pub use crate::postgres::PostgresVectorStorage;
@@ -127,12 +131,17 @@ pub mod utils {
         crate::memory::MemoryVectorStorage::new().await
     }
     
-    // TODO: Re-enable when API compatibility is fixed
-    // /// Create a Qdrant storage instance
-    // #[cfg(feature = "qdrant")]
-    // pub async fn create_qdrant_storage(url: &str) -> Result<crate::qdrant::QdrantVectorStorage> {
-    //     crate::qdrant::QdrantVectorStorage::new(url).await
-    // }
+    /// Create a Qdrant storage instance
+    #[cfg(feature = "qdrant")]
+    pub async fn create_qdrant_storage(url: &str) -> Result<crate::qdrant::QdrantVectorStorage> {
+        crate::qdrant::QdrantVectorStorage::new(url).await
+    }
+
+    /// Create a Weaviate storage instance
+    #[cfg(feature = "weaviate")]
+    pub async fn create_weaviate_storage(url: &str) -> Result<crate::weaviate::WeaviateVectorStorage> {
+        crate::weaviate::WeaviateVectorStorage::new(url).await
+    }
 
     /// Create a PostgreSQL storage instance
     #[cfg(feature = "postgres")]
@@ -164,13 +173,25 @@ pub mod utils {
             }
         }
 
-        // TODO: Add Qdrant detection when API compatibility is fixed
-        // #[cfg(feature = "qdrant")]
-        // {
-        //     if let Ok(storage) = create_qdrant_storage("http://localhost:6334").await {
-        //         return Ok(Box::new(storage));
-        //     }
-        // }
+        // Try Qdrant if QDRANT_URL is set
+        #[cfg(feature = "qdrant")]
+        {
+            if let Ok(qdrant_url) = std::env::var("QDRANT_URL") {
+                if let Ok(storage) = create_qdrant_storage(&qdrant_url).await {
+                    return Ok(Box::new(storage));
+                }
+            }
+        }
+
+        // Try Weaviate if WEAVIATE_URL is set
+        #[cfg(feature = "weaviate")]
+        {
+            if let Ok(weaviate_url) = std::env::var("WEAVIATE_URL") {
+                if let Ok(storage) = create_weaviate_storage(&weaviate_url).await {
+                    return Ok(Box::new(storage));
+                }
+            }
+        }
 
         // Fallback to memory storage
         #[cfg(feature = "memory")]

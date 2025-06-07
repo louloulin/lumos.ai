@@ -12,8 +12,16 @@ pub type VectorStorage = Arc<lumosai_vector::memory::MemoryVectorStorage>;
 /// 内存向量存储
 pub type MemoryStorage = lumosai_vector::memory::MemoryVectorStorage;
 
+/// Qdrant向量存储
+#[cfg(feature = "vector-qdrant")]
+pub type QdrantStorage = lumosai_vector::qdrant::QdrantVectorStorage;
+
+/// Weaviate向量存储
+#[cfg(feature = "vector-weaviate")]
+pub type WeaviateStorage = lumosai_vector::weaviate::WeaviateVectorStorage;
+
 /// PostgreSQL向量存储
-#[cfg(feature = "postgres")]
+#[cfg(feature = "vector-postgres")]
 pub type PostgresStorage = lumosai_vector::postgres::PostgresVectorStorage;
 
 /// 一行代码创建内存向量存储
@@ -32,6 +40,54 @@ pub async fn memory() -> Result<VectorStorage> {
     let storage = MemoryStorage::new().await
         .map_err(|e| Error::VectorStore(format!("Failed to create memory storage: {}", e)))?;
     Ok(Arc::new(storage))
+}
+
+/// 一行代码创建Qdrant向量存储
+///
+/// # 示例
+/// ```rust,no_run
+/// use lumos::prelude::*;
+///
+/// #[tokio::main]
+/// async fn main() -> Result<()> {
+///     let storage = lumos::vector::qdrant("http://localhost:6334").await?;
+///     Ok(())
+/// }
+/// ```
+#[cfg(feature = "vector-qdrant")]
+pub async fn qdrant(url: &str) -> Result<VectorStorage> {
+    let storage = QdrantStorage::new(url).await
+        .map_err(|e| Error::VectorStore(format!("Failed to create Qdrant storage: {}", e)))?;
+    Ok(Arc::new(storage))
+}
+
+#[cfg(not(feature = "vector-qdrant"))]
+pub async fn qdrant(_url: &str) -> Result<VectorStorage> {
+    Err(Error::VectorStore("Qdrant support not enabled. Enable 'vector-qdrant' feature".to_string()))
+}
+
+/// 一行代码创建Weaviate向量存储
+///
+/// # 示例
+/// ```rust,no_run
+/// use lumos::prelude::*;
+///
+/// #[tokio::main]
+/// async fn main() -> Result<()> {
+///     let storage = lumos::vector::weaviate("http://localhost:8080").await?;
+///     Ok(())
+/// }
+/// ```
+#[cfg(feature = "vector-weaviate")]
+pub async fn weaviate(url: &str) -> Result<VectorStorage> {
+    let storage = WeaviateStorage::new(url).await
+        .map_err(|e| Error::VectorStore(format!("Failed to create Weaviate storage: {}", e)))?;
+    Ok(Arc::new(storage))
+}
+
+#[cfg(not(feature = "vector-weaviate"))]
+pub async fn weaviate(_url: &str) -> Result<VectorStorage> {
+    Err(Error::VectorStore("Weaviate support not enabled. Enable 'vector-weaviate' feature".to_string()))
 }
 
 /// 一行代码创建PostgreSQL向量存储
@@ -81,13 +137,19 @@ pub async fn postgres_with_url(_database_url: &str) -> Result<VectorStorage> {
 }
 
 /// 智能向量存储创建器
-/// 
+///
 /// 根据环境自动选择最佳的存储后端
-/// 
+///
+/// 优先级顺序：
+/// 1. Qdrant (如果设置了 QDRANT_URL)
+/// 2. Weaviate (如果设置了 WEAVIATE_URL)
+/// 3. PostgreSQL (如果设置了 DATABASE_URL 或相关环境变量)
+/// 4. 内存存储 (兜底方案)
+///
 /// # 示例
 /// ```rust,no_run
 /// use lumos::prelude::*;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
 ///     // 自动检测并创建最佳存储
@@ -96,14 +158,40 @@ pub async fn postgres_with_url(_database_url: &str) -> Result<VectorStorage> {
 /// }
 /// ```
 pub async fn auto() -> Result<VectorStorage> {
-    // 优先尝试PostgreSQL，如果失败则使用内存存储
+    // 1. 尝试 Qdrant
+    if let Ok(qdrant_url) = std::env::var("QDRANT_URL") {
+        match qdrant(&qdrant_url).await {
+            Ok(storage) => {
+                tracing::info!("Using Qdrant vector storage at {}", qdrant_url);
+                return Ok(storage);
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to Qdrant at {}: {}", qdrant_url, e);
+            }
+        }
+    }
+
+    // 2. 尝试 Weaviate
+    if let Ok(weaviate_url) = std::env::var("WEAVIATE_URL") {
+        match weaviate(&weaviate_url).await {
+            Ok(storage) => {
+                tracing::info!("Using Weaviate vector storage at {}", weaviate_url);
+                return Ok(storage);
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to Weaviate at {}: {}", weaviate_url, e);
+            }
+        }
+    }
+
+    // 3. 尝试 PostgreSQL
     match postgres().await {
         Ok(storage) => {
             tracing::info!("Using PostgreSQL vector storage");
             Ok(storage)
         }
         Err(_) => {
-            tracing::info!("PostgreSQL not available, using memory vector storage");
+            tracing::info!("No external vector databases available, using memory vector storage");
             memory().await
         }
     }
@@ -150,7 +238,7 @@ impl VectorStorageBuilder {
         }
     }
     
-    /// 设置存储后端 ("memory", "postgres")
+    /// 设置存储后端 ("memory", "qdrant", "weaviate", "postgres")
     pub fn backend(mut self, backend: &str) -> Self {
         self.backend = Some(backend.to_string());
         self
@@ -180,6 +268,14 @@ impl VectorStorageBuilder {
         
         match backend.as_str() {
             "memory" => memory().await,
+            "qdrant" => {
+                let url = self.url.ok_or_else(|| Error::VectorStore("Qdrant URL is required".to_string()))?;
+                qdrant(&url).await
+            }
+            "weaviate" => {
+                let url = self.url.ok_or_else(|| Error::VectorStore("Weaviate URL is required".to_string()))?;
+                weaviate(&url).await
+            }
             "postgres" => {
                 if let Some(url) = self.url {
                     postgres_with_url(&url).await

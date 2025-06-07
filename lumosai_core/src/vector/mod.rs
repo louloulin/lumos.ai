@@ -224,6 +224,13 @@ pub enum VectorStorageConfig {
         /// Optional API key
         api_key: Option<String>,
     },
+    /// Weaviate vector storage
+    Weaviate {
+        /// Weaviate server URL
+        url: String,
+        /// Optional API key
+        api_key: Option<String>,
+    },
     /// MongoDB vector storage
     MongoDB {
         /// MongoDB connection string
@@ -268,8 +275,39 @@ pub fn create_vector_storage(config: Option<VectorStorageConfig>) -> Result<Box<
                 Ok(Box::new(self::sqlite::create_sqlite_vector_storage(db_path)?))
             }
         },
-        VectorStorageConfig::Qdrant { url: _, api_key: _ } => {
-            Err(Error::InvalidInput("Qdrant support temporarily disabled due to dependency conflicts".to_string()))
+        VectorStorageConfig::Qdrant { url, api_key } => {
+            #[cfg(feature = "qdrant")]
+            {
+                use crate::vector::qdrant::QdrantVectorStorage;
+                let mut config = crate::vector::qdrant::QdrantConfig::new(&url);
+                if let Some(key) = api_key {
+                    config = config.with_api_key(key);
+                }
+                let storage = QdrantVectorStorage::with_config(config).await
+                    .map_err(|e| Error::Storage(e.to_string()))?;
+                Ok(Box::new(storage))
+            }
+            #[cfg(not(feature = "qdrant"))]
+            {
+                Err(Error::InvalidInput("Qdrant support not enabled. Enable 'qdrant' feature".to_string()))
+            }
+        },
+        VectorStorageConfig::Weaviate { url, api_key } => {
+            #[cfg(feature = "weaviate")]
+            {
+                use crate::vector::weaviate::WeaviateVectorStorage;
+                let mut config = crate::vector::weaviate::WeaviateConfig::new(&url);
+                if let Some(key) = api_key {
+                    config = config.with_api_key(key);
+                }
+                let storage = WeaviateVectorStorage::with_config(config).await
+                    .map_err(|e| Error::Storage(e.to_string()))?;
+                Ok(Box::new(storage))
+            }
+            #[cfg(not(feature = "weaviate"))]
+            {
+                Err(Error::InvalidInput("Weaviate support not enabled. Enable 'weaviate' feature".to_string()))
+            }
         },
         VectorStorageConfig::MongoDB { connection_string: _, database: _ } => {
             Err(Error::InvalidInput("MongoDB support temporarily disabled due to dependency conflicts".to_string()))

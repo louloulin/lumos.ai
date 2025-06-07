@@ -72,6 +72,11 @@ codegen-units = 1
 [features]
 default = ["integrations"]
 integrations = ["reqwest", "sqlx"]
+# Vector database features
+vector-qdrant = ["lumosai_vector/qdrant"]
+vector-weaviate = ["lumosai_vector/weaviate"]
+vector-postgres = ["lumosai_vector/postgres"]
+vector-all = ["vector-qdrant", "vector-weaviate", "vector-postgres"]
 
 [dependencies]
 lumosai_core = { path = "lumosai_core", features = ["macros"] }

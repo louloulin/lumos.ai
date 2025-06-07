@@ -11,15 +11,17 @@ description = "Unified vector storage system for Lumos.ai"
 # Re-export all vector storage implementations
 lumosai-vector-core = { path = "core" }
 lumosai-vector-memory = { path = "memory", optional = true }
-# lumosai-vector-qdrant = { path = "qdrant", optional = true }  # TODO: Fix API compatibility with qdrant-client 1.14
+lumosai-vector-qdrant = { path = "qdrant", optional = true }
+lumosai-vector-weaviate = { path = "weaviate", optional = true }
 lumosai-vector-postgres = { path = "postgres", optional = true }
 
 [features]
 default = ["memory"]
 memory = ["lumosai-vector-memory"]
-# qdrant = ["lumosai-vector-qdrant"]  # TODO: Fix API compatibility
+qdrant = ["lumosai-vector-qdrant"]
+weaviate = ["lumosai-vector-weaviate"]
 postgres = ["lumosai-vector-postgres"]
-all = ["memory", "postgres"] # TODO: Add qdrant when API compatibility is fixed
+all = ["memory", "qdrant", "weaviate", "postgres"]
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }

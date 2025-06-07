@@ -41,29 +41,26 @@
 //! }
 //! ```
 
-// TODO: Implement PostgreSQL storage modules
-// pub mod storage;
-// pub mod config;
-// pub mod error;
+pub mod storage;
+pub mod config;
+pub mod error;
 
-// TODO: Re-export when implemented
-// pub use storage::PostgresVectorStorage;
-// pub use config::PostgresConfig;
-// pub use error::PostgresError;
+pub use storage::PostgresVectorStorage;
+pub use config::PostgresConfig;
+pub use error::{PostgresError, PostgresResult};
 
 // Re-export core types for convenience
 pub use lumosai_vector_core::prelude::*;
 
-// TODO: Implement when PostgreSQL storage is ready
-// /// Create a new PostgreSQL vector storage instance
-// pub async fn create_postgres_storage(database_url: &str) -> Result<PostgresVectorStorage> {
-//     PostgresVectorStorage::new(database_url).await
-// }
+/// Create a new PostgreSQL vector storage instance
+pub async fn create_postgres_storage(database_url: &str) -> Result<PostgresVectorStorage> {
+    PostgresVectorStorage::new(database_url).await
+}
 
-// /// Create a new PostgreSQL vector storage instance with configuration
-// pub async fn create_postgres_storage_with_config(config: PostgresConfig) -> Result<PostgresVectorStorage> {
-//     PostgresVectorStorage::with_config(config).await
-// }
+/// Create a new PostgreSQL vector storage instance with configuration
+pub async fn create_postgres_storage_with_config(config: PostgresConfig) -> Result<PostgresVectorStorage> {
+    PostgresVectorStorage::with_config(config).await
+}
 
 #[cfg(test)]
 mod tests {

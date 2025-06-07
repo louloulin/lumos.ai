@@ -59,12 +59,12 @@ pub use error::QdrantError;
 pub use lumosai_vector_core::prelude::*;
 
 /// Create a new Qdrant vector storage instance
-pub async fn create_qdrant_storage(url: &str) -> lumosai_vector_core::Result<QdrantVectorStorage> {
+pub async fn create_qdrant_storage(url: &str) -> Result<QdrantVectorStorage> {
     QdrantVectorStorage::new(url).await
 }
 
 /// Create a new Qdrant vector storage instance with configuration
-pub async fn create_qdrant_storage_with_config(config: QdrantConfig) -> lumosai_vector_core::Result<QdrantVectorStorage> {
+pub async fn create_qdrant_storage_with_config(config: QdrantConfig) -> Result<QdrantVectorStorage> {
     QdrantVectorStorage::with_config(config).await
 }
 

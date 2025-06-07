@@ -11,9 +11,9 @@ repository = "https://github.com/lumosai/lumos"
 # New unified architecture
 lumosai-vector-core = { path = "../core" }
 
-# PostgreSQL dependencies (simplified for now)
-# sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
-# pgvector = "0.3"
+# PostgreSQL dependencies
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
+# pgvector = "0.3"  # Not needed, using sqlx vector support
 
 # Core dependencies
 async-trait = "0.1"
@@ -21,6 +21,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 uuid = { version = "1.0", features = ["v4"] }
 tokio = { version = "1.0", features = ["sync"] }
+chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 thiserror = "1.0"
 
@@ -28,7 +29,13 @@ thiserror = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 tokio-test = "0.4"
 testcontainers = "0.15"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
 default = []
 test-integration = []
+
+[[bench]]
+name = "postgres_benchmark"
+harness = false
+required-features = []

@@ -96,9 +96,8 @@ pub use lumosai_vector_memory as memory;
 // #[cfg(feature = "qdrant")]
 // pub use lumosai_vector_qdrant as qdrant;
 
-// TODO: Re-enable when implemented
-// #[cfg(feature = "postgres")]
-// pub use lumosai_vector_postgres as postgres;
+#[cfg(feature = "postgres")]
+pub use lumosai_vector_postgres as postgres;
 
 /// Prelude module for convenient imports
 pub mod prelude {
@@ -111,9 +110,8 @@ pub mod prelude {
     // #[cfg(feature = "qdrant")]
     // pub use crate::qdrant::QdrantVectorStorage;
 
-    // TODO: Re-enable when implemented
-    // #[cfg(feature = "postgres")]
-    // pub use crate::postgres::PostgresVectorStorage;
+    #[cfg(feature = "postgres")]
+    pub use crate::postgres::PostgresVectorStorage;
 }
 
 /// Utility functions for working with vector storage
@@ -133,12 +131,11 @@ pub mod utils {
     //     crate::qdrant::QdrantVectorStorage::new(url).await
     // }
 
-    // TODO: Re-enable when implemented
-    // /// Create a PostgreSQL storage instance
-    // #[cfg(feature = "postgres")]
-    // pub async fn create_postgres_storage(database_url: &str) -> Result<crate::postgres::PostgresVectorStorage> {
-    //     crate::postgres::PostgresVectorStorage::new(database_url).await
-    // }
+    /// Create a PostgreSQL storage instance
+    #[cfg(feature = "postgres")]
+    pub async fn create_postgres_storage(database_url: &str) -> Result<crate::postgres::PostgresVectorStorage> {
+        crate::postgres::PostgresVectorStorage::new(database_url).await
+    }
     
     /// Auto-detect and create the best available storage backend
     /// Returns a memory storage instance as the default implementation
@@ -150,31 +147,39 @@ pub mod utils {
     }
 
     /// Create the best available storage backend based on environment
-    #[cfg(feature = "memory")]
-    pub async fn create_best_available_storage() -> Result<crate::memory::MemoryVectorStorage> {
+    #[cfg(any(feature = "memory", feature = "postgres"))]
+    pub async fn create_best_available_storage() -> Result<Box<dyn std::any::Any + Send + Sync>> {
         // Try different backends in order of preference
 
-        // For now, we only have memory storage fully implemented
-        // TODO: Add Qdrant and PostgreSQL detection when they're ready
+        // Try PostgreSQL first if DATABASE_URL is set
+        #[cfg(feature = "postgres")]
+        {
+            if let Ok(database_url) = std::env::var("DATABASE_URL") {
+                if let Ok(storage) = create_postgres_storage(&database_url).await {
+                    return Ok(Box::new(storage));
+                }
+            }
+        }
 
+        // TODO: Add Qdrant detection when API compatibility is fixed
         // #[cfg(feature = "qdrant")]
         // {
         //     if let Ok(storage) = create_qdrant_storage("http://localhost:6334").await {
-        //         return Ok(storage);
-        //     }
-        // }
-
-        // #[cfg(feature = "postgres")]
-        // {
-        //     if let Ok(database_url) = std::env::var("DATABASE_URL") {
-        //         if let Ok(storage) = create_postgres_storage(&database_url).await {
-        //             return Ok(storage);
-        //         }
+        //         return Ok(Box::new(storage));
         //     }
         // }
 
         // Fallback to memory storage
-        create_memory_storage().await
+        #[cfg(feature = "memory")]
+        {
+            let storage = create_memory_storage().await?;
+            return Ok(Box::new(storage));
+        }
+
+        #[cfg(not(feature = "memory"))]
+        {
+            Err(VectorError::NotSupported("No storage backends available".to_string()))
+        }
     }
 }
 

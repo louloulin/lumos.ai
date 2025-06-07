@@ -26,13 +26,13 @@ pub struct QdrantVectorStorage {
 
 impl QdrantVectorStorage {
     /// Create a new Qdrant vector storage instance
-    pub async fn new(url: &str) -> lumosai_vector_core::Result<Self> {
+    pub async fn new(url: &str) -> Result<Self> {
         let config = QdrantConfig::new(url);
         Self::with_config(config).await
     }
 
     /// Create a new Qdrant vector storage instance with configuration
-    pub async fn with_config(config: QdrantConfig) -> lumosai_vector_core::Result<Self> {
+    pub async fn with_config(config: QdrantConfig) -> Result<Self> {
         let mut client_config = qdrant_client::client::QdrantClientConfig::from_url(&config.url);
         
         if let Some(api_key) = &config.api_key {
@@ -40,11 +40,11 @@ impl QdrantVectorStorage {
         }
         
         let client = QdrantClient::new(Some(client_config))
-            .map_err(|e| QdrantError::Connection(e.to_string()))?;
+            .map_err(|e| VectorError::Connection(e.to_string()))?;
         
         // Test connection
         client.list_collections().await
-            .map_err(|e| QdrantError::Connection(format!("Failed to connect: {}", e)))?;
+            .map_err(|e| VectorError::Connection(format!("Failed to connect: {}", e)))?;
         
         Ok(Self { client, config })
     }
@@ -70,7 +70,7 @@ impl QdrantVectorStorage {
     }
     
     /// Convert filter condition to Qdrant filter
-    fn convert_filter(condition: FilterCondition) -> QdrantResult<Filter> {
+    fn convert_filter(condition: FilterCondition) -> Result<Filter> {
         let filter_condition = match condition {
             FilterCondition::Eq(field, value) => {
                 let qdrant_value = Self::convert_metadata_value(value)?;
@@ -130,7 +130,7 @@ impl QdrantVectorStorage {
                 Condition::field(field, Match::any(qdrant_values?))
             },
             _ => {
-                return Err(QdrantError::Search("Unsupported filter condition".to_string()));
+                return Err(VectorError::InvalidFilter("Unsupported filter condition".to_string()));
             }
         };
         
@@ -141,7 +141,7 @@ impl QdrantVectorStorage {
     }
     
     /// Convert metadata value to Qdrant value
-    fn convert_metadata_value(value: MetadataValue) -> QdrantResult<QdrantValue> {
+    fn convert_metadata_value(value: MetadataValue) -> Result<QdrantValue> {
         let qdrant_value = match value {
             MetadataValue::String(s) => QdrantValue {
                 kind: Some(qdrant_client::qdrant::value::Kind::StringValue(s)),
@@ -156,7 +156,7 @@ impl QdrantVectorStorage {
                 kind: Some(qdrant_client::qdrant::value::Kind::BoolValue(b)),
             },
             _ => {
-                return Err(QdrantError::Serialization(
+                return Err(VectorError::Serialization(
                     "Unsupported metadata value type for Qdrant".to_string()
                 ));
             }
@@ -211,7 +211,7 @@ impl VectorStorage for QdrantVectorStorage {
         };
         
         self.client.create_collection(&create_collection).await
-            .map_err(|e| QdrantError::Collection(format!("Failed to create collection: {}", e)))?;
+            .map_err(|e| VectorError::IndexCreation(format!("Failed to create collection: {}", e)))?;
         
         debug!("Created Qdrant collection: {}", collection_name);
         Ok(())
@@ -220,7 +220,7 @@ impl VectorStorage for QdrantVectorStorage {
     #[instrument(skip(self))]
     async fn list_indexes(&self) -> Result<Vec<String>> {
         let response = self.client.list_collections().await
-            .map_err(|e| QdrantError::Collection(format!("Failed to list collections: {}", e)))?;
+            .map_err(|e| VectorError::IndexOperation(format!("Failed to list collections: {}", e)))?;
         
         let mut indexes = Vec::new();
         for collection in response.collections {
@@ -249,23 +249,23 @@ impl VectorStorage for QdrantVectorStorage {
         };
         
         let response = self.client.collection_info(&request).await
-            .map_err(|e| QdrantError::Collection(format!("Failed to get collection info: {}", e)))?;
-        
+            .map_err(|e| VectorError::IndexOperation(format!("Failed to get collection info: {}", e)))?;
+
         let result = response.result.ok_or_else(|| {
-            QdrantError::Collection("No collection info in response".to_string())
+            VectorError::IndexOperation("No collection info in response".to_string())
         })?;
-        
+
         let config = result.config.ok_or_else(|| {
-            QdrantError::Collection("No config in collection info".to_string())
+            VectorError::IndexOperation("No config in collection info".to_string())
         })?;
-        
+
         let vectors_config = config.params.ok_or_else(|| {
-            QdrantError::Collection("No vector params in config".to_string())
+            VectorError::IndexOperation("No vector params in config".to_string())
         })?;
         
         let vector_params = match vectors_config.vectors_config {
             Some(qdrant_client::qdrant::vectors_config::Config::Params(params)) => params,
-            _ => return Err(QdrantError::Collection("Invalid vector config".to_string()).into()),
+            _ => return Err(VectorError::IndexOperation("Invalid vector config".to_string())),
         };
         
         let info = IndexInfo {
@@ -291,7 +291,7 @@ impl VectorStorage for QdrantVectorStorage {
         };
         
         self.client.delete_collection(&delete_collection).await
-            .map_err(|e| QdrantError::Collection(format!("Failed to delete collection: {}", e)))?;
+            .map_err(|e| VectorError::IndexOperation(format!("Failed to delete collection: {}", e)))?;
         
         debug!("Deleted Qdrant collection: {}", collection_name);
         Ok(())
@@ -344,7 +344,7 @@ impl VectorStorage for QdrantVectorStorage {
             };
             
             self.client.upsert_points(&upsert_points).await
-                .map_err(|e| QdrantError::Point(format!("Failed to upsert points: {}", e)))?;
+                .map_err(|e| VectorError::DocumentOperation(format!("Failed to upsert points: {}", e)))?;
         }
         
         debug!("Upserted {} documents to collection: {}", ids.len(), collection_name);
@@ -380,7 +380,7 @@ impl VectorStorage for QdrantVectorStorage {
         };
         
         let response = self.client.search_points(&search_points).await
-            .map_err(|e| QdrantError::Search(format!("Search failed: {}", e)))?;
+            .map_err(|e| VectorError::SearchOperation(format!("Search failed: {}", e)))?;
         
         let mut results = Vec::new();
         for scored_point in response.result {
@@ -439,7 +439,7 @@ impl VectorStorage for QdrantVectorStorage {
         };
         
         self.client.delete_points(&delete_points).await
-            .map_err(|e| QdrantError::Point(format!("Failed to delete points: {}", e)))?;
+            .map_err(|e| VectorError::DocumentOperation(format!("Failed to delete points: {}", e)))?;
         
         Ok(())
     }
@@ -451,7 +451,7 @@ impl VectorStorage for QdrantVectorStorage {
     
     async fn health_check(&self) -> Result<()> {
         self.client.list_collections().await
-            .map_err(|e| QdrantError::Connection(format!("Health check failed: {}", e)))?;
+            .map_err(|e| VectorError::Connection(format!("Health check failed: {}", e)))?;
         Ok(())
     }
     

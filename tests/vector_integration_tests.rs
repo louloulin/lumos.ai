@@ -2,7 +2,11 @@
 //!
 //! 这些测试验证所有向量数据库的完整功能
 
-use lumosai_vector_core::prelude::*;
+use lumosai_vector_core::{
+    VectorStorage as VectorStorageTrait, Document, DocumentId, IndexConfig,
+    SearchRequest, SearchQuery, SearchResponse, MetadataValue, FilterCondition,
+    IndexInfo, BackendInfo, Result
+};
 use std::collections::HashMap;
 use tokio;
 
@@ -52,7 +56,7 @@ impl TestDataGenerator {
 }
 
 /// 基础向量存储测试套件
-async fn run_basic_storage_tests<T: VectorStorage + ?Sized>(storage: &T) -> Result<()> {
+async fn run_basic_storage_tests<T: VectorStorageTrait + ?Sized>(storage: &T) -> Result<()> {
     let index_name = "test_basic_index";
     let dimension = 384;
     

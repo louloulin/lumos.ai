@@ -38,6 +38,7 @@ pub mod error;
 pub mod types;
 pub mod traits;
 pub mod config;
+pub mod performance;
 
 #[cfg(test)]
 mod tests;

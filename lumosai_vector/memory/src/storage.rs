@@ -280,6 +280,16 @@ impl VectorStorage for MemoryVectorStorage {
     }
 }
 
+impl Clone for MemoryVectorStorage {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            indexes: Arc::clone(&self.indexes),
+            stats: Arc::clone(&self.stats),
+        }
+    }
+}
+
 impl Clone for StorageStats {
     fn clone(&self) -> Self {
         Self {

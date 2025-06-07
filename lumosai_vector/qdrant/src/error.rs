@@ -1,6 +1,6 @@
 //! Error types for Qdrant vector storage
 
-use lumos_vector_core::VectorError;
+use lumosai_vector_core::VectorError;
 use thiserror::Error;
 
 /// Qdrant-specific error types

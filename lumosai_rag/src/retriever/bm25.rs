@@ -146,12 +146,15 @@ impl BM25Retriever {
         };
 
         let mut score = 0.0;
+        let mut found_terms = 0;
 
         for term in query_terms {
             let term_freq = *term_freq_map.get(term).unwrap_or(&0) as f32;
             if term_freq == 0.0 {
-                continue;
+                continue; // Term not found in this document
             }
+
+            found_terms += 1;
 
             let doc_freq = *self.document_frequencies.get(term).unwrap_or(&0) as f32;
             if doc_freq == 0.0 {
@@ -159,19 +162,25 @@ impl BM25Retriever {
             }
 
             let total_docs = self.documents.len() as f32;
-            
-            // IDF calculation: log((N - df + 0.5) / (df + 0.5))
-            let idf = ((total_docs - doc_freq + 0.5) / (doc_freq + 0.5)).ln();
-            
+
+            // IDF calculation: log(N / df)
+            // Use a small epsilon to avoid division by zero
+            let idf = (total_docs / doc_freq.max(1.0)).ln();
+
             // TF calculation with BM25 normalization
-            let tf_component = (term_freq * (self.config.k1 + 1.0)) / 
-                (term_freq + self.config.k1 * (1.0 - self.config.b + 
+            let tf_component = (term_freq * (self.config.k1 + 1.0)) /
+                (term_freq + self.config.k1 * (1.0 - self.config.b +
                     self.config.b * (doc_length / self.average_document_length)));
 
             score += idf * tf_component;
         }
 
-        score
+        // Return score only if at least one term was found
+        if found_terms > 0 {
+            score
+        } else {
+            0.0
+        }
     }
 
     /// Add new documents to the index
@@ -287,10 +296,10 @@ mod tests {
         let retriever = BM25Retriever::with_default_config(documents).unwrap();
 
         let results = retriever.search("quick fox", 10).await.unwrap();
-        
+
         assert!(!results.is_empty());
         assert!(results[0].score > 0.0);
-        
+
         // Documents with "quick" and "fox" should score higher
         let first_result = &results[0];
         assert!(first_result.document.content.contains("quick"));

@@ -4,7 +4,7 @@ pub mod types;
 pub mod provider;
 pub mod mock;
 pub mod function_calling;
-mod openai;
+pub mod openai;
 mod anthropic;
 mod qwen;
 mod deepseek;

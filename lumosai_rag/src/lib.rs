@@ -17,6 +17,15 @@ pub mod pipeline;
 pub mod types;
 pub mod error;
 
+// Add missing modules for compatibility
+pub mod chunking {
+    pub use crate::document::chunker::*;
+}
+
+pub mod retrieval {
+    pub use crate::retriever::*;
+}
+
 pub use error::RagError;
 pub use types::*;
 pub use pipeline::{RagPipeline, RagPipelineBuilder};

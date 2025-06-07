@@ -62,7 +62,7 @@ pub enum AgentEvent {
     ToolResult {
         agent_id: String,
         tool_name: String,
-        result: Result<serde_json::Value, String>,
+        result: std::result::Result<serde_json::Value, String>,
         duration_ms: u64,
         timestamp: DateTime<Utc>,
     },
@@ -152,7 +152,6 @@ pub trait EventHandler: Send + Sync {
 }
 
 /// 事件过滤器
-#[derive(Debug, Clone)]
 pub struct EventFilter {
     /// 事件类型过滤
     pub event_types: Option<Vec<String>>,

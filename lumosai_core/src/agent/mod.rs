@@ -114,7 +114,7 @@ pub use orchestration::{
 
 // Re-export events
 pub use events::{
-    EventBus, EventHandler, EventFilter, AgentEvent,
+    EventBus, EventHandler, EventFilter,
     LogEventHandler, MetricsEventHandler,
 };
 

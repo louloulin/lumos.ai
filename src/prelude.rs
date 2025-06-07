@@ -7,7 +7,9 @@
 pub use crate::{Error, Result, Message, Role};
 
 // 向量存储相关
-pub use crate::vector::{VectorStorage, MemoryStorage, PostgresStorage};
+pub use crate::vector::{VectorStorage, MemoryStorage};
+#[cfg(feature = "postgres")]
+pub use crate::vector::PostgresStorage;
 
 // RAG系统相关
 pub use crate::rag::{RagSystem, SimpleRag, Document, SearchResult};
@@ -35,13 +37,12 @@ pub use lumosai_core::llm::LlmProvider;
 pub use lumosai_core::tool::Tool;
 
 // 向量存储trait
-pub use lumosai_vector::core::{VectorStore, VectorStoreIndex};
+pub use lumosai_vector_core::prelude::IndexConfig;
 
 // RAG trait
 pub use lumosai_rag::{
-    chunking::ChunkingStrategy,
+    types::ChunkingStrategy,
     embedding::EmbeddingProvider,
-    retrieval::RetrievalStrategy,
 };
 
 // 常用宏

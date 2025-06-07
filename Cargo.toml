@@ -78,6 +78,7 @@ lumosai_core = { path = "lumosai_core", features = ["macros"] }
 lumosai_evals = { path = "lumosai_evals" }
 lumosai_rag = { path = "lumosai_rag" }
 lumosai_vector = { path = "lumosai_vector", features = ["memory"] }
+lumosai-vector-core = { path = "lumosai_vector/core" }
 lumosai_network = { path = "lumosai_network" }
 lumos_macro = { path = "lumos_macro" }
 redis = { workspace = true }

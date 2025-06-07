@@ -61,6 +61,9 @@ mod index;
 mod utils;
 
 pub use storage::MemoryVectorStorage;
+
+// Type alias for compatibility
+pub type MemoryVectorStore = MemoryVectorStorage;
 pub use index::MemoryIndex;
 
 /// Memory storage configuration

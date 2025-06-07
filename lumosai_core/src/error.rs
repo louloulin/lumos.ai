@@ -136,6 +136,18 @@ pub enum Error {
     /// Event system errors
     #[error("Event error: {0}")]
     Event(String),
+
+    /// Vector store errors
+    #[error("Vector store error: {0}")]
+    VectorStore(String),
+
+    /// RAG system errors
+    #[error("RAG error: {0}")]
+    Rag(String),
+
+    /// Configuration errors (alias for Configuration)
+    #[error("Config error: {0}")]
+    Config(String),
 }
 
 impl From<&str> for Error {

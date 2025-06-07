@@ -4,7 +4,7 @@
 
 mod loader;
 mod parser;
-mod chunker;
+pub mod chunker;
 
 pub use loader::{DocumentLoader, FileLoader};
 pub use parser::{DocumentParser, TextParser, MarkdownParser};

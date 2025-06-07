@@ -3251,11 +3251,15 @@ name = "lumosai"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
+ "futures",
  "lumos_macro",
+ "lumosai-vector-core",
  "lumosai_core",
  "lumosai_evals",
  "lumosai_network",
  "lumosai_rag",
+ "lumosai_vector",
  "redis 0.23.3",
  "reqwest",
  "serde",
@@ -3263,6 +3267,7 @@ dependencies = [
  "sqlx",
  "thiserror 1.0.69",
  "tokio",
+ "tracing",
  "uuid",
 ]
 

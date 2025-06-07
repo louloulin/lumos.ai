@@ -22,6 +22,8 @@ pub enum OrchestrationPattern {
     Sequential,
     /// 并行执行
     Parallel,
+    /// 管道执行
+    Pipeline,
     /// 条件分支
     Conditional {
         condition: String,
@@ -123,7 +125,6 @@ pub enum AgentExecutionState {
 }
 
 /// 协作会话
-#[derive(Debug)]
 pub struct CollaborationSession {
     /// 会话ID
     pub id: String,
@@ -330,8 +331,11 @@ impl BasicOrchestrator {
                 let input_clone = session.task.input.clone();
                 let agent_id_clone = agent_id.clone();
 
-                // 创建一个闭包来捕获self的方法
-                let execute_fn = |agent: Arc<dyn Agent>, input: &serde_json::Value| async move {
+                // 创建一个函数来执行单个Agent
+                async fn execute_single_agent_async(
+                    agent: Arc<dyn Agent>,
+                    input: serde_json::Value
+                ) -> std::result::Result<serde_json::Value, crate::error::Error> {
                     // 简化实现：将JSON输入转换为消息
                     let input_text = input.to_string();
                     let messages = vec![crate::llm::Message {
@@ -345,10 +349,10 @@ impl BasicOrchestrator {
                     let result = agent.generate(&messages, &options).await?;
 
                     Ok(serde_json::Value::String(result.response))
-                };
+                }
 
                 let handle = tokio::spawn(async move {
-                    let result = execute_fn(agent_clone, &input_clone).await;
+                    let result = execute_single_agent_async(agent_clone, input_clone).await;
                     (agent_id_clone, result)
                 });
 

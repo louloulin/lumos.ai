@@ -88,6 +88,9 @@
 // Re-export core types and traits
 pub use lumosai_vector_core::prelude::*;
 
+// Re-export core module for compatibility
+pub use lumosai_vector_core as core;
+
 // Re-export storage implementations
 #[cfg(feature = "memory")]
 pub use lumosai_vector_memory as memory;

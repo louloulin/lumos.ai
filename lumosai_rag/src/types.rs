@@ -160,22 +160,42 @@ pub struct EmbeddingConfig {
 /// Result from a document retrieval operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetrievalResult {
-    /// The documents retrieved
-    pub documents: Vec<Document>,
-    
-    /// Optional similarity scores for each document
-    pub scores: Option<Vec<f32>>,
+    /// The documents retrieved with scores
+    pub documents: Vec<ScoredDocument>,
+
+    /// Total number of documents found (before limit)
+    pub total_count: usize,
+}
+
+/// Document with similarity score
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScoredDocument {
+    /// The document
+    pub document: Document,
+
+    /// Similarity score (0.0 to 1.0)
+    pub score: f32,
+}
+
+/// Request for document retrieval
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetrievalRequest {
+    /// Query text or vector
+    pub query: String,
+
+    /// Retrieval options
+    pub options: RetrievalOptions,
 }
 
 /// Options for document retrieval
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetrievalOptions {
     /// Number of documents to retrieve
-    pub limit: usize,
-    
+    pub limit: Option<usize>,
+
     /// Minimum similarity score threshold
     pub threshold: Option<f32>,
-    
+
     /// Filter to apply on document metadata
     pub filter: Option<HashMap<String, serde_json::Value>>,
 }
@@ -183,7 +203,7 @@ pub struct RetrievalOptions {
 impl Default for RetrievalOptions {
     fn default() -> Self {
         Self {
-            limit: 5,
+            limit: Some(5),
             threshold: None,
             filter: None,
         }

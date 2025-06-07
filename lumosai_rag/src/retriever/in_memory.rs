@@ -74,14 +74,19 @@ impl InMemoryVectorStore {
         scored_docs.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
         
         // Apply limit
-        let limit = options.limit.min(scored_docs.len());
+        let limit = options.limit.unwrap_or(scored_docs.len()).min(scored_docs.len());
         scored_docs.truncate(limit);
-        
+
         // Convert to result format
-        let documents = scored_docs.iter().map(|(_, doc)| (*doc).clone()).collect();
-        let scores = Some(scored_docs.iter().map(|(score, _)| *score).collect());
-        
-        Ok(RetrievalResult { documents, scores })
+        let documents = scored_docs.iter().map(|(score, doc)| crate::types::ScoredDocument {
+            document: (*doc).clone(),
+            score: *score,
+        }).collect();
+
+        Ok(RetrievalResult {
+            documents,
+            total_count: scored_docs.len(),
+        })
     }
 }
 
@@ -280,7 +285,7 @@ mod tests {
         // 查询向量 [0.0, 1.0, 0.0] 应该与 doc-3 最相似
         let query_vector = vec![0.0, 1.0, 0.0];
         let options = RetrievalOptions {
-            limit: 3,
+            limit: Some(3),
             threshold: None,
             filter: None,
         };
@@ -289,15 +294,13 @@ mod tests {
         
         // 验证结果
         assert_eq!(result.documents.len(), 3);
-        assert_eq!(result.documents[0].id, "doc-3"); // 最相似
+        assert_eq!(result.documents[0].document.id, "doc-3"); // 最相似
         // 注意：我们不再断言准确的排序，因为doc-4也很相似
-        assert!(result.documents.iter().any(|d| d.id == "doc-4")); // 应该在结果中
-        
+        assert!(result.documents.iter().any(|d| d.document.id == "doc-4")); // 应该在结果中
+
         // 验证分数
-        assert!(result.scores.is_some());
-        let scores = result.scores.unwrap();
-        assert_eq!(scores.len(), 3);
-        assert!(scores[0] > 0.9); // doc-3 的分数应该很高
+        assert_eq!(result.documents.len(), 3);
+        assert!(result.documents[0].score > 0.9); // doc-3 的分数应该很高
     }
     
     #[tokio::test]
@@ -325,7 +328,7 @@ mod tests {
         assert_eq!(results.documents.len(), 3);
         // Both doc-1 and doc-2 have identical cosine similarity with the query
         // Due to floating point precision, either one might be ranked first
-        assert!(results.documents[0].id == "doc-1" || results.documents[0].id == "doc-2");
+        assert!(results.documents[0].document.id == "doc-1" || results.documents[0].document.id == "doc-2");
     }
     
     #[tokio::test]

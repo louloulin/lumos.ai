@@ -12,20 +12,13 @@ members = [
     "lumosai_derive",
     "lumosai_enterprise",
     "lumosai_bindings",
-    "lumos_vector",
+    "lumosai_vector",
     # "lumosai_cloud",
     # "lumosai_ai_extensions"
 ]
 resolver = "2"
 
-[workspace.metadata.workspaces]
-direct-packages = ["lumosai_stores"]
-
-[workspace.metadata.resolver]
-# 指定 lumosai_stores 中的 sqlx 应该使用不同于其他包的 libsqlite3-sys
-version_conflicts = [
-    { name = "libsqlite3-sys", versions = ["0.26.0", "0.27.0"] }
-]
+# Removed lumosai_stores - migrated to new unified vector architecture
 
 [package]
 name = "lumosai"

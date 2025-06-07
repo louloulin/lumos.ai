@@ -1,0 +1,33 @@
+[package]
+name = "lumosai-vector-qdrant"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lumos.ai Team <team@lumos.ai>"]
+description = "Qdrant vector database implementation for lumos-vector-core"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/lumosai/lumos"
+
+[dependencies]
+# New unified architecture
+lumosai-vector-core = { path = "../core" }
+
+# Qdrant client
+qdrant-client = "1.7"
+thiserror = "1.0"
+
+# Core dependencies
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+tokio = { version = "1.0", features = ["sync"] }
+tracing = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }
+tokio-test = "0.4"
+testcontainers = "0.15"
+
+[features]
+default = []
+test-integration = []

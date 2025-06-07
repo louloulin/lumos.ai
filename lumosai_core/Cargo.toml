@@ -49,6 +49,9 @@ async-openai = "0.18.3"
 url = "2.4"
 # lumosai_stores = { path = "../lumosai_stores", optional = true }
 
+# New unified vector storage
+lumosai_vector = { path = "../lumosai_vector", features = ["memory"] }
+
 # CLI dependencies
 clap = { version = "4.0", features = ["derive"] }
 toml = "0.8"

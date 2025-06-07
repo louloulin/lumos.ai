@@ -1,0 +1,26 @@
+[package]
+name = "lumosai-vector-memory"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lumos.ai Team <team@lumos.ai>"]
+description = "In-memory vector storage implementation for Lumos"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/lumosai/lumos"
+keywords = ["vector", "embedding", "memory", "ai", "search"]
+categories = ["database", "science", "algorithms"]
+
+[features]
+default = ["serde"]
+serde = ["lumosai-vector-core/serde"]
+
+[dependencies]
+# Core dependencies
+lumosai-vector-core = { path = "../core" }
+async-trait = "0.1"
+tokio = { version = "1.0", features = ["sync"] }
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }
+tokio-test = "0.4"

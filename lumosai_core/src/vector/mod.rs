@@ -1,10 +1,20 @@
+//! Vector storage module - now using unified lumos-vector-core architecture
+//!
+//! This module provides backward compatibility while using the new unified
+//! vector storage architecture under the hood.
+
 use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use crate::error::{Error, Result};
 
-/// Vector similarity metrics
+// Re-export new unified architecture
+pub use lumosai_vector::prelude::*;
+pub use lumosai_vector::memory::MemoryVectorStorage as NewMemoryVectorStorage;
+
+/// Legacy vector similarity metrics (for backward compatibility)
+/// Use lumos_vector_core::SimilarityMetric for new code
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum SimilarityMetric {
     /// Cosine similarity
@@ -15,7 +25,29 @@ pub enum SimilarityMetric {
     DotProduct,
 }
 
-/// Vector index statistics
+impl From<SimilarityMetric> for lumosai_vector::SimilarityMetric {
+    fn from(legacy: SimilarityMetric) -> Self {
+        match legacy {
+            SimilarityMetric::Cosine => lumosai_vector::SimilarityMetric::Cosine,
+            SimilarityMetric::Euclidean => lumosai_vector::SimilarityMetric::Euclidean,
+            SimilarityMetric::DotProduct => lumosai_vector::SimilarityMetric::DotProduct,
+        }
+    }
+}
+
+impl From<lumosai_vector::SimilarityMetric> for SimilarityMetric {
+    fn from(new: lumosai_vector::SimilarityMetric) -> Self {
+        match new {
+            lumosai_vector::SimilarityMetric::Cosine => SimilarityMetric::Cosine,
+            lumosai_vector::SimilarityMetric::Euclidean => SimilarityMetric::Euclidean,
+            lumosai_vector::SimilarityMetric::DotProduct => SimilarityMetric::DotProduct,
+            _ => SimilarityMetric::Cosine, // Default fallback
+        }
+    }
+}
+
+/// Legacy vector index statistics (for backward compatibility)
+/// Use lumos_vector_core::IndexInfo for new code
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexStats {
     /// Number of dimensions in the vectors
@@ -26,7 +58,18 @@ pub struct IndexStats {
     pub metric: SimilarityMetric,
 }
 
-/// Query result from vector search
+impl From<lumosai_vector::IndexInfo> for IndexStats {
+    fn from(info: lumosai_vector::IndexInfo) -> Self {
+        Self {
+            dimension: info.dimension,
+            count: info.vector_count,
+            metric: info.metric.into(),
+        }
+    }
+}
+
+/// Legacy query result from vector search (for backward compatibility)
+/// Use lumos_vector_core::SearchResult for new code
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryResult {
     /// Vector ID
@@ -37,6 +80,43 @@ pub struct QueryResult {
     pub vector: Option<Vec<f32>>,
     /// Associated metadata
     pub metadata: Option<HashMap<String, serde_json::Value>>,
+}
+
+impl From<lumosai_vector::SearchResult> for QueryResult {
+    fn from(result: lumosai_vector::SearchResult) -> Self {
+        Self {
+            id: result.id,
+            score: result.score,
+            vector: result.vector,
+            metadata: result.metadata.map(|m| convert_metadata_to_json(m)),
+        }
+    }
+}
+
+/// Convert new metadata format to legacy JSON format
+fn convert_metadata_to_json(metadata: lumosai_vector::Metadata) -> HashMap<String, serde_json::Value> {
+    metadata.into_iter()
+        .map(|(k, v)| (k, convert_metadata_value_to_json(v)))
+        .collect()
+}
+
+/// Convert metadata value to JSON value
+fn convert_metadata_value_to_json(value: lumosai_vector::MetadataValue) -> serde_json::Value {
+    match value {
+        lumosai_vector::MetadataValue::String(s) => serde_json::Value::String(s),
+        lumosai_vector::MetadataValue::Integer(i) => serde_json::Value::Number(serde_json::Number::from(i)),
+        lumosai_vector::MetadataValue::Float(f) => {
+            serde_json::Value::Number(serde_json::Number::from_f64(f).unwrap_or_else(|| serde_json::Number::from(0)))
+        },
+        lumosai_vector::MetadataValue::Boolean(b) => serde_json::Value::Bool(b),
+        lumosai_vector::MetadataValue::Array(arr) => {
+            serde_json::Value::Array(arr.into_iter().map(convert_metadata_value_to_json).collect())
+        },
+        lumosai_vector::MetadataValue::Object(obj) => {
+            serde_json::Value::Object(obj.into_iter().map(|(k, v)| (k, convert_metadata_value_to_json(v))).collect())
+        },
+        lumosai_vector::MetadataValue::Null => serde_json::Value::Null,
+    }
 }
 
 pub mod filter;

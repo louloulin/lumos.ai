@@ -49,12 +49,12 @@ impl From<QdrantError> for VectorError {
             QdrantError::Connection(msg) => VectorError::connection_failed(msg),
             QdrantError::Collection(msg) => VectorError::index_not_found(msg),
             QdrantError::Point(msg) => VectorError::storage_backend(msg),
-            QdrantError::Search(msg) => VectorError::search_failed(msg),
+            QdrantError::Search(msg) => VectorError::OperationFailed(msg),
             QdrantError::Config(msg) => VectorError::invalid_config(msg),
-            QdrantError::Serialization(msg) => VectorError::serialization_failed(msg),
+            QdrantError::Serialization(msg) => VectorError::Serialization(msg),
             QdrantError::Client(e) => VectorError::storage_backend(e.to_string()),
-            QdrantError::Json(e) => VectorError::serialization_failed(e.to_string()),
-            QdrantError::Uuid(e) => VectorError::invalid_input(e.to_string()),
+            QdrantError::Json(e) => VectorError::Serialization(e.to_string()),
+            QdrantError::Uuid(e) => VectorError::InvalidConfig(e.to_string()),
         }
     }
 }

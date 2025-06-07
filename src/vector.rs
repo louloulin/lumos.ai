@@ -6,8 +6,8 @@ use crate::{Result, Error};
 use std::sync::Arc;
 use lumosai_vector_core::prelude::*;
 
-/// 向量存储抽象 - 使用具体的内存存储类型来避免关联类型问题
-pub type VectorStorage = Arc<lumosai_vector::memory::MemoryVectorStorage>;
+/// 向量存储抽象 - 使用Box来避免关联类型问题
+pub type VectorStorage = Box<dyn std::any::Any + Send + Sync>;
 
 /// 内存向量存储
 pub type MemoryStorage = lumosai_vector::memory::MemoryVectorStorage;
@@ -39,7 +39,7 @@ pub type PostgresStorage = lumosai_vector::postgres::PostgresVectorStorage;
 pub async fn memory() -> Result<VectorStorage> {
     let storage = MemoryStorage::new().await
         .map_err(|e| Error::VectorStore(format!("Failed to create memory storage: {}", e)))?;
-    Ok(Arc::new(storage))
+    Ok(Box::new(storage))
 }
 
 /// 一行代码创建Qdrant向量存储
@@ -58,7 +58,7 @@ pub async fn memory() -> Result<VectorStorage> {
 pub async fn qdrant(url: &str) -> Result<VectorStorage> {
     let storage = QdrantStorage::new(url).await
         .map_err(|e| Error::VectorStore(format!("Failed to create Qdrant storage: {}", e)))?;
-    Ok(Arc::new(storage))
+    Ok(Box::new(storage))
 }
 
 #[cfg(not(feature = "vector-qdrant"))]
@@ -82,7 +82,7 @@ pub async fn qdrant(_url: &str) -> Result<VectorStorage> {
 pub async fn weaviate(url: &str) -> Result<VectorStorage> {
     let storage = WeaviateStorage::new(url).await
         .map_err(|e| Error::VectorStore(format!("Failed to create Weaviate storage: {}", e)))?;
-    Ok(Arc::new(storage))
+    Ok(Box::new(storage))
 }
 
 #[cfg(not(feature = "vector-weaviate"))]
@@ -128,7 +128,7 @@ pub async fn postgres_with_url(database_url: &str) -> Result<VectorStorage> {
     let config = lumosai_vector::postgres::PostgresConfig::new(database_url.to_string());
     let storage = PostgresStorage::with_config(config).await
         .map_err(|e| Error::VectorStore(format!("Failed to create PostgreSQL storage: {}", e)))?;
-    Ok(Arc::new(storage))
+    Ok(Box::new(storage))
 }
 
 #[cfg(not(feature = "postgres"))]

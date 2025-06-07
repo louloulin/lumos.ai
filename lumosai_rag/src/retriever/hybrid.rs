@@ -402,3 +402,187 @@ pub struct ScoredDocument {
     pub document: Document,
     pub score: f32,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{Document, RetrievalRequest, RetrievalOptions};
+    use async_trait::async_trait;
+
+    // Mock vector retriever for testing
+    struct MockVectorRetriever {
+        documents: Vec<crate::types::ScoredDocument>,
+    }
+
+    #[async_trait]
+    impl Retriever for MockVectorRetriever {
+        async fn retrieve(&self, _request: &RetrievalRequest) -> Result<RetrievalResult> {
+            Ok(RetrievalResult {
+                documents: self.documents.clone(),
+                total_count: self.documents.len(),
+            })
+        }
+    }
+
+    // Mock keyword retriever for testing
+    struct MockKeywordRetriever {
+        documents: Vec<ScoredDocument>,
+    }
+
+    #[async_trait]
+    impl KeywordRetriever for MockKeywordRetriever {
+        async fn search(&self, _query: &str, limit: usize) -> Result<Vec<ScoredDocument>> {
+            Ok(self.documents.iter().take(limit).cloned().collect())
+        }
+    }
+
+    fn create_test_document(id: &str, content: &str) -> Document {
+        Document {
+            id: id.to_string(),
+            content: content.to_string(),
+            metadata: crate::types::Metadata::new(),
+            embedding: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_hybrid_retriever_weighted_sum() {
+        // Create mock retrievers
+        let vector_retriever = Box::new(MockVectorRetriever {
+            documents: vec![
+                crate::types::ScoredDocument {
+                    document: create_test_document("doc1", "vector content 1"),
+                    score: 0.9,
+                },
+                crate::types::ScoredDocument {
+                    document: create_test_document("doc2", "vector content 2"),
+                    score: 0.7,
+                },
+            ],
+        });
+
+        let keyword_retriever = Box::new(MockKeywordRetriever {
+            documents: vec![
+                ScoredDocument {
+                    document: create_test_document("doc2", "keyword content 2"),
+                    score: 0.8,
+                },
+                ScoredDocument {
+                    document: create_test_document("doc3", "keyword content 3"),
+                    score: 0.6,
+                },
+            ],
+        });
+
+        let config = HybridSearchConfig {
+            vector_weight: 0.7,
+            keyword_weight: 0.3,
+            min_score_threshold: 0.1,
+            max_candidates_per_method: 10,
+            rerank_strategy: RerankStrategy::WeightedSum,
+        };
+
+        let hybrid_retriever = HybridRetriever::new(vector_retriever, keyword_retriever, config);
+
+        let request = RetrievalRequest {
+            query: "test query".to_string(),
+            options: RetrievalOptions {
+                limit: Some(5),
+                threshold: None,
+                filter: None,
+            },
+        };
+
+        let result = hybrid_retriever.retrieve(&request).await.unwrap();
+
+        // Should have 3 documents (doc1, doc2, doc3)
+        assert_eq!(result.documents.len(), 3);
+
+        // doc2 should have the highest score (appears in both results)
+        // doc2 score = 0.7 * 0.7 + 0.8 * 0.3 = 0.49 + 0.24 = 0.73
+        assert_eq!(result.documents[0].document.id, "doc2");
+        assert!((result.documents[0].score - 0.73).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn test_hybrid_retriever_rrf() {
+        let vector_retriever = Box::new(MockVectorRetriever {
+            documents: vec![
+                crate::types::ScoredDocument {
+                    document: create_test_document("doc1", "content 1"),
+                    score: 0.9,
+                },
+                crate::types::ScoredDocument {
+                    document: create_test_document("doc2", "content 2"),
+                    score: 0.8,
+                },
+            ],
+        });
+
+        let keyword_retriever = Box::new(MockKeywordRetriever {
+            documents: vec![
+                ScoredDocument {
+                    document: create_test_document("doc2", "content 2"),
+                    score: 0.7,
+                },
+                ScoredDocument {
+                    document: create_test_document("doc1", "content 1"),
+                    score: 0.6,
+                },
+            ],
+        });
+
+        let config = HybridSearchConfig {
+            vector_weight: 0.5,
+            keyword_weight: 0.5,
+            min_score_threshold: 0.0,
+            max_candidates_per_method: 10,
+            rerank_strategy: RerankStrategy::ReciprocalRankFusion { k: 60.0 },
+        };
+
+        let hybrid_retriever = HybridRetriever::new(vector_retriever, keyword_retriever, config);
+
+        let request = RetrievalRequest {
+            query: "test query".to_string(),
+            options: RetrievalOptions::default(),
+        };
+
+        let result = hybrid_retriever.retrieve(&request).await.unwrap();
+
+        // Should have 2 documents
+        assert_eq!(result.documents.len(), 2);
+
+        // Results should be sorted by RRF score
+        assert!(result.documents[0].score >= result.documents[1].score);
+    }
+
+    #[tokio::test]
+    async fn test_score_normalization() {
+        let config = HybridSearchConfig::default();
+        let vector_retriever = Box::new(MockVectorRetriever { documents: vec![] });
+        let keyword_retriever = Box::new(MockKeywordRetriever { documents: vec![] });
+        let hybrid_retriever = HybridRetriever::new(vector_retriever, keyword_retriever, config);
+
+        let documents = vec![
+            ScoredDocument {
+                document: create_test_document("doc1", "content 1"),
+                score: 10.0,
+            },
+            ScoredDocument {
+                document: create_test_document("doc2", "content 2"),
+                score: 5.0,
+            },
+            ScoredDocument {
+                document: create_test_document("doc3", "content 3"),
+                score: 0.0,
+            },
+        ];
+
+        let normalized = hybrid_retriever.normalize_scores(documents);
+
+        // Scores should be normalized to [0, 1]
+        assert_eq!(normalized[0].score, 1.0); // (10-0)/(10-0) = 1
+        assert_eq!(normalized[1].score, 0.5); // (5-0)/(10-0) = 0.5
+        assert_eq!(normalized[2].score, 0.0); // (0-0)/(10-0) = 0
+    }
+}

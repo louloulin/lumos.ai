@@ -12,6 +12,7 @@
 pub mod document;
 pub mod embedding;
 pub mod retriever;
+pub mod context;
 pub mod pipeline;
 pub mod types;
 pub mod error;

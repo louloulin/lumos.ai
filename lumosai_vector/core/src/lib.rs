@@ -48,6 +48,7 @@ pub use error::{VectorError, Result};
 pub use types::*;
 pub use traits::*;
 pub use config::*;
+pub use performance::*;
 
 /// Prelude module for convenient imports
 pub mod prelude {
@@ -55,4 +56,5 @@ pub mod prelude {
     pub use crate::types::*;
     pub use crate::traits::*;
     pub use crate::config::*;
+    pub use crate::performance::*;
 }

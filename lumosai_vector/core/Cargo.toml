@@ -19,6 +19,7 @@ async-trait = "0.1"
 thiserror = "1.0"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1.0", features = ["sync", "time"] }
 
 # Optional serialization support
 serde = { version = "1.0", features = ["derive"], optional = true }

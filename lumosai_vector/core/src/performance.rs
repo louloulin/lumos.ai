@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, Semaphore};
 use serde::{Deserialize, Serialize};
 
-use crate::{Result, VectorError, DocumentId, Document, SearchResponse};
+use crate::{Result, VectorError};
 
 /// 连接池配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,7 +111,7 @@ impl<T> ConnectionPool<T> {
         
         // 等待可用连接槽位
         let _permit = self.semaphore.acquire().await
-            .map_err(|e| VectorError::ConnectionError(format!("Failed to acquire connection: {}", e)))?;
+            .map_err(|e| VectorError::ConnectionFailed(format!("Failed to acquire connection: {}", e)))?;
         
         let mut connections = self.connections.write().await;
         
@@ -133,10 +133,10 @@ impl<T> ConnectionPool<T> {
         // 如果没有可用连接且未达到最大连接数，创建新连接
         if connections.len() < self.config.max_connections {
             // 这里需要实际的连接创建逻辑，暂时返回错误
-            return Err(VectorError::ConnectionError("Connection creation not implemented".to_string()));
+            return Err(VectorError::ConnectionFailed("Connection creation not implemented".to_string()));
         }
-        
-        Err(VectorError::ConnectionError("No available connections".to_string()))
+
+        Err(VectorError::ConnectionFailed("No available connections".to_string()))
     }
     
     /// 归还连接

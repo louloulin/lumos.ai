@@ -17,6 +17,10 @@ pub struct MemoryVectorStorage {
     indexes: Arc<RwLock<HashMap<String, MemoryIndex>>>,
     /// Storage statistics
     stats: Arc<RwLock<StorageStats>>,
+    /// Performance monitor
+    performance_monitor: Arc<PerformanceMonitor>,
+    /// Search result cache
+    search_cache: Arc<LRUCache<String, SearchResponse>>,
 }
 
 /// Storage statistics
@@ -48,10 +52,19 @@ impl MemoryVectorStorage {
     
     /// Create a new memory vector storage with custom configuration
     pub async fn with_config(config: MemoryConfig) -> Result<Self> {
+        let cache_config = CacheConfig {
+            max_entries: 100,
+            ttl: std::time::Duration::from_secs(300), // 5 minutes
+            enable_lru: true,
+            stats_interval: std::time::Duration::from_secs(60),
+        };
+
         Ok(Self {
             config,
             indexes: Arc::new(RwLock::new(HashMap::new())),
             stats: Arc::new(RwLock::new(StorageStats::default())),
+            performance_monitor: Arc::new(PerformanceMonitor::new()),
+            search_cache: Arc::new(LRUCache::new(cache_config)),
         })
     }
     
@@ -70,11 +83,24 @@ impl MemoryVectorStorage {
         if let Some(threshold_mb) = self.config.memory_threshold_mb {
             let current_usage_mb = self.memory_usage().await / (1024 * 1024);
             if current_usage_mb > threshold_mb as u64 {
+                // Clear search cache to free memory
+                self.search_cache.clear().await;
+
                 // Trigger garbage collection or other cleanup
                 // For now, this is a no-op, but could be extended
             }
         }
         Ok(())
+    }
+
+    /// Get performance metrics
+    pub async fn get_performance_metrics(&self) -> lumosai_vector_core::PerformanceMetrics {
+        self.performance_monitor.get_metrics().await
+    }
+
+    /// Get cache statistics
+    pub async fn get_cache_stats(&self) -> lumosai_vector_core::CacheStats {
+        self.search_cache.get_stats().await
     }
 }
 
@@ -175,24 +201,47 @@ impl VectorStorage for MemoryVectorStorage {
     
     async fn search(&self, request: SearchRequest) -> Result<SearchResponse> {
         let start_time = Instant::now();
-        
+
+        // Generate cache key for the search request
+        let cache_key = format!("{}_{}_{}",
+            request.index_name,
+            request.top_k,
+            serde_json::to_string(&request.query).unwrap_or_default()
+        );
+
+        // Check cache first
+        if let Some(cached_response) = self.search_cache.get(&cache_key).await {
+            let duration = start_time.elapsed();
+            self.performance_monitor.record_operation(duration, true).await;
+            return Ok(cached_response);
+        }
+
         let indexes = self.indexes.read().await;
         let index = indexes.get(&request.index_name)
             .ok_or_else(|| VectorError::index_not_found(&request.index_name))?;
-        
+
         let results = index.search(&request)?;
-        
+
         let execution_time_ms = start_time.elapsed().as_millis() as u64;
-        
+        let duration = start_time.elapsed();
+
         // Update stats
         {
             let mut stats = self.stats.write().await;
             stats.search_count += 1;
             stats.total_search_time_ms += execution_time_ms;
         }
-        
-        Ok(SearchResponse::new(results)
-            .with_execution_time(execution_time_ms))
+
+        let response = SearchResponse::new(results)
+            .with_execution_time(execution_time_ms);
+
+        // Cache the response
+        self.search_cache.set(cache_key, response.clone()).await;
+
+        // Record performance metrics
+        self.performance_monitor.record_operation(duration, true).await;
+
+        Ok(response)
     }
     
     async fn update_document(&self, index_name: &str, document: Document) -> Result<()> {
@@ -286,6 +335,8 @@ impl Clone for MemoryVectorStorage {
             config: self.config.clone(),
             indexes: Arc::clone(&self.indexes),
             stats: Arc::clone(&self.stats),
+            performance_monitor: Arc::clone(&self.performance_monitor),
+            search_cache: Arc::clone(&self.search_cache),
         }
     }
 }

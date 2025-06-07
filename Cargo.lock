@@ -3427,6 +3427,8 @@ dependencies = [
  "async-trait",
  "chrono",
  "lumosai-vector-core",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-test",
  "uuid",

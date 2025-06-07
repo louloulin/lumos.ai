@@ -6,16 +6,13 @@ use uuid::Uuid;
 use serde_json::Value;
 use rusqlite::{params, Connection, Result as SqliteResult};
 
-use super::{VectorStorage, IndexStats, QueryResult, SimilarityMetric};
-use super::filter::{FilterCondition, FilterInterpreter};
+use super::{VectorStorage, IndexStats, QueryResult, SimilarityMetric, FilterCondition};
 use crate::error::{Error, Result};
 
 /// SQLite vector storage implementation
 pub struct SqliteVectorStorage {
     /// Database connection
     conn: Arc<Mutex<Connection>>,
-    /// Filter interpreter
-    filter_interpreter: FilterInterpreter,
 }
 
 impl SqliteVectorStorage {
@@ -58,7 +55,6 @@ impl SqliteVectorStorage {
         
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
-            filter_interpreter: FilterInterpreter::new(),
         })
     }
     
@@ -101,7 +97,6 @@ impl SqliteVectorStorage {
         
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
-            filter_interpreter: FilterInterpreter::new(),
         })
     }
     
@@ -160,6 +155,45 @@ impl SqliteVectorStorage {
             "euclidean" => Ok(SimilarityMetric::Euclidean),
             "dotproduct" => Ok(SimilarityMetric::DotProduct),
             _ => Err(Error::Storage(format!("Unknown similarity metric: {}", s))),
+        }
+    }
+
+    /// Evaluate filter condition against metadata
+    fn evaluate_filter(&self, filter: &FilterCondition, metadata: &HashMap<String, Value>) -> bool {
+        match filter {
+            FilterCondition::Eq(field, value) => {
+                metadata.get(field).map_or(false, |v| v == value)
+            },
+            FilterCondition::Gt(field, value) => {
+                if let (Some(field_value), Some(filter_value)) = (metadata.get(field), value.as_f64()) {
+                    field_value.as_f64().map_or(false, |v| v > filter_value)
+                } else {
+                    false
+                }
+            },
+            FilterCondition::Lt(field, value) => {
+                if let (Some(field_value), Some(filter_value)) = (metadata.get(field), value.as_f64()) {
+                    field_value.as_f64().map_or(false, |v| v < filter_value)
+                } else {
+                    false
+                }
+            },
+            FilterCondition::In(field, values) => {
+                if let Some(field_value) = metadata.get(field) {
+                    values.contains(field_value)
+                } else {
+                    false
+                }
+            },
+            FilterCondition::And(conditions) => {
+                conditions.iter().all(|c| self.evaluate_filter(c, metadata))
+            },
+            FilterCondition::Or(conditions) => {
+                conditions.iter().any(|c| self.evaluate_filter(c, metadata))
+            },
+            FilterCondition::Not(condition) => {
+                !self.evaluate_filter(condition, metadata)
+            },
         }
     }
 }
@@ -418,7 +452,7 @@ impl VectorStorage for SqliteVectorStorage {
             // Apply filter if provided
             if let Some(filter) = &filter {
                 if let Some(meta) = &metadata {
-                    if !self.filter_interpreter.evaluate(filter, meta) {
+                    if !self.evaluate_filter(filter, meta) {
                         continue;
                     }
                 } else {

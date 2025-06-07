@@ -12,6 +12,7 @@ members = [
     "lumosai_derive",
     "lumosai_enterprise",
     "lumosai_bindings",
+    "lumos_vector",
     # "lumosai_cloud",
     # "lumosai_ai_extensions"
 ]

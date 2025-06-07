@@ -1,0 +1,43 @@
+[package]
+name = "lumos_vector"
+version = "0.1.0"
+edition = "2021"
+description = "Lumos.ai Vector Storage - A unified vector storage abstraction layer"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/lumos-ai/lumos.ai"
+keywords = ["vector", "storage", "embedding", "ai", "ml"]
+categories = ["database", "science"]
+
+[features]
+default = ["memory"]
+memory = []
+sqlite = ["dep:rusqlite"]
+qdrant = ["dep:qdrant-client", "dep:tonic"]
+mongodb = ["dep:mongodb"]
+
+[dependencies]
+# Core dependencies
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Storage backends (optional)
+rusqlite = { version = "0.32", features = ["bundled"], optional = true }
+tokio-rusqlite = { version = "0.6.0", features = ["bundled"], optional = true }
+qdrant-client = { version = "1.0", optional = true }
+tonic = { version = "0.10", optional = true }
+mongodb = { version = "2.0", optional = true }
+
+# Utilities
+float-cmp = "0.9"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.0"
+
+[[example]]
+name = "basic_usage"
+required-features = ["memory"]

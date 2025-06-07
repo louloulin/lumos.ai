@@ -6,8 +6,16 @@ use crate::{Result, Error};
 use std::sync::Arc;
 use lumosai_vector_core::prelude::*;
 
-/// 向量存储抽象 - 使用Box来避免关联类型问题
-pub type VectorStorage = Box<dyn std::any::Any + Send + Sync>;
+/// 向量存储抽象 - 使用enum来支持多种存储类型
+pub enum VectorStorage {
+    Memory(Arc<lumosai_vector::memory::MemoryVectorStorage>),
+    #[cfg(feature = "vector-postgres")]
+    Postgres(Arc<lumosai_vector::postgres::PostgresVectorStorage>),
+    #[cfg(feature = "vector-qdrant")]
+    Qdrant(Arc<lumosai_vector::qdrant::QdrantVectorStorage>),
+    #[cfg(feature = "vector-weaviate")]
+    Weaviate(Arc<lumosai_vector::weaviate::WeaviateVectorStorage>),
+}
 
 /// 内存向量存储
 pub type MemoryStorage = lumosai_vector::memory::MemoryVectorStorage;
@@ -39,7 +47,7 @@ pub type PostgresStorage = lumosai_vector::postgres::PostgresVectorStorage;
 pub async fn memory() -> Result<VectorStorage> {
     let storage = MemoryStorage::new().await
         .map_err(|e| Error::VectorStore(format!("Failed to create memory storage: {}", e)))?;
-    Ok(Box::new(storage))
+    Ok(VectorStorage::Memory(Arc::new(storage)))
 }
 
 /// 一行代码创建Qdrant向量存储
@@ -58,7 +66,7 @@ pub async fn memory() -> Result<VectorStorage> {
 pub async fn qdrant(url: &str) -> Result<VectorStorage> {
     let storage = QdrantStorage::new(url).await
         .map_err(|e| Error::VectorStore(format!("Failed to create Qdrant storage: {}", e)))?;
-    Ok(Box::new(storage))
+    Ok(VectorStorage::Qdrant(Arc::new(storage)))
 }
 
 #[cfg(not(feature = "vector-qdrant"))]
@@ -82,7 +90,7 @@ pub async fn qdrant(_url: &str) -> Result<VectorStorage> {
 pub async fn weaviate(url: &str) -> Result<VectorStorage> {
     let storage = WeaviateStorage::new(url).await
         .map_err(|e| Error::VectorStore(format!("Failed to create Weaviate storage: {}", e)))?;
-    Ok(Box::new(storage))
+    Ok(VectorStorage::Weaviate(Arc::new(storage)))
 }
 
 #[cfg(not(feature = "vector-weaviate"))]
@@ -128,7 +136,7 @@ pub async fn postgres_with_url(database_url: &str) -> Result<VectorStorage> {
     let config = lumosai_vector::postgres::PostgresConfig::new(database_url.to_string());
     let storage = PostgresStorage::with_config(config).await
         .map_err(|e| Error::VectorStore(format!("Failed to create PostgreSQL storage: {}", e)))?;
-    Ok(Box::new(storage))
+    Ok(VectorStorage::Postgres(Arc::new(storage)))
 }
 
 #[cfg(not(feature = "postgres"))]
@@ -311,6 +319,144 @@ fn get_postgres_url_from_env() -> Result<String> {
         .map_err(|_| Error::Config("POSTGRES_PASSWORD environment variable is required".to_string()))?;
     
     Ok(format!("postgresql://{}:{}@{}:{}/{}", user, password, host, port, db))
+}
+
+// 为VectorStorage enum实现VectorStorage trait
+#[async_trait::async_trait]
+impl lumosai_vector_core::VectorStorage for VectorStorage {
+    type Config = ();
+
+    async fn create_index(&self, config: lumosai_vector_core::IndexConfig) -> lumosai_vector_core::Result<()> {
+        match self {
+            VectorStorage::Memory(storage) => storage.create_index(config).await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.create_index(config).await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.create_index(config).await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.create_index(config).await,
+        }
+    }
+
+    async fn delete_index(&self, index_name: &str) -> lumosai_vector_core::Result<()> {
+        match self {
+            VectorStorage::Memory(storage) => storage.delete_index(index_name).await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.delete_index(index_name).await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.delete_index(index_name).await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.delete_index(index_name).await,
+        }
+    }
+
+    async fn list_indexes(&self) -> lumosai_vector_core::Result<Vec<String>> {
+        match self {
+            VectorStorage::Memory(storage) => storage.list_indexes().await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.list_indexes().await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.list_indexes().await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.list_indexes().await,
+        }
+    }
+
+    async fn describe_index(&self, index_name: &str) -> lumosai_vector_core::Result<lumosai_vector_core::IndexInfo> {
+        match self {
+            VectorStorage::Memory(storage) => storage.describe_index(index_name).await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.describe_index(index_name).await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.describe_index(index_name).await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.describe_index(index_name).await,
+        }
+    }
+
+    async fn upsert_documents(&self, index_name: &str, documents: Vec<lumosai_vector_core::Document>) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::DocumentId>> {
+        match self {
+            VectorStorage::Memory(storage) => storage.upsert_documents(index_name, documents).await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.upsert_documents(index_name, documents).await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.upsert_documents(index_name, documents).await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.upsert_documents(index_name, documents).await,
+        }
+    }
+
+    async fn search(&self, request: lumosai_vector_core::SearchRequest) -> lumosai_vector_core::Result<lumosai_vector_core::SearchResponse> {
+        match self {
+            VectorStorage::Memory(storage) => storage.search(request).await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.search(request).await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.search(request).await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.search(request).await,
+        }
+    }
+
+    async fn update_document(&self, index_name: &str, document: lumosai_vector_core::Document) -> lumosai_vector_core::Result<()> {
+        match self {
+            VectorStorage::Memory(storage) => storage.update_document(index_name, document).await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.update_document(index_name, document).await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.update_document(index_name, document).await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.update_document(index_name, document).await,
+        }
+    }
+
+    async fn delete_documents(&self, index_name: &str, ids: Vec<lumosai_vector_core::DocumentId>) -> lumosai_vector_core::Result<()> {
+        match self {
+            VectorStorage::Memory(storage) => storage.delete_documents(index_name, ids).await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.delete_documents(index_name, ids).await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.delete_documents(index_name, ids).await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.delete_documents(index_name, ids).await,
+        }
+    }
+
+    async fn get_documents(&self, index_name: &str, ids: Vec<lumosai_vector_core::DocumentId>, include_vectors: bool) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::Document>> {
+        match self {
+            VectorStorage::Memory(storage) => storage.get_documents(index_name, ids, include_vectors).await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.get_documents(index_name, ids, include_vectors).await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.get_documents(index_name, ids, include_vectors).await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.get_documents(index_name, ids, include_vectors).await,
+        }
+    }
+
+    async fn health_check(&self) -> lumosai_vector_core::Result<()> {
+        match self {
+            VectorStorage::Memory(storage) => storage.health_check().await,
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.health_check().await,
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.health_check().await,
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.health_check().await,
+        }
+    }
+
+    fn backend_info(&self) -> lumosai_vector_core::BackendInfo {
+        match self {
+            VectorStorage::Memory(storage) => storage.backend_info(),
+            #[cfg(feature = "vector-postgres")]
+            VectorStorage::Postgres(storage) => storage.backend_info(),
+            #[cfg(feature = "vector-qdrant")]
+            VectorStorage::Qdrant(storage) => storage.backend_info(),
+            #[cfg(feature = "vector-weaviate")]
+            VectorStorage::Weaviate(storage) => storage.backend_info(),
+        }
+    }
 }
 
 #[cfg(test)]

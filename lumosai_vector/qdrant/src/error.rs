@@ -29,7 +29,11 @@ pub enum QdrantError {
     /// Serialization error
     #[error("Serialization error: {0}")]
     Serialization(String),
-    
+
+    /// Filter error
+    #[error("Invalid filter: {0}")]
+    InvalidFilter(String),
+
     /// Qdrant client error
     #[error("Qdrant client error: {0}")]
     Client(#[from] qdrant_client::QdrantError),
@@ -52,6 +56,7 @@ impl From<QdrantError> for VectorError {
             QdrantError::Search(msg) => VectorError::OperationFailed(msg),
             QdrantError::Config(msg) => VectorError::invalid_config(msg),
             QdrantError::Serialization(msg) => VectorError::Serialization(msg),
+            QdrantError::InvalidFilter(msg) => VectorError::InvalidConfig(msg),
             QdrantError::Client(e) => VectorError::storage_backend(e.to_string()),
             QdrantError::Json(e) => VectorError::Serialization(e.to_string()),
             QdrantError::Uuid(e) => VectorError::InvalidConfig(e.to_string()),

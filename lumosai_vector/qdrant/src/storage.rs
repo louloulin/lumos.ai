@@ -202,7 +202,7 @@ impl VectorStorage for QdrantVectorStorage {
             // Convert metadata to Qdrant payload
             let mut payload = HashMap::new();
             for (key, value) in doc.metadata {
-                match QdrantFilterConverter::convert_metadata_value(value) {
+                match QdrantFilterConverter::convert_metadata_to_value(value) {
                     Ok(qdrant_value) => {
                         payload.insert(key, qdrant_value);
                     },

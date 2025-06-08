@@ -14,6 +14,8 @@ use lumosai_core::llm::{
     provider::LlmProvider,
 };
 use serde_json::json;
+use futures::StreamExt;
+use std::io::{self, Write};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -27,6 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         test_basic_generation(&zhipu, "智谱AI").await?;
         test_conversation(&zhipu, "智谱AI").await?;
+        test_streaming(&zhipu, "智谱AI").await?;
         test_function_calling(&zhipu, "智谱AI").await?;
     } else {
         println!("⚠️  跳过智谱AI测试 - 未设置ZHIPU_API_KEY环境变量");
@@ -39,6 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         test_basic_generation(&baidu, "百度ERNIE").await?;
         test_conversation(&baidu, "百度ERNIE").await?;
+        test_streaming(&baidu, "百度ERNIE").await?;
         test_function_calling(&baidu, "百度ERNIE").await?;
     } else {
         println!("⚠️  跳过百度ERNIE测试 - 未设置BAIDU_API_KEY或BAIDU_SECRET_KEY环境变量");
@@ -122,6 +126,50 @@ async fn test_conversation(
         }
     }
     
+    Ok(())
+}
+
+/// 测试流式生成功能
+async fn test_streaming(
+    provider: &dyn LlmProvider,
+    name: &str
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🌊 流式生成测试 ({})", name);
+
+    let options = LlmOptions::default()
+        .with_temperature(0.7)
+        .with_max_tokens(100);
+
+    let prompt = "请简单介绍一下机器学习的基本概念";
+
+    print!("💭 问题: {}\n🤖 {}流式响应: ", prompt, name);
+    io::stdout().flush()?;
+
+    match provider.generate_stream(prompt, &options).await {
+        Ok(mut stream) => {
+            let mut full_response = String::new();
+
+            while let Some(chunk) = stream.next().await {
+                match chunk {
+                    Ok(text) => {
+                        print!("{}", text);
+                        io::stdout().flush()?;
+                        full_response.push_str(&text);
+                    }
+                    Err(e) => {
+                        println!("\n❌ 流式错误: {}", e);
+                        break;
+                    }
+                }
+            }
+
+            println!("\n✅ 流式响应完成 (总长度: {} 字符)", full_response.len());
+        }
+        Err(e) => {
+            println!("❌ 流式生成错误: {}", e);
+        }
+    }
+
     Ok(())
 }
 

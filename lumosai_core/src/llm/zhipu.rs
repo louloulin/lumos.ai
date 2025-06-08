@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use futures::stream::{self, BoxStream};
+use futures::stream::{self, BoxStream, StreamExt};
+use futures::TryStreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -19,6 +20,34 @@ struct ZhipuResponse {
     id: String,
     created: u64,
     model: String,
+}
+
+/// 智谱AI streaming response structures
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct ZhipuStreamResponse {
+    choices: Vec<ZhipuStreamChoice>,
+    #[serde(default)]
+    usage: Option<ZhipuUsage>,
+    id: String,
+    created: u64,
+    model: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ZhipuStreamChoice {
+    index: u32,
+    delta: ZhipuStreamDelta,
+    finish_reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct ZhipuStreamDelta {
+    role: Option<String>,
+    content: Option<String>,
+    #[serde(default)]
+    tool_calls: Vec<ZhipuToolCall>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -100,6 +129,16 @@ impl ZhipuProvider {
             model: model.unwrap_or_else(|| "glm-4".to_string()),
             base_url: "https://open.bigmodel.cn/api/paas/v4".to_string(),
         }
+    }
+
+    /// Get the model name
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
+    /// Get the base URL
+    pub fn base_url(&self) -> &str {
+        &self.base_url
     }
 
     /// Create a new 智谱AI provider with custom base URL
@@ -295,18 +334,58 @@ impl LlmProvider for ZhipuProvider {
         prompt: &'a str,
         options: &'a LlmOptions
     ) -> Result<BoxStream<'a, Result<String>>> {
-        // For now, implement a simple chunked response
-        // TODO: Implement proper streaming using SSE (Server-Sent Events)
-        let result = self.generate(prompt, options).await?;
+        // Convert prompt to messages format
+        let messages = vec![serde_json::json!({
+            "role": "user",
+            "content": prompt
+        })];
 
-        // Split the result into chunks for simulation
-        let words: Vec<&str> = result.split_whitespace().collect();
-        let chunks: Vec<Result<String>> = words
-            .chunks(3)
-            .map(|chunk| Ok(chunk.join(" ") + " "))
-            .collect();
+        // Prepare request data
+        let url = format!("{}/chat/completions", self.base_url);
 
-        Ok(Box::pin(stream::iter(chunks)))
+        // Build request body with streaming enabled
+        let mut body = serde_json::json!({
+            "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
+            "messages": messages,
+            "stream": true,
+        });
+
+        // Add optional parameters
+        if let Some(temperature) = options.temperature {
+            body["temperature"] = serde_json::json!(temperature);
+        }
+
+        if let Some(max_tokens) = options.max_tokens {
+            body["max_tokens"] = serde_json::json!(max_tokens);
+        }
+
+        // Check for top_p in extra parameters
+        if let Some(top_p) = options.extra.get("top_p") {
+            body["top_p"] = top_p.clone();
+        }
+
+        // Send request
+        let response = self.client
+            .post(&url)
+            .headers(self.create_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| Error::Llm(format!("智谱AI streaming request failed: {}", e)))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(Error::Llm(format!(
+                "智谱AI streaming API returned error status {}: {}",
+                status, error_text
+            )));
+        }
+
+        // Create stream from response body
+        let stream = self.create_sse_stream(response).await?;
+        Ok(Box::pin(stream))
     }
 
     async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
@@ -455,6 +534,71 @@ impl LlmProvider for ZhipuProvider {
             function_calls,
             finish_reason: choice.finish_reason.clone().unwrap_or_else(|| "stop".to_string()),
         })
+    }
+}
+
+impl ZhipuProvider {
+    /// Create SSE stream from HTTP response
+    async fn create_sse_stream(
+        &self,
+        response: reqwest::Response,
+    ) -> Result<impl futures::Stream<Item = Result<String>>> {
+        let byte_stream = response.bytes_stream();
+
+        Ok(byte_stream
+            .map_err(|e| Error::Llm(format!("HTTP stream error: {}", e)))
+            .map(|chunk_result| {
+                chunk_result.and_then(|chunk| {
+                    // Convert bytes to string
+                    let text = String::from_utf8(chunk.to_vec())
+                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {}", e)))?;
+
+                    // Split by lines and process each line
+                    let mut results = Vec::new();
+                    for line in text.lines() {
+                        // Skip empty lines and comments
+                        if line.trim().is_empty() || line.starts_with(':') {
+                            continue;
+                        }
+
+                        // Parse SSE format: "data: {...}"
+                        if let Some(data) = line.strip_prefix("data: ") {
+                            // Handle end of stream
+                            if data.trim() == "[DONE]" {
+                                break;
+                            }
+
+                            // Parse JSON response
+                            match serde_json::from_str::<ZhipuStreamResponse>(data) {
+                                Ok(stream_response) => {
+                                    if let Some(choice) = stream_response.choices.first() {
+                                        if let Some(content) = &choice.delta.content {
+                                            if !content.is_empty() {
+                                                results.push(content.clone());
+                                            }
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    return Err(Error::Llm(format!(
+                                        "Failed to parse 智谱AI streaming response: {}", e
+                                    )));
+                                }
+                            }
+                        }
+                    }
+
+                    // Join all content from this chunk
+                    Ok(results.join(""))
+                })
+            })
+            .filter_map(|result| async move {
+                match result {
+                    Ok(content) if !content.is_empty() => Some(Ok(content)),
+                    Ok(_) => None, // Skip empty content
+                    Err(e) => Some(Err(e)),
+                }
+            }))
     }
 }
 

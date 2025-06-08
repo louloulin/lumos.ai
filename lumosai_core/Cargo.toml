@@ -61,6 +61,7 @@ tracing-subscriber = "0.3"
 # WebSocket and streaming dependencies
 tokio-tungstenite = "0.21"
 tungstenite = "0.21"
+tokio-stream = "0.1"
 
 # Authentication dependencies
 base64 = "0.21"

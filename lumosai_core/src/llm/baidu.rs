@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use futures::stream::{self, BoxStream};
+use futures::stream::{self, BoxStream, StreamExt};
+use futures::TryStreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -19,6 +20,21 @@ struct BaiduResponse {
     id: String,
     object: String,
     created: u64,
+    #[serde(default)]
+    function_call: Option<BaiduFunctionCall>,
+}
+
+/// 百度ERNIE streaming response structures
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct BaiduStreamResponse {
+    result: Option<String>,
+    #[serde(default)]
+    usage: Option<BaiduUsage>,
+    id: String,
+    object: String,
+    created: u64,
+    is_end: Option<bool>,
     #[serde(default)]
     function_call: Option<BaiduFunctionCall>,
 }
@@ -89,6 +105,16 @@ impl BaiduProvider {
             base_url: "https://aip.baidubce.com".to_string(),
             access_token: None,
         }
+    }
+
+    /// Get the model name
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
+    /// Get the base URL
+    pub fn base_url(&self) -> &str {
+        &self.base_url
     }
 
     /// Create a new 百度ERNIE provider with custom base URL
@@ -308,18 +334,61 @@ impl LlmProvider for BaiduProvider {
         prompt: &'a str,
         options: &'a LlmOptions
     ) -> Result<BoxStream<'a, Result<String>>> {
-        // For now, implement a simple chunked response
-        // TODO: Implement proper streaming using SSE (Server-Sent Events)
-        let result = self.generate(prompt, options).await?;
+        // Convert prompt to messages format
+        let messages = vec![serde_json::json!({
+            "role": "user",
+            "content": prompt
+        })];
 
-        // Split the result into chunks for simulation
-        let words: Vec<&str> = result.split_whitespace().collect();
-        let chunks: Vec<Result<String>> = words
-            .chunks(3)
-            .map(|chunk| Ok(chunk.join(" ") + " "))
-            .collect();
+        let mut provider = self.clone();
+        let access_token = provider.get_access_token().await?;
 
-        Ok(Box::pin(stream::iter(chunks)))
+        let model = options.model.clone().unwrap_or_else(|| self.model.clone());
+        let endpoint = self.get_model_endpoint(&model);
+        let url = format!("{}{}?access_token={}", self.base_url, endpoint, access_token);
+
+        // Build request body with streaming enabled
+        let mut body = serde_json::json!({
+            "messages": messages,
+            "stream": true,
+        });
+
+        // Add optional parameters
+        if let Some(temperature) = options.temperature {
+            body["temperature"] = serde_json::json!(temperature);
+        }
+
+        if let Some(max_tokens) = options.max_tokens {
+            body["max_output_tokens"] = serde_json::json!(max_tokens);
+        }
+
+        // Check for top_p in extra parameters
+        if let Some(top_p) = options.extra.get("top_p") {
+            body["top_p"] = top_p.clone();
+        }
+
+        // Send request
+        let response = self.client
+            .post(&url)
+            .headers(self.create_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| Error::Llm(format!("百度ERNIE streaming request failed: {}", e)))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(Error::Llm(format!(
+                "百度ERNIE streaming API returned error status {}: {}",
+                status, error_text
+            )));
+        }
+
+        // Create stream from response body
+        let stream = self.create_sse_stream(response).await?;
+        Ok(Box::pin(stream))
     }
 
     async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
@@ -370,7 +439,7 @@ impl LlmProvider for BaiduProvider {
         &self,
         messages: &[Message],
         functions: &[FunctionDefinition],
-        tool_choice: &ToolChoice,
+        _tool_choice: &ToolChoice,
         options: &LlmOptions,
     ) -> Result<FunctionCallingResponse> {
         let mut provider = self.clone();
@@ -453,6 +522,74 @@ impl LlmProvider for BaiduProvider {
             function_calls,
             finish_reason: "stop".to_string(),
         })
+    }
+}
+
+impl BaiduProvider {
+    /// Create SSE stream from HTTP response
+    async fn create_sse_stream(
+        &self,
+        response: reqwest::Response,
+    ) -> Result<impl futures::Stream<Item = Result<String>>> {
+        let byte_stream = response.bytes_stream();
+
+        Ok(byte_stream
+            .map_err(|e| Error::Llm(format!("HTTP stream error: {}", e)))
+            .map(|chunk_result| {
+                chunk_result.and_then(|chunk| {
+                    // Convert bytes to string
+                    let text = String::from_utf8(chunk.to_vec())
+                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {}", e)))?;
+
+                    // Split by lines and process each line
+                    let mut results = Vec::new();
+                    for line in text.lines() {
+                        // Skip empty lines and comments
+                        if line.trim().is_empty() || line.starts_with(':') {
+                            continue;
+                        }
+
+                        // Parse SSE format: "data: {...}"
+                        if let Some(data) = line.strip_prefix("data: ") {
+                            // Handle end of stream
+                            if data.trim() == "[DONE]" {
+                                break;
+                            }
+
+                            // Parse JSON response
+                            match serde_json::from_str::<BaiduStreamResponse>(data) {
+                                Ok(stream_response) => {
+                                    // Check if this is the end of the stream
+                                    if stream_response.is_end == Some(true) {
+                                        break;
+                                    }
+
+                                    if let Some(result) = stream_response.result {
+                                        if !result.is_empty() {
+                                            results.push(result);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    return Err(Error::Llm(format!(
+                                        "Failed to parse 百度ERNIE streaming response: {}", e
+                                    )));
+                                }
+                            }
+                        }
+                    }
+
+                    // Join all content from this chunk
+                    Ok(results.join(""))
+                })
+            })
+            .filter_map(|result| async move {
+                match result {
+                    Ok(content) if !content.is_empty() => Some(Ok(content)),
+                    Ok(_) => None, // Skip empty content
+                    Err(e) => Some(Err(e)),
+                }
+            }))
     }
 }
 

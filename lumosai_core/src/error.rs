@@ -17,6 +17,10 @@ pub enum Error {
     #[error("LLM error: {0}")]
     Llm(String),
 
+    /// LLM provider specific errors
+    #[error("LLM provider error: {0}")]
+    LlmProvider(String),
+
     /// Agent errors
     #[error("Agent error: {0}")]
     Agent(String),

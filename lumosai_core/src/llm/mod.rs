@@ -8,8 +8,15 @@ pub mod openai;
 mod anthropic;
 mod qwen;
 mod deepseek;
+pub mod cohere;
+pub mod gemini;
+pub mod ollama;
+pub mod together;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod new_providers_test;
 
 
 pub use types::{Message, LlmOptions, Role};
@@ -19,6 +26,10 @@ pub use openai::OpenAiProvider;
 pub use anthropic::AnthropicProvider;
 pub use qwen::{QwenProvider, QwenApiType};
 pub use deepseek::DeepSeekProvider;
+pub use cohere::CohereProvider;
+pub use gemini::GeminiProvider;
+pub use ollama::OllamaProvider;
+pub use together::TogetherProvider;
 pub use function_calling::{
     FunctionDefinition, 
     FunctionCall, 

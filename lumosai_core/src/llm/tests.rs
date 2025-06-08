@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::llm::{AnthropicProvider, DeepSeekProvider, LlmOptions, LlmProvider, Message, OpenAiProvider, Role};
+    use crate::llm::{AnthropicProvider, DeepSeekProvider, LlmOptions, LlmProvider, Message, OpenAiProvider, Role, CohereProvider, GeminiProvider, OllamaProvider, TogetherProvider};
 
     // 这些测试使用内联的测试数据，不依赖于外部HTTP模拟库
     
@@ -187,5 +187,77 @@ mod tests {
         // 验证响应成功
         assert!(response.is_ok());
         println!("DeepSeek response: {}", response.unwrap());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_cohere_integration() {
+        let api_key = std::env::var("COHERE_API_KEY").expect("需要设置COHERE_API_KEY环境变量");
+
+        let provider = CohereProvider::new(
+            api_key,
+            "command-r-plus".to_string(),
+        );
+
+        let options = LlmOptions::default()
+            .with_temperature(0.7)
+            .with_max_tokens(50);
+
+        let response = provider.generate("Say hello", &options).await;
+        assert!(response.is_ok());
+        println!("Cohere response: {}", response.unwrap());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_gemini_integration() {
+        let api_key = std::env::var("GEMINI_API_KEY").expect("需要设置GEMINI_API_KEY环境变量");
+
+        let provider = GeminiProvider::new(
+            api_key,
+            "gemini-1.5-pro".to_string(),
+        );
+
+        let options = LlmOptions::default()
+            .with_temperature(0.7)
+            .with_max_tokens(50);
+
+        let response = provider.generate("Say hello", &options).await;
+        assert!(response.is_ok());
+        println!("Gemini response: {}", response.unwrap());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_ollama_integration() {
+        // 需要本地运行Ollama服务
+        let provider = OllamaProvider::localhost("llama2".to_string());
+
+        let options = LlmOptions::default()
+            .with_temperature(0.7)
+            .with_max_tokens(50);
+
+        let response = provider.generate("Say hello", &options).await;
+        assert!(response.is_ok());
+        println!("Ollama response: {}", response.unwrap());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_together_integration() {
+        let api_key = std::env::var("TOGETHER_API_KEY").expect("需要设置TOGETHER_API_KEY环境变量");
+
+        let provider = TogetherProvider::new(
+            api_key,
+            "meta-llama/Llama-2-7b-chat-hf".to_string(),
+        );
+
+        let options = LlmOptions::default()
+            .with_temperature(0.7)
+            .with_max_tokens(50);
+
+        let response = provider.generate("Say hello", &options).await;
+        assert!(response.is_ok());
+        println!("Together response: {}", response.unwrap());
     }
 }

@@ -13,6 +13,9 @@ pub mod gemini;
 pub mod ollama;
 pub mod together;
 pub mod claude;
+pub mod zhipu;
+pub mod baidu;
+pub mod providers;
 #[cfg(test)]
 mod tests;
 
@@ -33,6 +36,8 @@ pub use gemini::GeminiProvider;
 pub use ollama::OllamaProvider;
 pub use together::TogetherProvider;
 pub use claude::ClaudeProvider;
+pub use zhipu::ZhipuProvider;
+pub use baidu::BaiduProvider;
 pub use function_calling::{
     FunctionDefinition, 
     FunctionCall, 

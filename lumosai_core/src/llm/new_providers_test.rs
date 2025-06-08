@@ -43,6 +43,29 @@ fn test_together_provider_creation() {
     assert!(!provider.supports_function_calling());
 }
 
+#[test]
+fn test_zhipu_provider_creation() {
+    let provider = ZhipuProvider::new(
+        "test-key".to_string(),
+        Some("glm-4".to_string()),
+    );
+
+    assert_eq!(provider.name(), "zhipu");
+    assert!(provider.supports_function_calling());
+}
+
+#[test]
+fn test_baidu_provider_creation() {
+    let provider = BaiduProvider::new(
+        "test-key".to_string(),
+        "test-secret".to_string(),
+        Some("ernie-bot".to_string()),
+    );
+
+    assert_eq!(provider.name(), "baidu");
+    assert!(provider.supports_function_calling());
+}
+
 
 
 
@@ -92,9 +115,11 @@ fn test_all_providers_implement_trait() {
         Box::new(GeminiProvider::new("test".to_string(), "model".to_string())),
         Box::new(OllamaProvider::localhost("model".to_string())),
         Box::new(TogetherProvider::new("test".to_string(), "model".to_string())),
+        Box::new(ZhipuProvider::new("test".to_string(), Some("model".to_string()))),
+        Box::new(BaiduProvider::new("test".to_string(), "test-secret".to_string(), Some("model".to_string()))),
     ];
-    
-    let expected_names = ["cohere", "gemini", "ollama", "together"];
+
+    let expected_names = ["cohere", "gemini", "ollama", "together", "zhipu", "baidu"];
     
     for (i, provider) in providers.iter().enumerate() {
         assert_eq!(provider.name(), expected_names[i]);
@@ -158,4 +183,35 @@ async fn test_together_integration() {
     let response = provider.generate("Say hello", &options).await;
     assert!(response.is_ok());
     println!("Together response: {}", response.unwrap());
+}
+
+#[tokio::test]
+#[ignore] // 需要实际的API密钥才能运行
+async fn test_zhipu_integration() {
+    let api_key = std::env::var("ZHIPU_API_KEY").expect("需要设置ZHIPU_API_KEY环境变量");
+    let provider = ZhipuProvider::new(api_key, Some("glm-4".to_string()));
+
+    let options = LlmOptions::default()
+        .with_temperature(0.7)
+        .with_max_tokens(50);
+
+    let response = provider.generate("你好", &options).await;
+    assert!(response.is_ok());
+    println!("智谱AI response: {}", response.unwrap());
+}
+
+#[tokio::test]
+#[ignore] // 需要实际的API密钥才能运行
+async fn test_baidu_integration() {
+    let api_key = std::env::var("BAIDU_API_KEY").expect("需要设置BAIDU_API_KEY环境变量");
+    let secret_key = std::env::var("BAIDU_SECRET_KEY").expect("需要设置BAIDU_SECRET_KEY环境变量");
+    let provider = BaiduProvider::new(api_key, secret_key, Some("ernie-bot".to_string()));
+
+    let options = LlmOptions::default()
+        .with_temperature(0.7)
+        .with_max_tokens(50);
+
+    let response = provider.generate("你好", &options).await;
+    assert!(response.is_ok());
+    println!("百度ERNIE response: {}", response.unwrap());
 }

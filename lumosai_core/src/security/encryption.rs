@@ -112,7 +112,7 @@ impl EncryptionManager {
         };
         
         let current_key = aead::LessSafeKey::new(unbound_key);
-        let key_id = format!("key-{}", Utc::now().timestamp());
+        let key_id = format!("key-{}", uuid::Uuid::new_v4());
         
         let mut key_history = HashMap::new();
         key_history.insert(key_id.clone(), EncryptionKey {
@@ -210,7 +210,7 @@ impl EncryptionManager {
         };
         
         let new_key = aead::LessSafeKey::new(unbound_key);
-        let new_key_id = format!("key-{}", Utc::now().timestamp());
+        let new_key_id = format!("key-{}", uuid::Uuid::new_v4());
         
         // 保存旧密钥到历史记录
         self.key_history.insert(new_key_id.clone(), EncryptionKey {
@@ -307,9 +307,6 @@ mod tests {
         let mut manager = EncryptionManager::new(&config).await.unwrap();
 
         let old_key_id = manager.key_id.clone();
-
-        // 等待一小段时间确保时间戳不同
-        tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
 
         manager.rotate_key().await.unwrap();
 

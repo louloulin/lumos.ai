@@ -14,13 +14,18 @@ use crate::memory::Memory;
 use crate::memory::working::WorkingMemory;
 use crate::tool::Tool;
 use crate::agent::types::{
-    AgentGenerateResult, 
-    AgentGenerateOptions, 
+    AgentGenerateResult,
+    AgentGenerateOptions,
     AgentStreamOptions,
     AgentStep,
     ToolCall,
+    RuntimeContext,
+    DynamicArgument,
+    ToolsInput,
+    ToolsetsInput,
 };
 use crate::voice::{VoiceProvider, VoiceOptions, ListenOptions};
+use crate::workflow::Workflow;
 use tokio::io::AsyncRead;
 
 /// Trait for agents that support structured output generation
@@ -73,18 +78,40 @@ pub trait Agent: Base + Send + Sync {
     fn get_working_memory(&self) -> Option<Arc<dyn WorkingMemory>> {
         None
     }
-    
+
     /// Get all tools available to the agent
     fn get_tools(&self) -> HashMap<String, Box<dyn Tool>>;
-    
+
+    /// Get tools with runtime context for dynamic resolution
+    async fn get_tools_with_context(&self, context: &RuntimeContext) -> Result<HashMap<String, Box<dyn Tool>>> {
+        // Default implementation returns static tools
+        Ok(self.get_tools())
+    }
+
     /// Add a tool to the agent
     fn add_tool(&mut self, tool: Box<dyn Tool>) -> Result<()>;
-    
+
     /// Remove a tool from the agent
     fn remove_tool(&mut self, tool_name: &str) -> Result<()>;
-    
+
     /// Get a specific tool by name
     fn get_tool(&self, tool_name: &str) -> Option<Box<dyn Tool>>;
+
+    /// Get available workflows for the agent
+    async fn get_workflows(&self, context: &RuntimeContext) -> Result<HashMap<String, Arc<dyn Workflow>>> {
+        // Default implementation returns empty workflows
+        Ok(HashMap::new())
+    }
+
+    /// Execute a workflow by name
+    async fn execute_workflow(&self, workflow_name: &str, input: Value, context: &RuntimeContext) -> Result<Value> {
+        let workflows = self.get_workflows(context).await?;
+        if let Some(workflow) = workflows.get(workflow_name) {
+            workflow.execute(input, context).await
+        } else {
+            Err(Error::NotFound(format!("Workflow '{}' not found", workflow_name)))
+        }
+    }
     
     /// Parse the LLM response to extract tool calls
     fn parse_tool_calls(&self, response: &str) -> Result<Vec<ToolCall>>;
@@ -98,11 +125,27 @@ pub trait Agent: Base + Send + Sync {
     /// Generate a title for a conversation
     async fn generate_title(&self, user_message: &Message) -> Result<String>;
     
+    /// Get instructions with runtime context for dynamic resolution
+    async fn get_instructions_with_context(&self, context: &RuntimeContext) -> Result<String> {
+        // Default implementation returns static instructions
+        Ok(self.get_instructions().to_string())
+    }
+
     /// Generate a response given a set of messages
     async fn generate(&self,
         messages: &[Message],
         options: &AgentGenerateOptions
     ) -> Result<AgentGenerateResult>;
+
+    /// Generate with runtime context for dynamic resolution
+    async fn generate_with_context(&self,
+        messages: &[Message],
+        options: &AgentGenerateOptions,
+        context: &RuntimeContext
+    ) -> Result<AgentGenerateResult> {
+        // Default implementation ignores context
+        self.generate(messages, options).await
+    }
 
     /// Generate a simple response from a text input (convenience method for plan4.md API)
     async fn generate_simple(&self, input: &str) -> Result<String> {
@@ -119,6 +162,16 @@ pub trait Agent: Base + Send + Sync {
         let result = self.generate(&[message], &options).await?;
 
         Ok(result.response)
+    }
+
+    /// Generate with multi-step reasoning
+    async fn generate_with_steps(&self,
+        messages: &[Message],
+        options: &AgentGenerateOptions,
+        max_steps: Option<u32>
+    ) -> Result<AgentGenerateResult> {
+        // Default implementation uses single step
+        self.generate(messages, options).await
     }
     
     /// Generate a response with memory thread integration

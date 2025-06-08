@@ -7,6 +7,8 @@ mod context;
 pub mod registry;
 pub mod builtin;
 pub mod builder;
+pub mod enhanced;
+pub mod toolset;
 
 #[cfg(test)]
 mod tests;
@@ -22,3 +24,5 @@ pub use builtin::{
     get_tool_categories, get_tool_info, ToolInfo
 };
 pub use builder::{ToolBuilder, create_tool};
+pub use enhanced::{EnhancedTool, ToolCapability, ToolCategory as EnhancedToolCategory};
+pub use toolset::{ToolSet, ToolSetBuilder, ToolSetError};

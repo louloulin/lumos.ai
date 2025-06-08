@@ -10,6 +10,7 @@ pub mod streaming;
 pub mod websocket;
 pub mod runtime_context;
 pub mod builder;
+pub mod enhanced_integration_test;
 pub mod mastra_compat;
 pub mod convenience;
 pub mod simplified_api;

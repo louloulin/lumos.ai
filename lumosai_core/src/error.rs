@@ -179,6 +179,14 @@ pub enum Error {
         #[source]
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
+
+    /// Invalid state errors
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
+
+    /// Timeout errors
+    #[error("Timeout: {0}")]
+    Timeout(String),
 }
 
 impl From<&str> for Error {

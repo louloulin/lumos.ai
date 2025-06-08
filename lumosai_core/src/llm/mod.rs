@@ -12,11 +12,13 @@ pub mod cohere;
 pub mod gemini;
 pub mod ollama;
 pub mod together;
+pub mod claude;
 #[cfg(test)]
 mod tests;
 
 #[cfg(test)]
 mod new_providers_test;
+mod third_party_integration_test;
 
 
 pub use types::{Message, LlmOptions, Role};
@@ -30,6 +32,7 @@ pub use cohere::CohereProvider;
 pub use gemini::GeminiProvider;
 pub use ollama::OllamaProvider;
 pub use together::TogetherProvider;
+pub use claude::ClaudeProvider;
 pub use function_calling::{
     FunctionDefinition, 
     FunctionCall, 

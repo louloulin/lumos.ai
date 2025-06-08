@@ -69,6 +69,9 @@ urlencoding = "2.1"
 # Security dependencies
 ring = "0.17"
 
+# Additional dependencies for new features
+bytes = "1.5"
+
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.8"

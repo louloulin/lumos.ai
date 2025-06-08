@@ -26,6 +26,8 @@ pub mod bindings;
 pub mod cli;
 pub mod auth;
 pub mod billing;
+pub mod cloud;
+pub mod unified_api;
 pub mod prelude;
 
 /// Re-export common types and traits

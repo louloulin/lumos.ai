@@ -134,6 +134,9 @@ mod tests {
         // 创建事件总线
         let event_bus = Arc::new(EventBus::new(100));
 
+        // 创建一个订阅者以保持通道开放
+        let _receiver = event_bus.subscribe();
+
         // 注册日志处理器
         let log_handler = Arc::new(LogEventHandler::new());
         event_bus
@@ -150,19 +153,19 @@ mod tests {
 
         // 发布一些事件
         let events = vec![
-            AgentEvent::AgentStarted {
+            crate::agent::events::AgentEvent::AgentStarted {
                 agent_id: "agent_001".to_string(),
                 timestamp: Utc::now(),
                 metadata: std::collections::HashMap::new(),
             },
-            AgentEvent::MessageSent {
+            crate::agent::events::AgentEvent::MessageSent {
                 from_agent: "agent_001".to_string(),
                 to_agent: Some("agent_002".to_string()),
                 message_id: "msg_001".to_string(),
                 content: "Hello!".to_string(),
                 timestamp: Utc::now(),
             },
-            AgentEvent::ToolCalled {
+            crate::agent::events::AgentEvent::ToolCalled {
                 agent_id: "agent_001".to_string(),
                 tool_name: "calculator".to_string(),
                 parameters: json!({"operation": "add"}),
@@ -218,13 +221,13 @@ mod tests {
             "agent_001",
             "You are agent 1",
             mock_llm1,
-        )) as Arc<dyn Agent>;
+        )) as Arc<dyn AgentTrait>;
 
         let agent2 = Arc::new(create_basic_agent(
-            "agent_002", 
+            "agent_002",
             "You are agent 2",
             mock_llm2,
-        )) as Arc<dyn Agent>;
+        )) as Arc<dyn AgentTrait>;
 
         // 创建协作任务
         let task = CollaborationTask {
@@ -303,13 +306,13 @@ mod tests {
             "parallel_agent_001",
             "You are parallel agent 1",
             mock_llm1,
-        )) as Arc<dyn Agent>;
+        )) as Arc<dyn AgentTrait>;
 
         let agent2 = Arc::new(create_basic_agent(
-            "parallel_agent_002", 
+            "parallel_agent_002",
             "You are parallel agent 2",
             mock_llm2,
-        )) as Arc<dyn Agent>;
+        )) as Arc<dyn AgentTrait>;
 
         // 创建并行协作任务
         let task = CollaborationTask {

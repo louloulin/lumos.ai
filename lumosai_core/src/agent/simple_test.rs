@@ -33,8 +33,11 @@ mod tests {
         // 测试事件总线
         let event_bus = std::sync::Arc::new(EventBus::new(100));
 
+        // 创建一个订阅者以保持通道开放
+        let _receiver = event_bus.subscribe();
+
         // 创建一个简单事件
-        let event = AgentEvent::AgentStarted {
+        let event = crate::agent::events::AgentEvent::AgentStarted {
             agent_id: "test_agent".to_string(),
             timestamp: Utc::now(),
             metadata: HashMap::new(),
@@ -77,19 +80,19 @@ mod tests {
             .with_event_types(vec!["AgentStarted".to_string()])
             .with_agent_ids(vec!["agent1".to_string()]);
 
-        let event1 = AgentEvent::AgentStarted {
+        let event1 = crate::agent::events::AgentEvent::AgentStarted {
             agent_id: "agent1".to_string(),
             timestamp: Utc::now(),
             metadata: HashMap::new(),
         };
 
-        let event2 = AgentEvent::AgentStopped {
+        let event2 = crate::agent::events::AgentEvent::AgentStopped {
             agent_id: "agent1".to_string(),
             timestamp: Utc::now(),
             reason: "test".to_string(),
         };
 
-        let event3 = AgentEvent::AgentStarted {
+        let event3 = crate::agent::events::AgentEvent::AgentStarted {
             agent_id: "agent2".to_string(),
             timestamp: Utc::now(),
             metadata: HashMap::new(),
@@ -179,19 +182,19 @@ mod tests {
 
         // 创建一些事件
         let events = vec![
-            AgentEvent::AgentStarted {
+            crate::agent::events::AgentEvent::AgentStarted {
                 agent_id: "agent1".to_string(),
                 timestamp: Utc::now(),
                 metadata: HashMap::new(),
             },
-            AgentEvent::MessageSent {
+            crate::agent::events::AgentEvent::MessageSent {
                 from_agent: "agent1".to_string(),
                 to_agent: Some("agent2".to_string()),
                 message_id: "msg1".to_string(),
                 content: "Hello".to_string(),
                 timestamp: Utc::now(),
             },
-            AgentEvent::ToolCalled {
+            crate::agent::events::AgentEvent::ToolCalled {
                 agent_id: "agent1".to_string(),
                 tool_name: "calculator".to_string(),
                 parameters: json!({}),

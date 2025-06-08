@@ -359,12 +359,15 @@ mod tests {
     #[test]
     fn test_tool_categories() {
         let categories = get_tool_categories();
-        assert_eq!(categories.len(), 5);
+        assert_eq!(categories.len(), 8);
         assert_eq!(categories[0].0, "文件操作");
         assert_eq!(categories[1].0, "网络请求");
         assert_eq!(categories[2].0, "数据处理");
         assert_eq!(categories[3].0, "系统工具");
         assert_eq!(categories[4].0, "数学计算");
+        assert_eq!(categories[5].0, "AI工具");
+        assert_eq!(categories[6].0, "数据库工具");
+        assert_eq!(categories[7].0, "通信工具");
     }
 
     #[test]

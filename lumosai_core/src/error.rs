@@ -152,6 +152,33 @@ pub enum Error {
     /// Configuration errors (alias for Configuration)
     #[error("Config error: {0}")]
     Config(String),
+
+    /// Configuration errors (structured)
+    #[error("Configuration error: {message}")]
+    ConfigError { message: String },
+
+    /// Network errors (structured)
+    #[error("Network error: {message}")]
+    NetworkError {
+        message: String,
+        #[source]
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
+
+    /// API errors (structured)
+    #[error("API error: {message}")]
+    ApiError {
+        message: String,
+        status_code: Option<u16>,
+    },
+
+    /// Parse errors (structured)
+    #[error("Parse error: {message}")]
+    ParseError {
+        message: String,
+        #[source]
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 }
 
 impl From<&str> for Error {

@@ -305,10 +305,14 @@ mod tests {
     async fn test_key_rotation() {
         let config = EncryptionConfig::default();
         let mut manager = EncryptionManager::new(&config).await.unwrap();
-        
+
         let old_key_id = manager.key_id.clone();
+
+        // 等待一小段时间确保时间戳不同
+        tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
+
         manager.rotate_key().await.unwrap();
-        
+
         assert_ne!(old_key_id, manager.key_id);
     }
 }

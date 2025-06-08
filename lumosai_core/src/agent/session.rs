@@ -85,7 +85,7 @@ pub struct ToolCallHistory {
 }
 
 /// 工具调用状态
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ToolCallStatus {
     /// 执行中
     Pending,

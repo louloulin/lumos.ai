@@ -23,48 +23,73 @@ use crate::telemetry::TraceCollector;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum AgentEvent {
+    /// Agent has started execution
+    AgentStarted {
+        agent_id: String,
+        timestamp: String,
+    },
+
+    /// Agent has stopped execution
+    AgentStopped {
+        agent_id: String,
+        timestamp: String,
+    },
+
+    /// Message sent by agent
+    MessageSent {
+        message: String,
+        timestamp: String,
+    },
+
+    /// Tool called by agent
+    ToolCalled {
+        tool_name: String,
+        arguments: serde_json::Value,
+        timestamp: String,
+    },
+
     /// Text delta from LLM streaming
-    TextDelta { 
+    TextDelta {
         delta: String,
         step_id: Option<String>,
     },
-    
+
     /// Tool call is starting
-    ToolCallStart { 
+    ToolCallStart {
         tool_call: ToolCall,
         step_id: String,
     },
-    
+
     /// Tool call has completed
-    ToolCallComplete { 
+    ToolCallComplete {
         tool_result: ToolResult,
         step_id: String,
     },
-    
+
     /// Agent step has completed
-    StepComplete { 
+    StepComplete {
         step: AgentStep,
         step_id: String,
     },
-    
+
     /// Generation phase has completed
-    GenerationComplete { 
+    GenerationComplete {
         final_response: String,
         total_steps: usize,
     },
-    
+
     /// Memory update occurred
     MemoryUpdate {
         key: String,
         operation: MemoryOperation,
     },
-    
+
     /// Error occurred during processing
-    Error { 
+    Error {
         error: String,
         step_id: Option<String>,
     },
-    
+
     /// Metadata/debug information
     Metadata {
         key: String,

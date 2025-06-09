@@ -107,6 +107,9 @@ pub use lumosai_vector_postgres as postgres;
 #[cfg(feature = "fastembed")]
 pub use lumosai_vector_fastembed as fastembed;
 
+#[cfg(feature = "lancedb")]
+pub use lumosai_vector_lancedb as lancedb;
+
 /// Prelude module for convenient imports
 pub mod prelude {
     pub use lumosai_vector_core::prelude::*;

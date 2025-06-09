@@ -82,7 +82,7 @@ def validate_cargo_config() -> Dict[str, Any]:
     
     # 检查工作空间是否包含 milvus 特性
     try:
-        with open(workspace_cargo_path, 'r') as f:
+        with open(workspace_cargo_path, 'r', encoding='utf-8') as f:
             content = f.read()
             
         has_milvus_dep = 'lumosai-vector-milvus' in content
@@ -108,7 +108,7 @@ def validate_api_structure() -> Dict[str, Any]:
         return {"success": False, "error": "lib.rs not found"}
     
     try:
-        with open(lib_rs_path, 'r') as f:
+        with open(lib_rs_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         required_exports = [
@@ -152,7 +152,7 @@ def validate_examples() -> Dict[str, Any]:
     for example in examples:
         if check_file_exists(example):
             try:
-                with open(example, 'r') as f:
+                with open(example, 'r', encoding='utf-8') as f:
                     content = f.read()
                 
                 # 检查示例是否包含必要的导入和主函数
@@ -186,7 +186,7 @@ def validate_documentation() -> Dict[str, Any]:
         return {"success": False, "error": "README.md not found"}
     
     try:
-        with open(readme_path, 'r') as f:
+        with open(readme_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         required_sections = [

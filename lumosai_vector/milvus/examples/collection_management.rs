@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     
     println!("🚀 Milvus Collection Management Example");
-    println!("=" * 50);
+    println!("{}", "=".repeat(50));
     
     // 1. Create Milvus storage with advanced configuration
     println!("\n📦 Creating Milvus storage with advanced configuration...");
@@ -57,9 +57,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (name, dimension, metric, description) in &collections {
         println!("\n📋 Creating collection: {}", name);
         
-        let index_config = IndexConfig::new(name, *dimension)
+        let index_config = IndexConfig::new(*name, *dimension)
             .with_metric(metric.clone())
-            .with_description(description);
+            .with_option("description", *description);
         
         match storage.create_index(index_config).await {
             Ok(_) => println!("✅ Collection '{}' created ({}D, {:?})", name, dimension, metric),
@@ -95,10 +95,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("\n📄 Collection: {}", name);
                 println!("   - Dimension: {}", info.dimension);
                 println!("   - Metric: {:?}", info.metric);
-                println!("   - Document count: {}", info.document_count);
-                if let Some(size) = info.storage_size {
-                    println!("   - Storage size: {:.2} MB", size as f64 / (1024.0 * 1024.0));
-                }
+                println!("   - Vector count: {}", info.vector_count);
+                println!("   - Storage size: {:.2} MB", info.size_bytes as f64 / (1024.0 * 1024.0));
                 
                 // Verify configuration
                 if info.dimension != *expected_dim {
@@ -142,11 +140,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let query_vector = generate_sample_embedding(*dimension, 42);
         let search_request = lumosai_vector_core::types::SearchRequest {
             index_name: name.to_string(),
-            vector: query_vector,
+            query: lumosai_vector_core::types::SearchQuery::Vector(query_vector),
             top_k: 5,
-            similarity_metric: Some(metric.clone()),
             filter: None,
             include_metadata: true,
+            include_vectors: false,
+            options: std::collections::HashMap::new(),
         };
         
         let start_time = std::time::Instant::now();
@@ -174,27 +173,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match storage.describe_index(name).await {
             Ok(info) => {
                 println!("\n📈 Statistics for '{}':", name);
-                println!("   - Documents: {}", info.document_count);
-                
-                if let Some(size) = info.storage_size {
-                    let size_mb = size as f64 / (1024.0 * 1024.0);
-                    println!("   - Storage: {:.2} MB", size_mb);
-                    
-                    if info.document_count > 0 {
-                        let avg_size = size as f64 / info.document_count as f64;
-                        println!("   - Avg doc size: {:.0} bytes", avg_size);
-                    }
+                println!("   - Documents: {}", info.vector_count);
+
+                let size_mb = info.size_bytes as f64 / (1024.0 * 1024.0);
+                println!("   - Storage: {:.2} MB", size_mb);
+
+                if info.vector_count > 0 {
+                    let avg_size = info.size_bytes as f64 / info.vector_count as f64;
+                    println!("   - Avg doc size: {:.0} bytes", avg_size);
                 }
-                
+
                 // Calculate efficiency metrics
                 let expected_vector_size = info.dimension * 4; // 4 bytes per float32
-                let efficiency = if info.storage_size.is_some() && info.document_count > 0 {
-                    let actual_size = info.storage_size.unwrap() as f64 / info.document_count as f64;
+                let efficiency = if info.vector_count > 0 {
+                    let actual_size = info.size_bytes as f64 / info.vector_count as f64;
                     expected_vector_size as f64 / actual_size * 100.0
                 } else {
                     0.0
                 };
-                
+
                 if efficiency > 0.0 {
                     println!("   - Storage efficiency: {:.1}%", efficiency);
                 }
@@ -215,11 +212,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for collection_name in &collections_384d {
         let search_request = lumosai_vector_core::types::SearchRequest {
             index_name: collection_name.to_string(),
-            vector: query_384.clone(),
+            query: lumosai_vector_core::types::SearchQuery::Vector(query_384.clone()),
             top_k: 3,
-            similarity_metric: Some(SimilarityMetric::Cosine),
             filter: None,
             include_metadata: false,
+            include_vectors: false,
+            options: std::collections::HashMap::new(),
         };
         
         match storage.search(search_request).await {

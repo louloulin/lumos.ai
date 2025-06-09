@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use lumosai_vector_milvus::{MilvusStorage, MilvusConfig};
 use lumosai_vector_core::{
     traits::VectorStorage,
-    types::{Document, IndexConfig, SearchRequest, SimilarityMetric},
+    types::{Document, IndexConfig, SearchRequest, SearchQuery, SimilarityMetric},
 };
 
 #[tokio::main]
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     
     println!("🚀 Milvus Basic Usage Example");
-    println!("=" * 50);
+    println!("{}", "=".repeat(50));
     
     // 1. Create Milvus storage
     println!("\n📦 Creating Milvus storage...");
@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔧 Creating vector collection...");
     let index_config = IndexConfig::new("documents", 384)
         .with_metric(SimilarityMetric::Cosine)
-        .with_description("Example document collection");
+        .with_option("description", "Example document collection");
     
     match storage.create_index(index_config).await {
         Ok(_) => println!("✅ Collection 'documents' created successfully"),
@@ -113,11 +113,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let search_request = SearchRequest {
         index_name: "documents".to_string(),
-        vector: query_vector,
+        query: SearchQuery::Vector(query_vector.clone()),
         top_k: 3,
-        similarity_metric: Some(SimilarityMetric::Cosine),
         filter: None,
         include_metadata: true,
+        include_vectors: false,
+        options: HashMap::new(),
     };
     
     match storage.search(search_request).await {
@@ -146,11 +147,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let filtered_search_request = SearchRequest {
         index_name: "documents".to_string(),
-        vector: query_vector,
+        query: SearchQuery::Vector(query_vector),
         top_k: 5,
-        similarity_metric: Some(SimilarityMetric::Cosine),
         filter: Some(filter),
         include_metadata: true,
+        include_vectors: false,
+        options: HashMap::new(),
     };
     
     match storage.search(filtered_search_request).await {
@@ -176,7 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(retrieved_docs) => {
             println!("✅ Retrieved {} documents:", retrieved_docs.len());
             for doc in &retrieved_docs {
-                println!("  - {}: {}", doc.id, doc.content.as_deref().unwrap_or("No content"));
+                println!("  - {}: {}", doc.id, &doc.content);
             }
         }
         Err(e) => {
@@ -217,10 +219,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("   - Name: {}", index_info.name);
                         println!("   - Dimension: {}", index_info.dimension);
                         println!("   - Metric: {:?}", index_info.metric);
-                        println!("   - Document count: {}", index_info.document_count);
-                        if let Some(size) = index_info.storage_size {
-                            println!("   - Storage size: {} bytes", size);
-                        }
+                        println!("   - Vector count: {}", index_info.vector_count);
+                        println!("   - Storage size: {} bytes", index_info.size_bytes);
                     }
                     Err(e) => println!("❌ Failed to get collection info: {}", e),
                 }

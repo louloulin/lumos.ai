@@ -10,7 +10,7 @@ use std::time::Instant;
 use lumosai_vector_milvus::{MilvusStorage, MilvusConfigBuilder};
 use lumosai_vector_core::{
     traits::VectorStorage,
-    types::{Document, IndexConfig, SearchRequest, SimilarityMetric},
+    types::{Document, IndexConfig, SearchRequest, SearchQuery, SimilarityMetric},
 };
 
 #[tokio::main]
@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     
     println!("🚀 Milvus Batch Operations Example");
-    println!("=" * 50);
+    println!("{}", "=".repeat(50));
     
     // Configuration for batch operations
     let batch_size = 1000;
@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔧 Creating optimized collection...");
     let index_config = IndexConfig::new("batch_documents", vector_dimension)
         .with_metric(SimilarityMetric::Cosine)
-        .with_description("Batch operations collection");
+        .with_option("description", "Batch operations collection");
     
     match storage.create_index(index_config).await {
         Ok(_) => println!("✅ Collection created for {} dimensions", vector_dimension),
@@ -134,11 +134,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         let search_request = SearchRequest {
             index_name: "batch_documents".to_string(),
-            vector: query_vector,
+            query: SearchQuery::Vector(query_vector),
             top_k: 10,
-            similarity_metric: Some(SimilarityMetric::Cosine),
             filter: None,
             include_metadata: false, // Faster without metadata
+            include_vectors: false,
+            options: std::collections::HashMap::new(),
         };
         
         match storage.search(search_request).await {
@@ -174,13 +175,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get collection information
     match storage.describe_index("batch_documents").await {
         Ok(index_info) => {
-            println!("   Documents in collection: {}", index_info.document_count);
-            
-            if let Some(storage_size) = index_info.storage_size {
-                let size_mb = storage_size as f64 / (1024.0 * 1024.0);
-                println!("   Storage size: {:.2} MB", size_mb);
-                
-                let bytes_per_doc = storage_size as f64 / index_info.document_count as f64;
+            println!("   Documents in collection: {}", index_info.vector_count);
+
+            let size_mb = index_info.size_bytes as f64 / (1024.0 * 1024.0);
+            println!("   Storage size: {:.2} MB", size_mb);
+
+            if index_info.vector_count > 0 {
+                let bytes_per_doc = index_info.size_bytes as f64 / index_info.vector_count as f64;
                 println!("   Bytes per document: {:.0}", bytes_per_doc);
             }
         }
@@ -207,11 +208,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         let search_request = SearchRequest {
             index_name: "batch_documents".to_string(),
-            vector: query_vector,
+            query: SearchQuery::Vector(query_vector),
             top_k: 5,
-            similarity_metric: Some(SimilarityMetric::Cosine),
             filter: Some(filter.clone()),
             include_metadata: true,
+            include_vectors: false,
+            options: std::collections::HashMap::new(),
         };
         
         match storage.search(search_request).await {
@@ -263,7 +265,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n📈 Final Statistics:");
     match storage.describe_index("batch_documents").await {
         Ok(final_index_info) => {
-            println!("   Remaining documents: {}", final_index_info.document_count);
+            println!("   Remaining documents: {}", final_index_info.vector_count);
         }
         Err(e) => {
             println!("⚠️  Could not get final collection info: {}", e);

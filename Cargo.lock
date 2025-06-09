@@ -6768,6 +6768,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "lumosai-vector-milvus"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.21.7",
+ "chrono",
+ "env_logger",
+ "futures",
+ "lumosai-vector-core",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "uuid",
+ "wiremock",
+]
+
+[[package]]
 name = "lumosai-vector-postgres"
 version = "0.1.0"
 dependencies = [
@@ -7139,6 +7162,7 @@ dependencies = [
  "lumosai-vector-fastembed",
  "lumosai-vector-lancedb",
  "lumosai-vector-memory",
+ "lumosai-vector-milvus",
  "lumosai-vector-postgres",
  "lumosai-vector-qdrant",
  "lumosai-vector-weaviate",
@@ -9332,6 +9356,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-streams",
  "web-sys",
+ "webpki-roots 0.25.4",
  "winreg",
 ]
 
@@ -12166,6 +12191,12 @@ checksum = "b291546d5d9d1eab74f069c77749f2cb8504a12caa20f0f2de93ddbf6f411888"
 dependencies = [
  "rustls-webpki 0.101.7",
 ]
+
+[[package]]
+name = "webpki-roots"
+version = "0.25.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
 
 [[package]]
 name = "webpki-roots"

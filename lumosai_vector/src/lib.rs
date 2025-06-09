@@ -104,6 +104,9 @@ pub use lumosai_vector_weaviate as weaviate;
 #[cfg(feature = "postgres")]
 pub use lumosai_vector_postgres as postgres;
 
+#[cfg(feature = "fastembed")]
+pub use lumosai_vector_fastembed as fastembed;
+
 /// Prelude module for convenient imports
 pub mod prelude {
     pub use lumosai_vector_core::prelude::*;

@@ -6,12 +6,15 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, Semaphore};
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::{Result, VectorError};
 
 /// 连接池配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ConnectionPoolConfig {
     /// 最大连接数
     pub max_connections: usize,
@@ -38,7 +41,8 @@ impl Default for ConnectionPoolConfig {
 }
 
 /// 缓存配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CacheConfig {
     /// 最大缓存条目数
     pub max_entries: usize,

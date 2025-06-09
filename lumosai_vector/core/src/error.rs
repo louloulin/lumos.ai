@@ -27,6 +27,9 @@ pub enum VectorError {
     
     #[error("Invalid vector data: {0}")]
     InvalidVector(String),
+
+    #[error("Embedding generation failed: {0}")]
+    EmbeddingError(String),
     
     /// Query-related errors
     #[error("Invalid query: {0}")]
@@ -137,6 +140,11 @@ impl VectorError {
     /// Create an internal error
     pub fn internal(msg: impl Into<String>) -> Self {
         Self::Internal(msg.into())
+    }
+
+    /// Create an embedding error
+    pub fn embedding_error(msg: impl Into<String>) -> Self {
+        Self::EmbeddingError(msg.into())
     }
     
     /// Check if this error is retryable

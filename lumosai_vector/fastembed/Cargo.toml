@@ -1,0 +1,59 @@
+[package]
+name = "lumosai-vector-fastembed"
+version = "0.1.0"
+edition = "2021"
+authors = ["LumosAI Team <team@lumosai.dev>"]
+description = "FastEmbed integration for LumosAI vector storage - local embedding generation"
+license = "MIT"
+repository = "https://github.com/lumosai/lumosai"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai-vector-fastembed"
+readme = "README.md"
+keywords = ["ai", "embeddings", "fastembed", "vector", "local"]
+categories = ["science", "api-bindings"]
+
+[dependencies]
+# Core dependencies
+lumosai-vector-core = { path = "../core", version = "0.1.0", features = ["serde"] }
+async-trait = "0.1.77"
+tokio = { version = "1.35", features = ["full"] }
+
+# FastEmbed dependencies
+fastembed = "4.9.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling and logging
+thiserror = "1.0"
+tracing = "0.1"
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"
+env_logger = "0.10"
+
+[features]
+default = []
+# Enable all available models
+all-models = []
+# Enable specific model families
+bge-models = []
+minilm-models = []
+multilingual-models = []
+
+[[example]]
+name = "basic_embedding"
+required-features = []
+
+[[example]]
+name = "batch_embedding"
+required-features = []
+
+[[example]]
+name = "vector_search"
+required-features = []

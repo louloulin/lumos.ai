@@ -1,0 +1,260 @@
+# LumosAI 发布配置文件
+# 用于配置发布流程的各种参数
+
+[release]
+# 项目信息
+name = "LumosAI"
+description = "企业级 AI 代理框架"
+repository = "https://github.com/lumosai/lumosai"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai"
+
+# 版本管理
+version_file = "Cargo.toml"
+changelog_file = "CHANGELOG.md"
+readme_file = "README.md"
+
+# 发布分支
+release_branch = "main"
+develop_branch = "develop"
+
+# 标签格式
+tag_format = "v{version}"
+tag_message = "Release {version}"
+
+# 提交信息格式
+commit_message = "chore: bump version to {version}"
+
+[build]
+# 构建配置
+profile = "release"
+features = ["all"]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc", 
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin"
+]
+
+# 构建前检查
+pre_build_checks = [
+    "cargo fmt --check",
+    "cargo clippy -- -D warnings",
+    "cargo test --all-features",
+    "cargo audit"
+]
+
+# 构建后操作
+post_build_actions = [
+    "strip_binaries",
+    "create_archives",
+    "generate_checksums"
+]
+
+[publish]
+# 发布到 crates.io
+crates_io = true
+registry = "https://crates.io"
+
+# 发布顺序（按依赖关系）
+publish_order = [
+    "lumos_macro",
+    "lumosai_core", 
+    "lumosai_vector/core",
+    "lumosai_vector",
+    "lumosai_evals",
+    "lumosai_rag", 
+    "lumosai_network",
+    "lumosai_cli",
+    "lumosai"
+]
+
+# 发布间隔（秒）
+publish_interval = 30
+
+# 发布重试次数
+max_retries = 3
+
+[github]
+# GitHub Release 配置
+create_release = true
+draft = false
+prerelease = false
+
+# Release 资产
+include_assets = [
+    "target/release/lumosai*",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+]
+
+# Release 说明模板
+release_notes_template = """
+# LumosAI {version}
+
+## 🚀 新功能和改进
+
+{features}
+
+## 🐛 Bug 修复
+
+{fixes}
+
+## 📝 变更记录
+
+{changes}
+
+## 📦 安装方式
+
+### Cargo
+```bash
+cargo install lumosai
+```
+
+### 二进制下载
+从下方的 Assets 中下载适合您平台的二进制文件。
+
+## 🔗 相关链接
+
+- [文档](https://docs.rs/lumosai)
+- [示例](https://github.com/lumosai/lumosai/tree/main/examples)
+- [变更日志](https://github.com/lumosai/lumosai/blob/main/CHANGELOG.md)
+"""
+
+[documentation]
+# 文档配置
+build_docs = true
+deploy_docs = true
+docs_branch = "gh-pages"
+docs_dir = "docs"
+
+# API 文档
+api_docs = true
+api_docs_features = ["all"]
+
+# 示例文档
+examples_docs = true
+
+[notifications]
+# 通知配置
+slack_webhook = ""
+discord_webhook = ""
+email_recipients = []
+
+# 通知模板
+success_message = "🎉 LumosAI {version} 发布成功！"
+failure_message = "❌ LumosAI {version} 发布失败"
+
+[security]
+# 安全检查
+security_audit = true
+dependency_check = true
+vulnerability_scan = true
+
+# 签名配置
+sign_releases = false
+gpg_key_id = ""
+
+[quality]
+# 质量检查
+code_coverage_threshold = 80
+performance_regression_check = true
+memory_leak_check = true
+
+# 基准测试
+run_benchmarks = true
+benchmark_comparison = true
+
+[rollback]
+# 回滚配置
+enable_rollback = true
+rollback_timeout = 3600  # 1小时
+
+# 回滚条件
+rollback_conditions = [
+    "critical_bug",
+    "security_vulnerability", 
+    "performance_regression"
+]
+
+[environments]
+# 环境配置
+
+[environments.staging]
+name = "staging"
+url = "https://staging.lumosai.dev"
+auto_deploy = true
+smoke_tests = true
+
+[environments.production]
+name = "production" 
+url = "https://lumosai.dev"
+auto_deploy = false
+manual_approval = true
+smoke_tests = true
+canary_deployment = true
+
+[hooks]
+# 钩子脚本
+
+[hooks.pre_release]
+# 发布前钩子
+scripts = [
+    "scripts/pre-release-check.sh",
+    "scripts/update-dependencies.sh"
+]
+
+[hooks.post_release]
+# 发布后钩子
+scripts = [
+    "scripts/post-release-notify.sh",
+    "scripts/update-homebrew.sh"
+]
+
+[hooks.on_failure]
+# 失败时钩子
+scripts = [
+    "scripts/rollback.sh",
+    "scripts/notify-failure.sh"
+]
+
+[artifacts]
+# 构建产物配置
+
+[artifacts.binaries]
+# 二进制文件
+include = ["lumosai", "lumosai_cli"]
+strip = true
+compress = true
+
+[artifacts.libraries]
+# 库文件
+include_static = true
+include_dynamic = false
+
+[artifacts.documentation]
+# 文档文件
+include_api_docs = true
+include_examples = true
+include_guides = true
+
+[artifacts.packages]
+# 包文件
+formats = ["tar.gz", "zip"]
+include_checksums = true
+include_signatures = false
+
+[metadata]
+# 元数据
+build_date = true
+git_commit = true
+git_branch = true
+build_environment = true
+
+# 自定义元数据
+custom_fields = [
+    "rust_version",
+    "cargo_version",
+    "target_triple"
+]

@@ -24,10 +24,28 @@ resolver = "2"
 name = "lumosai"
 version = "0.1.0"
 edition = "2021"
-authors = ["Lumosai Team"]
-description = "Rust版本的Mastra AI应用框架"
+authors = ["Lumosai Team <team@lumosai.dev>"]
+description = "企业级 AI 代理框架 - 高性能、类型安全的 Rust AI 应用开发框架"
 license = "MIT"
 repository = "https://github.com/lumosai/lumosai"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai"
+readme = "README.md"
+keywords = ["ai", "agent", "rust", "framework", "enterprise", "llm"]
+categories = ["development-tools", "api-bindings", "science"]
+exclude = [
+    "/.github/",
+    "/scripts/",
+    "/docs/",
+    "/examples/",
+    "/tests/",
+    "/benches/",
+    "*.md",
+    "release.toml",
+    "deny.toml",
+    ".gitignore",
+    ".gitattributes",
+]
 
 [lib]
 name = "lumosai"
@@ -68,6 +86,13 @@ debug = true
 opt-level = 3
 lto = true
 codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false
 
 [features]
 default = ["integrations"]

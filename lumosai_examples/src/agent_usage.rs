@@ -144,9 +144,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 最终响应
         "根据我的计算，12 乘以 5 等于 60。另外，北京今天的天气是晴朗，温度为22°C，湿度为45%。".to_string(),
     ];
-    
+
     let llm = Arc::new(tests::MockLlmProvider::new(mock_responses));
-    
     // 创建智能体
     let mut agent = create_basic_agent(
         "助手".to_string(),
@@ -252,4 +251,4 @@ pub mod tests {
             unimplemented!("Embeddings not implemented for mock provider")
         }
     }
-} 
+}

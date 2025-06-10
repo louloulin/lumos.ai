@@ -83,9 +83,9 @@ def verify_cargo_config():
         checks = [
             ("包名", 'name = "lumosai-vector-lancedb"' in content),
             ("版本", 'version = "0.1.0"' in content),
-            ("LanceDB 依赖", 'lancedb = "0.8.0"' in content),
-            ("Lance 依赖", 'lance = "0.12.0"' in content),
-            ("Arrow 依赖", 'arrow = "52.0.0"' in content),
+            ("LanceDB 依赖", 'lancedb = "0.20.0"' in content),
+            ("Lance 依赖", 'lance = "0.29.0"' in content),
+            ("Arrow 依赖", 'arrow = "55.1.0"' in content),
             ("核心依赖", 'lumosai-vector-core' in content),
             ("异步支持", 'tokio' in content),
         ]

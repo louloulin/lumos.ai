@@ -11,7 +11,7 @@ use crate::{Result, Error};
 use crate::llm::LlmProvider;
 use crate::tool::Tool;
 use crate::memory::{MemoryConfig, WorkingMemoryConfig};
-use super::{AgentConfig, BasicAgent};
+use super::{AgentConfig, BasicAgent, ModelResolver};
 use super::trait_def::Agent;
 use super::types::{VoiceConfig, TelemetrySettings};
 
@@ -38,6 +38,7 @@ pub struct AgentBuilder {
     name: Option<String>,
     instructions: Option<String>,
     model: Option<Arc<dyn LlmProvider>>,
+    model_name: Option<String>, // New field for string model names
     memory_config: Option<MemoryConfig>,
     model_id: Option<String>,
     voice_config: Option<VoiceConfig>,
@@ -50,6 +51,7 @@ pub struct AgentBuilder {
     tool_timeout: Option<u64>,
     tools: Vec<Box<dyn Tool>>,
     smart_defaults: bool,
+    model_resolver: Option<ModelResolver>, // Model resolver for string names
 }
 
 impl Default for AgentBuilder {
@@ -65,6 +67,7 @@ impl AgentBuilder {
             name: None,
             instructions: None,
             model: None,
+            model_name: None,
             memory_config: None,
             model_id: None,
             voice_config: None,
@@ -77,6 +80,7 @@ impl AgentBuilder {
             tool_timeout: None,
             tools: Vec::new(),
             smart_defaults: false,
+            model_resolver: None,
         }
     }
 
@@ -101,6 +105,16 @@ impl AgentBuilder {
     /// Set the LLM model provider
     pub fn model(mut self, model: Arc<dyn LlmProvider>) -> Self {
         self.model = Some(model);
+        self
+    }
+
+    /// Set the model using a string name (e.g., "gpt-4", "claude-3-sonnet")
+    /// This will automatically resolve the model name to the appropriate provider
+    pub fn model_name<S: Into<String>>(mut self, model_name: S) -> Self {
+        self.model_name = Some(model_name.into());
+        if self.model_resolver.is_none() {
+            self.model_resolver = Some(ModelResolver::new());
+        }
         self
     }
 
@@ -261,7 +275,68 @@ impl AgentBuilder {
         // Validate required fields
         let name = self.name.ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
         let instructions = self.instructions.ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
+
+        // Check if we have either a model or model_name
+        if self.model.is_none() && self.model_name.is_none() {
+            return Err(Error::Configuration("Either model or model_name is required".to_string()));
+        }
+
+        // If we have a model_name but no model, we need to resolve it asynchronously
+        if self.model.is_none() && self.model_name.is_some() {
+            return Err(Error::Configuration(
+                "Model name resolution requires async build. Use build_async() instead".to_string()
+            ));
+        }
+
         let model = self.model.ok_or_else(|| Error::Configuration("Agent model is required".to_string()))?;
+
+        // Create config
+        let config = AgentConfig {
+            name,
+            instructions,
+            memory_config: self.memory_config,
+            model_id: self.model_id,
+            voice_config: self.voice_config,
+            telemetry: self.telemetry,
+            working_memory: self.working_memory,
+            enable_function_calling: self.enable_function_calling.or(Some(true)),
+            context: self.context,
+            metadata: self.metadata,
+            max_tool_calls: self.max_tool_calls.or(Some(10)),
+            tool_timeout: self.tool_timeout.or(Some(30)),
+        };
+
+        // Create agent
+        let mut agent = BasicAgent::new(config, model);
+
+        // Add tools
+        for tool in self.tools {
+            agent.add_tool(tool)?;
+        }
+
+        Ok(agent)
+    }
+
+    /// Build the agent asynchronously (supports model name resolution)
+    pub async fn build_async(mut self) -> Result<BasicAgent> {
+        // Apply smart defaults if enabled
+        if self.smart_defaults {
+            self = self.apply_smart_defaults()?;
+        }
+
+        // Validate required fields
+        let name = self.name.ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
+        let instructions = self.instructions.ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
+
+        // Resolve model if needed
+        let model = if let Some(model) = self.model {
+            model
+        } else if let Some(model_name) = self.model_name {
+            let resolver = self.model_resolver.unwrap_or_default();
+            resolver.resolve(&model_name).await?
+        } else {
+            return Err(Error::Configuration("Either model or model_name is required".to_string()));
+        };
 
         // Create config
         let config = AgentConfig {

@@ -1,0 +1,218 @@
+# LumosAI Configuration Example (YAML)
+# This file demonstrates the new DSL configuration support
+
+project:
+  name: my-ai-app
+  version: 0.1.0
+  description: Example AI application with multiple agents
+  author: LumosAI Team
+
+# Agent configurations
+agents:
+  # General purpose assistant
+  assistant:
+    model: gpt-4
+    instructions: |
+      You are a helpful AI assistant. You can help with general questions,
+      provide information, and assist with various tasks. Be friendly and helpful.
+    tools:
+      - web_search
+      - calculator
+      - weather
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 30
+    memory:
+      enabled: true
+      max_capacity: 100
+      persistence: memory
+
+  # Programming specialist
+  coder:
+    model: deepseek-coder
+    instructions: |
+      You are an expert programmer and software engineer. You can help with:
+      - Writing and reviewing code
+      - Debugging and troubleshooting
+      - Architecture and design decisions
+      - Best practices and optimization
+    tools:
+      - code_executor
+      - file_manager
+      - git_tools
+    temperature: 0.3
+    max_tokens: 4000
+    timeout: 60
+
+  # Research specialist
+  researcher:
+    model: claude-3-sonnet
+    instructions: |
+      You are a research specialist. You excel at:
+      - Finding and analyzing information
+      - Summarizing complex topics
+      - Fact-checking and verification
+      - Academic and technical research
+    tools:
+      - web_search
+      - document_reader
+      - citation_manager
+    temperature: 0.5
+    max_tokens: 3000
+
+  # Data analyst
+  analyst:
+    model: gpt-4
+    instructions: |
+      You are a data analyst and scientist. You specialize in:
+      - Data analysis and visualization
+      - Statistical analysis
+      - Machine learning insights
+      - Report generation
+    tools:
+      - data_processor
+      - chart_generator
+      - statistics_calculator
+    temperature: 0.4
+    max_tokens: 2500
+
+# Workflow configurations
+workflows:
+  # Customer support workflow
+  support:
+    trigger: user_message
+    timeout: 120
+    steps:
+      - agent: assistant
+        condition: general_query
+        timeout: 30
+      - agent: coder
+        condition: code_related
+        timeout: 60
+      - agent: researcher
+        condition: research_needed
+        timeout: 90
+
+  # Development workflow
+  development:
+    trigger: code_request
+    timeout: 300
+    steps:
+      - agent: coder
+        condition: implementation
+        input: "Implement the requested feature"
+        timeout: 180
+      - agent: analyst
+        condition: testing_needed
+        input: "Analyze and test the implementation"
+        timeout: 120
+
+  # Research workflow
+  research:
+    trigger: research_request
+    timeout: 600
+    steps:
+      - agent: researcher
+        condition: initial_research
+        timeout: 300
+      - agent: analyst
+        condition: data_analysis
+        timeout: 200
+      - agent: assistant
+        condition: summary_needed
+        timeout: 100
+
+# RAG (Retrieval-Augmented Generation) configuration
+rag:
+  vector_store: memory
+  embeddings: openai
+  chunk_size: 1000
+  chunk_overlap: 200
+  documents:
+    - docs/
+    - knowledge/
+    - manuals/
+  index_name: lumosai_knowledge
+
+# Tool configurations
+tools:
+  web_search:
+    enabled: true
+    config:
+      max_results: 10
+      timeout: 30
+
+  calculator:
+    enabled: true
+    config:
+      precision: 10
+
+  weather:
+    enabled: true
+    config:
+      api_key: ${WEATHER_API_KEY}
+      default_location: "San Francisco"
+
+  code_executor:
+    enabled: true
+    config:
+      languages:
+        - python
+        - javascript
+        - rust
+      timeout: 60
+      sandbox: true
+
+  file_manager:
+    enabled: true
+    config:
+      allowed_paths:
+        - ./workspace/
+        - ./projects/
+      max_file_size: 10MB
+
+# Deployment configuration
+deployment:
+  platform: auto  # auto-detect best platform
+  environment: development
+
+  # Vercel configuration
+  vercel:
+    functions:
+      - api/chat
+      - api/agents
+      - api/workflows
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+
+  # AWS configuration
+  aws:
+    runtime: lambda
+    memory: 1024
+    timeout: 300
+    region: us-east-1
+
+  # Docker configuration
+  docker:
+    base_image: alpine
+    port: 8080
+    optimize: true
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+
+# Development settings
+development:
+  hot_reload: true
+  debug_mode: true
+  log_level: debug
+  port: 3000
+
+# Production settings
+production:
+  log_level: info
+  monitoring: true
+  metrics: true
+  health_checks: true

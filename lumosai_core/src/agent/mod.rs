@@ -95,6 +95,9 @@ pub use convenience::{
     ModelBuilder, LlmProviderExt,
 };
 
+// Re-export model resolver
+pub use model_resolver::ModelResolver;
+
 // Re-export simplified API functions (plan4.md implementation)
 pub use simplified_api::{
     Agent, // New simplified Agent struct

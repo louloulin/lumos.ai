@@ -1,8 +1,10 @@
 use crate::Result;
-use crate::agent::trait_def::Agent;
+use crate::agent::{trait_def::Agent, AgentBuilder, ModelResolver};
 use crate::tool::Tool;
+use crate::config::{ConfigLoader, YamlConfig};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::path::Path;
 use crate::rag::RagPipeline;
 use crate::workflow::basic::Workflow;
 
@@ -26,6 +28,8 @@ pub struct LumosApp {
     rags: HashMap<String, Arc<dyn RagPipeline>>,
     workflows: HashMap<String, Arc<dyn Workflow>>,
     mcp_endpoints: Vec<String>,
+    config: Option<YamlConfig>,
+    model_resolver: ModelResolver,
 }
 
 impl LumosApp {
@@ -39,7 +43,87 @@ impl LumosApp {
             rags: HashMap::new(),
             workflows: HashMap::new(),
             mcp_endpoints: Vec::new(),
+            config: None,
+            model_resolver: ModelResolver::new(),
         }
+    }
+
+    /// 从配置文件创建应用实例
+    pub async fn from_config<P: AsRef<Path>>(config_path: P) -> Result<Self> {
+        let config = ConfigLoader::load(config_path)?;
+        Self::from_yaml_config(config).await
+    }
+
+    /// 从 YAML 配置创建应用实例
+    pub async fn from_yaml_config(config: YamlConfig) -> Result<Self> {
+        let mut app = Self {
+            name: config.project.as_ref()
+                .map(|p| p.name.clone())
+                .unwrap_or_else(|| "lumosai_app".to_string()),
+            description: config.project.as_ref()
+                .and_then(|p| p.description.clone()),
+            agents: HashMap::new(),
+            tools: HashMap::new(),
+            rags: HashMap::new(),
+            workflows: HashMap::new(),
+            mcp_endpoints: Vec::new(),
+            config: Some(config.clone()),
+            model_resolver: ModelResolver::new(),
+        };
+
+        // 创建配置中定义的 Agents
+        if let Some(agents_config) = &config.agents {
+            for (name, agent_config) in agents_config {
+                let agent = app.create_agent_from_config(name, agent_config).await?;
+                app.agents.insert(name.clone(), Arc::new(agent));
+            }
+        }
+
+        Ok(app)
+    }
+
+    /// 自动检测并加载配置文件
+    pub async fn auto_load() -> Result<Self> {
+        let config = ConfigLoader::auto_detect()?;
+        Self::from_yaml_config(config).await
+    }
+
+    /// 从配置创建 Agent
+    async fn create_agent_from_config(
+        &self,
+        name: &str,
+        config: &crate::config::AgentConfig,
+    ) -> Result<impl Agent> {
+        let mut builder = AgentBuilder::new()
+            .name(name)
+            .instructions(&config.instructions)
+            .model_name(&config.model);
+
+        // 设置可选参数
+        if let Some(temperature) = config.temperature {
+            // Note: 这里需要扩展 AgentBuilder 以支持 temperature
+            // builder = builder.temperature(temperature);
+        }
+
+        if let Some(max_tokens) = config.max_tokens {
+            // Note: 这里需要扩展 AgentBuilder 以支持 max_tokens
+            // builder = builder.max_tokens(max_tokens);
+        }
+
+        if let Some(timeout) = config.timeout {
+            builder = builder.tool_timeout(timeout);
+        }
+
+        // 添加工具
+        if let Some(tools) = &config.tools {
+            for tool_name in tools {
+                // Note: 这里需要实现工具名称到工具实例的映射
+                // let tool = self.create_tool_from_name(tool_name)?;
+                // builder = builder.tool(tool);
+            }
+        }
+
+        builder.build_async().await
     }
     
     /// 设置应用名称
@@ -140,6 +224,12 @@ impl LumosApp {
     /// 获取所有代理列表
     pub fn agents(&self) -> &HashMap<String, Arc<dyn Agent>> {
         &self.agents
+    }
+
+    /// 获取指定名称的代理（便捷方法）
+    pub fn agent(&self, name: &str) -> Result<&Arc<dyn Agent>> {
+        self.agents.get(name)
+            .ok_or_else(|| crate::Error::Configuration(format!("Agent '{}' not found", name)))
     }
     
     /// 获取所有工具列表

@@ -1,6 +1,6 @@
 [package]
 name = "lumosai_vector"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["Lumos.ai Team <team@lumos.ai>"]
 license = "MIT OR Apache-2.0"

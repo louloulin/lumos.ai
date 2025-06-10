@@ -50,130 +50,197 @@
 
 ---
 
-## 🎪 阶段 8.1: API 统一和体验优化 (1-2 月)
+## 🎪 阶段 8.1: 链式调用和 DSL 支持优先实现 (立即开始)
 
-### 🎯 目标：统一现有 API，提供一致的开发体验
+### 🎯 目标：基于现有实现，优先支持模型名称链式调用和 DSL 配置
 
-#### 1. **统一 Agent API 体验**
+#### 1. **链式调用支持模型名称方式**
 
 **当前状况分析**:
-LumosAI 已有多种 API 模式：
+LumosAI 已有的 API：
 ```rust
-// 1. Quick API (已实现)
-let agent = Agent::quick("assistant", "You are helpful")
-    .model(llm)
-    .build()?;
-
-// 2. Builder API (已实现)
-let agent = AgentBuilder::new()
-    .name("assistant")
-    .instructions("You are helpful")
-    .model(llm)
-    .build()?;
-
-// 3. 便利函数 (已实现)
+// 当前需要手动创建 LLM 提供商
 let llm = openai("gpt-4")?;
-let llm = deepseek("deepseek-chat")?;
+let agent = Agent::quick("assistant", "You are helpful")
+    .model(llm)  // 需要传入 Arc<dyn LlmProvider>
+    .build()?;
 ```
 
-**优化目标**:
+**优化目标 - 支持模型名称字符串**:
 ```rust
-// 统一的链式 API
-let agent = Agent::new("assistant")
-    .instructions("You are helpful")
-    .model("gpt-4")  // 自动解析模型
+// 直接使用模型名称字符串
+let agent = Agent::quick("assistant", "You are helpful")
+    .model("gpt-4")           // 自动解析为 OpenAI
     .build().await?;
 
-// 或者更简单的宏
-let agent = agent!("assistant", "gpt-4", "You are helpful");
+let agent = Agent::quick("assistant", "You are helpful")
+    .model("deepseek-chat")   // 自动解析为 DeepSeek
+    .build().await?;
 
-// 配置驱动 (基于现有 LumosApp)
-let app = LumosApp::from_config("lumosai.toml").await?;
-let agent = app.agent("assistant");
+let agent = Agent::quick("assistant", "You are helpful")
+    .model("claude-3-sonnet") // 自动解析为 Claude
+    .build().await?;
+
+// 支持完整模型规范
+let agent = Agent::quick("assistant", "You are helpful")
+    .model("openai/gpt-4")    // 明确指定提供商
+    .model("anthropic/claude-3-sonnet")
+    .model("deepseek/deepseek-chat")
+    .build().await?;
 ```
 
 **实现计划**:
-- [ ] 扩展现有的 `Agent::quick()` API
-- [ ] 改进 `AgentBuilder` 的链式调用
-- [ ] 增强 `LumosApp` 的配置加载
-- [ ] 统一错误处理和文档
+- [ ] 扩展 `AgentBuilder::model()` 方法支持字符串参数
+- [ ] 实现模型名称自动解析器 `ModelResolver`
+- [ ] 添加模型提供商自动检测逻辑
+- [ ] 支持环境变量自动配置 API 密钥
 
-#### 2. **增强现有 CLI 工具**
+#### 2. **DSL 配置支持 (YAML + TOML)**
 
-**当前 CLI 功能**:
-LumosAI 已有完整的 CLI 工具：
-```bash
-lumos init --name my_project --template agent
-lumos dev --port 8080 -r
-lumos build --output /path/to/output
-lumos deploy --target docker
+**当前状况分析**:
+LumosAI 已有 TOML 配置支持：
+```rust
+// 现有的配置加载
+let config = CliUtils::load_config("lumosai.toml")?;
 ```
 
-**优化目标**:
-```bash
-# 更简单的项目创建
-lumosai new my-ai-app
-cd my-ai-app
+**优化目标 - 统一 DSL 支持**:
 
-# 智能开发模式
-lumosai dev  # 自动检测端口，启用热重载
-
-# 一键运行
-lumosai run  # 自动构建和运行
-
-# 简化部署
-lumosai deploy  # 自动检测最佳部署方式
-```
-
-**实现计划**:
-- [ ] 简化现有 CLI 命令参数
-- [ ] 添加智能默认值检测
-- [ ] 改进项目模板系统
-- [ ] 增强错误提示和帮助信息
-
-#### 3. **优化配置系统**
-
-**当前配置能力**:
-LumosAI 已支持 `lumosai.toml` 配置：
+**TOML 配置增强**:
 ```toml
-[project]
-name = "my-project"
-version = "0.1.0"
-
-[models]
-default = "deepseek-chat"
-
-[tools]
-web_search = { enabled = true }
-calculator = { enabled = true }
-```
-
-**优化目标**:
-```toml
-# 更简洁的配置
+# lumosai.toml
 [project]
 name = "my-ai-app"
+version = "0.1.0"
 
 [agents.assistant]
 model = "gpt-4"
-instructions = "You are helpful"
-tools = ["web", "calc"]  # 简化工具名
+instructions = "You are a helpful assistant"
+tools = ["web_search", "calculator"]
+temperature = 0.7
 
 [agents.coder]
 model = "deepseek-coder"
-instructions = "You are a programmer"
-tools = ["code", "file"]
+instructions = "You are an expert programmer"
+tools = ["code_executor", "file_manager"]
 
-# 自动推断的配置
-[rag]
-documents = "docs/"  # 自动配置向量存储
+[workflows.support]
+trigger = "user_message"
+steps = [
+  { agent = "assistant", condition = "general_query" },
+  { agent = "coder", condition = "code_related" }
+]
+```
+
+**YAML 配置支持**:
+```yaml
+# lumosai.yaml
+project:
+  name: my-ai-app
+  version: 0.1.0
+
+agents:
+  assistant:
+    model: gpt-4
+    instructions: You are a helpful assistant
+    tools:
+      - web_search
+      - calculator
+    temperature: 0.7
+
+  coder:
+    model: deepseek-coder
+    instructions: You are an expert programmer
+    tools:
+      - code_executor
+      - file_manager
+
+workflows:
+  support:
+    trigger: user_message
+    steps:
+      - agent: assistant
+        condition: general_query
+      - agent: coder
+        condition: code_related
 ```
 
 **实现计划**:
-- [ ] 扩展现有配置解析器
-- [ ] 添加配置验证和智能提示
-- [ ] 实现配置模板生成
-- [ ] 支持环境变量覆盖
+- [ ] 扩展现有配置解析器支持 YAML
+- [ ] 统一 TOML/YAML 配置结构
+- [ ] 实现 `LumosApp::from_config()` 方法
+- [ ] 添加配置验证和错误提示
+
+#### 3. **配置驱动的 Agent 创建**
+
+**基于现有 LumosApp 扩展**:
+```rust
+// 当前的 LumosApp 使用方式
+let mut app = LumosApp::new("my-app");
+app.add_agent("assistant".to_string(), agent);
+```
+
+**优化目标 - 配置驱动**:
+```rust
+// 从配置文件加载
+let app = LumosApp::from_config("lumosai.toml").await?;
+let agent = app.agent("assistant")?;
+
+// 或者从 YAML 加载
+let app = LumosApp::from_config("lumosai.yaml").await?;
+let agent = app.agent("assistant")?;
+
+// 直接使用配置的 Agent
+let response = app.agent("assistant")?.chat("Hello").await?;
+let result = app.workflow("support")?.run(input).await?;
+```
+
+**实现计划**:
+- [ ] 扩展 `LumosApp` 添加 `from_config()` 方法
+- [ ] 实现配置文件自动检测 (.toml/.yaml)
+- [ ] 添加 Agent 懒加载机制
+- [ ] 支持配置热重载
+
+#### 4. **模型名称解析器实现**
+
+**核心功能设计**:
+```rust
+// 模型解析器
+pub struct ModelResolver {
+    api_keys: HashMap<String, String>,
+    default_providers: HashMap<String, String>,
+}
+
+impl ModelResolver {
+    // 解析模型名称到提供商
+    pub async fn resolve(&self, model_name: &str) -> Result<Arc<dyn LlmProvider>> {
+        match model_name {
+            // 自动检测提供商
+            "gpt-4" | "gpt-3.5-turbo" => self.create_openai(model_name).await,
+            "claude-3-sonnet" | "claude-3-opus" => self.create_anthropic(model_name).await,
+            "deepseek-chat" | "deepseek-coder" => self.create_deepseek(model_name).await,
+
+            // 明确指定提供商
+            name if name.starts_with("openai/") => {
+                let model = name.strip_prefix("openai/").unwrap();
+                self.create_openai(model).await
+            },
+            name if name.starts_with("anthropic/") => {
+                let model = name.strip_prefix("anthropic/").unwrap();
+                self.create_anthropic(model).await
+            },
+
+            _ => Err(Error::UnsupportedModel(model_name.to_string()))
+        }
+    }
+}
+```
+
+**实现计划**:
+- [ ] 创建 `ModelResolver` 结构体
+- [ ] 实现模型名称到提供商的映射
+- [ ] 添加环境变量自动检测
+- [ ] 支持自定义模型配置
 
 ---
 
@@ -512,22 +579,25 @@ lumosai deploy --platform vercel-edge
 
 ## 🎯 具体行动项
 
-### 🔥 第一优先级 (立即开始)
+### 🔥 第一优先级 (立即开始 - 1 周内完成)
 
-1. **统一 API 体验** - 2 周
-   - [ ] 扩展现有 `Agent::quick()` API
-   - [ ] 改进 `AgentBuilder` 链式调用
-   - [ ] 统一错误处理
+1. **链式调用模型名称支持** - 3 天
+   - [ ] 扩展 `AgentBuilder::model()` 支持字符串参数
+   - [ ] 实现 `ModelResolver` 核心逻辑
+   - [ ] 添加常用模型名称映射
+   - [ ] 测试自动模型解析功能
 
-2. **简化配置系统** - 2 周
-   - [ ] 扩展现有 TOML 配置
-   - [ ] 添加智能默认值
-   - [ ] 实现配置验证
+2. **YAML 配置支持** - 2 天
+   - [ ] 添加 `serde_yaml` 依赖
+   - [ ] 扩展配置解析器支持 YAML
+   - [ ] 统一 TOML/YAML 配置结构
+   - [ ] 实现配置文件自动检测
 
-3. **优化 CLI 体验** - 1 周
-   - [ ] 简化现有命令参数
-   - [ ] 添加智能检测
-   - [ ] 改进错误提示
+3. **配置驱动 Agent 创建** - 2 天
+   - [ ] 实现 `LumosApp::from_config()` 方法
+   - [ ] 添加 Agent 懒加载机制
+   - [ ] 支持配置验证和错误提示
+   - [ ] 创建示例配置文件
 
 ### 🚀 第二优先级 (1-2 月内)
 

@@ -17,6 +17,7 @@ pub mod simplified_api;
 pub mod session;
 pub mod orchestration;
 pub mod events;
+pub mod model_resolver;
 
 #[cfg(feature = "demos")]
 pub mod websocket_demo;

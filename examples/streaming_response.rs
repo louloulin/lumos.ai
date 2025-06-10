@@ -6,17 +6,17 @@
 //! - 事件驱动流处理
 //! - WebSocket 流式连接
 
-use lumosai_core::prelude::*;
-use lumosai_core::agent::{AgentBuilder, BasicAgent};
+use lumosai_core::agent::{AgentBuilder, AgentTrait};
 use lumosai_core::agent::streaming::{StreamingAgent, AgentEvent, StreamingConfig, IntoStreaming};
 use lumosai_core::llm::{MockLlmProvider, Message, Role};
+use lumosai_core::agent::types::AgentGenerateOptions;
 use futures::StreamExt;
 use std::sync::Arc;
 use std::io::{self, Write};
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🌊 流式响应演示");
     println!("================");
     
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示基础流式响应
-async fn demo_basic_streaming() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_basic_streaming() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 基础流式响应 ===");
     
     // 创建模拟流式响应
@@ -53,31 +53,39 @@ async fn demo_basic_streaming() -> Result<(), Box<dyn std::error::Error>> {
     
     // 转换为流式 Agent
     let streaming_agent = agent.into_streaming();
-    
+
     println!("\n问题: 请详细介绍一下人工智能的发展历史");
     print!("AI回复: ");
     io::stdout().flush().unwrap();
-    
+
+    // 创建消息和选项
+    let messages = vec![Message::new(
+        Role::User,
+        "请详细介绍一下人工智能的发展历史，包括重要的里程碑事件".to_string(),
+        None,
+        None
+    )];
+    let options = AgentGenerateOptions::default();
+
     // 发起流式请求
-    let mut stream = streaming_agent.generate_stream(
-        "请详细介绍一下人工智能的发展历史，包括重要的里程碑事件"
-    ).await?;
-    
+    let mut stream = streaming_agent.execute_streaming(&messages, &options);
+
     // 处理流式响应
     let mut full_content = String::new();
     while let Some(event) = stream.next().await {
-        match event? {
-            AgentEvent::ContentDelta { delta } => {
+        let event = event.map_err(|e| format!("Stream error: {}", e))?;
+        match event {
+            AgentEvent::TextDelta { delta, .. } => {
                 print!("{}", delta);
                 io::stdout().flush().unwrap();
                 full_content.push_str(&delta);
-                
+
                 // 模拟流式延迟
                 tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
             }
-            AgentEvent::Completed { final_content } => {
+            AgentEvent::GenerationComplete { final_response, .. } => {
                 println!("\n\n=== 流式响应完成 ===");
-                println!("完整内容长度: {} 字符", final_content.len());
+                println!("完整内容长度: {} 字符", final_response.len());
                 break;
             }
             _ => {}
@@ -88,24 +96,22 @@ async fn demo_basic_streaming() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示高级流式配置
-async fn demo_advanced_streaming() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_advanced_streaming() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: 高级流式配置 ===");
     
     // 创建流式配置
     let streaming_config = StreamingConfig {
-        buffer_size: 1024,
-        flush_interval_ms: 100,
-        enable_partial_json: true,
-        enable_tool_streaming: true,
-        max_concurrent_streams: 5,
+        text_buffer_size: 10,
+        emit_metadata: true,
+        emit_memory_updates: true,
+        text_delta_delay_ms: Some(100),
     };
-    
+
     println!("流式配置:");
-    println!("  缓冲区大小: {} 字节", streaming_config.buffer_size);
-    println!("  刷新间隔: {} 毫秒", streaming_config.flush_interval_ms);
-    println!("  启用部分JSON: {}", streaming_config.enable_partial_json);
-    println!("  启用工具流式: {}", streaming_config.enable_tool_streaming);
-    println!("  最大并发流: {}", streaming_config.max_concurrent_streams);
+    println!("  文本缓冲区大小: {} 字符", streaming_config.text_buffer_size);
+    println!("  发送元数据: {}", streaming_config.emit_metadata);
+    println!("  发送内存更新: {}", streaming_config.emit_memory_updates);
+    println!("  文本延迟: {:?} 毫秒", streaming_config.text_delta_delay_ms);
     
     // 创建长文本响应
     let long_response = "Rust编程语言是一门系统编程语言，由Mozilla开发。它的设计目标是提供内存安全、并发安全和高性能。Rust的核心特性包括所有权系统、借用检查器、零成本抽象等。所有权系统通过编译时检查来防止内存泄漏和数据竞争。借用检查器确保引用的有效性。零成本抽象意味着高级特性不会带来运行时开销。Rust还提供了强大的类型系统、模式匹配、trait系统等现代编程语言特性。";
@@ -116,40 +122,46 @@ async fn demo_advanced_streaming() -> Result<(), Box<dyn std::error::Error>> {
         .name("advanced_streaming_agent")
         .instructions("你是一个技术专家，请提供详细的技术解释")
         .model(mock_provider)
-        .streaming_config(streaming_config)
         .build()?;
-    
-    let streaming_agent = agent.into_streaming();
-    
+
+    let streaming_agent = StreamingAgent::with_config(agent, streaming_config);
+
     println!("\n问题: 请详细解释Rust编程语言的特性");
     print!("AI回复: ");
     io::stdout().flush().unwrap();
-    
-    let mut stream = streaming_agent.generate_stream(
-        "请详细解释Rust编程语言的核心特性和设计理念"
-    ).await?;
+
+    let messages = vec![Message::new(
+        Role::User,
+        "请详细解释Rust编程语言的核心特性和设计理念".to_string(),
+        None,
+        None
+    )];
+    let options = AgentGenerateOptions::default();
+
+    let mut stream = streaming_agent.execute_streaming(&messages, &options);
     
     let mut word_count = 0;
     let mut char_count = 0;
     
     while let Some(event) = stream.next().await {
-        match event? {
-            AgentEvent::ContentDelta { delta } => {
+        let event = event.map_err(|e| format!("Stream error: {}", e))?;
+        match event {
+            AgentEvent::TextDelta { delta, .. } => {
                 print!("{}", delta);
                 io::stdout().flush().unwrap();
-                
+
                 char_count += delta.len();
                 word_count += delta.split_whitespace().count();
-                
+
                 // 每50个字符显示一次统计
                 if char_count % 50 == 0 {
                     print!(" [{}字符]", char_count);
                     io::stdout().flush().unwrap();
                 }
-                
+
                 tokio::time::sleep(tokio::time::Duration::from_millis(30)).await;
             }
-            AgentEvent::Completed { final_content: _ } => {
+            AgentEvent::GenerationComplete { .. } => {
                 println!("\n\n=== 高级流式响应完成 ===");
                 println!("总字符数: {}", char_count);
                 println!("总词数: {}", word_count);
@@ -163,7 +175,7 @@ async fn demo_advanced_streaming() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示事件驱动流处理
-async fn demo_event_driven_streaming() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_event_driven_streaming() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 事件驱动流处理 ===");
     
     let mock_provider = Arc::new(MockLlmProvider::new(vec![
@@ -179,13 +191,19 @@ async fn demo_event_driven_streaming() -> Result<(), Box<dyn std::error::Error>>
         .build()?;
     
     let streaming_agent = agent.into_streaming();
-    
+
     println!("\n问题: 请分析当前市场趋势");
     println!("事件流处理:");
-    
-    let mut stream = streaming_agent.generate_stream(
-        "请分析当前技术市场的发展趋势"
-    ).await?;
+
+    let messages = vec![Message::new(
+        Role::User,
+        "请分析当前技术市场的发展趋势".to_string(),
+        None,
+        None
+    )];
+    let options = AgentGenerateOptions::default();
+
+    let mut stream = streaming_agent.execute_streaming(&messages, &options);
     
     let mut event_count = 0;
     let mut content_chunks = Vec::new();
@@ -193,27 +211,28 @@ async fn demo_event_driven_streaming() -> Result<(), Box<dyn std::error::Error>>
     while let Some(event) = stream.next().await {
         event_count += 1;
         
-        match event? {
-            AgentEvent::StreamStarted => {
-                println!("  🚀 事件 {}: 流开始", event_count);
+        let event = event.map_err(|e| format!("Stream error: {}", e))?;
+        match event {
+            AgentEvent::AgentStarted { .. } => {
+                println!("  🚀 事件 {}: Agent 开始", event_count);
             }
-            AgentEvent::ContentDelta { delta } => {
+            AgentEvent::TextDelta { delta, .. } => {
                 println!("  📝 事件 {}: 内容片段 - '{}'", event_count, delta.trim());
                 content_chunks.push(delta);
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
             }
-            AgentEvent::ThinkingStarted => {
-                println!("  🤔 事件 {}: 开始思考", event_count);
+            AgentEvent::ToolCallStart { tool_call, .. } => {
+                println!("  🤔 事件 {}: 工具调用开始 - {}", event_count, tool_call.name);
             }
-            AgentEvent::ThinkingCompleted => {
-                println!("  💡 事件 {}: 思考完成", event_count);
+            AgentEvent::ToolCallComplete { tool_result, .. } => {
+                println!("  💡 事件 {}: 工具调用完成 - {}", event_count, tool_result.name);
             }
-            AgentEvent::Completed { final_content } => {
+            AgentEvent::GenerationComplete { final_response, .. } => {
                 println!("  ✅ 事件 {}: 流完成", event_count);
-                println!("     完整内容: {}", final_content);
+                println!("     完整内容: {}", final_response);
                 break;
             }
-            AgentEvent::Error { error } => {
+            AgentEvent::Error { error, .. } => {
                 println!("  ❌ 事件 {}: 错误 - {}", event_count, error);
             }
             _ => {
@@ -230,7 +249,7 @@ async fn demo_event_driven_streaming() -> Result<(), Box<dyn std::error::Error>>
 }
 
 /// 演示流式工具调用
-async fn demo_streaming_with_tools() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_streaming_with_tools() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 流式工具调用 ===");
     
     // 创建模拟工具调用响应
@@ -253,29 +272,36 @@ async fn demo_streaming_with_tools() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n问题: 请计算 (15 + 27) * 3");
     println!("流式工具调用:");
     
-    let mut stream = streaming_agent.generate_stream(
-        "请使用计算器工具计算 (15 + 27) * 3 的结果"
-    ).await?;
+    let messages = vec![Message::new(
+        Role::User,
+        "请使用计算器工具计算 (15 + 27) * 3 的结果".to_string(),
+        None,
+        None
+    )];
+    let options = AgentGenerateOptions::default();
+
+    let mut stream = streaming_agent.execute_streaming(&messages, &options);
     
     while let Some(event) = stream.next().await {
-        match event? {
-            AgentEvent::ContentDelta { delta } => {
+        let event = event.map_err(|e| format!("Stream error: {}", e))?;
+        match event {
+            AgentEvent::TextDelta { delta, .. } => {
                 print!("💬 内容: {}", delta);
                 io::stdout().flush().unwrap();
                 tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             }
-            AgentEvent::ToolCall { tool_name, arguments } => {
-                println!("\n🔧 工具调用: {} - 参数: {}", tool_name, arguments);
+            AgentEvent::ToolCallStart { tool_call, .. } => {
+                println!("\n🔧 工具调用开始: {}", tool_call.name);
             }
-            AgentEvent::ToolResult { tool_name, result } => {
-                println!("📊 工具结果: {} - 结果: {}", tool_name, result);
+            AgentEvent::ToolCallComplete { tool_result, .. } => {
+                println!("📊 工具调用完成: {} - 结果: {:?}", tool_result.name, tool_result.result);
             }
-            AgentEvent::Completed { final_content } => {
+            AgentEvent::GenerationComplete { final_response, .. } => {
                 println!("\n\n✅ 流式工具调用完成");
-                println!("最终结果: {}", final_content);
+                println!("最终结果: {}", final_response);
                 break;
             }
-            AgentEvent::Error { error } => {
+            AgentEvent::Error { error, .. } => {
                 println!("\n❌ 错误: {}", error);
                 break;
             }
@@ -309,11 +335,11 @@ fn calculate_streaming_stats(content: &str) -> (usize, usize, usize) {
 #[allow(dead_code)]
 fn format_stream_event(event: &AgentEvent, index: usize) -> String {
     match event {
-        AgentEvent::StreamStarted => format!("事件 {}: 流开始", index),
-        AgentEvent::ContentDelta { delta } => format!("事件 {}: 内容 '{}'", index, delta.trim()),
-        AgentEvent::ToolCall { tool_name, arguments } => format!("事件 {}: 工具调用 {} ({})", index, tool_name, arguments),
-        AgentEvent::Completed { .. } => format!("事件 {}: 完成", index),
-        AgentEvent::Error { error } => format!("事件 {}: 错误 {}", index, error),
+        AgentEvent::AgentStarted { .. } => format!("事件 {}: Agent 开始", index),
+        AgentEvent::TextDelta { delta, .. } => format!("事件 {}: 内容 '{}'", index, delta.trim()),
+        AgentEvent::ToolCallStart { tool_call, .. } => format!("事件 {}: 工具调用开始 {}", index, tool_call.name),
+        AgentEvent::GenerationComplete { .. } => format!("事件 {}: 完成", index),
+        AgentEvent::Error { error, .. } => format!("事件 {}: 错误 {}", index, error),
         _ => format!("事件 {}: 其他", index),
     }
 }

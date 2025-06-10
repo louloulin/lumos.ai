@@ -33,6 +33,9 @@
 //! let config = IndexConfig::new("test_index", 384)
 //!     .with_metric(SimilarityMetric::Cosine);
 //! ```
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
+#![allow(unexpected_cfgs, unused_assignments)]
 
 pub mod error;
 pub mod types;

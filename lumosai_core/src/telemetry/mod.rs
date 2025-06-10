@@ -5,6 +5,9 @@
 //! - Execution tracing with detailed step tracking
 //! - OpenTelemetry integration for distributed tracing
 //! - Multiple storage backends (in-memory, filesystem, OTLP)
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
+#![allow(unexpected_cfgs, unused_assignments)]
 
 pub mod metrics;
 pub mod trace;

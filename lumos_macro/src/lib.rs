@@ -1,3 +1,6 @@
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
+#![allow(unexpected_cfgs, unused_assignments)]
 extern crate proc_macro;
 use proc_macro::TokenStream;
 use syn::{Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};

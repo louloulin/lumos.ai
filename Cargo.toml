@@ -68,29 +68,33 @@ sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "sqlite", "js
 
 # 工具库
 uuid = { version = "1.6", features = ["v4", "serde"] }
-chrono = { version = "0.4.41", features = ["serde"] }
+chrono = { version = "0.4.39", features = ["serde"] }
 regex = "1.10"
 url = "2.5"
 
-# Arrow ecosystem - use latest versions with chrono quarter() fix
-arrow = "55.1.0"
-arrow-array = "55.1.0"
-arrow-schema = "55.1.0"
-arrow-buffer = "55.1.0"
-arrow-data = "55.1.0"
-arrow-arith = "55.1.0"
-arrow-cast = "55.1.0"
-arrow-csv = "55.1.0"
-arrow-ipc = "55.1.0"
-arrow-json = "55.1.0"
-arrow-ord = "55.1.0"
-arrow-row = "55.1.0"
-arrow-select = "55.1.0"
-arrow-string = "55.1.0"
+# Arrow ecosystem - use stable versions
+arrow = "54.0.0"
+arrow-array = "54.0.0"
+arrow-schema = "54.0.0"
+arrow-buffer = "54.0.0"
+arrow-data = "54.0.0"
+arrow-arith = "54.0.0"
+arrow-cast = "54.0.0"
+arrow-csv = "54.0.0"
+arrow-ipc = "54.0.0"
+arrow-json = "54.0.0"
+arrow-ord = "54.0.0"
+arrow-row = "54.0.0"
+arrow-select = "54.0.0"
+arrow-string = "54.0.0"
 
-# LanceDB ecosystem - latest versions compatible with Arrow 55.1.0
-lancedb = "0.20.0"
-lance = "0.29.0"
+# LanceDB ecosystem - compatible versions
+lancedb = "0.18.0"
+lance = "0.27.0"
+
+# Compression libraries - fix zstd version conflicts
+zstd = "0.12"
+zstd-safe = "6.0.5"
 
 # 测试工具
 tokio-test = "0.4"
@@ -116,12 +120,17 @@ strip = false
 
 [features]
 default = ["integrations"]
+macros = ["lumos_macro"]
 integrations = ["reqwest", "sqlx"]
 # Vector database features
 vector-qdrant = ["lumosai_vector/qdrant"]
 vector-weaviate = ["lumosai_vector/weaviate"]
 vector-postgres = ["lumosai_vector/postgres"]
 vector-all = ["vector-qdrant", "vector-weaviate", "vector-postgres"]
+# Additional features for cfg conditions
+postgres = ["sqlx/postgres"]
+qdrant = ["vector-qdrant"]
+weaviate = ["vector-weaviate"]
 
 [dependencies]
 lumosai_core = { path = "lumosai_core", features = ["macros"] }
@@ -130,7 +139,7 @@ lumosai_rag = { path = "lumosai_rag" }
 lumosai_vector = { path = "lumosai_vector", features = ["memory"] }
 lumosai-vector-core = { path = "lumosai_vector/core" }
 lumosai_network = { path = "lumosai_network" }
-lumos_macro = { path = "lumos_macro" }
+lumos_macro = { path = "lumos_macro", optional = true }
 redis = { workspace = true }
 
 tokio = { workspace = true }

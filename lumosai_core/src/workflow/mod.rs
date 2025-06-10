@@ -1,6 +1,9 @@
 //! 工作流模块，用于执行由步骤组成的工作流
 //!
 //! 基于Mastra的设计，提供强大的工作流编排能力
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
+#![allow(unexpected_cfgs, unused_assignments)]
 
 mod step;
 mod tests;

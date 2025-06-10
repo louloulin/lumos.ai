@@ -32,6 +32,9 @@
 //!     ip_address: "192.168.1.1".to_string(),
 //! }).await?;
 //! ```
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
+#![allow(unexpected_cfgs, unused_assignments)]
 
 pub mod encryption;
 pub mod zero_trust;

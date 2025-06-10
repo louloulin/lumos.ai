@@ -1,4 +1,7 @@
 //! Memory module for storing and retrieving context information
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
+#![allow(unexpected_cfgs, unused_assignments)]
 
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};

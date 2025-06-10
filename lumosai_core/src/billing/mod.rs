@@ -1,6 +1,9 @@
 //! 企业级计费和订阅管理系统
 //! 
 //! 提供完整的计费、订阅管理、使用量跟踪和自动化扩缩容功能
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
+#![allow(unexpected_cfgs, unused_assignments)]
 
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

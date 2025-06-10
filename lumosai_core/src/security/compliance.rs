@@ -46,7 +46,7 @@ pub enum ComplianceStandard {
     SOC2,
     GDPR,
     HIPAA,
-    PCI_DSS,
+    PciDss,
     ISO27001,
     NIST,
 }

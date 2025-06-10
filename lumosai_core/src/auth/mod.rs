@@ -30,6 +30,9 @@
 //! // Validate permissions
 //! let has_permission = rbac.check_permission(&user.id, "agents:create").await?;
 //! ```
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
+#![allow(unexpected_cfgs, unused_assignments)]
 
 pub mod jwt;
 pub mod oauth2;

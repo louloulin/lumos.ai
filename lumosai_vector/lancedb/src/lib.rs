@@ -71,7 +71,7 @@ pub struct LanceDbClient {
 impl LanceDbClient {
     /// Create a new LanceDB client
     pub async fn new(config: LanceDbConfig) -> LanceDbResult<Self> {
-        let db = lancedb::connect(&config.uri).await
+        let db = lancedb::connect(&config.uri).execute().await
             .map_err(|e| LanceDbError::Connection(e.to_string()))?;
         
         Ok(Self {
@@ -92,7 +92,7 @@ impl LanceDbClient {
     
     /// List all tables in the database
     pub async fn list_tables(&self) -> LanceDbResult<Vec<String>> {
-        let tables = self.db.table_names().await
+        let tables = self.db.table_names().execute().await
             .map_err(|e| LanceDbError::Database(e.to_string()))?;
         Ok(tables)
     }
@@ -114,10 +114,10 @@ impl LanceDbClient {
     pub async fn stats(&self) -> LanceDbResult<DatabaseStats> {
         let tables = self.list_tables().await?;
         let mut total_rows = 0;
-        let mut total_size = 0;
+        let total_size = 0;
         
         for table_name in &tables {
-            if let Ok(table) = self.db.open_table(table_name).await {
+            if let Ok(table) = self.db.open_table(table_name).execute().await {
                 if let Ok(count) = table.count_rows(None).await {
                     total_rows += count;
                 }
@@ -137,7 +137,7 @@ impl LanceDbClient {
 
 /// Database statistics
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct DatabaseStats {
     /// Number of tables
     pub table_count: usize,

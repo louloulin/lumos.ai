@@ -1,7 +1,7 @@
 //! Index management for LanceDB
 
 use std::collections::HashMap;
-use lancedb::index::{Index, IvfFlatIndexBuilder, IvfPqIndexBuilder};
+use lancedb::index::{Index, vector::{IvfFlatIndexBuilder, IvfPqIndexBuilder}};
 
 use crate::{
     config::{IndexType, IndexParams},
@@ -55,7 +55,7 @@ impl IndexManager {
                 let mut builder = IvfFlatIndexBuilder::default();
                 
                 if let Some(num_clusters) = config.params.num_clusters {
-                    builder = builder.num_partitions(num_clusters);
+                    builder = builder.num_partitions(num_clusters as u32);
                 }
                 
                 Ok(Index::IvfFlat(builder))
@@ -65,11 +65,11 @@ impl IndexManager {
                 let mut builder = IvfPqIndexBuilder::default();
                 
                 if let Some(num_clusters) = config.params.num_clusters {
-                    builder = builder.num_partitions(num_clusters);
+                    builder = builder.num_partitions(num_clusters as u32);
                 }
                 
                 if let Some(num_sub_quantizers) = config.params.num_sub_quantizers {
-                    builder = builder.num_sub_vectors(num_sub_quantizers);
+                    builder = builder.num_sub_vectors(num_sub_quantizers as u32);
                 }
                 
                 if let Some(bits) = config.params.bits_per_sub_quantizer {
@@ -99,7 +99,7 @@ impl IndexManager {
     pub fn recommend_index_type(
         &self,
         vector_count: usize,
-        vector_dimension: usize,
+        _vector_dimension: usize,
         query_pattern: QueryPattern,
     ) -> IndexType {
         match query_pattern {

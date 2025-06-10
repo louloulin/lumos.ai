@@ -5,11 +5,15 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use arrow_array::RecordBatchIterator;
 use arrow_schema::Schema;
+use lancedb::query::{QueryBase, ExecutableQuery};
+use arrow::error::ArrowError;
+
+use futures::TryStreamExt;
 
 use lumosai_vector_core::{
     traits::{VectorStorage, BackendInfo},
     types::*,
-    error::Result,
+    error::{Result, VectorError},
 };
 
 use crate::{
@@ -101,7 +105,7 @@ impl LanceDbStorage {
                 Ok(format!("{} <= {}", field, self.format_value(value)?))
             }
             FilterCondition::In(field, values) => {
-                let formatted_values: Result<Vec<String>, _> = values
+                let formatted_values: std::result::Result<Vec<String>, LanceDbError> = values
                     .iter()
                     .map(|v| self.format_value(v))
                     .collect();
@@ -109,7 +113,7 @@ impl LanceDbStorage {
                 Ok(format!("{} IN ({})", field, values_str))
             }
             FilterCondition::NotIn(field, values) => {
-                let formatted_values: Result<Vec<String>, _> = values
+                let formatted_values: std::result::Result<Vec<String>, LanceDbError> = values
                     .iter()
                     .map(|v| self.format_value(v))
                     .collect();
@@ -135,14 +139,14 @@ impl LanceDbStorage {
                 Ok(format!("{} REGEXP '{}'", field, pattern))
             }
             FilterCondition::And(conditions) => {
-                let expressions: Result<Vec<String>, _> = conditions
+                let expressions: std::result::Result<Vec<String>, LanceDbError> = conditions
                     .iter()
                     .map(|c| self.build_filter_expression(c))
                     .collect();
                 Ok(format!("({})", expressions?.join(" AND ")))
             }
             FilterCondition::Or(conditions) => {
-                let expressions: Result<Vec<String>, _> = conditions
+                let expressions: std::result::Result<Vec<String>, LanceDbError> = conditions
                     .iter()
                     .map(|c| self.build_filter_expression(c))
                     .collect();
@@ -163,7 +167,7 @@ impl LanceDbStorage {
             MetadataValue::Float(f) => Ok(f.to_string()),
             MetadataValue::Boolean(b) => Ok(b.to_string()),
             MetadataValue::Array(arr) => {
-                let formatted: Result<Vec<String>, _> = arr
+                let formatted: std::result::Result<Vec<String>, LanceDbError> = arr
                     .iter()
                     .map(|v| self.format_value(v))
                     .collect();
@@ -172,6 +176,7 @@ impl LanceDbStorage {
             MetadataValue::Object(_) => {
                 Err(LanceDbError::InvalidData("Object values not supported in filters".to_string()))
             }
+            MetadataValue::Null => Ok("NULL".to_string()),
         }
     }
     
@@ -195,12 +200,12 @@ impl VectorStorage for LanceDbStorage {
         let db = self.client.connection();
         
         // Check if table already exists
-        if self.client.table_exists(&config.name).await.map_err(|e| e.into())? {
+        if self.client.table_exists(&config.name).await.map_err(VectorError::from)? {
             return Err(LanceDbError::already_exists(format!("Index '{}' already exists", config.name)).into());
         }
         
         // Create schema for the table
-        let schema = self.get_or_create_schema(&config.name, config.dimension).await.map_err(|e| e.into())?;
+        let schema = self.get_or_create_schema(&config.name, config.dimension).await.map_err(VectorError::from)?;
         
         // Create empty table first
         let empty_batch = arrow::record_batch::RecordBatch::new_empty(Arc::new(schema.clone()));
@@ -209,7 +214,10 @@ impl VectorStorage for LanceDbStorage {
         let table = db
             .create_table(
                 &config.name,
-                RecordBatchIterator::new(batches, Arc::new(schema)),
+                RecordBatchIterator::new(
+                    batches.into_iter().map(Ok::<_, ArrowError>),
+                    Arc::new(schema)
+                ),
             )
             .execute()
             .await
@@ -224,8 +232,8 @@ impl VectorStorage for LanceDbStorage {
                             .create_index(
                                 &["vector"],
                                 lancedb::index::Index::IvfFlat(
-                                    lancedb::index::IvfFlatIndexBuilder::default()
-                                        .num_partitions(num_clusters)
+                                    lancedb::index::vector::IvfFlatIndexBuilder::default()
+                                        .num_partitions(num_clusters as u32)
                                 ),
                             )
                             .execute()
@@ -234,14 +242,14 @@ impl VectorStorage for LanceDbStorage {
                     }
                 }
                 crate::config::IndexType::IVFPQ => {
-                    let mut builder = lancedb::index::IvfPqIndexBuilder::default();
+                    let mut builder = lancedb::index::vector::IvfPqIndexBuilder::default();
                     
                     if let Some(num_clusters) = self.config.index_config.index_params.num_clusters {
-                        builder = builder.num_partitions(num_clusters);
+                        builder = builder.num_partitions(num_clusters as u32);
                     }
                     
                     if let Some(num_sub_quantizers) = self.config.index_config.index_params.num_sub_quantizers {
-                        builder = builder.num_sub_vectors(num_sub_quantizers);
+                        builder = builder.num_sub_vectors(num_sub_quantizers as u32);
                     }
                     
                     table
@@ -269,14 +277,14 @@ impl VectorStorage for LanceDbStorage {
     }
     
     async fn list_indexes(&self) -> Result<Vec<String>> {
-        let tables = self.client.list_tables().await.map_err(|e| e.into())?;
+        let tables = self.client.list_tables().await.map_err(VectorError::from)?;
         Ok(tables)
     }
     
     async fn describe_index(&self, index_name: &str) -> Result<IndexInfo> {
         let db = self.client.connection();
         
-        if !self.client.table_exists(index_name).await.map_err(|e| e.into())? {
+        if !self.client.table_exists(index_name).await.map_err(VectorError::from)? {
             return Err(LanceDbError::not_found(format!("Index '{}' not found", index_name)).into());
         }
         
@@ -289,7 +297,7 @@ impl VectorStorage for LanceDbStorage {
         // Extract vector dimension from schema
         let vector_field = schema.field_with_name("vector").map_err(|e| LanceDbError::arrow(e.to_string()))?;
         let dimension = match vector_field.data_type() {
-            arrow_schema::DataType::List(field) => {
+            arrow_schema::DataType::List(_field) => {
                 // For list type, we need to infer dimension from data or use a default
                 // This is a limitation of the current approach
                 384 // Default dimension, should be improved
@@ -301,18 +309,20 @@ impl VectorStorage for LanceDbStorage {
             name: index_name.to_string(),
             dimension,
             metric: SimilarityMetric::Cosine, // Default, should be stored in metadata
-            document_count: count,
-            storage_size: None, // LanceDB doesn't provide direct size info
+            vector_count: count,
+            size_bytes: 0, // LanceDB doesn't provide direct size info
             metadata: HashMap::new(),
+            created_at: None,
+            updated_at: None,
         })
     }
     
     async fn delete_index(&self, index_name: &str) -> Result<()> {
-        if !self.client.table_exists(index_name).await.map_err(|e| e.into())? {
+        if !self.client.table_exists(index_name).await.map_err(VectorError::from)? {
             return Err(LanceDbError::not_found(format!("Index '{}' not found", index_name)).into());
         }
         
-        self.client.drop_table(index_name).await.map_err(|e| e.into())?;
+        self.client.drop_table(index_name).await.map_err(VectorError::from)?;
         
         // Remove from schema cache
         let mut schemas = self.schemas.write().await;
@@ -328,7 +338,7 @@ impl VectorStorage for LanceDbStorage {
 
         let db = self.client.connection();
 
-        if !self.client.table_exists(index_name).await.map_err(|e| e.into())? {
+        if !self.client.table_exists(index_name).await.map_err(VectorError::from)? {
             return Err(LanceDbError::not_found(format!("Index '{}' not found", index_name)).into());
         }
 
@@ -341,20 +351,21 @@ impl VectorStorage for LanceDbStorage {
 
         // Get vector dimension from first document
         let vector_dim = documents[0].embedding.as_ref().unwrap().len();
-        let schema = self.get_or_create_schema(index_name, vector_dim).await.map_err(|e| e.into())?;
+        let schema = self.get_or_create_schema(index_name, vector_dim).await.map_err(VectorError::from)?;
 
         // Convert documents to record batch
-        let batch = utils::documents_to_record_batch(&documents, &schema).map_err(|e| e.into())?;
+        let batch = utils::documents_to_record_batch(&documents, &schema).map_err(VectorError::from)?;
 
         // Open table and add data
         let table = db.open_table(index_name).execute().await.map_err(|e| LanceDbError::from(e))?;
 
-        // Use merge operation for upsert behavior
+        // Use add operation for inserting data
         table
-            .merge()
-            .when_matched_update_all()
-            .when_not_matched_insert_all()
-            .execute(RecordBatchIterator::new(vec![batch], Arc::new(schema)))
+            .add(RecordBatchIterator::new(
+                vec![batch].into_iter().map(Ok::<_, ArrowError>),
+                Arc::new(schema)
+            ))
+            .execute()
             .await
             .map_err(|e| LanceDbError::from(e))?;
 
@@ -365,36 +376,47 @@ impl VectorStorage for LanceDbStorage {
     async fn search(&self, request: SearchRequest) -> Result<SearchResponse> {
         let db = self.client.connection();
 
-        if !self.client.table_exists(&request.index_name).await.map_err(|e| e.into())? {
+        if !self.client.table_exists(&request.index_name).await.map_err(VectorError::from)? {
             return Err(LanceDbError::not_found(format!("Index '{}' not found", request.index_name)).into());
         }
 
         let table = db.open_table(&request.index_name).execute().await.map_err(|e| LanceDbError::from(e))?;
 
-        // Build query
+        // Build query - extract vector from SearchQuery
+        let vector = match &request.query {
+            SearchQuery::Vector(v) => v.clone(),
+            SearchQuery::Text(_) => return Err(LanceDbError::InvalidData("Text search not supported yet".to_string()).into()),
+        };
+
         let mut query = table
-            .vector_search(request.vector.clone())
+            .vector_search(vector)
             .map_err(|e| LanceDbError::from(e))?
             .limit(request.top_k);
 
         // Add filter if provided
         if let Some(filter) = &request.filter {
-            let filter_expr = self.build_filter_expression(filter).map_err(|e| e.into())?;
-            query = query.where_clause(&filter_expr).map_err(|e| LanceDbError::from(e))?;
+            let filter_expr = self.build_filter_expression(filter).map_err(VectorError::from)?;
+            query = query.only_if(&filter_expr);
         }
 
-        // Set distance type based on similarity metric
-        if let Some(metric) = &request.similarity_metric {
-            let distance_type = self.similarity_to_distance_type(metric);
-            // Note: LanceDB API for setting distance type may vary by version
-            // This is a placeholder for the actual implementation
-        }
+        // Note: Similarity metric configuration would be set during index creation
+        // LanceDB 0.20.0 doesn't support runtime metric changes in vector search
 
         // Execute query
-        let results = query.execute().await.map_err(|e| LanceDbError::from(e))?;
+        let mut results = query.execute().await.map_err(|e| LanceDbError::from(e))?;
 
-        // Convert results to SearchResponse
-        let documents = utils::record_batch_to_documents(&results).map_err(|e| e.into())?;
+        // Collect all batches from the stream
+        let mut all_batches = Vec::new();
+        while let Some(batch) = results.try_next().await.map_err(|e| LanceDbError::from(e))? {
+            all_batches.push(batch);
+        }
+
+        // Convert batches to documents
+        let mut documents = Vec::new();
+        for batch in all_batches {
+            let batch_docs = utils::record_batch_to_documents(&batch).map_err(VectorError::from)?;
+            documents.extend(batch_docs);
+        }
 
         // Create search results with scores
         // Note: LanceDB should provide scores, but the exact API may vary
@@ -403,16 +425,18 @@ impl VectorStorage for LanceDbStorage {
             .enumerate()
             .map(|(i, doc)| SearchResult {
                 id: doc.id,
+                vector: if request.include_vectors { doc.embedding } else { None },
+                content: Some(doc.content),
                 score: 1.0 - (i as f32 * 0.01), // Placeholder scoring
                 metadata: Some(doc.metadata),
-                document: if request.include_metadata { Some(doc) } else { None },
             })
             .collect();
 
         Ok(SearchResponse {
             results: search_results,
             total_count: None,
-            query_time_ms: None,
+            execution_time_ms: None,
+            metadata: HashMap::new(),
         })
     }
 
@@ -429,7 +453,7 @@ impl VectorStorage for LanceDbStorage {
 
         let db = self.client.connection();
 
-        if !self.client.table_exists(index_name).await.map_err(|e| e.into())? {
+        if !self.client.table_exists(index_name).await.map_err(VectorError::from)? {
             return Err(LanceDbError::not_found(format!("Index '{}' not found", index_name)).into());
         }
 
@@ -455,7 +479,7 @@ impl VectorStorage for LanceDbStorage {
 
         let db = self.client.connection();
 
-        if !self.client.table_exists(index_name).await.map_err(|e| e.into())? {
+        if !self.client.table_exists(index_name).await.map_err(VectorError::from)? {
             return Err(LanceDbError::not_found(format!("Index '{}' not found", index_name)).into());
         }
 
@@ -473,17 +497,26 @@ impl VectorStorage for LanceDbStorage {
         };
 
         // Execute query
-        let results = table
+        let mut results = table
             .query()
-            .where_clause(&condition)
-            .map_err(|e| LanceDbError::from(e))?
+            .only_if(&condition)
             .select(lancedb::query::Select::Columns(columns))
             .execute()
             .await
             .map_err(|e| LanceDbError::from(e))?;
 
-        // Convert results to documents
-        let mut documents = utils::record_batch_to_documents(&results).map_err(|e| e.into())?;
+        // Collect all batches from the stream
+        let mut all_batches = Vec::new();
+        while let Some(batch) = results.try_next().await.map_err(|e| LanceDbError::from(e))? {
+            all_batches.push(batch);
+        }
+
+        // Convert batches to documents
+        let mut documents = Vec::new();
+        for batch in all_batches {
+            let batch_docs = utils::record_batch_to_documents(&batch).map_err(VectorError::from)?;
+            documents.extend(batch_docs);
+        }
 
         // Remove embeddings if not requested
         if !include_vectors {
@@ -497,7 +530,7 @@ impl VectorStorage for LanceDbStorage {
 
     async fn health_check(&self) -> Result<()> {
         // Try to list tables to check connection
-        self.client.list_tables().await.map_err(|e| e.into())?;
+        self.client.list_tables().await.map_err(VectorError::from)?;
         Ok(())
     }
 
@@ -510,8 +543,8 @@ impl VectorStorage for LanceDbStorage {
             .with_feature("versioning")
             .with_feature("compression")
             .with_feature("cloud_storage")
-            .with_metadata("uri", self.config.uri.clone().into())
-            .with_metadata("batch_size", (self.config.performance.batch_size as i64).into())
-            .with_metadata("compression_enabled", self.config.performance.enable_compression.into())
+            .with_metadata("uri", self.config.uri.clone())
+            .with_metadata("batch_size", self.config.performance.batch_size as i64)
+            .with_metadata("compression_enabled", self.config.performance.enable_compression)
     }
 }

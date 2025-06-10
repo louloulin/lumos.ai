@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use arrow::array::{Float32Array, StringArray, ListBuilder, Float32Builder};
+use arrow::array::{Float32Array, StringArray, ListBuilder, Float32Builder, Array};
 use arrow::record_batch::RecordBatch;
 use arrow_schema::{DataType, Field, Schema};
 
@@ -26,7 +26,7 @@ pub fn documents_to_record_batch(
     
     for doc in documents {
         ids.push(doc.id.clone());
-        contents.push(doc.content.clone().unwrap_or_default());
+        contents.push(doc.content.clone());
         
         if let Some(embedding) = &doc.embedding {
             vectors.push(embedding.clone());
@@ -49,7 +49,7 @@ pub fn documents_to_record_batch(
     
     for vector in vectors {
         let float_array = Float32Array::from(vector);
-        vector_builder.append_value(float_array.values());
+        vector_builder.append_value(float_array.values().iter().map(|&x| Some(x)));
     }
     
     let vector_array = vector_builder.finish();
@@ -121,7 +121,7 @@ pub fn record_batch_to_documents(batch: &RecordBatch) -> LanceDbResult<Vec<Docum
 }
 
 /// Create an Arrow schema for vector documents
-pub fn create_document_schema(vector_dim: usize) -> Schema {
+pub fn create_document_schema(_vector_dim: usize) -> Schema {
     let fields = vec![
         Field::new("id", DataType::Utf8, false),
         Field::new("content", DataType::Utf8, true),
@@ -159,6 +159,7 @@ pub fn metadata_value_to_json(value: &MetadataValue) -> serde_json::Value {
                 .collect();
             serde_json::Value::Object(json_obj)
         }
+        MetadataValue::Null => serde_json::Value::Null,
     }
 }
 
@@ -190,9 +191,7 @@ pub fn json_to_metadata_value(value: &serde_json::Value) -> LanceDbResult<Metada
                 .collect();
             Ok(MetadataValue::Object(metadata_obj?))
         }
-        serde_json::Value::Null => {
-            Err(LanceDbError::InvalidData("Null values not supported in metadata".to_string()))
-        }
+        serde_json::Value::Null => Ok(MetadataValue::Null)
     }
 }
 

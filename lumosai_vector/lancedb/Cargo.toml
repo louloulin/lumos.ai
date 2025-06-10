@@ -1,6 +1,6 @@
 [package]
 name = "lumosai-vector-lancedb"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["LumosAI Team <team@lumosai.dev>"]
 description = "LanceDB integration for LumosAI vector storage - high-performance columnar vector database"

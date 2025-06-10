@@ -6711,7 +6711,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "chrono",
@@ -6768,7 +6768,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai-vector-lancedb"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "arrow 51.0.0",
@@ -7193,7 +7193,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_vector"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "lumosai-vector-core",
  "lumosai-vector-fastembed",

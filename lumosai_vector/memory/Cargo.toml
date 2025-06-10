@@ -15,7 +15,7 @@ serde = ["lumosai-vector-core/serde"]
 
 [dependencies]
 # Core dependencies
-lumosai-vector-core = { path = "../core" }
+lumosai-vector-core = { path = "../core", version = "0.1.1" }
 async-trait = "0.1"
 tokio = { version = "1.0", features = ["sync"] }
 uuid = { version = "1.0", features = ["v4"] }

@@ -68,29 +68,29 @@ sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "sqlite", "js
 
 # 工具库
 uuid = { version = "1.6", features = ["v4", "serde"] }
-chrono = { version = "0.4.38", features = ["serde"] }
+chrono = { version = "0.4.41", features = ["serde"] }
 regex = "1.10"
 url = "2.5"
 
-# Arrow ecosystem - use compatible versions to avoid conflicts
-arrow = "51.0.0"
-arrow-array = "51.0.0"
-arrow-schema = "51.0.0"
-arrow-buffer = "51.0.0"
-arrow-data = "51.0.0"
-arrow-arith = "51.0.0"
-arrow-cast = "51.0.0"
-arrow-csv = "51.0.0"
-arrow-ipc = "51.0.0"
-arrow-json = "51.0.0"
-arrow-ord = "51.0.0"
-arrow-row = "51.0.0"
-arrow-select = "51.0.0"
-arrow-string = "51.0.0"
+# Arrow ecosystem - use latest versions with chrono quarter() fix
+arrow = "55.1.0"
+arrow-array = "55.1.0"
+arrow-schema = "55.1.0"
+arrow-buffer = "55.1.0"
+arrow-data = "55.1.0"
+arrow-arith = "55.1.0"
+arrow-cast = "55.1.0"
+arrow-csv = "55.1.0"
+arrow-ipc = "55.1.0"
+arrow-json = "55.1.0"
+arrow-ord = "55.1.0"
+arrow-row = "55.1.0"
+arrow-select = "55.1.0"
+arrow-string = "55.1.0"
 
-# LanceDB ecosystem - compatible with Arrow 51.0.0
-lancedb = "0.8.0"
-lance = "0.12.0"
+# LanceDB ecosystem - latest versions compatible with Arrow 55.1.0
+lancedb = "0.20.0"
+lance = "0.29.0"
 
 # 测试工具
 tokio-test = "0.4"

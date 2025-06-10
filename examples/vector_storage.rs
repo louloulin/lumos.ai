@@ -14,7 +14,7 @@ use std::time::Instant;
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🔍 向量存储演示");
     println!("================");
     
@@ -34,11 +34,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示内存向量存储
-async fn demo_memory_storage() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_memory_storage() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 内存向量存储 ===");
     
     // 创建内存向量存储
-    let storage = MemoryVectorStorage::new();
+    let storage = MemoryVectorStorage::new(384, Some(1000));
     
     // 创建索引
     let index_name = "demo_index";
@@ -92,9 +92,9 @@ async fn demo_memory_storage() -> Result<(), Box<dyn std::error::Error>> {
     // 获取索引统计信息
     let stats = storage.describe_index(index_name).await?;
     println!("\n索引统计信息:");
-    println!("  向量数量: {}", stats.vector_count);
-    println!("  索引大小: {} KB", stats.index_size_kb);
-    println!("  最后更新: {:?}", stats.last_updated);
+    println!("  向量数量: {}", stats.count);
+    println!("  向量维度: {}", stats.dimension);
+    println!("  相似度度量: {:?}", stats.metric);
     
     // 列出所有索引
     let indexes = storage.list_indexes().await?;
@@ -107,10 +107,10 @@ async fn demo_memory_storage() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示向量搜索功能
-async fn demo_vector_search() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_vector_search() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: 向量搜索功能 ===");
     
-    let storage = MemoryVectorStorage::new();
+    let storage = MemoryVectorStorage::new(384, Some(1000));
     let index_name = "search_demo";
     let dimension = 128; // 使用较小的维度便于演示
     
@@ -187,10 +187,10 @@ async fn demo_vector_search() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示批量操作
-async fn demo_batch_operations() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_batch_operations() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 批量操作 ===");
     
-    let storage = MemoryVectorStorage::new();
+    let storage = MemoryVectorStorage::new(384, Some(1000));
     let index_name = "batch_demo";
     let dimension = 256;
     
@@ -261,14 +261,15 @@ async fn demo_batch_operations() -> Result<(), Box<dyn std::error::Error>> {
     // 获取最终统计
     let final_stats = storage.describe_index(index_name).await?;
     println!("\n最终索引统计:");
-    println!("  向量数量: {}", final_stats.vector_count);
-    println!("  索引大小: {} KB", final_stats.index_size_kb);
+    println!("  向量数量: {}", final_stats.count);
+    println!("  向量维度: {}", final_stats.dimension);
+    println!("  相似度度量: {:?}", final_stats.metric);
     
     Ok(())
 }
 
 /// 演示性能测试
-async fn demo_performance_testing() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_performance_testing() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 性能测试 ===");
     
     // 测试不同维度的性能
@@ -282,7 +283,7 @@ async fn demo_performance_testing() -> Result<(), Box<dyn std::error::Error>> {
     for dimension in dimensions {
         println!("\n--- 测试维度: {} ---", dimension);
         
-        let storage = MemoryVectorStorage::new();
+        let storage = MemoryVectorStorage::new(384, Some(1000));
         let index_name = &format!("perf_test_{}", dimension);
         
         // 创建索引
@@ -339,7 +340,7 @@ async fn demo_performance_testing() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示不同相似度度量
-async fn demo_similarity_metrics() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_similarity_metrics() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let dimension = 128;
     let test_vectors = vec![
         vec![1.0; dimension],  // 全1向量
@@ -357,7 +358,7 @@ async fn demo_similarity_metrics() -> Result<(), Box<dyn std::error::Error>> {
     for metric in metrics {
         println!("\n测试相似度度量: {:?}", metric);
         
-        let storage = MemoryVectorStorage::new();
+        let storage = MemoryVectorStorage::new(384, Some(1000));
         let index_name = &format!("metric_test_{:?}", metric);
         
         storage.create_index(index_name, dimension, Some(metric)).await?;
@@ -417,7 +418,7 @@ fn generate_semantic_vector(text: &str, dimension: usize) -> Vec<f32> {
     let mut vector = Vec::with_capacity(dimension);
     for i in 0..dimension {
         let seed = hash.wrapping_add(i as u64);
-        let value = ((seed * 1103515245 + 12345) % (1 << 31)) as f32 / (1 << 30) as f32 - 1.0;
+        let value = ((seed.wrapping_mul(1103515245).wrapping_add(12345)) % (1 << 31)) as f32 / (1 << 30) as f32 - 1.0;
         vector.push(value);
     }
     

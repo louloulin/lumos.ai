@@ -1,6 +1,6 @@
 [package]
 name = "lumosai-vector-core"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Lumos.ai Team <team@lumos.ai>"]
 description = "Core abstractions and traits for Lumos vector storage system"

@@ -1,6 +1,6 @@
 [package]
 name = "lumosai-vector-fastembed"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["LumosAI Team <team@lumosai.dev>"]
 description = "FastEmbed integration for LumosAI vector storage - local embedding generation"

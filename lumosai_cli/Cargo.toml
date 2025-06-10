@@ -1,6 +1,6 @@
 [package]
 name = "lumosai_cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Lumosai CLI 工具，用于创建、开发和部署 Lumosai AI 应用"
 authors = ["Lumosai Team <dev@lumosai.cn>"]

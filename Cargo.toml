@@ -22,7 +22,7 @@ resolver = "2"
 
 [package]
 name = "lumosai"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Lumosai Team <team@lumosai.dev>"]
 description = "企业级 AI 代理框架 - 高性能、类型安全的 Rust AI 应用开发框架"

@@ -5792,7 +5792,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "lumos_macro"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "nom 7.1.3",
  "proc-macro2",
@@ -5804,7 +5804,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5829,7 +5829,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai-vector-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5843,7 +5843,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai-vector-fastembed"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "env_logger",
@@ -5861,7 +5861,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai-vector-lancedb"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "arrow",
@@ -5885,7 +5885,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai-vector-memory"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5899,7 +5899,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai-vector-milvus"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5922,7 +5922,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai-vector-postgres"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5941,7 +5941,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai-vector-qdrant"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "lumosai-vector-core",
@@ -5958,7 +5958,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai-vector-weaviate"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "lumosai-vector-core",
@@ -5976,7 +5976,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_bindings"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -6001,7 +6001,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "actix",
  "actix-cors",
@@ -6035,7 +6035,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-openai",
@@ -6077,7 +6077,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_derive"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6087,7 +6087,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_enterprise"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6135,7 +6135,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_evals"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -6154,7 +6154,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_examples"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6179,7 +6179,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_marketplace"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6214,7 +6214,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_mcp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-sse",
@@ -6242,7 +6242,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_network"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "dashmap 5.5.3",
@@ -6262,7 +6262,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_rag"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6286,7 +6286,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_vector"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "lumosai-vector-core",
  "lumosai-vector-fastembed",

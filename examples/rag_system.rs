@@ -6,17 +6,15 @@
 //! - 智能检索
 //! - RAG Agent 集成
 
-use lumosai_core::prelude::*;
-use lumosai_core::agent::{AgentBuilder, BasicAgent};
-use lumosai_core::rag::{RagPipeline, BasicRagPipeline, DocumentSource, QueryResult, ChunkConfig};
-use lumosai_core::vector::{MemoryVectorStorage, VectorStorage, SimilarityMetric};
-use lumosai_core::llm::{MockLlmProvider, Message, Role};
+use lumosai_core::agent::{AgentBuilder, AgentTrait};
+use lumosai_core::rag::{RagPipeline, BasicRagPipeline, DocumentSource, QueryResult as RagQueryResult, ChunkConfig};
+use lumosai_core::vector::{MemoryVectorStorage, VectorStorage};
+use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
-use serde_json::json;
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("📚 RAG 系统演示");
     println!("================");
     
@@ -36,23 +34,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示基础 RAG 管道构建
-async fn demo_basic_rag_pipeline() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_basic_rag_pipeline() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 基础 RAG 管道构建 ===");
     
     // 1. 创建向量存储
-    let vector_storage = Arc::new(tokio::sync::Mutex::new(MemoryVectorStorage::new()));
+    let vector_storage = Arc::new(tokio::sync::Mutex::new(MemoryVectorStorage::new(1536, Some(1000))));
     
     // 2. 创建嵌入函数（模拟）
-    let embedding_fn = |text: &str| -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+    let embedding_fn = |text: &str| -> lumosai_core::Result<Vec<f32>> {
         // 简单的哈希嵌入，实际项目中应该使用真实的嵌入模型
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         use std::hash::{Hash, Hasher};
         text.hash(&mut hasher);
         let hash = hasher.finish();
 
-        // 生成384维的伪嵌入向量
-        let mut embedding = vec![0.0; 384];
-        for i in 0..384 {
+        // 生成1536维的伪嵌入向量
+        let mut embedding = vec![0.0; 1536];
+        for i in 0..1536 {
             embedding[i] = ((hash.wrapping_add(i as u64)) as f32) / (u64::MAX as f32);
         }
         Ok(embedding)
@@ -96,7 +94,7 @@ async fn demo_basic_rag_pipeline() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示知识库构建和查询
-async fn demo_knowledge_base() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_knowledge_base() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: 知识库构建和查询 ===");
     
     // 创建更大的知识库
@@ -158,16 +156,15 @@ async fn demo_knowledge_base() -> Result<(), Box<dyn std::error::Error>> {
             println!("  {}. {}", j + 1, doc.content);
         }
         
-        if let Some(answer) = &result.generated_answer {
-            println!("生成的答案: {}", answer);
-        }
+        // 显示检索到的上下文
+        println!("检索到的上下文: {}", result.context);
     }
     
     Ok(())
 }
 
 /// 演示 RAG Agent 集成
-async fn demo_rag_agent() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_rag_agent() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: RAG Agent 集成 ===");
     
     // 创建 RAG 管道
@@ -196,12 +193,11 @@ async fn demo_rag_agent() -> Result<(), Box<dyn std::error::Error>> {
     
     let llm_provider = Arc::new(MockLlmProvider::new(rag_responses));
     
-    // 创建带 RAG 的 Agent
+    // 创建 Agent（不直接集成 RAG，而是手动处理）
     let rag_agent = AgentBuilder::new()
         .name("rag_expert")
         .instructions("你是一个技术专家，请基于提供的知识库内容回答问题。在回答时要引用相关的知识库信息。")
         .model(llm_provider)
-        .rag_pipeline(Arc::new(tokio::sync::Mutex::new(rag_pipeline)))
         .build()?;
     
     // 测试 RAG Agent
@@ -214,18 +210,23 @@ async fn demo_rag_agent() -> Result<(), Box<dyn std::error::Error>> {
     println!("RAG Agent 问答测试:");
     for (i, question) in rag_questions.iter().enumerate() {
         println!("\n问题 {}: {}", i + 1, question);
-        let response = rag_agent.generate(question).await?;
-        println!("RAG Agent: {}", response.content);
-        
-        // 显示检索到的相关文档（如果有的话）
-        if let Some(retrieved_docs) = response.metadata.get("retrieved_documents") {
+        let response = rag_agent.generate_simple(question).await?;
+        println!("RAG Agent: {}", response);
+
+        // 手动演示 RAG 检索（因为 Agent 没有直接集成 RAG）
+        let rag_result = rag_pipeline.query(question, 3).await?;
+        if !rag_result.documents.is_empty() {
             println!("相关文档:");
-            if let Some(docs) = retrieved_docs.as_array() {
-                for (j, doc) in docs.iter().enumerate() {
-                    if let Some(content) = doc.get("content").and_then(|c| c.as_str()) {
-                        println!("  {}. {}", j + 1, content);
-                    }
-                }
+            for (j, doc) in rag_result.documents.iter().enumerate() {
+                let score = rag_result.scores.as_ref()
+                    .and_then(|scores| scores.get(j))
+                    .copied()
+                    .unwrap_or(0.0);
+                println!("  {}. {} (相似度: {:.3})",
+                    j + 1,
+                    doc.content.chars().take(80).collect::<String>(),
+                    score
+                );
             }
         }
     }
@@ -234,7 +235,7 @@ async fn demo_rag_agent() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示高级 RAG 功能
-async fn demo_advanced_rag() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_advanced_rag() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 高级 RAG 功能 ===");
     
     // 创建高级配置的 RAG 管道
@@ -244,13 +245,14 @@ async fn demo_advanced_rag() -> Result<(), Box<dyn std::error::Error>> {
     // 配置分块策略
     let chunk_config = ChunkConfig {
         chunk_size: 200,
-        chunk_overlap: 50,
-        separator: "\n".to_string(),
+        chunk_overlap: Some(50),
+        separator: Some("\n".to_string()),
+        strategy: Some("recursive".to_string()),
     };
-    
+
     println!("高级 RAG 配置:");
     println!("  分块大小: {} 字符", chunk_config.chunk_size);
-    println!("  重叠大小: {} 字符", chunk_config.chunk_overlap);
+    println!("  重叠大小: {:?} 字符", chunk_config.chunk_overlap);
     println!("  分隔符: {:?}", chunk_config.separator);
     
     // 添加长文档进行分块测试
@@ -286,10 +288,14 @@ async fn demo_advanced_rag() -> Result<(), Box<dyn std::error::Error>> {
         
         println!("检索结果 ({} 个文档):", result.documents.len());
         for (i, doc) in result.documents.iter().enumerate() {
-            println!("  {}. {} (相似度: {:.3})", 
-                i + 1, 
+            let score = result.scores.as_ref()
+                .and_then(|scores| scores.get(i))
+                .copied()
+                .unwrap_or(0.0);
+            println!("  {}. {} (相似度: {:.3})",
+                i + 1,
                 doc.content.chars().take(100).collect::<String>() + "...",
-                doc.similarity_score.unwrap_or(0.0)
+                score
             );
         }
     }
@@ -298,7 +304,7 @@ async fn demo_advanced_rag() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== RAG 系统统计 ===");
     println!("知识库统计:");
     println!("  总文档数: 估计 {} 个", processed_count);
-    println!("  向量维度: 384");
+    println!("  向量维度: 1536");
     println!("  支持的查询类型: 语义搜索、关键词匹配");
     println!("  平均响应时间: < 100ms");
     
@@ -306,17 +312,17 @@ async fn demo_advanced_rag() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 创建模拟嵌入函数
-fn create_mock_embedding_function() -> impl Fn(&str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
-    |text: &str| -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+fn create_mock_embedding_function() -> impl Fn(&str) -> lumosai_core::Result<Vec<f32>> {
+    |text: &str| -> lumosai_core::Result<Vec<f32>> {
         // 基于文本内容生成确定性的嵌入向量
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         use std::hash::{Hash, Hasher};
         text.hash(&mut hasher);
         let hash = hasher.finish();
 
-        // 生成384维的嵌入向量
-        let mut embedding = vec![0.0; 384];
-        for i in 0..384 {
+        // 生成1536维的嵌入向量
+        let mut embedding = vec![0.0; 1536];
+        for i in 0..1536 {
             let seed = hash.wrapping_add(i as u64);
             embedding[i] = ((seed % 1000) as f32) / 1000.0 - 0.5; // 范围 [-0.5, 0.5]
         }

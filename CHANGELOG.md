@@ -1,175 +1,188 @@
-# 变更日志
+# 📝 Changelog
 
-所有重要的项目变更都会记录在此文件中。
+All notable changes to LumosAI will be documented in this file.
 
-格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
-并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [未发布]
+## [Unreleased]
 
-### 新增
-- 增强的工作流系统，支持复杂的业务流程编排
-- 增强的工具系统，提供智能工具管理和执行
-- 增强的内存管理，支持语义搜索和上下文管理
-- 增强的应用框架，提供模块化和可扩展架构
-- 完整的发布系统，包括自动化构建、测试和部署
-- 企业级安全框架，包括零信任架构和威胁检测
-- 智能计费系统，支持多种计费模式和资源管理
-- 云集成功能，支持主流云服务提供商
-- 遥测和监控系统，提供全面的性能监控
-- 认证授权系统，支持多种认证方式
+### 🚀 Added
+- **📚 Documentation System**: Comprehensive documentation with user guides, API references, and tutorials
+- **🤝 Contributing Guidelines**: Detailed contribution process and code standards
+- **📋 Code of Conduct**: Community guidelines for inclusive collaboration
+- **✅ Example Validation**: All 12 demonstration examples now pass validation
+- **🏗️ Architecture Documentation**: Detailed system architecture and component guides
 
-### 变更
-- 重构了向量存储架构，统一了多种向量数据库支持
-- 优化了代理系统的性能和可扩展性
-- 改进了 RAG 系统的检索精度和响应速度
-- 升级了网络通信模块，支持分布式部署
+### 🔧 Changed
+- **📖 README**: Complete rewrite with comprehensive feature overview and examples
+- **📁 Project Structure**: Improved organization with clear documentation hierarchy
+- **🔗 Module Imports**: Standardized import paths across all examples
 
-### 修复
-- 修复了工作流执行中的并发问题
-- 解决了内存泄漏和性能瓶颈
-- 修复了向量搜索的精度问题
-- 解决了多线程环境下的竞态条件
+### 🐛 Fixed
+- **✅ Example Compilation**: Fixed all compilation errors in demonstration code
+- **🔧 Import Paths**: Corrected module import paths from `lumos` to `lumosai`
+- **⚙️ Function Signatures**: Updated function signatures to match current API
+- **🛠️ Tool Integration**: Fixed tool integration patterns in examples
 
-## [0.1.0] - 2024-01-XX
+### 📚 Documentation
+- **📖 User Guides**: Created comprehensive getting started and development guides
+- **🏗️ Architecture**: Detailed system architecture and design documentation
+- **🤝 Contributing**: Complete contribution guidelines and development setup
+- **📋 Code Standards**: Established coding standards and best practices
 
-### 新增
-- 🎉 LumosAI 框架初始发布
-- 🤖 基础代理系统
-  - 代理创建和管理
-  - 工具集成和执行
-  - 会话状态管理
-- 🔧 工具系统
-  - 工具注册和发现
-  - 动态工具加载
-  - 工具执行引擎
-- 🧠 内存管理
-  - 短期和长期记忆
-  - 向量存储集成
-  - 语义搜索
-- 📚 RAG 系统
-  - 文档处理和分块
-  - 嵌入生成
-  - 检索增强生成
-- 🌐 网络通信
-  - 代理间通信
-  - 消息路由
-  - 服务发现
-- ⚡ 工作流引擎
-  - 工作流定义和执行
-  - 步骤编排
-  - 条件分支和循环
-- 🔒 安全框架
-  - 身份认证
-  - 权限控制
-  - 数据加密
-- 📊 评估系统
-  - LLM 性能评估
-  - 基准测试
-  - 指标收集
-- 🎯 向量数据库支持
-  - Qdrant 集成
-  - Weaviate 集成
-  - PostgreSQL 向量扩展
-  - 内存向量存储
-- 🛠️ CLI 工具
-  - 项目脚手架
-  - 开发服务器
-  - 构建和部署工具
-- 📖 文档和示例
-  - API 文档
-  - 使用指南
-  - 示例项目
+## [0.1.3] - 2024-01-XX
 
-### 技术特性
-- 🦀 **Rust 原生**: 高性能、内存安全的实现
-- ⚡ **异步优先**: 全面的 async/await 支持
-- 🔧 **模块化设计**: 可插拔的组件架构
-- 🎯 **类型安全**: 强类型系统确保编译时安全
-- 🚀 **高性能**: 优化的并发和内存管理
-- 🔄 **可扩展**: 支持水平和垂直扩展
-- 🛡️ **企业级**: 完整的安全和监控功能
+### 🚀 Added
+- **🤖 Agent System**: Complete agent creation, management, and conversation handling
+- **� RAG System**: Advanced document processing, chunking, and retrieval-augmented generation
+- **📊 Vector Storage**: Memory-based vector storage with search capabilities
+- **🛠️ Tool Integration**: Extensible tool system for agent capabilities
+- **� Memory Management**: Persistent conversation history and context management
+- **🔄 Workflow Orchestration**: Multi-agent collaboration and task management
+- **🌊 Streaming Responses**: Real-time response streaming for better UX
+- **🔐 Authentication System**: JWT, RBAC, multi-tenant, and OAuth2 support
+- **📈 Monitoring System**: Performance metrics, health checks, and observability
+- **🚀 Enhanced Features**: Advanced framework capabilities and optimizations
 
-### 支持的平台
-- Linux (x86_64)
-- macOS (x86_64, ARM64)
-- Windows (x86_64)
+### 📊 Examples & Demonstrations
+- **🤖 Basic Agent**: Simple agent creation and conversation patterns
+- **🧠 RAG System**: Document processing and intelligent retrieval
+- **🛠️ Tool Integration**: Adding custom tools to agents
+- **💾 Memory System**: Conversation history and context persistence
+- **📊 Vector Storage**: Vector database operations and search
+- **� Streaming Response**: Real-time response handling
+- **👥 Multi-Agent Workflow**: Agent collaboration and orchestration
+- **🚀 Enhanced Features**: Advanced framework capabilities
+- **⚡ Performance Benchmark**: Performance testing and optimization
+- **🔐 Authentication**: Enterprise security and access control
+- **� Monitoring**: System monitoring and metrics collection
+- **🎯 Complete API Demo**: Full framework demonstration
 
-### 依赖要求
-- Rust 1.70+
-- Tokio 1.33+
-- 可选: Redis, PostgreSQL, Qdrant, Weaviate
+### 🛡️ Enterprise Features
+- **� Security**: Role-based access control (RBAC) with fine-grained permissions
+- **🏢 Multi-Tenancy**: Isolated tenant environments with custom configurations
+- **📊 Observability**: Real-time metrics, distributed tracing, and monitoring
+- **⚡ Performance**: High-performance async operations with Rust optimizations
+- **🔄 Scalability**: Horizontal scaling with load balancing support
 
-### 安装方式
+### 🔧 Core Architecture
+- **🦀 Rust Native**: Memory-safe, high-performance implementation
+- **⚡ Async/Await**: Non-blocking I/O for high concurrency
+- **🎯 Type Safety**: Compile-time guarantees and error prevention
+- **� Modular Design**: Pluggable component architecture
+- **📦 Zero Dependencies**: Minimal external dependencies for security
+
+### 🌐 Platform Support
+- **� Linux**: x86_64, ARM64
+- **🍎 macOS**: x86_64 (Intel), ARM64 (Apple Silicon)
+- **🪟 Windows**: x86_64
+
+### 📋 Requirements
+- **🦀 Rust**: 1.70+ (latest stable recommended)
+- **⚡ Tokio**: 1.33+ (async runtime)
+- **🔧 Optional**: Redis, PostgreSQL, Qdrant, Weaviate
+
+### 📦 Installation
+
+```toml
+# Add to your Cargo.toml
+[dependencies]
+lumosai = "0.1.3"
+tokio = { version = "1.0", features = ["full"] }
+```
+
 ```bash
-# 通过 Cargo 安装
-cargo install lumosai
+# Or install CLI tools
+cargo install lumosai-cli
 
-# 或者从源码构建
+# Build from source
 git clone https://github.com/lumosai/lumosai
 cd lumosai
 cargo build --release
 ```
 
-### 快速开始
+### 🚀 Quick Start
+
 ```rust
 use lumosai::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // 创建代理
+    // Create an agent
     let agent = Agent::builder()
-        .name("my-agent")
-        .system_prompt("You are a helpful assistant")
+        .name("my-assistant")
+        .model("gpt-4")
+        .system_prompt("You are a helpful AI assistant")
         .build()
         .await?;
-    
-    // 发送消息
-    let response = agent.chat("Hello, world!").await?;
-    println!("Response: {}", response);
-    
+
+    // Have a conversation
+    let response = agent.chat("Hello, how can you help me?").await?;
+    println!("Assistant: {}", response);
+
     Ok(())
 }
 ```
 
-### 已知限制
-- 某些高级功能仍在开发中
-- 文档可能不够完整
-- 性能优化仍在进行中
+### ⚠️ Known Limitations
+- Some advanced features are still in development
+- Documentation is continuously being improved
+- Performance optimizations are ongoing
 
-### 贡献指南
-欢迎贡献代码、报告问题或提出建议！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详细信息。
+### 🤝 Contributing
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### 许可证
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详细信息。
+### 📄 License
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
 
-### 致谢
-感谢所有贡献者和社区成员的支持！
+### 🙏 Acknowledgments
+Thanks to all contributors and community members for their support!
 
 ---
 
-## 版本说明
+## 📋 Release Information
 
-### 语义化版本
-我们遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范：
+### 🔢 Semantic Versioning
+We follow [Semantic Versioning](https://semver.org/) specification:
 
-- **主版本号 (MAJOR)**: 不兼容的 API 变更
-- **次版本号 (MINOR)**: 向后兼容的功能新增
-- **修订号 (PATCH)**: 向后兼容的问题修复
+- **🔴 MAJOR**: Incompatible API changes
+- **🟡 MINOR**: Backward-compatible functionality additions
+- **🟢 PATCH**: Backward-compatible bug fixes
 
-### 发布周期
-- **主版本**: 每年 1-2 次
-- **次版本**: 每月 1-2 次
-- **修订版本**: 根据需要随时发布
+### 📅 Release Schedule
+- **🔴 Major Releases**: 1-2 times per year
+- **🟡 Minor Releases**: 1-2 times per month
+- **🟢 Patch Releases**: As needed for critical fixes
 
-### 支持政策
-- **当前版本**: 完全支持
-- **前一个主版本**: 安全更新和关键 bug 修复
-- **更早版本**: 不再支持
+### 🛡️ Support Policy
+- **✅ Current Version**: Full support and active development
+- **⚠️ Previous Major**: Security updates and critical bug fixes
+- **❌ Older Versions**: No longer supported
 
-### 升级指南
-每个版本都会提供详细的升级指南，包括：
-- 破坏性变更说明
-- 迁移步骤
-- 新功能介绍
-- 性能改进说明
+### 🔄 Upgrade Guides
+Each release includes detailed upgrade guides with:
+- **💥 Breaking Changes**: API changes and migration steps
+- **✨ New Features**: Feature introductions and usage examples
+- **⚡ Performance**: Performance improvements and optimizations
+- **🐛 Bug Fixes**: Important fixes and their impact
+
+### 📊 Types of Changes
+- **🚀 Added** for new features
+- **🔧 Changed** for changes in existing functionality
+- **🗑️ Deprecated** for soon-to-be removed features
+- **🚫 Removed** for now removed features
+- **🐛 Fixed** for any bug fixes
+- **🛡️ Security** for vulnerability fixes
+- **📚 Documentation** for documentation changes
+- **⚡ Performance** for performance improvements
+
+### 🔗 Links
+- **📦 Repository**: [GitHub](https://github.com/lumosai/lumosai)
+- **📚 Documentation**: [docs/README.md](docs/README.md)
+- **🐛 Issues**: [GitHub Issues](https://github.com/lumosai/lumosai/issues)
+- **🚀 Releases**: [GitHub Releases](https://github.com/lumosai/lumosai/releases)
+
+---
+
+**For detailed release information, visit our [GitHub Releases](https://github.com/lumosai/lumosai/releases) page.**

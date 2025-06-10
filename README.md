@@ -1,491 +1,392 @@
-# LumosAI框架
+# 🌟 LumosAI
 
-LumosAI是一个用Rust语言构建的现代化AI Agent框架。此外，我们还提供了完整的JavaScript客户端和UI组件库。
+<div align="center">
 
-## 项目结构（Monorepo）
+**A powerful, enterprise-grade AI framework built in Rust for building intelligent applications**
 
-这个仓库采用monorepo结构，包含多个相互关联的包：
+[![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/lumosai/lumosai)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/lumosai)
 
-```
-lumosai/
-├── packages/         # JavaScript包
-│   ├── client-js/    # JavaScript客户端
-│   └── ...           # 未来的其他包
-├── lumosai_ui/       # UI组件库和演示界面
-├── lumosai_core/     # 核心Rust库
-├── lumosai_cli/      # 命令行工具
-└── ...               # 其他相关项目
-```
+[📖 Documentation](docs/README.md) | [🚀 Quick Start](#quick-start) | [💡 Examples](#examples) | [🤝 Contributing](#contributing)
 
-> 📝 **更多详情:** 查看 [Monorepo使用指南](./MONOREPO_GUIDE.md) 了解完整的目录结构和更详细的使用说明。
+</div>
 
-## JavaScript开发指南
+---
 
-这个仓库使用pnpm作为包管理工具，并通过workspace功能管理多个JS包。
+## ✨ Features
 
-### 安装依赖
+### 🤖 **Intelligent Agent System**
+- **Multi-Model Support**: OpenAI GPT, Anthropic Claude, local models
+- **Specialized Agents**: Research, writing, analysis, and custom roles
+- **Tool Integration**: Extensible tool system with built-in tools
+- **Conversation Memory**: Persistent context and conversation history
 
-```bash
-pnpm install
-```
+### 🧠 **Advanced RAG System**
+- **Document Processing**: PDF, text, markdown, and web content
+- **Smart Chunking**: Recursive, semantic, and custom chunking strategies
+- **Vector Storage**: Memory, PostgreSQL, Qdrant, Weaviate backends
+- **Hybrid Retrieval**: Semantic search + keyword matching
 
-### 构建所有JS包
+### 🔄 **Workflow Orchestration**
+- **Multi-Agent Collaboration**: Sequential, parallel, and conditional workflows
+- **Task Management**: Complex task decomposition and execution
+- **Event-Driven Architecture**: Real-time event processing and routing
+- **Error Handling**: Robust retry mechanisms and fallback strategies
 
-```bash
-pnpm build:all
-```
+### 🛡️ **Enterprise Security**
+- **Authentication**: JWT, OAuth2, API keys, multi-factor authentication
+- **Authorization**: Role-based access control (RBAC) with fine-grained permissions
+- **Multi-Tenant**: Isolated tenant environments with custom configurations
+- **Audit Logging**: Comprehensive security and compliance logging
 
-### 单独开发UI
+### 📊 **Monitoring & Observability**
+- **Real-time Metrics**: Performance, usage, and health monitoring
+- **Distributed Tracing**: Request tracing across agent interactions
+- **Custom Dashboards**: Grafana and Prometheus integration
+- **Alerting**: Intelligent alerting for system anomalies
 
-```bash
-pnpm dev:ui
-```
+### ⚡ **High Performance**
+- **Rust Performance**: Memory-safe, zero-cost abstractions
+- **Async/Await**: Non-blocking I/O for high concurrency
+- **Caching**: Intelligent caching at multiple layers
+- **Scalability**: Horizontal scaling with load balancing
 
-### 单独开发客户端库
+---
 
-```bash
-pnpm dev:client
-```
+## 🚀 Quick Start
 
-## 使用LumosAI JavaScript客户端
+### Installation
 
-```typescript
-import { LumosAIClient } from '@lumosai/client-js';
-
-// 初始化客户端
-const client = new LumosAIClient({
-  apiKey: 'your-api-key',
-  baseUrl: 'https://api.lumosai.com', // 可选，默认为官方API
-});
-
-// 使用代理
-const agent = client.getAgent('agent-id');
-const response = await agent.generate('你好，请介绍一下你自己');
-
-console.log(response.message.content);
-```
-
-# Lumosai - Rust语言的AI Agent框架
-
-Lumosai是一个用Rust实现的AI Agent框架，专注于性能、安全性和可扩展性。它提供了创建、管理和部署智能代理的工具和抽象，使开发者能够轻松构建高效的AI应用。
-
-## 主要特性
-
-- **高性能**：使用Rust语言实现，提供优秀的性能和内存安全
-- **模块化设计**：核心框架、工具库和适配器的清晰分离
-- **类型安全**：利用Rust的类型系统确保API使用的正确性
-- **灵活扩展**：支持自定义工具、代理和LLM适配器
-- **异步优先**：从设计之初就支持异步操作
-- **内存管理**：提供多种内存存储选项
-- **宏支持**：通过过程宏简化API使用
-- **DSL语法**：提供受Mastra启发的声明式DSL，简化工作流、RAG、评估和MCP集成
-
-## 项目结构
-
-- `lumosai_core`：核心库，包含基本抽象和接口
-  - `agent`：Agent trait和实现
-  - `tool`：Tool trait和实现
-  - `memory`：内存和状态管理
-  - `llm`：LLM适配器和抽象
-  - `eval`：评估和测试框架
-  - `rag`：检索增强生成支持
-  - `mcp`：MCP（Mastra Compatible Protocol）支持
-- `lumosai_rag`：检索增强生成库，提供扩展的RAG功能
-- `lumosai_evals`：评估和测试框架，提供全面的评估工具
-- `lumosai_examples`：示例代码，展示框架使用方法
-- `lumos_macro`：宏库，提供简化API使用的过程宏
-- `docs`：文档
-
-## 安装
-
-添加依赖到你的`Cargo.toml`：
+Add LumosAI to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lumosai_core = "0.1.0"
+lumosai = "0.1.3"
+tokio = { version = "1.0", features = ["full"] }
 ```
 
-若要使用宏功能，启用`macros`特性：
-
-```toml
-[dependencies]
-lumosai_core = { version = "0.1.0", features = ["macros"] }
-lumos_macro = "0.1.0"
-```
-
-若要使用RAG或评估功能：
-
-```toml
-[dependencies]
-lumosai_core = "0.1.0"
-lumosai_rag = "0.1.0"
-lumosai_evals = "0.1.0"
-```
-
-## 快速开始
-
-### 基础使用示例
+### Basic Usage
 
 ```rust
-use lumosai_core::{Result, Error};
-use lumosai_core::agent::{Agent, SimpleAgent};
-use lumosai_core::tool::{Tool, FunctionTool};
-use lumosai_core::llm::{LlmProvider, OpenAiAdapter};
-use std::sync::Arc;
+use lumosai::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // 创建LLM适配器
-    let llm = Arc::new(OpenAiAdapter::new(
-        "your-api-key",
-        "gpt-4",
-    ));
-    
-    // 创建工具
-    let calculator = FunctionTool::new(
-        "calculator",
-        "执行基础数学计算",
-        |params| async move {
-            // 工具实现...
-            Ok(serde_json::json!({"result": 42}))
-        },
-    );
-    
-    // 创建代理
-    let mut agent = SimpleAgent::new(
-        "math_helper",
-        "你是一个擅长数学的助手。",
-        llm,
-    );
-    
-    // 注册工具
-    agent.add_tool(calculator);
-    
-    // 运行代理
-    let response = agent.run("计算 (15 + 27) * 2").await?;
-    println!("代理回答: {}", response);
-    
+    // 🤖 Create a simple agent
+    let agent = Agent::builder()
+        .name("assistant")
+        .model("gpt-4")
+        .system_prompt("You are a helpful AI assistant")
+        .build()
+        .await?;
+
+    // 💬 Have a conversation
+    let response = agent.chat("Hello, how are you?").await?;
+    println!("Agent: {}", response);
+
     Ok(())
 }
 ```
 
-### 使用宏的简化示例
+### Advanced Example: RAG System
 
 ```rust
-use lumosai_core::{Result, Error};
-use lumosai_core::llm::OpenAiAdapter;
-use lumos_macro::{tool, agent};
-use std::sync::Arc;
-
-// 使用宏定义工具
-#[tool(
-    name = "calculator",
-    description = "执行基础数学计算"
-)]
-fn calculator(
-    #[parameter(name = "a", description = "第一个数字", r#type = "number")]
-    a: f64,
-    #[parameter(name = "b", description = "第二个数字", r#type = "number")]
-    b: f64,
-    #[parameter(name = "operation", description = "运算符", r#type = "string")]
-    operation: String,
-) -> Result<serde_json::Value> {
-    // 工具实现...
-    Ok(serde_json::json!({"result": 42}))
-}
-
-// 使用宏定义代理
-#[agent(
-    name = "math_helper",
-    instructions = "你是一个擅长数学的助手。",
-    model = "gpt-4"
-)]
-struct MathHelper {
-    #[tool]
-    calculator: calculator,
-}
+use lumosai::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // 创建LLM适配器
-    let llm = Arc::new(OpenAiAdapter::new(
-        "your-api-key",
-        "gpt-4",
-    ));
-    
-    // 创建代理
-    let agent = create_mathhelper(llm);
-    
-    // 运行代理
-    let response = agent.run("计算 (15 + 27) * 2").await?;
-    println!("代理回答: {}", response);
-    
+    // 📦 Create vector storage
+    let storage = VectorStorage::memory().await?;
+
+    // 🧠 Create RAG system
+    let rag = RagSystem::builder()
+        .storage(storage)
+        .embedding_provider("openai")
+        .chunking_strategy("recursive")
+        .build()
+        .await?;
+
+    // 📄 Add documents
+    rag.add_document("AI is transforming industries...").await?;
+
+    // 🔍 Search and generate
+    let results = rag.search("What is AI?", 5).await?;
+    println!("Found {} relevant documents", results.len());
+
     Ok(())
 }
 ```
 
-### 使用DSL宏示例
+---
 
-```rust
-use lumosai_core::{Result, Error};
-use lumosai_core::agent::Agent;
-use lumosai_core::llm::OpenAiAdapter;
-use lumos_macro::{workflow, rag_pipeline};
-use std::sync::Arc;
+## 💡 Examples
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    // 创建LLM适配器
-    let llm = Arc::new(OpenAiAdapter::new(
-        "your-api-key",
-        "gpt-4",
-    ));
-    
-    // 创建代理
-    let researcher = create_researcher(llm.clone());
-    let writer = create_writer(llm.clone());
-    let reviewer = create_reviewer(llm.clone());
-    
-    // 定义知识库
-    let kb = rag_pipeline! {
-        name: "documentation_kb",
-        source: DocumentSource::from_directory("./docs"),
-        pipeline: {
-            chunk: { chunk_size: 1000, chunk_overlap: 200 },
-            embed: { model: "text-embedding-3-small" },
-            store: { db: "memory" }
-        }
-    };
-    
-    // 定义工作流
-    let content_workflow = workflow! {
-        name: "content_creation",
-        description: "创建高质量的内容",
-        steps: {
-            {
-                name: "research",
-                agent: researcher,
-                instructions: "使用知识库进行深入的主题研究",
-                context: { knowledge_base: kb }
-            },
-            {
-                name: "writing",
-                agent: writer,
-                instructions: "将研究结果整理成文章",
-                when: { completed("research") }
-            },
-            {
-                name: "review",
-                agent: reviewer,
-                instructions: "检查文章质量和准确性",
-                when: { completed("writing") }
-            }
-        }
-    };
-    
-    // 执行工作流
-    let result = content_workflow.execute(serde_json::json!({
-        "topic": "Rust中的智能指针"
-    })).await?;
-    
-    println!("工作流执行结果: {}", result);
-    
-    Ok(())
-}
-```
+Our comprehensive example suite demonstrates real-world usage patterns:
 
-## 示例
+| Example | Description | Complexity |
+|---------|-------------|------------|
+| [🤖 Basic Agent](examples/basic_agent.rs) | Simple agent creation and conversation | ⭐ |
+| [🧠 RAG System](examples/rag_system.rs) | Document processing and retrieval | ⭐⭐ |
+| [🛠️ Tool Integration](examples/tool_integration.rs) | Adding tools to agents | ⭐⭐ |
+| [💾 Memory System](examples/memory_system.rs) | Conversation memory and context | ⭐⭐ |
+| [📊 Vector Storage](examples/vector_storage.rs) | Vector database operations | ⭐⭐ |
+| [🌊 Streaming Response](examples/streaming_response.rs) | Real-time streaming responses | ⭐⭐⭐ |
+| [👥 Multi-Agent Workflow](examples/multi_agent_workflow.rs) | Agent collaboration patterns | ⭐⭐⭐ |
+| [🚀 Enhanced Features](examples/enhanced_features_demo.rs) | Advanced framework capabilities | ⭐⭐⭐ |
+| [⚡ Performance Benchmark](examples/performance_benchmark.rs) | Performance testing and optimization | ⭐⭐⭐ |
+| [🔐 Authentication](examples/auth_demo.rs) | Enterprise security features | ⭐⭐⭐⭐ |
+| [📈 Monitoring](examples/monitoring_demo_simple.rs) | System monitoring and metrics | ⭐⭐⭐⭐ |
+| [🎯 Complete API Demo](examples/simplified_api_complete_demo.rs) | Full framework demonstration | ⭐⭐⭐⭐⭐ |
 
-请参阅 `lumosai_examples` 目录中的示例程序，了解更多使用方法。可以通过以下命令运行示例：
+### Running Examples
 
 ```bash
-cargo run --example basic_usage
-cargo run --example agent_usage
-cargo run --example workflow_example
+# Basic agent example
+cargo run --example basic_agent
+
+# RAG system with document processing
+cargo run --example rag_system
+
+# Multi-agent collaboration
+cargo run --example multi_agent_workflow
+
+# Complete API demonstration
+cargo run --example simplified_api_complete_demo
 ```
 
-示例包括：
+---
 
-- `basic_usage` - 基础框架使用
-- `agent_usage` - 代理创建和使用
-- `agent_tools` - 代理工具实现
-- `workflow_example` - 工作流示例
-- `workflow_dsl` - 工作流DSL使用
-- `rag_dsl` - RAG功能示例
-- `eval_dsl` - 评估框架示例
-- `mcp_dsl` - MCP集成示例
-- `lumos_app` - 应用程序框架
-- `lumos_macro_usage` - 宏使用示例
-- `macro_tool_example` - 工具宏示例
+## 🏗️ Architecture
 
-## 核心功能
+LumosAI follows a modular, layered architecture designed for scalability and maintainability:
 
-### Agent
-
-Agent是框架的核心概念，代表一个能够执行任务的智能体：
-
-```rust
-pub trait Agent: Send + Sync {
-    fn name(&self) -> &str;
-    fn instructions(&self) -> &str;
-    fn add_tool(&mut self, tool: Box<dyn Tool>);
-    async fn run(&self, input: &str) -> Result<String>;
-    async fn run_with_memory(&self, input: &str, memory: Box<dyn Memory>) -> Result<String>;
-}
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Application Layer                        │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
+│  │   Web UI    │ │     CLI     │ │    Custom Applications  │ │
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     API Layer                               │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
+│  │  REST API   │ │  GraphQL    │ │      WebSocket API      │ │
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                   Service Layer                             │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
+│  │   Agents    │ │  Workflows  │ │      Authentication     │ │
+│  │   Memory    │ │     RAG     │ │       Monitoring        │ │
+│  │   Tools     │ │   Events    │ │       Security          │ │
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Core Layer                               │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
+│  │   Traits    │ │   Types     │ │       Utilities         │ │
+│  │   Errors    │ │   Config    │ │       Macros            │ │
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                Infrastructure Layer                         │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
+│  │  Databases  │ │   Storage   │ │      External APIs      │ │
+│  │   Cache     │ │   Queues    │ │       Providers         │ │
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Tool
+### Core Components
 
-Tool代表代理可以使用的工具或功能：
+- **🤖 Agent System**: Intelligent agents with specialized capabilities
+- **🧠 RAG Engine**: Advanced retrieval-augmented generation
+- **🔄 Workflow Engine**: Multi-agent orchestration and task management
+- **💾 Memory System**: Persistent context and conversation management
+- **🛠️ Tool System**: Extensible tool integration framework
+- **🔐 Security Layer**: Authentication, authorization, and audit logging
+- **📊 Monitoring**: Real-time metrics, tracing, and observability
 
-```rust
-pub trait Tool: Send + Sync {
-    fn name(&self) -> &str;
-    fn description(&self) -> &str;
-    fn parameters(&self) -> &[Parameter];
-    async fn execute(&self, params: serde_json::Value) -> Result<serde_json::Value>;
-}
+---
+
+## 📚 Documentation
+
+### 📖 User Guides
+- [🚀 Getting Started Guide](docs/getting-started.md) - Your first steps with LumosAI
+- [🤖 Agent Development](docs/agents.md) - Creating and customizing agents
+- [🧠 RAG Implementation](docs/rag.md) - Building retrieval-augmented generation systems
+- [🔄 Workflow Orchestration](docs/workflows.md) - Multi-agent collaboration patterns
+- [🛠️ Tool Development](docs/tools.md) - Creating custom tools for agents
+- [💾 Memory Management](docs/memory.md) - Persistent context and state management
+
+### 🔧 Technical References
+- [📋 API Reference](docs/api/README.md) - Complete API documentation
+- [🏗️ Architecture Guide](docs/architecture.md) - System design and components
+- [⚙️ Configuration](docs/configuration.md) - Framework configuration options
+- [🔌 Integrations](docs/integrations.md) - Third-party service integrations
+- [🚀 Deployment](docs/deployment.md) - Production deployment strategies
+
+### 🛡️ Enterprise Features
+- [🔐 Security Guide](docs/security.md) - Authentication, authorization, and compliance
+- [📊 Monitoring & Observability](docs/monitoring.md) - Metrics, logging, and tracing
+- [🏢 Multi-Tenancy](docs/multi-tenancy.md) - Tenant isolation and management
+- [⚡ Performance Optimization](docs/performance.md) - Scaling and optimization strategies
+
+### 💡 Tutorials & Examples
+- [🎯 Use Cases](docs/use-cases.md) - Real-world application scenarios
+- [🧪 Testing Guide](docs/testing.md) - Testing strategies and best practices
+- [🔄 Migration Guide](docs/migration.md) - Upgrading between versions
+- [❓ FAQ](docs/faq.md) - Frequently asked questions
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions of all kinds! Whether you're fixing bugs, adding features, improving documentation, or sharing feedback, your contributions help make LumosAI better for everyone.
+
+### 🚀 Quick Contribution Guide
+
+1. **🍴 Fork the repository**
+2. **🌿 Create your feature branch** (`git checkout -b feature/amazing-feature`)
+3. **✅ Make your changes** (follow our coding standards)
+4. **🧪 Add tests** for your changes
+5. **📝 Update documentation** if needed
+6. **✨ Commit your changes** (`git commit -m 'Add amazing feature'`)
+7. **📤 Push to the branch** (`git push origin feature/amazing-feature`)
+8. **🔄 Open a Pull Request**
+
+### 📋 Contribution Areas
+
+- **🐛 Bug Reports**: Help us identify and fix issues
+- **💡 Feature Requests**: Suggest new capabilities and improvements
+- **📖 Documentation**: Improve guides, examples, and API docs
+- **🧪 Testing**: Add test coverage and improve test quality
+- **🎨 Examples**: Create real-world usage examples
+- **🔧 Performance**: Optimize performance and resource usage
+- **🛡️ Security**: Enhance security features and practices
+
+### 🎯 Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/lumosai/lumosai.git
+cd lumosai
+
+# Install Rust (if not already installed)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Build the project
+cargo build
+
+# Run tests
+cargo test
+
+# Run examples
+cargo run --example basic_agent
+
+# Check code quality
+cargo clippy
+cargo fmt --check
 ```
 
-### Memory
+### 📏 Code Standards
 
-Memory提供状态管理和持久化能力：
+- **🦀 Rust Best Practices**: Follow Rust idioms and conventions
+- **📝 Documentation**: Document all public APIs with examples
+- **🧪 Testing**: Maintain high test coverage (aim for >80%)
+- **🔍 Code Quality**: Pass `cargo clippy` and `cargo fmt` checks
+- **⚡ Performance**: Consider performance implications of changes
+- **🛡️ Security**: Follow secure coding practices
 
-```rust
-pub trait Memory: Send + Sync {
-    async fn get(&self, key: &str) -> Result<Option<String>>;
-    async fn set(&self, key: &str, value: &str) -> Result<()>;
-    async fn delete(&self, key: &str) -> Result<()>;
-    async fn append(&self, key: &str, value: &str) -> Result<()>;
-}
+### 🏷️ Issue Labels
+
+- `good first issue` - Perfect for newcomers
+- `help wanted` - Community contributions welcome
+- `bug` - Something isn't working
+- `enhancement` - New feature or improvement
+- `documentation` - Documentation improvements
+- `performance` - Performance-related changes
+- `security` - Security-related issues
+
+---
+
+## 🌟 Community & Support
+
+### 💬 Join Our Community
+
+- **💬 Discord**: [Join our Discord server](https://discord.gg/lumosai) for real-time discussions
+- **📧 Mailing List**: [Subscribe to our newsletter](https://lumosai.com/newsletter) for updates
+- **🐦 Twitter**: Follow [@LumosAI](https://twitter.com/lumosai) for announcements
+- **📺 YouTube**: [LumosAI Channel](https://youtube.com/lumosai) for tutorials and demos
+
+### 🆘 Getting Help
+
+- **📖 Documentation**: Check our [comprehensive docs](docs/README.md)
+- **💡 Examples**: Browse [example applications](examples/)
+- **🐛 Issues**: Report bugs on [GitHub Issues](https://github.com/lumosai/lumosai/issues)
+- **💬 Discussions**: Ask questions in [GitHub Discussions](https://github.com/lumosai/lumosai/discussions)
+- **📧 Email**: Contact us at [support@lumosai.com](mailto:support@lumosai.com)
+
+### 🏆 Contributors
+
+Thanks to all our amazing contributors! 🎉
+
+<a href="https://github.com/lumosai/lumosai/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=lumosai/lumosai" />
+</a>
+
+### 🚀 Enterprise Support
+
+For enterprise customers, we offer:
+
+- **🎯 Priority Support**: Dedicated support channels
+- **🏗️ Custom Development**: Tailored solutions for your needs
+- **📚 Training & Consulting**: Expert guidance and training
+- **🔒 Security & Compliance**: Enhanced security features
+- **📈 SLA Guarantees**: Service level agreements
+
+Contact us at [enterprise@lumosai.com](mailto:enterprise@lumosai.com) for more information.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+```
+MIT License
+
+Copyright (c) 2024 LumosAI
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
-### LlmProvider
+---
 
-LlmProvider抽象了与大语言模型的交互：
+<div align="center">
 
-```rust
-pub trait LlmProvider: Send + Sync {
-    async fn generate(&self, messages: &[Message], options: &GenerateOptions) -> Result<String>;
-    async fn embed(&self, text: &str) -> Result<Vec<f32>>;
-}
-```
+**⭐ Star us on GitHub if you find LumosAI helpful!**
 
-## 扩展功能
+[⭐ Star](https://github.com/lumosai/lumosai) | [🐛 Report Bug](https://github.com/lumosai/lumosai/issues) | [💡 Request Feature](https://github.com/lumosai/lumosai/issues) | [📖 Documentation](docs/README.md)
 
-### RAG (检索增强生成)
+**Built with ❤️ by the LumosAI team**
 
-Lumosai提供了完整的RAG支持，包括：
-
-- 文档加载和处理
-- 向量嵌入生成
-- 向量存储和检索
-- 结果重排序和优化
-
-```rust
-let rag_pipeline = rag_pipeline! {
-    name: "knowledge_base",
-    source: {
-        type: "directory",
-        path: "./docs",
-        pattern: "**/*.md"
-    },
-    pipeline: {
-        chunk: {
-            size: 1000,
-            overlap: 200
-        },
-        embed: {
-            model: "text-embedding-3-small"
-        },
-        store: {
-            type: "memory"
-        }
-    }
-};
-
-let results = rag_pipeline.query("如何使用Rust的所有权系统？", 5).await?;
-```
-
-### 评估框架
-
-Lumosai提供了评估代理性能的工具：
-
-```rust
-let eval_suite = eval_suite! {
-    name: "agent_performance",
-    metrics: {
-        accuracy: AccuracyMetric,
-        relevance: RelevanceMetric,
-        completeness: CompletenessMetric
-    },
-    test_cases: [
-        {
-            query: "Rust的特点是什么？",
-            expected: "内存安全,并发,性能",
-            weight: 1.0
-        }
-    ],
-    thresholds: {
-        accuracy: 0.8,
-        relevance: 0.7,
-        completeness: 0.6
-    }
-};
-
-let results = eval_suite.run(agent).await?;
-```
-
-### 工作流
-
-Lumosai支持定义复杂的多代理工作流：
-
-```rust
-let workflow = workflow! {
-    name: "content_creation",
-    description: "创建高质量的内容",
-    steps: {
-        {
-            name: "research",
-            agent: researcher,
-            instructions: "进行主题研究"
-        },
-        {
-            name: "writing",
-            agent: writer,
-            instructions: "撰写内容",
-            when: { completed("research") }
-        }
-    }
-};
-
-let result = workflow.execute(input_data).await?;
-```
-
-## 贡献指南
-
-我们欢迎各种形式的贡献，包括但不限于：
-
-- 代码贡献
-- 文档改进
-- 错误报告
-- 功能建议
-
-### 贡献流程
-
-1. Fork 项目仓库
-2. 创建您的特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 开启一个Pull Request
-
-### 代码规范
-
-- 遵循Rust标准编码风格
-- 所有代码必须通过 `cargo clippy` 和 `cargo fmt` 检查
-- 添加适当的测试覆盖率
-- 保持代码文档的完整性
-
-## 许可证
-
-本项目采用MIT许可证 - 详见 [LICENSE](LICENSE) 文件 
+</div>

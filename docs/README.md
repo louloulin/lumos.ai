@@ -1,22 +1,62 @@
-# Lumos-X 项目文档
+# 📚 LumosAI Documentation
 
-欢迎查阅Lumos-X项目文档。这里提供了对系统设计、架构和API的全面介绍，帮助您理解和使用Lumos-X平台。
+Welcome to the comprehensive documentation for LumosAI, the enterprise-grade AI framework built in Rust.
 
-## 文档章节
+## 🚀 Quick Navigation
 
-- [1. 项目概述](./1_overview.md)：项目背景、目标和核心价值
-- [2. 系统架构](./2_architecture.md)：整体架构设计和组件关系
-- [3. 核心技术栈](./3_tech_stack.md)：所使用的技术栈详情
-- [4. 核心组件](./4_core_components.md)：主要组件的实现细节
-- [5. API参考](./5_api_reference.md)：API说明文档
-- [6. 前后端交互](./6_frontend_backend.md)：前后端交互模型详解
-- [7. 开发指南](./7_dev_guide.md)：开发和扩展指南
-- [8. 部署选项](./8_deployment.md)：不同部署模式的配置与指南
+### 📖 Getting Started
+- [🚀 Getting Started Guide](getting_started.md) - Your first steps with LumosAI
+- [📋 Overview](1_overview.md) - Project background and core values
+- [🏗️ Architecture](2_architecture.md) - System design and components
+- [🔧 Tech Stack](3_tech_stack.md) - Technology stack details
 
-## 快速开始
+### 🤖 Core Concepts
+- [🧩 Core Components](4_core_components.md) - Main component implementations
+- [📋 API Reference](5_api_reference.md) - Complete API documentation
+- [🔧 Development Guide](6_development_guide.md) - Development and extension guide
+- [🚀 Deployment Guide](7_deployment_guide.md) - Deployment configurations
 
-要快速开始使用Lumos-X，请参考[开发指南](./7_dev_guide.md)中的"快速开始"部分。
+### 🛡️ Enterprise Features
+- [🔍 Vector Databases](VECTOR_DATABASES.md) - Vector storage implementations
+- [⚡ FastEmbed Implementation](FASTEMBED_IMPLEMENTATION.md) - Embedding system
+- [🗄️ LanceDB Implementation](LANCEDB_IMPLEMENTATION.md) - Vector database integration
 
-## 贡献
+### 🔧 Development Resources
+- [🎯 Simplified API](simplified_api_final.md) - Simplified API design
+- [🔮 DSL Macros](dsl_macros.md) - Domain-specific language macros
+- [📊 Implementation Roadmap](implementation_roadmap.md) - Development roadmap
+- [📈 Implementation Summary](implementation_summary.md) - Progress summary
 
-如果您想为文档做出贡献，请参考[贡献指南](./contributing.md)。 
+### 📋 Reference & Guides
+- [❓ FAQ](8_faq.md) - Frequently asked questions
+- [📦 Release Guide](RELEASE_GUIDE.md) - Release process and versioning
+- [🔄 Updates](updates/) - Latest updates and changes
+- [📊 Analysis](lumos_vs_mastra_analysis.md) - Framework comparisons
+
+## 🎯 Documentation by Role
+
+### 👨‍💻 **For Developers**
+Start with [Getting Started](getting_started.md), then explore [Core Components](4_core_components.md) and [API Reference](5_api_reference.md).
+
+### 🏗️ **For Architects**
+Review [System Architecture](2_architecture.md), [Tech Stack](3_tech_stack.md), and [Vector Databases](VECTOR_DATABASES.md).
+
+### 🚀 **For DevOps**
+Focus on [Deployment Guide](7_deployment_guide.md) and [Release Guide](RELEASE_GUIDE.md).
+
+### 👔 **For Product Managers**
+Check out [Overview](1_overview.md), [Implementation Summary](implementation_summary.md), and [FAQ](8_faq.md).
+
+## 🆘 Need Help?
+
+- **🐛 Found a bug?** [Report it on GitHub](https://github.com/lumosai/lumosai/issues)
+- **💡 Have a question?** Check our [FAQ](8_faq.md)
+- **📧 Need enterprise support?** [Contact us](mailto:enterprise@lumosai.com)
+
+## 🤝 Contributing to Documentation
+
+We welcome contributions to improve our documentation! See our [Development Guide](6_development_guide.md) for details.
+
+---
+
+**📖 Happy reading, and welcome to the LumosAI community!**

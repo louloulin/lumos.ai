@@ -6,14 +6,14 @@
 //! - 不同 LLM 提供商集成
 //! - 基础对话功能
 
-use lumosai_core::prelude::*;
-use lumosai_core::agent::{AgentBuilder, BasicAgent};
-use lumosai_core::llm::{MockLlmProvider, Message, Role};
+use lumosai_core::agent::{AgentBuilder, BasicAgent, AgentTrait};
+use lumosai_core::base::Base;
+use lumosai_core::llm::{MockLlmProvider};
 use std::sync::Arc;
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🤖 基础 Agent 演示");
     println!("================");
     
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示简单 Agent 创建
-async fn demo_simple_agent() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_simple_agent() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 简单 Agent 创建 ===");
     
     // 创建 Mock LLM 提供商（用于演示）
@@ -50,14 +50,14 @@ async fn demo_simple_agent() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
     
     // 生成响应
-    let response = agent.generate("你好！请介绍一下自己。").await?;
-    println!("Agent 回复: {}", response.content);
+    let response = agent.generate_simple("你好！请介绍一下自己。").await?;
+    println!("Agent 回复: {}", response);
     
     Ok(())
 }
 
 /// 演示高级 Agent 配置
-async fn demo_advanced_agent() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_advanced_agent() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: 高级 Agent 配置 ===");
     
     // 创建更复杂的响应
@@ -72,21 +72,20 @@ async fn demo_advanced_agent() -> Result<(), Box<dyn std::error::Error>> {
         .instructions("你是一个专业的 Rust 编程专家，擅长解答 Rust 相关的技术问题。请提供详细、准确的技术解释。")
         .model(llm_provider)
         .max_tool_calls(5)
-        .temperature(0.7)
         .build()?;
     
-    let tech_response = advanced_agent.generate(
+    let tech_response = advanced_agent.generate_simple(
         "请详细解释 Rust 中的所有权概念，包括其核心原理和优势"
     ).await?;
     
     println!("Rust 专家回复:");
-    println!("{}", tech_response.content);
+    println!("{}", tech_response);
     
     Ok(())
 }
 
 /// 演示多轮对话
-async fn demo_conversation() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_conversation() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 多轮对话 ===");
     
     // 创建对话响应序列
@@ -107,23 +106,23 @@ async fn demo_conversation() -> Result<(), Box<dyn std::error::Error>> {
     // 模拟多轮对话
     println!("开始多轮对话演示:");
     
-    let response1 = conversation_agent.generate("我叫张三，今年25岁").await?;
+    let response1 = conversation_agent.generate_simple("我叫张三，今年25岁").await?;
     println!("第1轮 - 用户: 我叫张三，今年25岁");
-    println!("第1轮 - AI: {}", response1.content);
+    println!("第1轮 - AI: {}", response1);
     
-    let response2 = conversation_agent.generate("我的爱好是编程和阅读").await?;
+    let response2 = conversation_agent.generate_simple("我的爱好是编程和阅读").await?;
     println!("\n第2轮 - 用户: 我的爱好是编程和阅读");
-    println!("第2轮 - AI: {}", response2.content);
+    println!("第2轮 - AI: {}", response2);
     
-    let response3 = conversation_agent.generate("请告诉我，你还记得我的名字和年龄吗？").await?;
+    let response3 = conversation_agent.generate_simple("请告诉我，你还记得我的名字和年龄吗？").await?;
     println!("\n第3轮 - 用户: 请告诉我，你还记得我的名字和年龄吗？");
-    println!("第3轮 - AI: {}", response3.content);
+    println!("第3轮 - AI: {}", response3);
     
     Ok(())
 }
 
 /// 演示 Agent 配置选项
-async fn demo_agent_options() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_agent_options() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: Agent 配置选项 ===");
     
     // 创建不同配置的 Agent 来展示各种选项
@@ -138,43 +137,39 @@ async fn demo_agent_options() -> Result<(), Box<dyn std::error::Error>> {
         .name("creative_assistant")
         .instructions("你是一个富有创造力的助手")
         .model(llm_provider.clone())
-        .temperature(0.9)
-        .max_tokens(Some(200))
         .build()?;
     
     println!("高创造性 Agent (temperature=0.9):");
-    let creative_response = creative_agent.generate("写一个关于未来的短故事").await?;
-    println!("回复: {}", creative_response.content);
+    let creative_response = creative_agent.generate_simple("写一个关于未来的短故事").await?;
+    println!("回复: {}", creative_response);
     
     // 低创造性 Agent（低温度）
     let precise_agent = AgentBuilder::new()
         .name("precise_assistant")
         .instructions("你是一个精确、事实导向的助手")
         .model(llm_provider)
-        .temperature(0.1)
-        .max_tokens(Some(100))
         .build()?;
     
     println!("\n精确性 Agent (temperature=0.1):");
-    let precise_response = precise_agent.generate("什么是人工智能？").await?;
-    println!("回复: {}", precise_response.content);
+    let precise_response = precise_agent.generate_simple("什么是人工智能？").await?;
+    println!("回复: {}", precise_response);
     
     // 显示 Agent 配置信息
     println!("\n=== Agent 配置信息 ===");
     println!("创造性 Agent:");
-    println!("  名称: {}", creative_agent.name());
-    println!("  指令: {}", creative_agent.instructions());
+    println!("  名称: {:?}", creative_agent.name());
+    println!("  指令: {}", creative_agent.get_instructions());
     
     println!("\n精确性 Agent:");
-    println!("  名称: {}", precise_agent.name());
-    println!("  指令: {}", precise_agent.instructions());
+    println!("  名称: {:?}", precise_agent.name());
+    println!("  指令: {}", precise_agent.get_instructions());
     
     Ok(())
 }
 
 /// 创建 DeepSeek 提供商（如果有 API Key）
 #[allow(dead_code)]
-fn create_deepseek_provider() -> Result<Arc<dyn lumosai_core::llm::LlmProvider>, Box<dyn std::error::Error>> {
+fn create_deepseek_provider() -> std::result::Result<Arc<dyn lumosai_core::llm::LlmProvider>, Box<dyn std::error::Error>> {
     // 注意：这里需要实际的 DeepSeek 提供商实现
     // 目前使用 Mock 提供商作为演示
     let mock_responses = vec![

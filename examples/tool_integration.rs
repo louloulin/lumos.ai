@@ -6,12 +6,15 @@
 //! - 工具调用和结果处理
 //! - 内置工具使用
 
-use lumosai_core::prelude::*;
-use lumosai_core::agent::{AgentBuilder, BasicAgent};
-use lumosai_core::tool::{Tool, ToolSchema, ParameterSchema, ToolExecutionContext, SchemaFormat};
-use lumosai_core::llm::{MockLlmProvider, Message, Role};
+use lumosai_core::agent::{AgentBuilder, BasicAgent, AgentTrait};
+use lumosai_core::base::{Base, BaseComponent};
+use lumosai_core::tool::{Tool, ToolSchema, ParameterSchema, ToolExecutionContext, ToolExecutionOptions, SchemaFormat};
+use lumosai_core::llm::{MockLlmProvider};
+use lumosai_core::logger::Component as LogComponent;
+use lumosai_core::telemetry::TelemetrySink;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use std::collections::HashMap;
 use async_trait::async_trait;
 use tokio;
 
@@ -49,7 +52,7 @@ async fn demo_custom_tools() -> Result<(), Box<dyn std::error::Error>> {
         "precision": 2
     });
     
-    let result = calculator.execute(params, &context).await?;
+    let result = calculator.execute(params, context.clone(), &ToolExecutionOptions::default()).await?;
     println!("计算器工具测试:");
     println!("表达式: 15 + 27 * 3");
     println!("结果: {}", result);
@@ -61,7 +64,7 @@ async fn demo_custom_tools() -> Result<(), Box<dyn std::error::Error>> {
         "units": "metric"
     });
     
-    let weather_result = weather_tool.execute(weather_params, &context).await?;
+    let weather_result = weather_tool.execute(weather_params, context.clone(), &ToolExecutionOptions::default()).await?;
     println!("\n天气工具测试:");
     println!("城市: 北京");
     println!("结果: {}", weather_result);
@@ -91,24 +94,27 @@ async fn demo_agent_with_tools() -> Result<(), Box<dyn std::error::Error>> {
         .name("tool_agent")
         .instructions("你是一个助手，可以使用计算器和天气查询工具来帮助用户。当用户需要计算时使用计算器工具，需要天气信息时使用天气工具。")
         .model(llm_provider)
-        .tools(vec![calculator, weather_tool])
+        .tools(vec![
+            calculator.clone_box(),
+            weather_tool.clone_box()
+        ])
         .build()?;
     
     // 测试计算功能
     println!("测试计算功能:");
-    let calc_response = agent.generate(
+    let calc_response = agent.generate_simple(
         "请计算 (15 + 27) * 3 的结果"
     ).await?;
     println!("用户: 请计算 (15 + 27) * 3 的结果");
-    println!("AI: {}", calc_response.content);
+    println!("AI: {}", calc_response);
     
     // 测试天气查询
     println!("\n测试天气查询:");
-    let weather_response = agent.generate(
+    let weather_response = agent.generate_simple(
         "请查询北京的天气情况"
     ).await?;
     println!("用户: 请查询北京的天气情况");
-    println!("AI: {}", weather_response.content);
+    println!("AI: {}", weather_response);
     
     Ok(())
 }
@@ -132,16 +138,20 @@ async fn demo_tool_chain() -> Result<(), Box<dyn std::error::Error>> {
         .name("data_analyst")
         .instructions("你是一个数据分析专家，可以获取数据、处理分析并生成报告。请按顺序使用工具完成完整的分析流程。")
         .model(llm_provider)
-        .tools(vec![data_fetcher, data_processor, report_generator])
+        .tools(vec![
+            data_fetcher.clone_box(),
+            data_processor.clone_box(),
+            report_generator.clone_box()
+        ])
         .build()?;
     
-    let response = pipeline_agent.generate(
+    let response = pipeline_agent.generate_simple(
         "请执行完整的数据分析流程：获取最新销售数据，进行趋势分析，并生成报告"
     ).await?;
     
     println!("数据分析流程:");
     println!("用户: 请执行完整的数据分析流程：获取最新销售数据，进行趋势分析，并生成报告");
-    println!("AI: {}", response.content);
+    println!("AI: {}", response);
     
     Ok(())
 }
@@ -168,60 +178,121 @@ async fn demo_builtin_tools() -> Result<(), Box<dyn std::error::Error>> {
 // ============================================================================
 
 /// 计算器工具
+#[derive(Clone)]
 pub struct CalculatorTool {
     name: String,
+    base: BaseComponent,
+}
+
+impl std::fmt::Debug for CalculatorTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CalculatorTool")
+            .field("name", &self.name)
+            .finish()
+    }
 }
 
 impl CalculatorTool {
     pub fn new() -> Self {
         Self {
             name: "calculator".to_string(),
+            base: BaseComponent::new_with_name("calculator".to_string(), LogComponent::Tool),
         }
+    }
+}
+
+impl Base for CalculatorTool {
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
+
+    fn component(&self) -> LogComponent {
+        LogComponent::Tool
+    }
+
+    fn logger(&self) -> Arc<dyn lumosai_core::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: Arc<dyn lumosai_core::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
     }
 }
 
 #[async_trait]
 impl Tool for CalculatorTool {
-    fn name(&self) -> &str {
+    fn id(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         "执行基础数学计算，支持加减乘除和括号运算"
     }
-    
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(CalculatorTool {
+            name: self.name.clone(),
+            base: self.base.clone(),
+        })
+    }
+
     fn schema(&self) -> ToolSchema {
         ToolSchema {
-            name: self.name.clone(),
-            description: self.description().to_string(),
             parameters: vec![
                 ParameterSchema {
                     name: "expression".to_string(),
                     description: "要计算的数学表达式".to_string(),
+                    r#type: "string".to_string(),
                     required: true,
-                    schema_type: "string".to_string(),
-                    format: Some(SchemaFormat::Text),
+                    properties: None,
+                    default: None,
                 },
                 ParameterSchema {
                     name: "precision".to_string(),
                     description: "计算精度（小数位数）".to_string(),
+                    r#type: "integer".to_string(),
                     required: false,
-                    schema_type: "integer".to_string(),
-                    format: Some(SchemaFormat::Number),
+                    properties: None,
+                    default: Some(json!(2)),
                 },
             ],
+            json_schema: Some(json!({
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "要计算的数学表达式"
+                    },
+                    "precision": {
+                        "type": "integer",
+                        "description": "计算精度（小数位数）",
+                        "default": 2
+                    }
+                },
+                "required": ["expression"]
+            })),
+            format: SchemaFormat::JsonSchema,
+            output_schema: None,
         }
     }
-    
-    async fn execute(&self, params: Value, _ctx: &ToolExecutionContext) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+
+    async fn execute(&self, params: Value, _ctx: ToolExecutionContext, _opts: &ToolExecutionOptions) -> lumosai_core::Result<Value> {
         let expression = params["expression"]
             .as_str()
-            .ok_or("缺少表达式参数")?;
-        
+            .ok_or_else(|| lumosai_core::Error::Tool("缺少表达式参数".to_string()))?;
+
         let precision = params["precision"]
             .as_u64()
             .unwrap_or(2) as usize;
-        
+
         // 简单的表达式计算（实际项目中应使用 evalexpr 等库）
         let result = match expression {
             "15 + 27 * 3" => 96.0,
@@ -229,7 +300,7 @@ impl Tool for CalculatorTool {
             "15 + 27" => 42.0,
             _ => 42.0, // 默认值
         };
-        
+
         Ok(json!({
             "result": format!("{:.precision$}", result, precision = precision),
             "expression": expression,
@@ -239,55 +310,116 @@ impl Tool for CalculatorTool {
 }
 
 /// 天气查询工具
+#[derive(Clone)]
 pub struct WeatherTool {
     name: String,
+    base: BaseComponent,
+}
+
+impl std::fmt::Debug for WeatherTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WeatherTool")
+            .field("name", &self.name)
+            .finish()
+    }
 }
 
 impl WeatherTool {
     pub fn new() -> Self {
         Self {
             name: "weather".to_string(),
+            base: BaseComponent::new_with_name("weather".to_string(), LogComponent::Tool),
         }
+    }
+}
+
+impl Base for WeatherTool {
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
+
+    fn component(&self) -> LogComponent {
+        LogComponent::Tool
+    }
+
+    fn logger(&self) -> Arc<dyn lumosai_core::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: Arc<dyn lumosai_core::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
     }
 }
 
 #[async_trait]
 impl Tool for WeatherTool {
-    fn name(&self) -> &str {
+    fn id(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         "查询指定城市的天气信息"
     }
-    
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(WeatherTool {
+            name: self.name.clone(),
+            base: self.base.clone(),
+        })
+    }
+
     fn schema(&self) -> ToolSchema {
         ToolSchema {
-            name: self.name.clone(),
-            description: self.description().to_string(),
             parameters: vec![
                 ParameterSchema {
                     name: "city".to_string(),
                     description: "城市名称".to_string(),
+                    r#type: "string".to_string(),
                     required: true,
-                    schema_type: "string".to_string(),
-                    format: Some(SchemaFormat::Text),
+                    properties: None,
+                    default: None,
                 },
                 ParameterSchema {
                     name: "units".to_string(),
                     description: "温度单位 (metric/imperial)".to_string(),
+                    r#type: "string".to_string(),
                     required: false,
-                    schema_type: "string".to_string(),
-                    format: Some(SchemaFormat::Text),
+                    properties: None,
+                    default: Some(json!("metric")),
                 },
             ],
+            json_schema: Some(json!({
+                "type": "object",
+                "properties": {
+                    "city": {
+                        "type": "string",
+                        "description": "城市名称"
+                    },
+                    "units": {
+                        "type": "string",
+                        "description": "温度单位 (metric/imperial)",
+                        "default": "metric"
+                    }
+                },
+                "required": ["city"]
+            })),
+            format: SchemaFormat::JsonSchema,
+            output_schema: None,
         }
     }
-    
-    async fn execute(&self, params: Value, _ctx: &ToolExecutionContext) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+
+    async fn execute(&self, params: Value, _ctx: ToolExecutionContext, _opts: &ToolExecutionOptions) -> lumosai_core::Result<Value> {
         let city = params["city"]
             .as_str()
-            .ok_or("缺少城市参数")?;
+            .ok_or_else(|| lumosai_core::Error::Tool("缺少城市参数".to_string()))?;
         
         let _units = params["units"]
             .as_str()
@@ -325,45 +457,100 @@ impl Tool for WeatherTool {
 }
 
 /// 数据获取工具
+#[derive(Clone)]
 pub struct DataFetcherTool {
     name: String,
+    base: BaseComponent,
+}
+
+impl std::fmt::Debug for DataFetcherTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DataFetcherTool")
+            .field("name", &self.name)
+            .finish()
+    }
 }
 
 impl DataFetcherTool {
     pub fn new() -> Self {
         Self {
             name: "data_fetcher".to_string(),
+            base: BaseComponent::new_with_name("data_fetcher".to_string(), LogComponent::Tool),
         }
+    }
+}
+
+impl Base for DataFetcherTool {
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
+
+    fn component(&self) -> LogComponent {
+        LogComponent::Tool
+    }
+
+    fn logger(&self) -> Arc<dyn lumosai_core::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: Arc<dyn lumosai_core::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
     }
 }
 
 #[async_trait]
 impl Tool for DataFetcherTool {
-    fn name(&self) -> &str {
+    fn id(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         "从数据源获取数据"
     }
-    
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(DataFetcherTool {
+            name: self.name.clone(),
+            base: self.base.clone(),
+        })
+    }
+
     fn schema(&self) -> ToolSchema {
         ToolSchema {
-            name: self.name.clone(),
-            description: self.description().to_string(),
             parameters: vec![
                 ParameterSchema {
                     name: "source".to_string(),
                     description: "数据源类型".to_string(),
+                    r#type: "string".to_string(),
                     required: true,
-                    schema_type: "string".to_string(),
-                    format: Some(SchemaFormat::Text),
+                    properties: None,
+                    default: None,
                 },
             ],
+            json_schema: Some(json!({
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "type": "string",
+                        "description": "数据源类型"
+                    }
+                },
+                "required": ["source"]
+            })),
+            format: SchemaFormat::JsonSchema,
+            output_schema: None,
         }
     }
-    
-    async fn execute(&self, params: Value, _ctx: &ToolExecutionContext) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+
+    async fn execute(&self, params: Value, _ctx: ToolExecutionContext, _opts: &ToolExecutionOptions) -> lumosai_core::Result<Value> {
         let _source = params["source"].as_str().unwrap_or("default");
         
         // 模拟数据获取
@@ -382,45 +569,100 @@ impl Tool for DataFetcherTool {
 }
 
 /// 数据处理工具
+#[derive(Clone)]
 pub struct DataProcessorTool {
     name: String,
+    base: BaseComponent,
+}
+
+impl std::fmt::Debug for DataProcessorTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DataProcessorTool")
+            .field("name", &self.name)
+            .finish()
+    }
 }
 
 impl DataProcessorTool {
     pub fn new() -> Self {
         Self {
             name: "data_processor".to_string(),
+            base: BaseComponent::new_with_name("data_processor".to_string(), LogComponent::Tool),
         }
+    }
+}
+
+impl Base for DataProcessorTool {
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
+
+    fn component(&self) -> LogComponent {
+        LogComponent::Tool
+    }
+
+    fn logger(&self) -> Arc<dyn lumosai_core::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: Arc<dyn lumosai_core::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
     }
 }
 
 #[async_trait]
 impl Tool for DataProcessorTool {
-    fn name(&self) -> &str {
+    fn id(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         "处理和分析数据"
     }
-    
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(DataProcessorTool {
+            name: self.name.clone(),
+            base: self.base.clone(),
+        })
+    }
+
     fn schema(&self) -> ToolSchema {
         ToolSchema {
-            name: self.name.clone(),
-            description: self.description().to_string(),
             parameters: vec![
                 ParameterSchema {
                     name: "data".to_string(),
                     description: "要处理的数据".to_string(),
+                    r#type: "object".to_string(),
                     required: true,
-                    schema_type: "object".to_string(),
-                    format: Some(SchemaFormat::Json),
+                    properties: None,
+                    default: None,
                 },
             ],
+            json_schema: Some(json!({
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "object",
+                        "description": "要处理的数据"
+                    }
+                },
+                "required": ["data"]
+            })),
+            format: SchemaFormat::JsonSchema,
+            output_schema: None,
         }
     }
-    
-    async fn execute(&self, params: Value, _ctx: &ToolExecutionContext) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+
+    async fn execute(&self, params: Value, _ctx: ToolExecutionContext, _opts: &ToolExecutionOptions) -> lumosai_core::Result<Value> {
         let _data = &params["data"];
         
         // 模拟数据处理
@@ -438,45 +680,100 @@ impl Tool for DataProcessorTool {
 }
 
 /// 报告生成工具
+#[derive(Clone)]
 pub struct ReportGeneratorTool {
     name: String,
+    base: BaseComponent,
+}
+
+impl std::fmt::Debug for ReportGeneratorTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReportGeneratorTool")
+            .field("name", &self.name)
+            .finish()
+    }
 }
 
 impl ReportGeneratorTool {
     pub fn new() -> Self {
         Self {
             name: "report_generator".to_string(),
+            base: BaseComponent::new_with_name("report_generator".to_string(), LogComponent::Tool),
         }
+    }
+}
+
+impl Base for ReportGeneratorTool {
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
+    }
+
+    fn component(&self) -> LogComponent {
+        LogComponent::Tool
+    }
+
+    fn logger(&self) -> Arc<dyn lumosai_core::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: Arc<dyn lumosai_core::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
     }
 }
 
 #[async_trait]
 impl Tool for ReportGeneratorTool {
-    fn name(&self) -> &str {
+    fn id(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         "生成分析报告"
     }
-    
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(ReportGeneratorTool {
+            name: self.name.clone(),
+            base: self.base.clone(),
+        })
+    }
+
     fn schema(&self) -> ToolSchema {
         ToolSchema {
-            name: self.name.clone(),
-            description: self.description().to_string(),
             parameters: vec![
                 ParameterSchema {
                     name: "analysis".to_string(),
                     description: "分析结果".to_string(),
+                    r#type: "object".to_string(),
                     required: true,
-                    schema_type: "object".to_string(),
-                    format: Some(SchemaFormat::Json),
+                    properties: None,
+                    default: None,
                 },
             ],
+            json_schema: Some(json!({
+                "type": "object",
+                "properties": {
+                    "analysis": {
+                        "type": "object",
+                        "description": "分析结果"
+                    }
+                },
+                "required": ["analysis"]
+            })),
+            format: SchemaFormat::JsonSchema,
+            output_schema: None,
         }
     }
-    
-    async fn execute(&self, params: Value, _ctx: &ToolExecutionContext) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+
+    async fn execute(&self, params: Value, _ctx: ToolExecutionContext, _opts: &ToolExecutionOptions) -> lumosai_core::Result<Value> {
         let _analysis = &params["analysis"];
         
         // 模拟报告生成

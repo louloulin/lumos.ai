@@ -1,0 +1,39 @@
+[package]
+name = "web-pages"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+# Local dependencies
+assets = { path = "../web-assets" }
+
+# Core UI dependencies
+dioxus.workspace = true
+dioxus-ssr.workspace = true
+daisy_rsx.workspace = true
+
+# HTTP and routing (for UI components only)
+axum.workspace = true
+axum-extra.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Markdown processing
+comrak.workspace = true
+
+# Time handling
+time.workspace = true
+
+# Validation
+validator.workspace = true
+
+# OpenAPI (for UI components)
+oas3.workspace = true
+
+# UUID generation
+uuid.workspace = true

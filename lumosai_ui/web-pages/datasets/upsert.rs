@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 pub fn Upsert(
     id: Option<i32>,
     trigger_id: String,
-    models: Vec<models::Model>,
+    models: Vec<crate::types::Model>,
     name: String,
     team_id: i32,
     combine_under_n_chars: i32,

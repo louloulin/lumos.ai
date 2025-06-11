@@ -46,7 +46,7 @@ pub fn view(
                     rbac: rbac.clone(),
                     integration: integration.clone(),
                     logo_url: openapi.clone().get_logo_url(),
-                    description: openapi.clone().get_description()
+                    description: openapi.clone().get_description().map(|s| s.to_string())
                 }
 
                 hr {

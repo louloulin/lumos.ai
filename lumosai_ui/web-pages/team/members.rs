@@ -152,12 +152,12 @@ pub fn page(
                                 tr {
                                     td {
                                             Avatar {
-                                                name: "{invite.first_name}",
+                                                name: "{invite.first_name.as_deref().unwrap_or("Guest")}",
                                                 avatar_type: avatar::AvatarType::User
                                             }
                                             span {
                                                 class: "ml-2",
-                                                "{invite.first_name} {invite.last_name}"
+                                                "                                                "{invite.first_name.as_deref().unwrap_or("Guest")} {invite.last_name.as_deref().unwrap_or("")}""
                                             }
                                     }
                                     td {

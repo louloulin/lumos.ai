@@ -2,7 +2,7 @@ pub mod filter;
 pub mod index;
 pub mod table;
 
-use db::{AuditAccessType, AuditAction};
+use crate::types::{AuditAccessType, AuditAction};
 
 const AUDIT_ACCESS: [AuditAccessType; 2] = [AuditAccessType::UserInterface, AuditAccessType::API];
 

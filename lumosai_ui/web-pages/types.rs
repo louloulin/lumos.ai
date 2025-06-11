@@ -377,6 +377,7 @@ pub struct ApiKeyConnection {
     pub id: i32,
     pub integration_id: i32,
     pub api_key: String,
+    pub visibility: Visibility,
     pub created_at: OffsetDateTime,
 }
 
@@ -387,6 +388,8 @@ pub struct Oauth2Connection {
     pub access_token: String,
     pub refresh_token: Option<String>,
     pub expires_at: Option<OffsetDateTime>,
+    pub visibility: Visibility,
+    pub scopes: Option<Vec<String>>,
     pub created_at: OffsetDateTime,
 }
 
@@ -451,10 +454,36 @@ pub struct AuditTrail {
 }
 
 // Additional dataset and model types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DocumentPipeline {
+    pub id: i32,
+    pub name: String,
+    pub description: Option<String>,
+    pub dataset_id: i32,
+    pub status: String,
+    pub created_at: OffsetDateTime,
+}
 
+// Audit types for UI
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AuditAccessType {
+    UserInterface,
+    API,
+}
 
-
-
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AuditAction {
+    CreateMember,
+    CreateInvite,
+    DeleteMember,
+    CreateTeam,
+    DeleteTeam,
+    CreateAPIKey,
+    DeleteAPIKey,
+    CreatePipelineKey,
+    DeletePipelineKey,
+    TextGeneration,
+}
 
 // Tool call types for console
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

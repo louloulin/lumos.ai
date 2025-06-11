@@ -5,7 +5,8 @@ use crate::types::Team;
 use dioxus::prelude::*;
 
 pub fn popup(teams: Vec<(String, String)>, team: Team) -> String {
-    let page = if let Some(name) = &team.name.clone() {
+    let page = if !team.name.is_empty() {
+        let name = &team.name;
         rsx! {
             turbo-frame {
                 id: "teams-popup",

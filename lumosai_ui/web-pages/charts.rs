@@ -10,8 +10,8 @@ pub fn TokenUsageChart(data: Vec<DailyTokenUsage>) -> Element {
     let mut daily_data: HashMap<time::Date, (i64, i64)> = HashMap::new();
 
     for item in &data {
-        let entry = daily_data.entry(item.usage_date).or_insert((0, 0));
-        match item.token_type {
+        let entry = daily_data.entry(item.date.date()).or_insert((0, 0));
+        match item.usage_type {
             crate::types::TokenUsageType::Prompt => entry.0 += item.total_tokens,
             crate::types::TokenUsageType::Completion => entry.1 += item.total_tokens,
         }
@@ -95,7 +95,7 @@ pub fn ApiRequestChart(data: Vec<DailyApiRequests>) -> Element {
                             y: "195",
                             text_anchor: "middle",
                             font_size: "10",
-                            "{day_data.request_date.month()}/{day_data.request_date.day()}"
+                            "{day_data.date.month()}/{day_data.date.day()}"
                         }
                     }
                 }

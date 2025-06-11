@@ -80,7 +80,7 @@ pub fn page(
                                                     direction: Direction::Left,
                                                     button_text: "...",
                                                     DropDownLink {
-                                                        popover_target: format!("delete-trigger-{}", team.id),
+                                                        popover_target: format!("delete-trigger-{}", team.team_id),
                                                         href: "#",
                                                         target: "_top",
                                                         "Delete Team"
@@ -103,27 +103,27 @@ pub fn page(
                                                 class: "ml-2 mr-2",
                                                 "Name Not Set"
                                             }
-                                            if team.id != team_id {
+                                            if team.team_id != team_id {
                                                 a {
                                                     "data-turbo-frame": "_top",
-                                                    href: crate::routes::team::Index{ team_id: team.id }.to_string(),
+                                                    href: crate::routes::team::Index{ team_id: team.team_id }.to_string(),
                                                     "(Switch to this Team)"
                                                 }
                                             }
                                         }
                                         td {
                                             strong {
-                                                "{team.team_owner}"
+                                                "{team.user_email}"
                                             }
                                         }
-                                        if team.team_owner == current_user_email && teams.len() > 1 {
+                                        if team.user_email == current_user_email && teams.len() > 1 {
                                             td {
                                                 class: "text-right",
                                                 DropDown {
                                                     direction: Direction::Left,
                                                     button_text: "...",
                                                     DropDownLink {
-                                                        popover_target: format!("delete-trigger-{}", team.id),
+                                                        popover_target: format!("delete-trigger-{}", team.team_id),
                                                         href: "#",
                                                         target: "_top",
                                                         "Delete Team"
@@ -198,13 +198,13 @@ pub fn page(
 
             for team in teams {
                 ConfirmModal {
-                    action: crate::routes::teams::Delete {team_id: team.id}.to_string(),
-                    trigger_id: format!("delete-trigger-{}", team.id),
+                    action: crate::routes::teams::Delete {team_id: team.team_id}.to_string(),
+                    trigger_id: format!("delete-trigger-{}", team.team_id),
                     submit_label: "Delete".to_string(),
                     heading: "Delete this Team?".to_string(),
                     warning: "Are you sure you want to delete this Team?".to_string(),
                     hidden_fields: vec![
-                        ("team_id".into(), team.id.to_string()),
+                        ("team_id".into(), team.team_id.to_string()),
                     ],
                 }
             }

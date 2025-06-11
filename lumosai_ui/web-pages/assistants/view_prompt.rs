@@ -23,7 +23,7 @@ pub fn ViewDrawer(team_id: i32, prompt: Prompt, trigger_id: String) -> Element {
                         img {
                             width: "96",
                             height: "96",
-                            src: Image { team_id, id: object_id }.to_string()
+                            src: Image { team_id, id: object_id.to_string() }.to_string()
                         }
                     } else {
                         Avatar {
@@ -38,11 +38,11 @@ pub fn ViewDrawer(team_id: i32, prompt: Prompt, trigger_id: String) -> Element {
                 }
                 p {
                     class: "mt-6 text-center text-sm text-token-text-tertiary",
-                    "Created by {prompt.author_name}"
+                    "                    "Created by {prompt.author_name.as_deref().unwrap_or("Unknown")}""
                 }
                 p {
                     class: "mt-6 text-center",
-                    "{prompt.description}"
+                    "                    "{prompt.description.as_deref().unwrap_or("No description available")}""
                 }
                 if has_some_examples {
                     h2 {

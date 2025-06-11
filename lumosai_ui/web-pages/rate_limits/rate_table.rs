@@ -27,18 +27,18 @@ pub fn RateTable(rate_limits: Vec<crate::types::RateLimit>, team_id: i32) -> Ele
                         for limit in rate_limits {
                             tr {
                                 td {
-                                    "{limit.api_key_id}"
+                                    "{limit.api_key_id.map(|id| id.to_string()).unwrap_or("N/A".to_string())}"
                                 }
                                 td {
                                     Label {
                                         label_role: LabelRole::Success,
-                                        "{limit.tpm_limit}"
+                                        "{limit.tpm_limit.map(|l| l.to_string()).unwrap_or("N/A".to_string())}"
                                     }
                                 }
                                 td {
                                     Label {
                                         label_role: LabelRole::Success,
-                                        "{limit.rpm_limit}"
+                                        "{limit.rpm_limit.map(|l| l.to_string()).unwrap_or("N/A".to_string())}"
                                     }
                                 }
                                 td {

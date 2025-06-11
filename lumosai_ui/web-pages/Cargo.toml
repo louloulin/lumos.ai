@@ -28,6 +28,10 @@ comrak = { workspace = true }
 
 # Time handling
 time = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async runtime
+tokio = { version = "1", features = ["time"] }
 
 # Validation
 validator = { workspace = true }

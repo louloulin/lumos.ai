@@ -14,6 +14,7 @@ members = [
     "lumosai_bindings",
     "lumosai_vector",
     "lumosai_ui",
+    "lumosai_ui/web-server",
     # "lumosai_cloud",
     # "lumosai_ai_extensions"
 ]

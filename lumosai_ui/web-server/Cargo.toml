@@ -1,0 +1,55 @@
+[package]
+name = "lumosai-web-server"
+version = "0.1.0"
+edition = "2021"
+
+# Enable backtrace feature for panic hook
+[features]
+default = ["web"]
+web = ["dioxus-web"]
+desktop = ["dioxus-desktop"]
+fullstack = ["dioxus-fullstack"]
+
+[[bin]]
+name = "lumosai-web-server"
+path = "main.rs"
+
+[[bin]]
+name = "lumosai-desktop"
+path = "desktop.rs"
+
+[dependencies]
+# Local dependencies
+web-pages = { path = "../web-pages" }
+web-assets = { path = "../web-assets" }
+
+# Dioxus framework
+dioxus = { version = "0.6", features = ["router"] }
+dioxus-web = { version = "0.6", optional = true }
+dioxus-desktop = { version = "0.6", optional = true }
+dioxus-router = { version = "0.6" }
+dioxus-fullstack = { version = "0.6", optional = true }
+
+# Web server (for fullstack mode)
+axum = { version = "0.8", features = ["multipart"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tower = { version = "0.5.2" }
+tower-http = { version = "0.6.2", features = ["fs", "cors"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+
+# Logging
+tracing = { version = "0.1" }
+tracing-subscriber = { version="0.3.19", features = ["env-filter"] }
+
+# Utilities
+rand = { version = "0.9.1" }
+url = "2.4"
+
+# Additional dependencies for specific features
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+time = "0.3.36"

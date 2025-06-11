@@ -1,0 +1,182 @@
+# LumosAI UI Development Commands
+
+# List all available commands
+list:
+    just --list
+
+# Install dependencies
+install:
+    cargo build
+    cd web-assets && npm install
+
+# Development mode - start web application (Dioxus web)
+dev:
+    #!/usr/bin/env bash
+    echo "🌐 Starting LumosAI Web Application (Dioxus)..."
+    cd web-server && cargo run --bin lumosai-web-server
+
+# Start desktop application (Dioxus desktop)
+desktop:
+    #!/usr/bin/env bash
+    echo "🖥️  Starting LumosAI Desktop Application (Dioxus)..."
+    cd web-server && cargo run --bin lumosai-desktop --features desktop
+
+# Start fullstack application (Dioxus fullstack with SSR)
+fullstack:
+    #!/usr/bin/env bash
+    echo "🌐 Starting LumosAI Fullstack Application (SSR + Hydration)..."
+    cd web-server && cargo run --bin lumosai-web-server --features fullstack
+
+# Legacy web server mode (for compatibility)
+web-server:
+    #!/usr/bin/env bash
+    echo "🌐 Starting legacy web server mode..."
+    cd web-server && DEVELOPMENT_MODE=1 cargo run --bin lumosai-web-server
+
+# Build web assets
+assets:
+    cd web-assets && npm run build
+
+# Watch web assets for changes
+assets-watch:
+    cd web-assets && npm run dev
+
+# Watch Tailwind CSS for changes
+tailwind-watch:
+    cd web-assets && npm run tailwind:watch
+
+# Build for production
+build:
+    #!/usr/bin/env bash
+    echo "🏗️  Building LumosAI UI for production..."
+    cd web-assets && npm run build
+    cd web-server && cargo build --release --bin lumosai-web-server
+
+# Build desktop application
+build-desktop:
+    #!/usr/bin/env bash
+    echo "🖥️  Building LumosAI Desktop Application..."
+    cd web-assets && npm run build
+    cd web-server && cargo build --release --bin lumosai-desktop --features desktop
+
+# Build fullstack application
+build-fullstack:
+    #!/usr/bin/env bash
+    echo "🌐 Building LumosAI Fullstack Application..."
+    cd web-assets && npm run build
+    cd web-server && cargo build --release --bin lumosai-web-server --features fullstack
+
+# Run tests
+test:
+    cargo test --workspace
+
+# Run clippy linter
+lint:
+    cargo clippy --workspace --all-targets --all-features
+
+# Format code
+fmt:
+    cargo fmt --all
+
+# Clean build artifacts
+clean:
+    cargo clean
+    cd web-assets && rm -rf dist node_modules
+
+# Generate documentation
+docs:
+    cargo doc --workspace --no-deps --open
+
+# Check for security vulnerabilities
+audit:
+    cargo audit
+
+# Run all checks (test, lint, format)
+check: test lint fmt
+
+# Start development environment (parallel processes)
+dev-full:
+    #!/usr/bin/env bash
+    echo "🚀 Starting full development environment..."
+    
+    # Start web assets watcher in background
+    cd web-assets && npm run dev &
+    ASSETS_PID=$!
+    
+    # Start Tailwind watcher in background
+    cd web-assets && npm run tailwind:watch &
+    TAILWIND_PID=$!
+    
+    # Start web server
+    DEVELOPMENT_MODE=1 HOT_RELOAD=1 cargo run --bin lumosai-web-server &
+    SERVER_PID=$!
+    
+    # Function to cleanup background processes
+    cleanup() {
+        echo "🛑 Stopping development servers..."
+        kill $ASSETS_PID $TAILWIND_PID $SERVER_PID 2>/dev/null
+        exit 0
+    }
+    
+    # Set trap to cleanup on script exit
+    trap cleanup SIGINT SIGTERM
+    
+    echo "✅ Development environment started!"
+    echo "📱 Web: http://localhost:8080"
+    echo "🔧 Press Ctrl+C to stop all servers"
+    
+    # Wait for any process to exit
+    wait
+
+# Quick start for new developers
+quick-start:
+    #!/usr/bin/env bash
+    echo "🌟 Welcome to LumosAI UI Development!"
+    echo "📦 Installing dependencies..."
+    just install
+    echo "🚀 Starting development environment..."
+    just dev-full
+
+# Production deployment
+deploy:
+    #!/usr/bin/env bash
+    echo "🚀 Deploying LumosAI UI..."
+    just build
+    echo "✅ Build complete! Binary available at: target/release/lumosai-web-server"
+
+# Create release package
+package:
+    #!/usr/bin/env bash
+    echo "📦 Creating release package..."
+    just build
+    just build-desktop
+    mkdir -p release
+    cp target/release/lumosai-web-server release/
+    cp target/release/lumosai-desktop release/ 2>/dev/null || echo "Desktop build not available"
+    cp -r web-assets/dist release/static
+    echo "✅ Release package created in ./release/"
+
+# Development server with specific port
+dev-port PORT:
+    DEVELOPMENT_MODE=1 PORT={{PORT}} cargo run --bin lumosai-web-server
+
+# Show application info
+info:
+    #!/usr/bin/env bash
+    echo "📋 LumosAI UI Information"
+    echo "========================"
+    echo "Version: $(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "lumosai-web-server") | .version')"
+    echo "Rust Version: $(rustc --version)"
+    echo "Cargo Version: $(cargo --version)"
+    echo "Node Version: $(node --version 2>/dev/null || echo 'Not installed')"
+    echo "NPM Version: $(npm --version 2>/dev/null || echo 'Not installed')"
+    echo ""
+    echo "🌐 Web App: just dev"
+    echo "🖥️  Desktop App: just desktop"
+    echo "🌐 Fullstack App: just fullstack"
+    echo "📚 Documentation: just docs"
+    echo ""
+    echo "Available modes:"
+    echo "  • Web: Dioxus web application (runs in browser)"
+    echo "  • Desktop: Dioxus desktop application (native window)"
+    echo "  • Fullstack: Dioxus fullstack with SSR and hydration"

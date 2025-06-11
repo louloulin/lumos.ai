@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**一个强大的企业级 AI 框架，使用 Rust 构建，用于创建智能应用程序**
+**A powerful enterprise-grade AI framework built with Rust for creating intelligent applications**
 
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -10,15 +10,15 @@
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/lumosai)
 [![Tests](https://img.shields.io/badge/tests-7%2F7%20passing-brightgreen.svg)](tests/)
 
-> 🎉 **项目状态更新 (2024-12-19)**: LumosAI 已完成全面的项目完善工作！
-> - ✅ 所有编译问题已修复
-> - ✅ 完整的测试框架已建立 (7/7 测试通过)
-> - ✅ 企业级功能完整保留
-> - ✅ 生产就绪状态达成
+> 🎉 **Project Status Update (2024-12-19)**: LumosAI has completed comprehensive project enhancement work!
+> - ✅ All compilation issues have been fixed
+> - ✅ Complete testing framework established (7/7 tests passing)
+> - ✅ Enterprise-grade features fully preserved
+> - ✅ Production-ready status achieved
 >
-> 📖 查看 [项目完善报告](docs/PROJECT_COMPLETION_REPORT.md) 了解详细信息
+> 📖 See [Project Completion Report](docs/PROJECT_COMPLETION_REPORT.md) for detailed information
 
-[📖 文档](docs/README.md) | [🚀 快速开始](docs/QUICK_START.md) | [💡 示例](#examples) | [🤝 贡献](#contributing)
+[📖 Documentation](docs/README.md) | [🚀 Quick Start](docs/QUICK_START.md) | [💡 Examples](#examples) | [🤝 Contributing](#contributing)
 
 </div>
 

@@ -48,203 +48,239 @@ pub mod files {
     };
 
     // Navigation icons
-    pub const nav_service_requests_svg: StaticFile = StaticFile {
+    pub const NAV_SERVICE_REQUESTS_SVG: StaticFile = StaticFile {
         name: "nav-service-requests.svg",
         content: b"<svg><!-- service requests icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const nav_history_svg: StaticFile = StaticFile {
+    pub const NAV_HISTORY_SVG: StaticFile = StaticFile {
         name: "nav-history.svg",
         content: b"<svg><!-- history icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const assistant_svg: StaticFile = StaticFile {
+    pub const ASSISTANT_SVG: StaticFile = StaticFile {
         name: "assistant.svg",
         content: b"<svg><!-- assistant icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const nav_audit_svg: StaticFile = StaticFile {
+    pub const NAV_AUDIT_SVG: StaticFile = StaticFile {
         name: "nav-audit.svg",
         content: b"<svg><!-- audit icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const nav_ccsds_data_svg: StaticFile = StaticFile {
+    pub const NAV_CCSDS_DATA_SVG: StaticFile = StaticFile {
         name: "nav-ccsds-data.svg",
         content: b"<svg><!-- data icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const nav_api_keys_svg: StaticFile = StaticFile {
+    pub const NAV_API_KEYS_SVG: StaticFile = StaticFile {
         name: "nav-api-keys.svg",
         content: b"<svg><!-- api keys icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const nav_members_svg: StaticFile = StaticFile {
+    pub const NAV_MEMBERS_SVG: StaticFile = StaticFile {
         name: "nav-members.svg",
         content: b"<svg><!-- members icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const nav_teams_svg: StaticFile = StaticFile {
+    pub const NAV_TEAMS_SVG: StaticFile = StaticFile {
         name: "nav-teams.svg",
         content: b"<svg><!-- teams icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const nav_phonebook_svg: StaticFile = StaticFile {
+    pub const NAV_PHONEBOOK_SVG: StaticFile = StaticFile {
         name: "nav-phonebook.svg",
         content: b"<svg><!-- phonebook icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const limits_svg: StaticFile = StaticFile {
+    pub const LIMITS_SVG: StaticFile = StaticFile {
         name: "limits.svg",
         content: b"<svg><!-- limits icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
     // Button and action icons
-    pub const button_plus_svg: StaticFile = StaticFile {
+    pub const BUTTON_PLUS_SVG: StaticFile = StaticFile {
         name: "button-plus.svg",
         content: b"<svg><!-- plus button icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const delete_svg: StaticFile = StaticFile {
+    pub const DELETE_SVG: StaticFile = StaticFile {
         name: "delete.svg",
         content: b"<svg><!-- delete icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const spinner_svg: StaticFile = StaticFile {
+    pub const SPINNER_SVG: StaticFile = StaticFile {
         name: "spinner.svg",
         content: b"<svg><!-- spinner icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const tools_svg: StaticFile = StaticFile {
+    pub const TOOLS_SVG: StaticFile = StaticFile {
         name: "tools.svg",
         content: b"<svg><!-- tools icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const handshake_svg: StaticFile = StaticFile {
+    pub const HANDSHAKE_SVG: StaticFile = StaticFile {
         name: "handshake.svg",
         content: b"<svg><!-- handshake icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
     // Audio control icons
-    pub const read_aloud_loading_svg: StaticFile = StaticFile {
+    pub const READ_ALOUD_LOADING_SVG: StaticFile = StaticFile {
         name: "read-aloud-loading.svg",
         content: b"<svg><!-- read aloud loading icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const read_aloud_stop_svg: StaticFile = StaticFile {
+    pub const READ_ALOUD_STOP_SVG: StaticFile = StaticFile {
         name: "read-aloud-stop.svg",
         content: b"<svg><!-- read aloud stop icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const read_aloud_svg: StaticFile = StaticFile {
+    pub const READ_ALOUD_SVG: StaticFile = StaticFile {
         name: "read-aloud.svg",
         content: b"<svg><!-- read aloud icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
     // Copy and interaction icons
-    pub const tick_copy_svg: StaticFile = StaticFile {
+    pub const TICK_COPY_SVG: StaticFile = StaticFile {
         name: "tick-copy.svg",
         content: b"<svg><!-- tick copy icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const copy_svg: StaticFile = StaticFile {
+    pub const COPY_SVG: StaticFile = StaticFile {
         name: "copy.svg",
         content: b"<svg><!-- copy icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const profile_svg: StaticFile = StaticFile {
+    pub const PROFILE_SVG: StaticFile = StaticFile {
         name: "profile.svg",
         content: b"<svg><!-- profile icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const ai_svg: StaticFile = StaticFile {
+    pub const AI_SVG: StaticFile = StaticFile {
         name: "ai.svg",
         content: b"<svg><!-- ai icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
     // Input control icons
-    pub const microphone_svg: StaticFile = StaticFile {
+    pub const MICROPHONE_SVG: StaticFile = StaticFile {
         name: "microphone.svg",
         content: b"<svg><!-- microphone icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const stop_recording_svg: StaticFile = StaticFile {
+    pub const STOP_RECORDING_SVG: StaticFile = StaticFile {
         name: "stop-recording.svg",
         content: b"<svg><!-- stop recording icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const attach_svg: StaticFile = StaticFile {
+    pub const ATTACH_SVG: StaticFile = StaticFile {
         name: "attach.svg",
         content: b"<svg><!-- attach icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const streaming_stop_svg: StaticFile = StaticFile {
+    pub const STREAMING_STOP_SVG: StaticFile = StaticFile {
         name: "streaming-stop.svg",
         content: b"<svg><!-- streaming stop icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const submit_button_svg: StaticFile = StaticFile {
+    pub const SUBMIT_BUTTON_SVG: StaticFile = StaticFile {
         name: "submit-button.svg",
         content: b"<svg><!-- submit button icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
     // Additional icons for compatibility
-    pub const button_select_svg: StaticFile = StaticFile {
+    pub const BUTTON_SELECT_SVG: StaticFile = StaticFile {
         name: "button-select.svg",
         content: b"<svg><!-- select button icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const button_edit_svg: StaticFile = StaticFile {
+    pub const BUTTON_EDIT_SVG: StaticFile = StaticFile {
         name: "button-edit.svg",
         content: b"<svg><!-- edit button icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const menu_delete_svg: StaticFile = StaticFile {
+    pub const MENU_DELETE_SVG: StaticFile = StaticFile {
         name: "menu-delete.svg",
         content: b"<svg><!-- menu delete icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const empty_api_keys_svg: StaticFile = StaticFile {
+    pub const EMPTY_API_KEYS_SVG: StaticFile = StaticFile {
         name: "empty-api-keys.svg",
         content: b"<svg><!-- empty api keys icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    pub const avatar_svg: StaticFile = StaticFile {
+    pub const AVATAR_SVG: StaticFile = StaticFile {
         name: "avatar.svg",
         content: b"<svg><!-- avatar icon --></svg>",
         mime_type: "image/svg+xml",
     };
 
-    // Legacy compatibility
-    pub const COLLAPSE_SVG: StaticFile = collapse_svg;
+    // Legacy compatibility aliases
+    pub const collapse_svg: StaticFile = COLLAPSE_SVG;
+    pub const index_css: StaticFile = INDEX_CSS;
+    pub const output_css: StaticFile = OUTPUT_CSS;
+    pub const index_js: StaticFile = INDEX_JS;
+    pub const bionic_logo_svg: StaticFile = BIONIC_LOGO_SVG;
+    pub const nav_service_requests_svg: StaticFile = NAV_SERVICE_REQUESTS_SVG;
+    pub const nav_history_svg: StaticFile = NAV_HISTORY_SVG;
+    pub const assistant_svg: StaticFile = ASSISTANT_SVG;
+    pub const nav_audit_svg: StaticFile = NAV_AUDIT_SVG;
+    pub const nav_ccsds_data_svg: StaticFile = NAV_CCSDS_DATA_SVG;
+    pub const nav_api_keys_svg: StaticFile = NAV_API_KEYS_SVG;
+    pub const nav_members_svg: StaticFile = NAV_MEMBERS_SVG;
+    pub const nav_teams_svg: StaticFile = NAV_TEAMS_SVG;
+    pub const nav_phonebook_svg: StaticFile = NAV_PHONEBOOK_SVG;
+    pub const limits_svg: StaticFile = LIMITS_SVG;
+    pub const button_plus_svg: StaticFile = BUTTON_PLUS_SVG;
+    pub const delete_svg: StaticFile = DELETE_SVG;
+    pub const spinner_svg: StaticFile = SPINNER_SVG;
+    pub const tools_svg: StaticFile = TOOLS_SVG;
+    pub const handshake_svg: StaticFile = HANDSHAKE_SVG;
+    pub const read_aloud_loading_svg: StaticFile = READ_ALOUD_LOADING_SVG;
+    pub const read_aloud_stop_svg: StaticFile = READ_ALOUD_STOP_SVG;
+    pub const read_aloud_svg: StaticFile = READ_ALOUD_SVG;
+    pub const tick_copy_svg: StaticFile = TICK_COPY_SVG;
+    pub const copy_svg: StaticFile = COPY_SVG;
+    pub const profile_svg: StaticFile = PROFILE_SVG;
+    pub const ai_svg: StaticFile = AI_SVG;
+    pub const microphone_svg: StaticFile = MICROPHONE_SVG;
+    pub const stop_recording_svg: StaticFile = STOP_RECORDING_SVG;
+    pub const attach_svg: StaticFile = ATTACH_SVG;
+    pub const streaming_stop_svg: StaticFile = STREAMING_STOP_SVG;
+    pub const submit_button_svg: StaticFile = SUBMIT_BUTTON_SVG;
+    pub const button_select_svg: StaticFile = BUTTON_SELECT_SVG;
+    pub const button_edit_svg: StaticFile = BUTTON_EDIT_SVG;
+    pub const menu_delete_svg: StaticFile = MENU_DELETE_SVG;
+    pub const empty_api_keys_svg: StaticFile = EMPTY_API_KEYS_SVG;
+    pub const avatar_svg: StaticFile = AVATAR_SVG;
 }

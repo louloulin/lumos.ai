@@ -26,6 +26,8 @@ use tower_http::cors::{Any, CorsLayer};
 use crate::ai_client::{AIClient, AIClientConfig, AIProvider};
 use crate::database::Database;
 use crate::streaming::{self, AppState};
+use crate::tools::ToolRegistry;
+use crate::file_handler::{FileHandler, FileConfig};
 
 /// 启动API服务器
 pub async fn start_api_server() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,7 +36,14 @@ pub async fn start_api_server() -> Result<(), Box<dyn std::error::Error>> {
     // 创建AI客户端和数据库连接
     let ai_client = create_ai_client();
     let database = create_database().await?;
-    let app_state = AppState { ai_client, database };
+    let tool_registry = ToolRegistry::new();
+    let file_handler = create_file_handler(database.clone()).await?;
+    let app_state = AppState {
+        ai_client,
+        database,
+        tool_registry,
+        file_handler: file_handler.clone()
+    };
 
     // 配置CORS
     let cors = CorsLayer::new()
@@ -63,7 +72,16 @@ pub async fn start_api_server() -> Result<(), Box<dyn std::error::Error>> {
         // 配置管理
         .route("/api/config", get(get_config))
         .route("/api/config", post(update_config))
-        
+
+        // 工具管理
+        .route("/api/tools", get(streaming::list_tools))
+        .route("/api/tools/execute", post(streaming::execute_tool))
+
+        // 文件管理
+        .route("/api/files/upload", post(upload_files_handler))
+        .route("/api/files", get(list_files_handler))
+        .route("/api/files/:id", delete(delete_file_handler))
+
         // 静态文件和文档
         .route("/", get(api_info))
         .route("/docs", get(api_docs))
@@ -117,6 +135,18 @@ async fn create_database() -> Result<Database, Box<dyn std::error::Error>> {
     Ok(database)
 }
 
+/// 创建文件处理器
+async fn create_file_handler(database: Database) -> Result<FileHandler, Box<dyn std::error::Error>> {
+    let config = FileConfig::default();
+    let file_handler = FileHandler::new(config, database);
+
+    // 初始化上传目录
+    file_handler.init().await?;
+    println!("📁 File handler initialized");
+
+    Ok(file_handler)
+}
+
 /// API信息
 async fn api_info() -> impl IntoResponse {
     Json(json!({
@@ -130,6 +160,8 @@ async fn api_info() -> impl IntoResponse {
             "conversations": "/api/conversations",
             "models": "/api/models",
             "config": "/api/config",
+            "tools": "/api/tools",
+            "files": "/api/files",
             "docs": "/docs"
         }
     }))
@@ -292,4 +324,27 @@ async fn update_config(Json(config): Json<serde_json::Value>) -> impl IntoRespon
         "message": "配置已更新",
         "config": config
     }))
+}
+
+/// 文件上传处理器包装
+async fn upload_files_handler(
+    State(state): State<AppState>,
+    multipart: axum::extract::Multipart,
+) -> impl IntoResponse {
+    crate::file_handler::upload_files(State(state.file_handler), multipart).await
+}
+
+/// 文件列表处理器包装
+async fn list_files_handler(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    crate::file_handler::list_files(State(state.file_handler)).await
+}
+
+/// 文件删除处理器包装
+async fn delete_file_handler(
+    Path(file_id): Path<String>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    crate::file_handler::delete_file(Path(file_id), State(state.file_handler)).await
 }

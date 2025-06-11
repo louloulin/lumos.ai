@@ -34,6 +34,8 @@ mod ai_client;
 mod streaming;
 mod api_server;
 mod database;
+mod tools;
+mod file_handler;
 
 use ai_client::AIClient;
 use streaming::AppState;

@@ -24,8 +24,10 @@ use serde::{Deserialize, Serialize};
 use std::{convert::Infallible, time::Duration};
 use tokio_stream::StreamExt;
 
-use crate::ai_client::{AIClient, ChatMessage, MessageRole, StreamChunk};
-use crate::database::{Database, MessageRole as DbMessageRole};
+use crate::ai_client::{AIClient, ChatMessage, MessageRole};
+use crate::database::Database;
+use crate::tools::{ToolRegistry, ToolContext};
+use crate::file_handler::FileHandler;
 
 /// 流式聊天请求
 #[derive(Debug, Deserialize)]
@@ -76,6 +78,8 @@ pub enum StreamEvent {
 pub struct AppState {
     pub ai_client: AIClient,
     pub database: Database,
+    pub tool_registry: ToolRegistry,
+    pub file_handler: FileHandler,
 }
 
 /// 流式聊天处理器
@@ -96,7 +100,7 @@ pub async fn stream_chat(
 /// 创建聊天流
 async fn create_chat_stream(
     ai_client: AIClient,
-    database: Database,
+    _database: Database,
     request: StreamChatRequest,
 ) -> impl Stream<Item = Result<Event, Infallible>> {
     let conversation_id = request.conversation_id.unwrap_or_else(|| generate_id());
@@ -341,6 +345,56 @@ pub async fn health_check() -> impl IntoResponse {
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "version": env!("CARGO_PKG_VERSION")
     }))
+}
+
+/// 获取可用工具列表
+pub async fn list_tools(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let tools = state.tool_registry.get_enabled_definitions();
+    Json(serde_json::json!({
+        "success": true,
+        "tools": tools,
+        "total": tools.len()
+    }))
+}
+
+/// 执行工具调用
+pub async fn execute_tool(
+    State(state): State<AppState>,
+    Json(request): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let tool_name = request.get("tool_name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    let params = request.get("parameters")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
+
+    let conversation_id = request.get("conversation_id")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(0);
+
+    // 创建工具执行上下文
+    let context = ToolContext {
+        user_id: 1, // 默认用户ID
+        conversation_id,
+        permissions: vec!["basic".to_string()],
+    };
+
+    match state.tool_registry.execute_tool(tool_name, params, &context) {
+        Ok(result) => Json(serde_json::json!({
+            "success": true,
+            "tool_name": tool_name,
+            "result": result
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "tool_name": tool_name,
+            "error": e.to_string()
+        }))
+    }
 }
 
 /// WebSocket升级处理器（未来实现）

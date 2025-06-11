@@ -24,6 +24,7 @@ pub struct Prompt {
     pub description: Option<String>,
     pub system_prompt: String,
     pub visibility: Visibility,
+    pub category_id: i32,
     pub created_at: OffsetDateTime,
 }
 
@@ -233,10 +234,13 @@ pub struct DailyApiRequests {
 pub struct History {
     pub id: i32,
     pub user_id: i32,
-    pub prompt_id: i32,
+    pub prompt_id: Option<i32>,
     pub message: String,
     pub response: Option<String>,
+    pub summary: String,
+    pub prompt_type: PromptType,
     pub created_at: OffsetDateTime,
+    pub created_at_iso: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -288,6 +292,7 @@ pub struct Capability {
     pub id: i32,
     pub name: String,
     pub description: Option<String>,
+    pub capability: ModelCapability,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -296,6 +301,8 @@ pub enum ModelCapability {
     ImageGeneration,
     CodeGeneration,
     Embedding,
+    #[serde(rename = "tool_use")]
+    ToolUse,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -303,6 +310,97 @@ pub struct Category {
     pub id: i32,
     pub name: String,
     pub description: Option<String>,
+}
+
+// Additional types for integrations
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ApiKeyConnection {
+    pub id: i32,
+    pub integration_id: i32,
+    pub api_key: String,
+    pub created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Oauth2Connection {
+    pub id: i32,
+    pub integration_id: i32,
+    pub access_token: String,
+    pub refresh_token: Option<String>,
+    pub expires_at: Option<OffsetDateTime>,
+    pub created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum IntegrationType {
+    OpenAPI,
+    OAuth2,
+    ApiKey,
+    Custom,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ModelType {
+    OpenAI,
+    Anthropic,
+    Local,
+    Custom,
+}
+
+// Tool definition for OpenAI API compatibility
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BionicToolDefinition {
+    pub name: String,
+    pub description: String,
+    pub parameters: serde_json::Value,
+}
+
+// Additional types for UI components
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TeamOwner {
+    pub team_id: i32,
+    pub user_id: i32,
+    pub team_name: String,
+    pub user_email: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuditTrail {
+    pub id: i32,
+    pub user_id: i32,
+    pub action: String,
+    pub details: Option<String>,
+    pub created_at: OffsetDateTime,
+}
+
+// Dataset and Model types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Dataset {
+    pub id: i32,
+    pub name: String,
+    pub visibility: Visibility,
+    pub count: i64,
+    pub combine_under_n_chars: i32,
+    pub new_after_n_chars: i32,
+    pub created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Model {
+    pub id: i32,
+    pub name: String,
+    pub model_type: ModelType,
+    pub base_url: Option<String>,
+    pub created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Integration {
+    pub id: i32,
+    pub name: String,
+    pub integration_type: IntegrationType,
+    pub status: IntegrationStatus,
+    pub created_at: OffsetDateTime,
 }
 
 // Tool call types for console
@@ -337,6 +435,8 @@ impl Rbac {
     pub fn can_view_audit_trail(&self) -> bool { true }
     pub fn can_setup_models(&self) -> bool { true }
     pub fn can_view_system_prompt(&self) -> bool { true }
+    pub fn can_delete_chat(&self) -> bool { true }
+    pub fn can_edit_dataset(&self, _dataset: &Dataset) -> bool { true }
 }
 
 // Utility functions

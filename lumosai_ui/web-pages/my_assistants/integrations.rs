@@ -1,8 +1,7 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::Integration;
+use crate::types::{Rbac, Integration};
 use dioxus::prelude::*;
 use serde::Deserialize;
 use validator::Validate;
@@ -108,7 +107,7 @@ pub fn page(team_id: i32, rbac: Rbac, form: IntegrationForm) -> String {
                                                     td {
                                                         span {
                                                             class: match integration.integration_status {
-                                                                db::IntegrationStatus::Configured => "badge badge-success",
+                                                                crate::types::IntegrationStatus::Configured => "badge badge-success",
                                                                 _ => "badge badge-warning"
                                                             },
                                                             "{integration.integration_status:?}"

@@ -6,11 +6,8 @@ use crate::console::model_popup::ModelPopup;
 use crate::ConfirmModal;
 use assets::files::*;
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::queries::capabilities::Capability;
-use db::queries::prompts::{Prompt, SinglePrompt};
+use crate::types::{Rbac, Capability, Prompt, SinglePrompt, BionicToolDefinition};
 use dioxus::prelude::*;
-use openai_api::BionicToolDefinition;
 
 pub fn page(
     team_id: i32,

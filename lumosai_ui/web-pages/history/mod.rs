@@ -2,7 +2,7 @@ pub mod form;
 pub mod history_table;
 pub mod index;
 pub mod results;
-use db::History;
+use crate::types::History;
 use std::collections::HashMap;
 use time::{Duration, OffsetDateTime};
 

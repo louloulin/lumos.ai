@@ -1,8 +1,7 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::Dataset;
+use crate::types::{Rbac, Dataset};
 use dioxus::prelude::*;
 use serde::Deserialize;
 use validator::Validate;

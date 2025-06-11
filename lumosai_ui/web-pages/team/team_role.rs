@@ -27,5 +27,26 @@ pub fn Role(role: DBRole) -> Element {
                 "Collaborator"
             }
         ),
+        DBRole::Admin => rsx!(
+            Label {
+                class: "mr-2",
+                label_role: LabelRole::Highlight,
+                "Admin"
+            }
+        ),
+        DBRole::Member => rsx!(
+            Label {
+                class: "mr-2",
+                label_role: LabelRole::Neutral,
+                "Member"
+            }
+        ),
+        DBRole::Viewer => rsx!(
+            Label {
+                class: "mr-2",
+                label_role: LabelRole::Neutral,
+                "Viewer"
+            }
+        ),
     }
 }

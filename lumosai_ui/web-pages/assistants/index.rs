@@ -4,11 +4,9 @@ use crate::assistants::prompt_card::PromptCard;
 use crate::hero::Hero;
 use crate::routes;
 use crate::ConfirmModal;
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::{Button, ButtonScheme, ButtonType, TabContainer, TabPanel};
-use db::authz::Rbac;
-
-use db::{queries::prompts::Prompt, Category};
+use crate::types::{Rbac, Prompt, Category};
 use dioxus::prelude::*;
 use std::collections::HashMap;
 
@@ -64,7 +62,7 @@ pub fn page(team_id: i32, rbac: Rbac, prompts: Vec<Prompt>, categories: Vec<Cate
                                 category: Category {
                                     id: -1,
                                     name: "All".to_string(),
-                                    description: "All assistants".to_string()
+                                    description: Some("All assistants".to_string())
                                 },
                                 prompts: prompts.clone(),
                                 rbac: rbac.clone(),
@@ -133,7 +131,7 @@ fn AssistantTab(
                 }
                 h4 {
                     class: "mb-8 text-sm md:text-base",
-                    "{category.description}"
+                    "{category.description.as_deref().unwrap_or("No description")}"
                 }
                 div {
                     class: "grid grid-cols-1 gap-x-1.5 gap-y-1 md:gap-x-2 md:gap-y-1.5 lg:grid-cols-2 lg:gap-x-3 lg:gap-y-2.5",

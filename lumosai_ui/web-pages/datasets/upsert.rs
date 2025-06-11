@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use daisy_rsx::*;
 use db::queries::models;
-use db::Visibility;
+use crate::types::Visibility;
 use dioxus::prelude::*;
 
 #[component]

@@ -2,10 +2,9 @@
 use crate::app_layout::Layout;
 use crate::app_layout::SideBar;
 use crate::ConfirmModal;
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::queries::{datasets::Dataset, models::Model};
+use crate::types::{Rbac, Dataset, Model};
 use dioxus::prelude::*;
 
 pub fn page(
@@ -161,7 +160,7 @@ pub fn page(
                 combine_under_n_chars: 500,
                 new_after_n_chars: 1000,
                 _multipage_sections: true,
-                visibility: db::Visibility::Private,
+                visibility: crate::types::Visibility::Private,
                 can_set_visibility_to_company
             }
         }

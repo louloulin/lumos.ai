@@ -4,13 +4,10 @@ use super::assistant_console::AssistantConsole;
 use crate::app_layout::SideBar;
 use crate::console::{ChatWithChunks, PendingChatState};
 use crate::ConfirmModal;
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::queries::capabilities::Capability;
-use db::queries::prompts::SinglePrompt;
+use crate::types::{Rbac, Capability, SinglePrompt, BionicToolDefinition};
 use dioxus::prelude::*;
-use openai_api::BionicToolDefinition;
 
 pub fn page(
     team_id: i32,
@@ -54,7 +51,7 @@ pub fn page(
                             }
                         }
                         ConfirmModal {
-                            action: crate::routes::prompts::DeleteConv{team_id, prompt_id: prompt.id, conversation_id}.to_string(),
+                            action: format!("/team/{}/prompts/{}/conversations/{}/delete", team_id, prompt.id, conversation_id),
                             trigger_id: format!("delete-conv-{}", conversation_id),
                             submit_label: "Delete".to_string(),
                             heading: "Delete this Conversation?".to_string(),
@@ -67,7 +64,7 @@ pub fn page(
                         }
                         form {
                             method: "get",
-                            action: crate::routes::prompts::NewChat{team_id, prompt_id: prompt.id}.to_string(),
+                            action: format!("/team/{}/prompts/{}/new-chat", team_id, prompt.id),
                             Button {
                                 class: "mr-2",
                                 button_scheme: ButtonScheme::Neutral,

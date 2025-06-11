@@ -3,9 +3,9 @@ use crate::{
     app_layout::{Layout, SideBar},
     hero::Hero,
 };
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
-use db::{authz::Rbac, History};
+use crate::types::{Rbac, History};
 use dioxus::prelude::*;
 
 pub fn page(rbac: Rbac, team_id: i32, history: Vec<History>) -> String {

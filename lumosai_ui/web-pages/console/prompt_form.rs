@@ -4,10 +4,9 @@ use crate::routes;
 
 use assets::files::*;
 use daisy_rsx::*;
-use db::queries::capabilities::Capability;
-use db::types::public::ModelCapability;
+use crate::types::{Capability, ModelCapability, BionicToolDefinition};
 use dioxus::prelude::*;
-use openai_api::BionicToolDefinition;
+use web_assets::files::*;
 
 #[component]
 pub fn Form(
@@ -23,7 +22,7 @@ pub fn Form(
     // Check if tool_use capability is present
     let has_tool_use = capabilities
         .iter()
-        .any(|cap| cap.capability == ModelCapability::tool_use);
+        .any(|cap| cap.capability == ModelCapability::ToolUse);
 
     let show_attach_button = has_tool_use;
 

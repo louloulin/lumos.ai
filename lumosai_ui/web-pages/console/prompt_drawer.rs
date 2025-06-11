@@ -42,7 +42,7 @@ pub fn PromptDrawer(
                         class: "space-y-1",
                         for chunk in chunks {
                             li {
-                                "A section from Page {chunk.page_number} in file {chunk.file_name}."
+                                "A section from Page {chunk.page_number.map(|p| p.to_string()).unwrap_or_else(|| \"Unknown\".to_string())} in file {chunk.file_name.as_deref().unwrap_or(\"Unknown\")}."
                             }
                         }
                     }

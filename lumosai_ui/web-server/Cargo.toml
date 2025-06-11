@@ -51,5 +51,15 @@ url = "2.4"
 # Additional dependencies for specific features
 chrono = { version = "0.4", features = ["serde"] }
 
+# HTTP client for AI APIs
+reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# Error handling
+thiserror = "1.0"
+
+# Streaming
+futures = "0.3"
+tokio-stream = "0.1"
+
 [dev-dependencies]
 time = "0.3.36"

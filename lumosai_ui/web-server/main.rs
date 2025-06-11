@@ -29,7 +29,16 @@ use dioxus::prelude::*;
 use web_pages::base_layout::BaseLayout;
 use web_pages::console::chat_console::ChatConsole;
 
-fn main() {
+// AI功能模块
+mod ai_client;
+mod streaming;
+mod api_server;
+
+use ai_client::AIClient;
+use streaming::AppState;
+
+#[tokio::main]
+async fn main() {
     // Initialize logging
     init_logging();
 
@@ -48,8 +57,14 @@ fn main() {
 
     #[cfg(all(not(feature = "desktop"), not(feature = "fullstack")))]
     {
-        println!("🌐 Launching LumosAI Web Application...");
-        launch_web();
+        // 检查是否启动API服务器模式
+        if std::env::args().any(|arg| arg == "--api-server") {
+            println!("🚀 Launching LumosAI API Server...");
+            launch_api_server().await;
+        } else {
+            println!("🌐 Launching LumosAI Web Application...");
+            launch_web();
+        }
     }
 }
 
@@ -72,6 +87,13 @@ fn launch_web() {
     println!("📱 This will open in your default browser");
 
     dioxus::launch(App);
+}
+
+async fn launch_api_server() {
+    if let Err(e) = api_server::start_api_server().await {
+        eprintln!("❌ Failed to start API server: {}", e);
+        std::process::exit(1);
+    }
 }
 
 // Main App Component

@@ -1,7 +1,7 @@
 [package]
 name = "web-pages"
-version.workspace = true
-edition.workspace = true
+version = "0.1.3"
+edition = "2021"
 
 [lib]
 path = "lib.rs"
@@ -11,29 +11,29 @@ path = "lib.rs"
 web-assets = { path = "../web-assets" }
 
 # Core UI dependencies
-dioxus.workspace = true
-dioxus-ssr.workspace = true
-daisy_rsx.workspace = true
+dioxus = { workspace = true }
+dioxus-ssr = { workspace = true }
+daisy_rsx = { workspace = true }
 
 # HTTP and routing (for UI components only)
-axum.workspace = true
-axum-extra.workspace = true
+axum = { workspace = true }
+axum-extra = { workspace = true }
 
 # Serialization
-serde.workspace = true
-serde_json.workspace = true
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 # Markdown processing
-comrak.workspace = true
+comrak = { workspace = true }
 
 # Time handling
-time = { workspace = true, features = ["serde"] }
+time = { workspace = true }
 
 # Validation
-validator.workspace = true
+validator = { workspace = true }
 
 # OpenAPI (for UI components)
-oas3.workspace = true
+oas3 = { workspace = true }
 
 # UUID generation
-uuid.workspace = true
+uuid = { workspace = true }

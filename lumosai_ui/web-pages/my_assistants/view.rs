@@ -85,7 +85,7 @@ pub fn page(
                             }
                             p {
                                 class: "text-lg text-gray-600 mt-1",
-                                "{prompt.description}"
+                                "{prompt.description.as_deref().unwrap_or(\"No description\")}"
                             }
                         }
                     }
@@ -93,11 +93,11 @@ pub fn page(
 
                 // Replace all card sections with component calls
                 AssistantDetailsCard { prompt: prompt.clone() }
-                SystemPromptCard { system_prompt: prompt.system_prompt.clone().unwrap_or_default() }
+                SystemPromptCard { system_prompt: prompt.system_prompt.clone() }
                 DatasetsCard { team_id, prompt_id: prompt.id, datasets: datasets.clone() }
                 IntegrationsCard { team_id, prompt_id: prompt.id, integrations: integrations.clone() }
                 ExamplesCard {
-                    disclaimer: prompt.disclaimer.clone(),
+                    disclaimer: prompt.disclaimer.clone().unwrap_or_default(),
                     example1, example2, example3, example4
                 }
                 AdvancedSettingsCard { prompt: prompt.clone() }

@@ -13,6 +13,7 @@ members = [
     "lumosai_enterprise",
     "lumosai_bindings",
     "lumosai_vector",
+    "lumosai_ui",
     # "lumosai_cloud",
     # "lumosai_ai_extensions"
 ]
@@ -62,7 +63,6 @@ thiserror = "1.0"
 anyhow = "1.0"
 tracing = "0.1"
 reqwest = { version = "0.11.23", features = ["json"] }
-axum = "0.7"
 redis = { version = "0.23.0", features = ["tokio-comp"] }
 sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "sqlite", "json"] }
 
@@ -96,6 +96,18 @@ lance = "0.27.0"
 zstd = "0.12"
 zstd-safe = "6.0.5"
 
+# UI 框架依赖
+dioxus = { version = "0.6", default-features = false, features = ["macro", "html", "signals"] }
+dioxus-ssr = { version = "0.6", default-features = false }
+daisy_rsx = "0.1.30"
+axum = { version = "0.8", default-features = false }
+axum-extra = { version = "0.10", features = ["typed-routing"] }
+time = { version = "0.3.36", features = ["formatting", "parsing", "serde"] }
+validator = { version = "0.20.0", features = ["derive"] }
+oas3 = "0.16.1"
+comrak = { version = "0.39.0", features = ["shortcodes"] }
+mime = "0.3.0"
+
 # 测试工具
 tokio-test = "0.4"
 mockall = "0.11"
@@ -122,6 +134,9 @@ strip = false
 default = ["integrations"]
 macros = ["lumos_macro"]
 integrations = ["reqwest", "sqlx"]
+# UI features
+ui = ["lumosai_ui"]
+ui-full = ["ui"]
 # Vector database features
 vector-qdrant = ["lumosai_vector/qdrant"]
 vector-weaviate = ["lumosai_vector/weaviate"]
@@ -139,6 +154,7 @@ lumosai_rag = { path = "lumosai_rag" }
 lumosai_vector = { path = "lumosai_vector", features = ["memory"] }
 lumosai-vector-core = { path = "lumosai_vector/core" }
 lumosai_network = { path = "lumosai_network" }
+lumosai_ui = { path = "lumosai_ui", optional = true }
 lumos_macro = { path = "lumos_macro", optional = true }
 redis = { workspace = true }
 

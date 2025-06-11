@@ -71,6 +71,10 @@ pub use lumosai_core as core;
 pub use lumosai_rag as rag_core;
 pub use lumosai_vector as vector_core;
 
+// UI模块重导出 (可选功能)
+#[cfg(feature = "ui")]
+pub use lumosai_ui as ui;
+
 // 简化API模块
 pub mod prelude;
 pub mod vector;

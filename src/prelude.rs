@@ -45,6 +45,10 @@ pub use lumosai_rag::{
     embedding::EmbeddingProvider,
 };
 
+// UI组件相关 (可选功能)
+#[cfg(feature = "ui")]
+pub use crate::ui::prelude::*;
+
 // 常用宏
 #[cfg(feature = "macros")]
 pub use lumos_macro::*;

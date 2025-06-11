@@ -40,7 +40,7 @@ pub fn AssistantDetailsCard(prompt: crate::types::SinglePrompt) -> Element {
                     class: "mt-6",
                     DisplayField {
                         label: "Description".to_string(),
-                        value: prompt.description.clone(),
+                        value: prompt.description.clone().unwrap_or_default(),
                         value_class: Some("p-3".to_string()),
                     }
                 }

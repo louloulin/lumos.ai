@@ -70,7 +70,7 @@ pub fn page(
                     display_name: model.display_name.clone(),
                     trigger_id: format!("edit-model-form-{}", model.id),
                     name: model.name.clone(),
-                    model_type: super::model_type(model.model_type.clone()),
+                    model_type: model.model_type.clone(),
                     base_url: model.base_url.clone().unwrap_or_default(),
                     api_key: model.api_key.clone().unwrap_or("".to_string()),
                     tpm_limit: model.tpm_limit.unwrap_or(0),

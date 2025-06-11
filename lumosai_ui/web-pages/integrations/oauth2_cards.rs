@@ -36,10 +36,10 @@ pub fn Oauth2Cards(
                                             class: "text-sm text-gray-600",
                                             "Scopes: "
                                             {
-                                                if let Ok(scopes_array) = serde_json::from_value::<Vec<String>>(connection.scopes.clone()) {
-                                                    scopes_array.join(", ")
+                                                if let Some(scopes) = &connection.scopes {
+                                                    scopes.join(", ")
                                                 } else {
-                                                    "Unknown".to_string()
+                                                    "No scopes".to_string()
                                                 }
                                             }
                                         }

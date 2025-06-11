@@ -400,7 +400,7 @@ pub enum IntegrationType {
     ApiKey,
     Custom,
     #[serde(rename = "MCP_Server")]
-    MCP_Server,
+    McpServer,
     BuiltIn,
 }
 
@@ -446,10 +446,10 @@ pub struct TeamOwner {
 pub struct AuditTrail {
     pub id: i32,
     pub user_id: i32,
-    pub action: String,
+    pub action: AuditAction,
     pub details: Option<String>,
     pub email: String,
-    pub access_type: String,
+    pub access_type: AuditAccessType,
     pub created_at: OffsetDateTime,
 }
 
@@ -460,18 +460,20 @@ pub struct DocumentPipeline {
     pub name: String,
     pub description: Option<String>,
     pub dataset_id: i32,
+    pub dataset_name: String,
     pub status: String,
+    pub api_key: String,
     pub created_at: OffsetDateTime,
 }
 
 // Audit types for UI
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum AuditAccessType {
     UserInterface,
     API,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum AuditAction {
     CreateMember,
     CreateInvite,

@@ -3,7 +3,7 @@ use crate::routes;
 
 use web_assets::files::*;
 use crate::types::SinglePrompt;
-use web_assets::files::*;
+
 use dioxus::prelude::*;
 
 #[component]

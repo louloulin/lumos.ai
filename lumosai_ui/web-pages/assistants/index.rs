@@ -131,7 +131,7 @@ fn AssistantTab(
                 }
                 h4 {
                     class: "mb-8 text-sm md:text-base",
-                    "{category.description.as_deref().unwrap_or("No description ")}"
+{category.description.as_deref().unwrap_or("No description")}
                 }
                 div {
                     class: "grid grid-cols-1 gap-x-1.5 gap-y-1 md:gap-x-2 md:gap-y-1.5 lg:grid-cols-2 lg:gap-x-3 lg:gap-y-2.5",

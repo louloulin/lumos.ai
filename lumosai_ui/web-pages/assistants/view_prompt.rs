@@ -20,10 +20,17 @@ pub fn ViewDrawer(team_id: i32, prompt: Prompt, trigger_id: String) -> Element {
                 div {
                     class: "flex justify-center",
                     if let Some(object_id) = prompt.image_icon_object_id {
-                        img {
-                            width: "96",
-                            height: "96",
-                            src: Image { team_id, id: object_id.to_string() }.to_string()
+                        if let Ok(id) = object_id.parse::<i32>() {
+                            img {
+                                width: "96",
+                                height: "96",
+                                src: Image { team_id, id }.to_string()
+                            }
+                        } else {
+                            Avatar {
+                                avatar_size: AvatarSize::ExtraLarge,
+                                avatar_type: AvatarType::User
+                            }
                         }
                     } else {
                         Avatar {
@@ -38,11 +45,11 @@ pub fn ViewDrawer(team_id: i32, prompt: Prompt, trigger_id: String) -> Element {
                 }
                 p {
                     class: "mt-6 text-center text-sm text-token-text-tertiary",
-                    "                    "Created by {prompt.author_name.as_deref().unwrap_or("Unknown")}""
+"Created by " {prompt.author_name.as_deref().unwrap_or("Unknown")}
                 }
                 p {
                     class: "mt-6 text-center",
-                    "                    "{prompt.description.as_deref().unwrap_or("No description available")}""
+{prompt.description.as_deref().unwrap_or("No description available")}
                 }
                 if has_some_examples {
                     h2 {

@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 #[component]
 pub fn Integration(integration_type: IntegrationType) -> Element {
     match integration_type {
-        IntegrationType::MCP_Server => rsx!(
+        IntegrationType::McpServer => rsx!(
             Label {
                 class: "truncate",
                 label_role: LabelRole::Info,

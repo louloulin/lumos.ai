@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use crate::routes::prompts::Image;
+
 use daisy_rsx::*;
 use crate::types::Prompt;
 use dioxus::prelude::*;

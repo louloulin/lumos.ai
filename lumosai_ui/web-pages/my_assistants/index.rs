@@ -6,8 +6,7 @@ use crate::routes;
 use crate::ConfirmModal;
 use assets::files::*;
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::queries::prompts::Prompt;
+use crate::types::{Rbac, Prompt};
 use dioxus::prelude::*;
 
 pub fn page(team_id: i32, rbac: Rbac, prompts: Vec<Prompt>) -> String {

@@ -4,7 +4,7 @@ use super::{ChatWithChunks, PendingChatState};
 use crate::app_layout::SideBar;
 use crate::console::model_popup::ModelPopup;
 use crate::ConfirmModal;
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
 use crate::types::{Rbac, Capability, Prompt, SinglePrompt, BionicToolDefinition};
 use dioxus::prelude::*;

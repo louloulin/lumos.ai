@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
-use db::authz::Rbac;
+use crate::types::Rbac;
 use dioxus::prelude::*;
 
 pub fn page(rbac: Rbac, team_id: i32) -> String {

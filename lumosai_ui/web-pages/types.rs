@@ -25,6 +25,8 @@ pub struct Prompt {
     pub system_prompt: String,
     pub visibility: Visibility,
     pub category_id: i32,
+    pub image_icon_object_id: Option<String>,
+    pub updated_at: OffsetDateTime,
     pub created_at: OffsetDateTime,
 }
 
@@ -66,6 +68,11 @@ pub struct Dataset {
     pub name: String,
     pub description: Option<String>,
     pub team_id: i32,
+    pub visibility: Visibility,
+    pub count: i64,
+    pub combine_under_n_chars: i32,
+    pub new_after_n_chars: i32,
+    pub embeddings_model_name: Option<String>,
     pub created_at: OffsetDateTime,
 }
 
@@ -73,9 +80,13 @@ pub struct Dataset {
 pub struct Model {
     pub id: i32,
     pub name: String,
-    pub model_type: String,
+    pub model_type: ModelType,
     pub base_url: Option<String>,
     pub api_key: Option<String>,
+    pub tpm_limit: Option<i32>,
+    pub rpm_limit: Option<i32>,
+    pub context_size: Option<i32>,
+    pub created_at: OffsetDateTime,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -95,8 +106,10 @@ pub struct Integration {
     pub id: i32,
     pub name: String,
     pub description: Option<String>,
-    pub integration_type: String,
+    pub integration_type: IntegrationType,
     pub enabled: bool,
+    pub integration_status: IntegrationStatus,
+    pub created_at: OffsetDateTime,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -257,6 +270,12 @@ pub struct Document {
     pub dataset_id: i32,
     pub name: String,
     pub content: String,
+    pub file_name: String,
+    pub content_size: i64,
+    pub batches: i32,
+    pub waiting: i32,
+    pub fail_count: i32,
+    pub failure_reason: Option<String>,
     pub created_at: OffsetDateTime,
 }
 
@@ -266,6 +285,10 @@ pub struct ModelWithPrompt {
     pub name: String,
     pub model_type: String,
     pub prompt_count: i64,
+    pub base_url: Option<String>,
+    pub tpm_limit: Option<i32>,
+    pub rpm_limit: Option<i32>,
+    pub context_size: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -345,6 +368,11 @@ pub enum ModelType {
     Anthropic,
     Local,
     Custom,
+    #[serde(rename = "LLM")]
+    LLM,
+    Embeddings,
+    TextToSpeech,
+    Image,
 }
 
 // Tool definition for OpenAI API compatibility
@@ -373,35 +401,11 @@ pub struct AuditTrail {
     pub created_at: OffsetDateTime,
 }
 
-// Dataset and Model types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Dataset {
-    pub id: i32,
-    pub name: String,
-    pub visibility: Visibility,
-    pub count: i64,
-    pub combine_under_n_chars: i32,
-    pub new_after_n_chars: i32,
-    pub created_at: OffsetDateTime,
-}
+// Additional dataset and model types
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Model {
-    pub id: i32,
-    pub name: String,
-    pub model_type: ModelType,
-    pub base_url: Option<String>,
-    pub created_at: OffsetDateTime,
-}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Integration {
-    pub id: i32,
-    pub name: String,
-    pub integration_type: IntegrationType,
-    pub status: IntegrationStatus,
-    pub created_at: OffsetDateTime,
-}
+
+
 
 // Tool call types for console
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -437,6 +441,7 @@ impl Rbac {
     pub fn can_view_system_prompt(&self) -> bool { true }
     pub fn can_delete_chat(&self) -> bool { true }
     pub fn can_edit_dataset(&self, _dataset: &Dataset) -> bool { true }
+    pub fn can_manage_integrations(&self) -> bool { true }
 }
 
 // Utility functions

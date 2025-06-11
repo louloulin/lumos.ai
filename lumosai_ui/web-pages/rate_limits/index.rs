@@ -2,9 +2,9 @@
 use crate::app_layout::{Layout, SideBar};
 use crate::charts::{ApiRequestChartCard, TokenUsageChartCard};
 use crate::ConfirmModal;
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
-use db::{authz::Rbac, Model, RateLimit};
+use crate::types::{Rbac, Model, RateLimit};
 use dioxus::prelude::*;
 
 pub fn page(
@@ -12,8 +12,8 @@ pub fn page(
     team_id: i32,
     rate_limits: Vec<RateLimit>,
     models: Vec<Model>,
-    token_usage_data: Vec<db::queries::token_usage_metrics::DailyTokenUsage>,
-    api_request_data: Vec<db::queries::token_usage_metrics::DailyApiRequests>,
+    token_usage_data: Vec<crate::types::DailyTokenUsage>,
+    api_request_data: Vec<crate::types::DailyApiRequests>,
 ) -> String {
     let page = rsx! {
         Layout {

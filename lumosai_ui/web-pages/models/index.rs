@@ -1,10 +1,9 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
 use crate::ConfirmModal;
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::queries::models::ModelWithPrompt;
+use crate::types::{Rbac, ModelWithPrompt};
 use dioxus::prelude::*;
 
 pub fn page(

@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use daisy_rsx::{select::SelectOption, *};
-use db::queries::datasets::Dataset;
+use crate::types::Dataset;
 use dioxus::prelude::*;
 
 #[component]

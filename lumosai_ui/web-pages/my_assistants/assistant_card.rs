@@ -8,6 +8,8 @@ use dioxus::prelude::*;
 pub fn MyAssistantCard(team_id: i32, prompt: Prompt) -> Element {
     let description: String = prompt
         .description
+        .as_deref()
+        .unwrap_or("No description")
         .chars()
         .filter(|&c| c != '\n' && c != '\t' && c != '\r')
         .collect();

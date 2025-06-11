@@ -1,10 +1,9 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
 use crate::ConfirmModal;
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::{Invitation, Member, Team, User};
+use crate::types::{Rbac, Invitation, Member, Team, User};
 use dioxus::prelude::*;
 
 pub fn page(

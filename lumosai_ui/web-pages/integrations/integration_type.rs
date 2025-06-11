@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use daisy_rsx::*;
-use db::IntegrationType;
+use crate::types::IntegrationType;
 use dioxus::prelude::*;
 
 #[component]

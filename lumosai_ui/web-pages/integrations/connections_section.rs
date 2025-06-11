@@ -1,9 +1,7 @@
 #![allow(non_snake_case)]
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::{ApiKeyConnection, Oauth2Connection};
+use crate::types::{Rbac, ApiKeyConnection, Oauth2Connection, BionicOpenAPI};
 use dioxus::prelude::*;
-use integrations::bionic_openapi::BionicOpenAPI;
 
 use super::api_key_cards::ApiKeyCards;
 use super::api_key_form::ApiKeyForm;

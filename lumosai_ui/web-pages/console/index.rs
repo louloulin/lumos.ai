@@ -1,11 +1,8 @@
 #![allow(non_snake_case)]
 use crate::app_layout::SideBar;
 use crate::console::model_popup::ModelPopup;
-use db::authz::Rbac;
-use db::queries::capabilities::Capability;
-use db::queries::prompts::{Prompt, SinglePrompt};
+use crate::types::{Rbac, Capability, Prompt, SinglePrompt, BionicToolDefinition};
 use dioxus::prelude::*;
-use openai_api::BionicToolDefinition;
 
 pub fn new_conversation(
     team_id: i32,

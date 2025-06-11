@@ -34,5 +34,29 @@ pub fn Model(model_type: ModelType) -> Element {
                 "Image Generation"
             }
         ),
+        ModelType::OpenAI => rsx!(
+            Label {
+                label_role: LabelRole::Success,
+                "OpenAI"
+            }
+        ),
+        ModelType::Anthropic => rsx!(
+            Label {
+                label_role: LabelRole::Info,
+                "Anthropic"
+            }
+        ),
+        ModelType::Local => rsx!(
+            Label {
+                label_role: LabelRole::Neutral,
+                "Local"
+            }
+        ),
+        ModelType::Custom => rsx!(
+            Label {
+                label_role: LabelRole::Warning,
+                "Custom"
+            }
+        ),
     }
 }

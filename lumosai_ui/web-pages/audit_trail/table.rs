@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use daisy_rsx::*;
-use db::AuditTrail;
+use crate::types::AuditTrail;
 use dioxus::prelude::*;
 
 #[component]

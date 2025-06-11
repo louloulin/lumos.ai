@@ -2,7 +2,7 @@
 use crate::console::tools_modal::ToolsModal;
 use crate::routes;
 
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
 use crate::types::{Capability, ModelCapability, BionicToolDefinition};
 use dioxus::prelude::*;

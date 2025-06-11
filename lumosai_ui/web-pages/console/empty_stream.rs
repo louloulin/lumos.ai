@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use crate::routes;
 
-use assets::files::*;
+use web_assets::files::*;
 use crate::types::SinglePrompt;
 use web_assets::files::*;
 use dioxus::prelude::*;

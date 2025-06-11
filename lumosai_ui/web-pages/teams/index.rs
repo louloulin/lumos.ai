@@ -4,7 +4,7 @@ use crate::ConfirmModal;
 use assets::files::button_plus_svg;
 use daisy_rsx::*;
 use db::authz::Rbac;
-use db::{InviteSummary, TeamOwner};
+use crate::types::{InviteSummary, TeamOwner};
 use dioxus::prelude::*;
 
 pub fn page(

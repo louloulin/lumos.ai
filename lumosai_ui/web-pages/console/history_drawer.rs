@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use daisy_rsx::*;
-use db::History;
+use crate::types::History;
 use dioxus::prelude::*;
 
 #[component]

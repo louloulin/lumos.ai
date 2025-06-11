@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use super::ChatChunks;
 use daisy_rsx::*;
-use db::authz::Rbac;
+use crate::types::Rbac;
 use dioxus::prelude::*;
 
 #[component]

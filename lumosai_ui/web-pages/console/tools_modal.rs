@@ -2,7 +2,7 @@
 use crate::routes;
 use daisy_rsx::*;
 use dioxus::prelude::*;
-use openai_api::BionicToolDefinition;
+use crate::types::BionicToolDefinition;
 
 #[component]
 pub fn ToolsModal(

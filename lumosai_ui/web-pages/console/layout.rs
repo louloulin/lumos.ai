@@ -1,10 +1,7 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
-use db::authz::Rbac;
-use db::queries::capabilities::Capability;
-use db::queries::prompts::SinglePrompt;
+use crate::types::{Rbac, Capability, SinglePrompt, BionicToolDefinition};
 use dioxus::prelude::*;
-use openai_api::BionicToolDefinition;
 
 use super::{ChatWithChunks, PendingChatState};
 

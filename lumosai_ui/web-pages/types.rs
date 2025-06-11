@@ -124,6 +124,8 @@ pub struct User {
     pub id: i32,
     pub email: String,
     pub name: Option<String>,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
 }
 
 // Mock integration types
@@ -289,6 +291,15 @@ pub struct ModelWithPrompt {
     pub tpm_limit: Option<i32>,
     pub rpm_limit: Option<i32>,
     pub context_size: Option<i32>,
+    pub prompt_id: Option<i32>,
+    pub display_name: String,
+    pub api_key: Option<String>,
+    pub description: Option<String>,
+    pub disclaimer: Option<String>,
+    pub example1: Option<String>,
+    pub example2: Option<String>,
+    pub example3: Option<String>,
+    pub example4: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -297,6 +308,10 @@ pub struct Member {
     pub user_id: i32,
     pub team_id: i32,
     pub role: Role,
+    pub email: String,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub roles: Vec<Role>,
     pub created_at: OffsetDateTime,
 }
 
@@ -306,6 +321,9 @@ pub struct Invitation {
     pub email: String,
     pub team_id: i32,
     pub invited_by: i32,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub roles: Vec<Role>,
     pub created_at: OffsetDateTime,
 }
 
@@ -442,6 +460,8 @@ impl Rbac {
     pub fn can_delete_chat(&self) -> bool { true }
     pub fn can_edit_dataset(&self, _dataset: &Dataset) -> bool { true }
     pub fn can_manage_integrations(&self) -> bool { true }
+    pub fn can_make_assistant_public(&self) -> bool { true }
+    pub fn can_make_invitations(&self) -> bool { true }
 }
 
 // Utility functions

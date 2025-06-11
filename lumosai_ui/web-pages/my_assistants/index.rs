@@ -4,7 +4,7 @@ use crate::hero::Hero;
 use crate::my_assistants::assistant_card::MyAssistantCard;
 use crate::routes;
 use crate::ConfirmModal;
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
 use crate::types::{Rbac, Prompt};
 use dioxus::prelude::*;

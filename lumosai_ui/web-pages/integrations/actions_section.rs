@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use super::parameter_renderer::render_parameter;
 use dioxus::prelude::*;
-use openai_api::BionicToolDefinition;
+use crate::types::BionicToolDefinition;
 
 #[component]
 pub fn ActionsSection(logo_url: String, tool_definitions: Vec<BionicToolDefinition>) -> Element {

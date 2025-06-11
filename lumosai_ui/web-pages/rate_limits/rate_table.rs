@@ -4,7 +4,7 @@ use crate::types;
 use dioxus::prelude::*;
 
 #[component]
-pub fn RateTable(rate_limits: Vec<db::RateLimit>, team_id: i32) -> Element {
+pub fn RateTable(rate_limits: Vec<crate::types::RateLimit>, team_id: i32) -> Element {
     rsx!(
         Card {
             class: "has-data-table mt-6",

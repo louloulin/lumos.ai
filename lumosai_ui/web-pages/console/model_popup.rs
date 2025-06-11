@@ -1,5 +1,5 @@
-use assets::files::button_select_svg;
-use db::Prompt;
+use web_assets::files::button_select_svg;
+use crate::types::Prompt;
 use dioxus::prelude::*;
 
 #[component]

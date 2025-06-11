@@ -2,9 +2,8 @@
 use crate::app_layout::{Layout, SideBar};
 use db::authz::Rbac;
 use db::queries::capabilities::Capability;
-use db::queries::prompts::SinglePrompt;
+use crate::types::{SinglePrompt, BionicToolDefinition};
 use dioxus::prelude::*;
-use openai_api::BionicToolDefinition;
 
 use crate::console::empty_stream::EmptyStream;
 use crate::console::{ChatWithChunks, PendingChatState};

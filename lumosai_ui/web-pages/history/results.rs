@@ -1,9 +1,8 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
-use assets::files::nav_history_svg;
+use web_assets::files::nav_history_svg;
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::History;
+use crate::types::{Rbac, History};
 use dioxus::prelude::*;
 
 pub fn page(rbac: Rbac, team_id: i32, history: Vec<History>) -> String {

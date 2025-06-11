@@ -1,4 +1,4 @@
-use db::queries::documents::Document;
+use crate::types::Document;
 use dioxus::prelude::*;
 
 pub fn status(document: Document, team_id: i32, first_time: bool) -> String {

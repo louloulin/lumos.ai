@@ -27,5 +27,23 @@ pub fn Integration(integration_type: IntegrationType) -> Element {
                 "Open API"
             }
         ),
+        IntegrationType::OAuth2 => rsx!(
+            Label {
+                label_role: LabelRole::Info,
+                "OAuth2"
+            }
+        ),
+        IntegrationType::ApiKey => rsx!(
+            Label {
+                label_role: LabelRole::Success,
+                "API Key"
+            }
+        ),
+        IntegrationType::Custom => rsx!(
+            Label {
+                label_role: LabelRole::Warning,
+                "Custom"
+            }
+        ),
     }
 }

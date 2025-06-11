@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
-use db::authz::Rbac;
-use db::queries::capabilities::Capability;
+use crate::types::{Rbac, Capability};
 use crate::types::{SinglePrompt, BionicToolDefinition};
 use dioxus::prelude::*;
 
@@ -60,7 +59,7 @@ pub fn AssistantConsole(
                         prompt_id: prompt.id,
                         lock_console: has_pending_chat,
                         conversation_id,
-                        disclaimer: prompt.disclaimer,
+                        disclaimer: prompt.disclaimer.clone().unwrap_or_default(),
                         capabilities,
                         enabled_tools,
                         available_tools,

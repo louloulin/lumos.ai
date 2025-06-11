@@ -1,9 +1,8 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
-use assets::files::avatar_svg;
+use web_assets::files::avatar_svg;
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::queries::users::User;
+use crate::types::{Rbac, User};
 use dioxus::prelude::*;
 
 #[component]

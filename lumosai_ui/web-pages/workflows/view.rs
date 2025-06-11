@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
-use db::authz::Rbac;
+use crate::types::Rbac;
 use dioxus::prelude::*;
 
 use super::workflow_cards::{get_workflow_icon, Workflow};

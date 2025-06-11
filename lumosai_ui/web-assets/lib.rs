@@ -214,6 +214,37 @@ pub mod files {
         mime_type: "image/svg+xml",
     };
 
+    // Additional icons for compatibility
+    pub const button_select_svg: StaticFile = StaticFile {
+        name: "button-select.svg",
+        content: b"<svg><!-- select button icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const button_edit_svg: StaticFile = StaticFile {
+        name: "button-edit.svg",
+        content: b"<svg><!-- edit button icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const menu_delete_svg: StaticFile = StaticFile {
+        name: "menu-delete.svg",
+        content: b"<svg><!-- menu delete icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const empty_api_keys_svg: StaticFile = StaticFile {
+        name: "empty-api-keys.svg",
+        content: b"<svg><!-- empty api keys icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const avatar_svg: StaticFile = StaticFile {
+        name: "avatar.svg",
+        content: b"<svg><!-- avatar icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
     // Legacy compatibility
     pub const COLLAPSE_SVG: StaticFile = collapse_svg;
 }

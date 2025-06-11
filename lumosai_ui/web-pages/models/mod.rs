@@ -2,7 +2,7 @@ pub mod form;
 pub mod index;
 pub mod model_table;
 pub mod model_type;
-use db::ModelType;
+use crate::types::ModelType;
 
 fn model_type(model_type: ModelType) -> String {
     match model_type {

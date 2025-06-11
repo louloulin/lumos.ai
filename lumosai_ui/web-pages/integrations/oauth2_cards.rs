@@ -2,9 +2,9 @@
 use crate::assistants::visibility::VisLabel;
 use crate::routes;
 use crate::ConfirmModal;
-use assets::files::menu_delete_svg;
+use web_assets::files::menu_delete_svg;
 use daisy_rsx::*;
-use db::Oauth2Connection;
+use crate::types::Oauth2Connection;
 use dioxus::prelude::*;
 
 pub fn Oauth2Cards(

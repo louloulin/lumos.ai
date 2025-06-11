@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 // Visibility enum
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Visibility {
     Private,
     Team,
@@ -28,6 +28,12 @@ pub struct Prompt {
     pub image_icon_object_id: Option<String>,
     pub updated_at: OffsetDateTime,
     pub created_at: OffsetDateTime,
+    pub example1: Option<String>,
+    pub example2: Option<String>,
+    pub example3: Option<String>,
+    pub example4: Option<String>,
+    pub author_name: Option<String>,
+    pub disclaimer: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -196,6 +202,7 @@ pub struct InviteSummary {
     pub email: String,
     pub team_name: String,
     pub invited_by: String,
+    pub created_by: String,
     pub created_at: OffsetDateTime,
     pub team_id: i32,
 }
@@ -438,6 +445,8 @@ pub struct AuditTrail {
     pub user_id: i32,
     pub action: String,
     pub details: Option<String>,
+    pub email: String,
+    pub access_type: String,
     pub created_at: OffsetDateTime,
 }
 

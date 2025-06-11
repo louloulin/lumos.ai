@@ -1,10 +1,9 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
 use crate::ConfirmModal;
-use assets::files::empty_api_keys_svg;
+use web_assets::files::empty_api_keys_svg;
 use daisy_rsx::*;
-use db::authz::Rbac;
-use db::{Dataset, DocumentPipeline};
+use crate::types::{Rbac, Dataset, DocumentPipeline};
 use dioxus::prelude::*;
 
 pub fn page(

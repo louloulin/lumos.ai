@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
 use crate::ConfirmModal;
-use assets::files::button_plus_svg;
+use web_assets::files::button_plus_svg;
 use daisy_rsx::*;
-use db::authz::Rbac;
+use crate::types::Rbac;
 use crate::types::{InviteSummary, TeamOwner};
 use dioxus::prelude::*;
 

@@ -4,10 +4,8 @@ use super::connections_section::ConnectionsSection;
 use super::integration_header::IntegrationHeader;
 use crate::app_layout::{Layout, SideBar};
 use daisy_rsx::*;
-use db::{authz::Rbac, ApiKeyConnection, Integration, Oauth2Connection};
+use crate::types::{Rbac, ApiKeyConnection, Integration, Oauth2Connection, BionicOpenAPI, BionicToolDefinition};
 use dioxus::prelude::*;
-use integrations::bionic_openapi::BionicOpenAPI;
-use openai_api::BionicToolDefinition;
 
 pub fn view(
     team_id: i32,

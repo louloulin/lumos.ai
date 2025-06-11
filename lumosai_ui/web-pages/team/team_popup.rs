@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
-use assets::files::{bionic_logo_svg, button_select_svg, profile_svg};
+use web_assets::files::{bionic_logo_svg, button_select_svg, profile_svg};
 use daisy_rsx::*;
-use db::queries::teams::Team;
+use crate::types::Team;
 use dioxus::prelude::*;
 
 pub fn popup(teams: Vec<(String, String)>, team: Team) -> String {

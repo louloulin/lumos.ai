@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use daisy_rsx::*;
-use db::queries::token_usage_metrics::{DailyApiRequests, DailyTokenUsage};
+use crate::types::{DailyApiRequests, DailyTokenUsage};
 use dioxus::prelude::*;
 use std::collections::HashMap;
 

@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use assets::files::{button_select_svg, profile_svg};
+use web_assets::files::{button_select_svg, profile_svg};
 use daisy_rsx::*;
 use dioxus::prelude::*;
 

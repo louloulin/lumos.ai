@@ -6,7 +6,7 @@ use crate::my_assistants::{
     system_prompt_card::SystemPromptCard,
 };
 use daisy_rsx::*;
-use db::authz::Rbac;
+use crate::types::Rbac;
 use dioxus::prelude::*;
 
 pub fn page(

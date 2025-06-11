@@ -8,6 +8,8 @@ use dioxus::prelude::*;
 pub fn PromptCard(team_id: i32, rbac: Rbac, prompt: Prompt) -> Element {
     let description: String = prompt
         .description
+        .as_deref()
+        .unwrap_or("No description")
         .chars()
         .filter(|&c| c != '\n' && c != '\t' && c != '\r')
         .collect();
@@ -30,7 +32,7 @@ pub fn PromptCard(team_id: i32, rbac: Rbac, prompt: Prompt) -> Element {
                         img {
                             width: "96",
                             height: "96",
-                            src: Image { team_id, id: object_id }.to_string()
+                            src: format!("/team/{}/image/{}", team_id, object_id)
                         }
                     } else {
                         Avatar {

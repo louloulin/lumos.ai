@@ -20,3 +20,19 @@ dioxus-ssr = { workspace = true }
 daisy_rsx = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[[example]]
+name = "basic_layout"
+path = "examples/basic_layout.rs"
+
+[[example]]
+name = "simple_ui_test"
+path = "examples/simple_ui_test.rs"
+
+[[example]]
+name = "ui_validation"
+path = "examples/ui_validation.rs"
+
+[[example]]
+name = "generate_html"
+path = "examples/generate_html.rs"

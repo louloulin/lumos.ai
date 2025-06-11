@@ -19,15 +19,15 @@ fn main() {
 fn BasicApp() -> Element {
     rsx! {
         BaseLayout {
-            title: "LumosAI Dashboard",
-            fav_icon_src: "/favicon.svg",
-            collapse_svg_src: "/icons/collapse.svg",
+            title: "LumosAI Dashboard".to_string(),
+            fav_icon_src: "/favicon.svg".to_string(),
+            collapse_svg_src: "/icons/collapse.svg".to_string(),
             stylesheets: vec![
                 "/styles/tailwind.css".to_string(),
                 "/styles/app.css".to_string()
             ],
-            section_class: "p-6 bg-base-100",
-            js_href: "/js/app.js",
+            section_class: "p-6 bg-base-100".to_string(),
+            js_href: "/js/app.js".to_string(),
             
             // Header content
             header: rsx! {
@@ -144,8 +144,8 @@ fn BasicApp() -> Element {
                     }
                 }
             },
-            
-            // Main content area
+
+            // Main content area (children)
             div {
                 class: "space-y-6",
                 

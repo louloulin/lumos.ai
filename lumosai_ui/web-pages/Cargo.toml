@@ -8,7 +8,7 @@ path = "lib.rs"
 
 [dependencies]
 # Local dependencies
-assets = { path = "../web-assets" }
+web-assets = { path = "../web-assets" }
 
 # Core UI dependencies
 dioxus.workspace = true
@@ -27,7 +27,7 @@ serde_json.workspace = true
 comrak.workspace = true
 
 # Time handling
-time.workspace = true
+time = { workspace = true, features = ["serde"] }
 
 # Validation
 validator.workspace = true

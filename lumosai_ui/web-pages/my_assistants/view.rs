@@ -12,9 +12,9 @@ use dioxus::prelude::*;
 pub fn page(
     team_id: i32,
     rbac: Rbac,
-    prompt: db::SinglePrompt,
-    datasets: Vec<db::PromptDataset>,
-    integrations: Vec<db::PromptIntegration>,
+    prompt: crate::types::SinglePrompt,
+    datasets: Vec<crate::types::PromptDataset>,
+    integrations: Vec<crate::types::PromptIntegration>,
 ) -> String {
     let example1 = prompt.example1.clone().unwrap_or_default();
     let example2 = prompt.example2.clone().unwrap_or_default();

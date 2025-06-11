@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use assets::files::collapse_svg;
+use web_assets::files::COLLAPSE_SVG;
 use dioxus::prelude::*;
 
 // Remember: owned props must implement PartialEq!
@@ -100,7 +100,7 @@ pub fn BaseLayout(props: AppLayoutProps) -> Element {
                                 height: "24",
                                 width: "24",
                                 class: "svg-icon mr-6",
-                                src: collapse_svg.name
+                                src: COLLAPSE_SVG.name
                             }
                         }
                         div {

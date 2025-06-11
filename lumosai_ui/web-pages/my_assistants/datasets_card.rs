@@ -3,7 +3,7 @@ use daisy_rsx::*;
 use dioxus::prelude::*;
 
 #[component]
-pub fn DatasetsCard(team_id: i32, prompt_id: i32, datasets: Vec<db::PromptDataset>) -> Element {
+pub fn DatasetsCard(team_id: i32, prompt_id: i32, datasets: Vec<crate::types::PromptDataset>) -> Element {
     rsx! {
         Card {
             class: "mb-6",

@@ -3,8 +3,8 @@ use super::logout_form::LogoutForm;
 use super::snackbar::Snackbar;
 use crate::menu::{NavGroup, NavItem};
 use crate::profile_popup::ProfilePopup;
-use assets::files::*;
-use db::authz::Rbac;
+use web_assets::files::*;
+use crate::types::*;
 use dioxus::prelude::*;
 
 #[derive(PartialEq, Clone, Eq, Debug)]

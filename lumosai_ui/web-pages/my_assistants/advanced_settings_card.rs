@@ -4,7 +4,7 @@ use daisy_rsx::*;
 use dioxus::prelude::*;
 
 #[component]
-pub fn AdvancedSettingsCard(prompt: db::SinglePrompt) -> Element {
+pub fn AdvancedSettingsCard(prompt: crate::types::SinglePrompt) -> Element {
     rsx! {
         Card {
             class: "mb-6",

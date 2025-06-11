@@ -9,8 +9,18 @@ pub mod prompt_drawer;
 pub mod prompt_form;
 pub mod tools_modal;
 
-use db::queries::{chats::Chat, chats_chunks::ChatChunks};
-use openai_api::ToolCall;
+use crate::types::{Chat, ToolCall};
+
+// Chat chunks type for UI
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChatChunks {
+    pub id: i32,
+    pub chat_id: i32,
+    pub content: String,
+    pub page_number: Option<i32>,
+    pub file_name: Option<String>,
+    pub created_at: time::OffsetDateTime,
+}
 
 #[derive(PartialEq, Clone)]
 pub struct ChatWithChunks {

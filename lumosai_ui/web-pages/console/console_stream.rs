@@ -1,11 +1,11 @@
 #![allow(non_snake_case)]
 use crate::routes;
 
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
-use db::{authz::Rbac, ChatRole};
+use crate::types::{Rbac, ChatRole};
 use dioxus::prelude::*;
-use openai_api::ToolCall;
+use crate::types::ToolCall;
 
 use super::{ChatWithChunks, PendingChatState};
 

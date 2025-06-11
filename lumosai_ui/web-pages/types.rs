@@ -52,6 +52,10 @@ pub struct Chat {
     pub prompt_id: i32,
     pub message: String,
     pub response: Option<String>,
+    pub content: Option<String>,
+    pub role: ChatRole,
+    pub tool_call_id: Option<String>,
+    pub tool_calls: Option<String>,
     pub created_at: OffsetDateTime,
 }
 
@@ -78,7 +82,10 @@ pub struct ApiKey {
     pub id: i32,
     pub name: String,
     pub key_value: String,
+    pub api_key: String,
     pub team_id: i32,
+    pub prompt_type: PromptType,
+    pub prompt_name: String,
     pub created_at: OffsetDateTime,
 }
 
@@ -169,6 +176,135 @@ pub struct InviteSummary {
     pub team_id: i32,
 }
 
+// Additional enums and types for compatibility
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ChatRole {
+    User,
+    Assistant,
+    System,
+    Tool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TokenUsageType {
+    Prompt,
+    Completion,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum IntegrationStatus {
+    Configured,
+    NotConfigured,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum PromptType {
+    Chat,
+    Completion,
+    Assistant,
+    Model,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Role {
+    Admin,
+    Member,
+    Viewer,
+    SystemAdministrator,
+    TeamManager,
+    Collaborator,
+}
+
+// Database query result types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DailyTokenUsage {
+    pub date: OffsetDateTime,
+    pub total_tokens: i64,
+    pub usage_type: TokenUsageType,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DailyApiRequests {
+    pub date: OffsetDateTime,
+    pub request_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct History {
+    pub id: i32,
+    pub user_id: i32,
+    pub prompt_id: i32,
+    pub message: String,
+    pub response: Option<String>,
+    pub created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RateLimit {
+    pub id: i32,
+    pub model_id: i32,
+    pub requests_per_minute: i32,
+    pub tokens_per_minute: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Document {
+    pub id: i32,
+    pub dataset_id: i32,
+    pub name: String,
+    pub content: String,
+    pub created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModelWithPrompt {
+    pub id: i32,
+    pub name: String,
+    pub model_type: String,
+    pub prompt_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Member {
+    pub id: i32,
+    pub user_id: i32,
+    pub team_id: i32,
+    pub role: Role,
+    pub created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Invitation {
+    pub id: i32,
+    pub email: String,
+    pub team_id: i32,
+    pub invited_by: i32,
+    pub created_at: OffsetDateTime,
+}
+
+// Capability and model types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Capability {
+    pub id: i32,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ModelCapability {
+    TextGeneration,
+    ImageGeneration,
+    CodeGeneration,
+    Embedding,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Category {
+    pub id: i32,
+    pub name: String,
+    pub description: Option<String>,
+}
+
 // Tool call types for console
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ToolCall {
@@ -200,6 +336,7 @@ impl Rbac {
     pub fn can_view_teams(&self) -> bool { true }
     pub fn can_view_audit_trail(&self) -> bool { true }
     pub fn can_setup_models(&self) -> bool { true }
+    pub fn can_view_system_prompt(&self) -> bool { true }
 }
 
 // Utility functions

@@ -4,9 +4,9 @@ use crate::{
     charts::{ApiRequestChartCard, TokenUsageChartCard},
     render, ConfirmModal,
 };
-use assets::files::*;
+use web_assets::files::*;
 use daisy_rsx::*;
-use db::{authz::Rbac, ApiKey, Prompt, PromptType as DBPromptType};
+use crate::types::{Rbac, ApiKey, Prompt, PromptType as DBPromptType};
 use dioxus::prelude::*;
 
 pub fn page(
@@ -15,8 +15,8 @@ pub fn page(
     api_keys: Vec<ApiKey>,
     assistants: Vec<Prompt>,
     models: Vec<Prompt>,
-    token_usage_data: Vec<db::queries::token_usage_metrics::DailyTokenUsage>,
-    api_request_data: Vec<db::queries::token_usage_metrics::DailyApiRequests>,
+    token_usage_data: Vec<crate::types::DailyTokenUsage>,
+    api_request_data: Vec<crate::types::DailyApiRequests>,
 ) -> String {
     let page = rsx! {
         Layout {
@@ -113,6 +113,20 @@ pub fn PromptType(prompt_type: DBPromptType) -> Element {
                 class: "mr-2 truncate",
                 label_role: LabelRole::Highlight,
                 "Assistant"
+            }
+        ),
+        DBPromptType::Chat => rsx!(
+            Label {
+                class: "mr-2 truncate",
+                label_role: LabelRole::Info,
+                "Chat"
+            }
+        ),
+        DBPromptType::Completion => rsx!(
+            Label {
+                class: "mr-2 truncate",
+                label_role: LabelRole::Info,
+                "Completion"
             }
         ),
     }

@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use daisy_rsx::*;
-use db::Role as DBRole;
+use crate::types::Role as DBRole;
 use dioxus::prelude::*;
 
 #[component]

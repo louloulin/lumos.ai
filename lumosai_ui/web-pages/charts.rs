@@ -12,8 +12,8 @@ pub fn TokenUsageChart(data: Vec<DailyTokenUsage>) -> Element {
     for item in &data {
         let entry = daily_data.entry(item.usage_date).or_insert((0, 0));
         match item.token_type {
-            db::TokenUsageType::Prompt => entry.0 += item.total_tokens,
-            db::TokenUsageType::Completion => entry.1 += item.total_tokens,
+            crate::types::TokenUsageType::Prompt => entry.0 += item.total_tokens,
+            crate::types::TokenUsageType::Completion => entry.1 += item.total_tokens,
         }
     }
 

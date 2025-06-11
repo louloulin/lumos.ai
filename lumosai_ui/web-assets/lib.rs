@@ -108,10 +108,109 @@ pub mod files {
         mime_type: "image/svg+xml",
     };
 
-    // Button icons
+    // Button and action icons
     pub const button_plus_svg: StaticFile = StaticFile {
         name: "button-plus.svg",
         content: b"<svg><!-- plus button icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const delete_svg: StaticFile = StaticFile {
+        name: "delete.svg",
+        content: b"<svg><!-- delete icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const spinner_svg: StaticFile = StaticFile {
+        name: "spinner.svg",
+        content: b"<svg><!-- spinner icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const tools_svg: StaticFile = StaticFile {
+        name: "tools.svg",
+        content: b"<svg><!-- tools icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const handshake_svg: StaticFile = StaticFile {
+        name: "handshake.svg",
+        content: b"<svg><!-- handshake icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    // Audio control icons
+    pub const read_aloud_loading_svg: StaticFile = StaticFile {
+        name: "read-aloud-loading.svg",
+        content: b"<svg><!-- read aloud loading icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const read_aloud_stop_svg: StaticFile = StaticFile {
+        name: "read-aloud-stop.svg",
+        content: b"<svg><!-- read aloud stop icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const read_aloud_svg: StaticFile = StaticFile {
+        name: "read-aloud.svg",
+        content: b"<svg><!-- read aloud icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    // Copy and interaction icons
+    pub const tick_copy_svg: StaticFile = StaticFile {
+        name: "tick-copy.svg",
+        content: b"<svg><!-- tick copy icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const copy_svg: StaticFile = StaticFile {
+        name: "copy.svg",
+        content: b"<svg><!-- copy icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const profile_svg: StaticFile = StaticFile {
+        name: "profile.svg",
+        content: b"<svg><!-- profile icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const ai_svg: StaticFile = StaticFile {
+        name: "ai.svg",
+        content: b"<svg><!-- ai icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    // Input control icons
+    pub const microphone_svg: StaticFile = StaticFile {
+        name: "microphone.svg",
+        content: b"<svg><!-- microphone icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const stop_recording_svg: StaticFile = StaticFile {
+        name: "stop-recording.svg",
+        content: b"<svg><!-- stop recording icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const attach_svg: StaticFile = StaticFile {
+        name: "attach.svg",
+        content: b"<svg><!-- attach icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const streaming_stop_svg: StaticFile = StaticFile {
+        name: "streaming-stop.svg",
+        content: b"<svg><!-- streaming stop icon --></svg>",
+        mime_type: "image/svg+xml",
+    };
+
+    pub const submit_button_svg: StaticFile = StaticFile {
+        name: "submit-button.svg",
+        content: b"<svg><!-- submit button icon --></svg>",
         mime_type: "image/svg+xml",
     };
 

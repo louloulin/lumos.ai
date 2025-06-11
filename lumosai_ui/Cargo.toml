@@ -21,6 +21,9 @@ daisy_rsx = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
+# Additional dependencies for examples
+open = "5.0"
+
 [[example]]
 name = "basic_layout"
 path = "examples/basic_layout.rs"
@@ -36,3 +39,11 @@ path = "examples/ui_validation.rs"
 [[example]]
 name = "generate_html"
 path = "examples/generate_html.rs"
+
+[[example]]
+name = "dioxus_app"
+path = "examples/dioxus_app.rs"
+
+[[example]]
+name = "web_app"
+path = "examples/web_app.rs"

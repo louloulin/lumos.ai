@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumosAI Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better appearance */
+        .navbar { @apply sticky top-0 z-50; }
+        .stats-card { @apply transition-transform hover:scale-105; }
+        .nav-item { @apply transition-colors duration-200; }
+    </style>
+</head>
+<body>
+    <!DOCTYPE html><html lang='en'><div class="min-h-screen bg-base-100"><header class="navbar bg-base-200 shadow-lg"><div class="navbar-start"><button class="btn btn-ghost btn-circle">☰</button><h1 class="text-xl font-bold ml-4">🌟 LumosAI Dashboard</h1></div><div class="navbar-end"><div class="flex items-center space-x-2"><button class="btn btn-ghost btn-sm">🌙</button><div class="dropdown dropdown-end"><button class="btn btn-ghost btn-circle avatar">👤</button></div></div></div></header><div class="flex"><aside class="w-64 bg-base-200 min-h-screen transition-all duration-300"><nav class="p-4"><ul class="space-y-2"><li><button class="w-full flex items-center p-3 text-left bg-primary text-primary-content rounded-lg"><span class="text-lg">📊</span><span class="ml-3">Dashboard</span></button></li><li><button class="w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg"><span class="text-lg">🤖</span><span class="ml-3">Assistants</span></button></li><li><button class="w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg"><span class="text-lg">💬</span><span class="ml-3">Console</span></button></li><li><button class="w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg"><span class="text-lg">📈</span><span class="ml-3">Analytics</span></button></li><li><button class="w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg"><span class="text-lg">⚙️</span><span class="ml-3">Settings</span></button></li></ul></nav></aside><main class="flex-1 p-6"><div class="space-y-6"><div class="flex items-center justify-between"><h2 class="text-3xl font-bold">📊 Dashboard</h2><div class="flex space-x-2"><button class="btn  btn-primary btn-sm  " type="button">New Assistant</button><button class="btn  btn-secondary btn-sm  " type="button">Import Data</button></div></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><div class="card p-6"><div class="flex items-center"><div class="p-3 rounded-full text-white bg-blue-500">🤖</div><div class="ml-4"><h3 class="text-sm font-medium text-gray-600">Active Assistants</h3><p class="text-2xl font-bold">12</p></div></div></div><div class="card p-6"><div class="flex items-center"><div class="p-3 rounded-full text-white bg-green-500">💬</div><div class="ml-4"><h3 class="text-sm font-medium text-gray-600">Total Conversations</h3><p class="text-2xl font-bold">1,234</p></div></div></div><div class="card p-6"><div class="flex items-center"><div class="p-3 rounded-full text-white bg-purple-500">📡</div><div class="ml-4"><h3 class="text-sm font-medium text-gray-600">API Calls Today</h3><p class="text-2xl font-bold">5,678</p></div></div></div><div class="card p-6"><div class="flex items-center"><div class="p-3 rounded-full text-white bg-orange-500">✅</div><div class="ml-4"><h3 class="text-sm font-medium text-gray-600">Success Rate</h3><p class="text-2xl font-bold">98.5%</p></div></div></div></div><div class="card p-6"><h3 class="text-xl font-semibold mb-4">Recent Activity</h3><div class="space-y-3"><div class="flex items-center space-x-3 p-3 hover:bg-base-200 rounded-lg"><div class="text-lg">🤖</div><div class="flex-1"><h4 class="font-medium">New assistant created</h4><p class="text-sm text-gray-600">Customer Support Bot v2.0</p></div><div class="text-xs text-gray-500">2 minutes ago</div></div><div class="flex items-center space-x-3 p-3 hover:bg-base-200 rounded-lg"><div class="text-lg">💬</div><div class="flex-1"><h4 class="font-medium">Conversation completed</h4><p class="text-sm text-gray-600">User inquiry about pricing</p></div><div class="text-xs text-gray-500">5 minutes ago</div></div><div class="flex items-center space-x-3 p-3 hover:bg-base-200 rounded-lg"><div class="text-lg">📊</div><div class="flex-1"><h4 class="font-medium">Analytics report generated</h4><p class="text-sm text-gray-600">Weekly performance summary</p></div><div class="text-xs text-gray-500">1 hour ago</div></div></div></div></div></main></div></div></html>
+    <script>
+        console.log('🌟 LumosAI Dashboard loaded successfully!');
+        
+        // Add some basic interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click handlers for buttons
+            document.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    console.log('Button clicked:', this.textContent);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

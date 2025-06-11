@@ -24,15 +24,17 @@ use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::ai_client::{AIClient, AIClientConfig, AIProvider};
+use crate::database::Database;
 use crate::streaming::{self, AppState};
 
 /// 启动API服务器
 pub async fn start_api_server() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Starting LumosAI API Server...");
 
-    // 创建AI客户端
+    // 创建AI客户端和数据库连接
     let ai_client = create_ai_client();
-    let app_state = AppState { ai_client };
+    let database = create_database().await?;
+    let app_state = AppState { ai_client, database };
 
     // 配置CORS
     let cors = CorsLayer::new()
@@ -50,7 +52,7 @@ pub async fn start_api_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/chat/simple", post(streaming::simple_chat))
         
         // 对话管理
-        .route("/api/conversations", get(list_conversations))
+        .route("/api/conversations", get(streaming::list_conversations))
         .route("/api/conversations/:id", get(streaming::get_conversation))
         .route("/api/conversations/:id", delete(streaming::delete_conversation))
         
@@ -87,18 +89,32 @@ fn create_ai_client() -> AIClient {
         println!("🔑 Using OpenAI API");
         return AIClient::openai(openai_key);
     }
-    
+
     if let Ok(deepseek_key) = std::env::var("DEEPSEEK_API_KEY") {
         println!("🔑 Using DeepSeek API");
         return AIClient::deepseek(deepseek_key);
     }
-    
+
     // 默认使用本地Ollama
     println!("🏠 Using local Ollama");
     AIClient::ollama(
         "http://localhost:11434/v1".to_string(),
         "llama2".to_string(),
     )
+}
+
+/// 创建数据库连接
+async fn create_database() -> Result<Database, Box<dyn std::error::Error>> {
+    // 从环境变量读取数据库URL，默认使用本地SQLite文件
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite:./lumosai.db".to_string());
+
+    println!("🗄️ Connecting to database: {}", database_url);
+
+    let database = Database::new(&database_url).await?;
+    println!("✅ Database connected successfully");
+
+    Ok(database)
 }
 
 /// API信息
@@ -208,16 +224,7 @@ Content-Type: application/json
     )
 }
 
-/// 获取对话列表
-async fn list_conversations() -> impl IntoResponse {
-    // TODO: 从数据库获取对话列表
-    Json(json!({
-        "conversations": [],
-        "total": 0,
-        "page": 1,
-        "per_page": 20
-    }))
-}
+
 
 /// 获取可用模型列表
 async fn list_models() -> impl IntoResponse {

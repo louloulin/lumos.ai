@@ -33,6 +33,7 @@ use web_pages::console::chat_console::ChatConsole;
 mod ai_client;
 mod streaming;
 mod api_server;
+mod database;
 
 use ai_client::AIClient;
 use streaming::AppState;

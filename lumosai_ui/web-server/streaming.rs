@@ -25,6 +25,7 @@ use std::{convert::Infallible, time::Duration};
 use tokio_stream::StreamExt;
 
 use crate::ai_client::{AIClient, ChatMessage, MessageRole, StreamChunk};
+use crate::database::{Database, MessageRole as DbMessageRole};
 
 /// 流式聊天请求
 #[derive(Debug, Deserialize)]
@@ -74,6 +75,7 @@ pub enum StreamEvent {
 #[derive(Clone)]
 pub struct AppState {
     pub ai_client: AIClient,
+    pub database: Database,
 }
 
 /// 流式聊天处理器
@@ -81,7 +83,7 @@ pub async fn stream_chat(
     State(state): State<AppState>,
     Json(request): Json<StreamChatRequest>,
 ) -> impl IntoResponse {
-    let stream = create_chat_stream(state.ai_client, request).await;
+    let stream = create_chat_stream(state.ai_client, state.database, request).await;
     
     Sse::new(stream)
         .keep_alive(
@@ -94,6 +96,7 @@ pub async fn stream_chat(
 /// 创建聊天流
 async fn create_chat_stream(
     ai_client: AIClient,
+    database: Database,
     request: StreamChatRequest,
 ) -> impl Stream<Item = Result<Event, Infallible>> {
     let conversation_id = request.conversation_id.unwrap_or_else(|| generate_id());
@@ -230,25 +233,95 @@ pub async fn simple_chat(
 /// 获取对话历史
 pub async fn get_conversation(
     Path(conversation_id): Path<String>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
-    // TODO: 从数据库获取对话历史
-    Json(serde_json::json!({
-        "conversation_id": conversation_id,
-        "messages": [],
-        "created_at": chrono::Utc::now().to_rfc3339(),
-        "updated_at": chrono::Utc::now().to_rfc3339()
-    }))
+    let conversation_id: i64 = match conversation_id.parse() {
+        Ok(id) => id,
+        Err(_) => {
+            return Json(serde_json::json!({
+                "success": false,
+                "error": "Invalid conversation ID"
+            }));
+        }
+    };
+
+    // 默认用户ID为1（系统用户）
+    let user_id = 1;
+
+    match state.database.get_conversation(conversation_id, user_id).await {
+        Ok(conversation) => {
+            match state.database.get_messages(conversation_id).await {
+                Ok(messages) => Json(serde_json::json!({
+                    "success": true,
+                    "conversation": {
+                        "id": conversation.id,
+                        "title": conversation.title,
+                        "created_at": conversation.created_at,
+                        "updated_at": conversation.updated_at
+                    },
+                    "messages": messages
+                })),
+                Err(e) => Json(serde_json::json!({
+                    "success": false,
+                    "error": format!("Failed to get messages: {}", e)
+                }))
+            }
+        }
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "error": format!("Conversation not found: {}", e)
+        }))
+    }
 }
 
 /// 删除对话
 pub async fn delete_conversation(
     Path(conversation_id): Path<String>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
-    // TODO: 从数据库删除对话
-    Json(serde_json::json!({
-        "success": true,
-        "conversation_id": conversation_id
-    }))
+    let conversation_id: i64 = match conversation_id.parse() {
+        Ok(id) => id,
+        Err(_) => {
+            return Json(serde_json::json!({
+                "success": false,
+                "error": "Invalid conversation ID"
+            }));
+        }
+    };
+
+    // 默认用户ID为1（系统用户）
+    let user_id = 1;
+
+    match state.database.delete_conversation(conversation_id, user_id).await {
+        Ok(_) => Json(serde_json::json!({
+            "success": true,
+            "conversation_id": conversation_id
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "error": format!("Failed to delete conversation: {}", e)
+        }))
+    }
+}
+
+/// 获取对话列表
+pub async fn list_conversations(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    // 默认用户ID为1（系统用户）
+    let user_id = 1;
+
+    match state.database.get_conversations(user_id).await {
+        Ok(conversations) => Json(serde_json::json!({
+            "success": true,
+            "conversations": conversations,
+            "total": conversations.len()
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "error": format!("Failed to get conversations: {}", e)
+        }))
+    }
 }
 
 /// 生成唯一ID

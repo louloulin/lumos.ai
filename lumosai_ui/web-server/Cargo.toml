@@ -61,5 +61,8 @@ thiserror = "1.0"
 futures = "0.3"
 tokio-stream = "0.1"
 
+# Database (using in-memory storage for now)
+# sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "migrate"] }
+
 [dev-dependencies]
 time = "0.3.36"

@@ -29,3 +29,6 @@ pub use builtin::{
 pub use builder::{ToolBuilder, create_tool};
 pub use enhanced::{EnhancedTool, ToolCapability, ToolCategory as EnhancedToolCategory};
 pub use toolset::{ToolSet, ToolSetBuilder, ToolSetError};
+
+// Export built-in tools from builtin module
+pub use builtin::{WebSearchTool, CalculatorTool, FileManagerTool, CodeExecutorTool};

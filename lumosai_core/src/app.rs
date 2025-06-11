@@ -1,12 +1,13 @@
 use crate::Result;
 use crate::agent::{trait_def::Agent, AgentBuilder, ModelResolver};
 use crate::tool::Tool;
-use crate::config::{ConfigLoader, YamlConfig};
+use crate::config::{ConfigLoader, YamlConfig, WorkflowConfig};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::path::Path;
 use crate::rag::RagPipeline;
-use crate::workflow::basic::Workflow;
+use crate::workflow::Workflow;
+use crate::workflow::EnhancedWorkflow;
 
 pub mod enhanced;
 
@@ -79,6 +80,14 @@ impl LumosApp {
             }
         }
 
+        // 创建配置中定义的 Workflows
+        if let Some(workflows_config) = &config.workflows {
+            for (name, workflow_config) in workflows_config {
+                let workflow = app.create_workflow_from_config(name, workflow_config)?;
+                app.workflows.insert(name.clone(), Arc::new(workflow));
+            }
+        }
+
         Ok(app)
     }
 
@@ -101,13 +110,11 @@ impl LumosApp {
 
         // 设置可选参数
         if let Some(temperature) = config.temperature {
-            // Note: 这里需要扩展 AgentBuilder 以支持 temperature
-            // builder = builder.temperature(temperature);
+            builder = builder.temperature(temperature);
         }
 
         if let Some(max_tokens) = config.max_tokens {
-            // Note: 这里需要扩展 AgentBuilder 以支持 max_tokens
-            // builder = builder.max_tokens(max_tokens);
+            builder = builder.max_tokens(max_tokens);
         }
 
         if let Some(timeout) = config.timeout {
@@ -117,15 +124,67 @@ impl LumosApp {
         // 添加工具
         if let Some(tools) = &config.tools {
             for tool_name in tools {
-                // Note: 这里需要实现工具名称到工具实例的映射
-                // let tool = self.create_tool_from_name(tool_name)?;
-                // builder = builder.tool(tool);
+                if let Some(tool) = self.resolve_tool(tool_name)? {
+                    builder = builder.add_tool(tool);
+                }
             }
         }
 
         builder.build_async().await
     }
-    
+
+    /// 解析工具名称到工具实例
+    fn resolve_tool(&self, tool_name: &str) -> Result<Option<Arc<dyn crate::tool::Tool>>> {
+        // 首先检查已注册的工具
+        if let Some(tool) = self.tools.get(tool_name) {
+            return Ok(Some(tool.clone()));
+        }
+
+        // 尝试创建内置工具
+        match tool_name {
+            "web_search" => {
+                use crate::tool::builtin::WebSearchTool;
+                Ok(Some(Arc::new(WebSearchTool::new())))
+            },
+            "calculator" => {
+                use crate::tool::builtin::CalculatorTool;
+                Ok(Some(Arc::new(CalculatorTool::new())))
+            },
+            "file_manager" => {
+                use crate::tool::builtin::FileManagerTool;
+                Ok(Some(Arc::new(FileManagerTool::new())))
+            },
+            "code_executor" => {
+                use crate::tool::builtin::CodeExecutorTool;
+                Ok(Some(Arc::new(CodeExecutorTool::new())))
+            },
+            _ => {
+                tracing::warn!("Unknown tool: {}", tool_name);
+                Ok(None)
+            }
+        }
+    }
+
+    /// 从配置创建工作流
+    fn create_workflow_from_config(
+        &self,
+        name: &str,
+        config: &WorkflowConfig,
+    ) -> Result<EnhancedWorkflow> {
+        // 设置基本信息
+        let workflow_id = config.id.as_ref().map_or(name.to_string(), |id| id.clone());
+        let description = config.description.clone();
+
+        // 创建基本的 EnhancedWorkflow
+        let mut workflow = EnhancedWorkflow::new(workflow_id, description);
+
+        // TODO: 添加步骤配置的处理
+        // 这里需要根据 config.steps 来构建工作流步骤
+        // 由于 WorkflowStep 需要 StepExecutor，这里暂时创建一个空的工作流
+
+        Ok(workflow)
+    }
+
     /// 设置应用名称
     pub fn with_name(mut self, name: &str) -> Self {
         self.name = name.to_string();

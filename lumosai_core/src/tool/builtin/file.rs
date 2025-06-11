@@ -2,10 +2,14 @@
 //! 
 //! This module provides file reading, writing, and directory operations
 
-use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool};
+use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool, ToolExecutionContext, ToolExecutionOptions};
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::path::Path;
+use std::fs;
+use crate::{Result, Error};
+use crate::base::Base;
+use async_trait::async_trait;
 
 /// Create a file reader tool
 /// Similar to Mastra's file reading capabilities
@@ -290,6 +294,225 @@ pub fn create_file_info_tool() -> FunctionTool {
     )
 }
 
+/// File manager tool for file system operations
+#[derive(Clone)]
+pub struct FileManagerTool {
+    base: crate::base::BaseComponent,
+    id: String,
+    description: String,
+    schema: ToolSchema,
+}
+
+impl FileManagerTool {
+    /// Create a new file manager tool
+    pub fn new() -> Self {
+        let schema = ToolSchema::new(vec![
+            ParameterSchema {
+                name: "operation".to_string(),
+                description: "File operation to perform (read, write, list, exists, delete)".to_string(),
+                r#type: "string".to_string(),
+                required: true,
+                properties: None,
+                default: None,
+            },
+            ParameterSchema {
+                name: "path".to_string(),
+                description: "File or directory path".to_string(),
+                r#type: "string".to_string(),
+                required: true,
+                properties: None,
+                default: None,
+            },
+            ParameterSchema {
+                name: "content".to_string(),
+                description: "Content to write (for write operation)".to_string(),
+                r#type: "string".to_string(),
+                required: false,
+                properties: None,
+                default: None,
+            },
+        ]);
+
+        Self {
+            base: crate::base::BaseComponent::new_with_name(
+                "file_manager".to_string(),
+                crate::logger::Component::Tool
+            ),
+            id: "file_manager".to_string(),
+            description: "Perform file system operations".to_string(),
+            schema,
+        }
+    }
+
+    fn read_file(&self, path: &str) -> Result<String> {
+        fs::read_to_string(path)
+            .map_err(|e| Error::Tool(format!("Failed to read file '{}': {}", path, e)))
+    }
+
+    fn write_file(&self, path: &str, content: &str) -> Result<()> {
+        fs::write(path, content)
+            .map_err(|e| Error::Tool(format!("Failed to write file '{}': {}", path, e)))
+    }
+
+    fn list_directory(&self, path: &str) -> Result<Vec<String>> {
+        let entries = fs::read_dir(path)
+            .map_err(|e| Error::Tool(format!("Failed to read directory '{}': {}", path, e)))?;
+
+        let mut files = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(|e| Error::Tool(format!("Failed to read directory entry: {}", e)))?;
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            files.push(file_name);
+        }
+
+        files.sort();
+        Ok(files)
+    }
+
+    fn file_exists(&self, path: &str) -> bool {
+        Path::new(path).exists()
+    }
+
+    fn delete_file(&self, path: &str) -> Result<()> {
+        let path_obj = Path::new(path);
+        if path_obj.is_file() {
+            fs::remove_file(path)
+                .map_err(|e| Error::Tool(format!("Failed to delete file '{}': {}", path, e)))
+        } else if path_obj.is_dir() {
+            fs::remove_dir_all(path)
+                .map_err(|e| Error::Tool(format!("Failed to delete directory '{}': {}", path, e)))
+        } else {
+            Err(Error::Tool(format!("Path '{}' does not exist", path)))
+        }
+    }
+}
+
+impl std::fmt::Debug for FileManagerTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FileManagerTool")
+            .field("id", &self.id)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
+impl Base for FileManagerTool {
+    fn name(&self) -> Option<&str> {
+        self.base.name()
+    }
+
+    fn component(&self) -> crate::logger::Component {
+        self.base.component()
+    }
+
+    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::logger::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
+    }
+}
+
+#[async_trait]
+impl Tool for FileManagerTool {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn description(&self) -> &str {
+        &self.description
+    }
+
+    fn schema(&self) -> ToolSchema {
+        self.schema.clone()
+    }
+
+    async fn execute(
+        &self,
+        params: Value,
+        _context: ToolExecutionContext,
+        _options: &ToolExecutionOptions
+    ) -> Result<Value> {
+        let operation = params.get("operation")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| Error::Tool("Operation parameter is required".to_string()))?;
+
+        let path = params.get("path")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| Error::Tool("Path parameter is required".to_string()))?;
+
+        match operation {
+            "read" => {
+                let content = self.read_file(path)?;
+                Ok(json!({
+                    "operation": "read",
+                    "path": path,
+                    "content": content,
+                    "size": content.len()
+                }))
+            },
+            "write" => {
+                let content = params.get("content")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| Error::Tool("Content parameter is required for write operation".to_string()))?;
+
+                self.write_file(path, content)?;
+                Ok(json!({
+                    "operation": "write",
+                    "path": path,
+                    "size": content.len(),
+                    "success": true
+                }))
+            },
+            "list" => {
+                let files = self.list_directory(path)?;
+                Ok(json!({
+                    "operation": "list",
+                    "path": path,
+                    "files": files,
+                    "count": files.len()
+                }))
+            },
+            "exists" => {
+                let exists = self.file_exists(path);
+                Ok(json!({
+                    "operation": "exists",
+                    "path": path,
+                    "exists": exists
+                }))
+            },
+            "delete" => {
+                self.delete_file(path)?;
+                Ok(json!({
+                    "operation": "delete",
+                    "path": path,
+                    "success": true
+                }))
+            },
+            _ => Err(Error::Tool(format!("Unknown operation: {}", operation)))
+        }
+    }
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(self.clone())
+    }
+}
+
+impl Default for FileManagerTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -348,5 +571,30 @@ mod tests {
         assert_eq!(response["success"], true);
         assert_eq!(response["path"], "/tmp");
         assert_eq!(response["total_count"], 2);
+    }
+
+    #[tokio::test]
+    async fn test_file_manager_tool() {
+        let tool = FileManagerTool::new();
+
+        assert_eq!(tool.name(), Some("file_manager"));
+        assert_eq!(tool.description(), "Perform file system operations");
+    }
+
+    #[tokio::test]
+    async fn test_file_manager_exists() {
+        let tool = FileManagerTool::new();
+
+        let params = json!({
+            "operation": "exists",
+            "path": "Cargo.toml"  // This file should exist in the project root
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await.unwrap();
+        assert_eq!(result.get("operation").unwrap().as_str().unwrap(), "exists");
+        assert!(result.get("exists").is_some());
     }
 }

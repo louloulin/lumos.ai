@@ -119,12 +119,14 @@ pub fn create_all_builtin_tools(_config: &BuiltinToolsConfig) -> Vec<Box<dyn Too
         Box::new(create_web_scraper_tool()),
         Box::new(create_json_api_tool()),
         Box::new(create_url_validator_tool()),
+        Box::new(WebSearchTool::new()),
 
         // File tools
         Box::new(create_file_reader_tool()),
         Box::new(create_file_writer_tool()),
         Box::new(create_directory_lister_tool()),
         Box::new(create_file_info_tool()),
+        Box::new(FileManagerTool::new()),
 
         // Data tools
         Box::new(create_json_parser_tool()),
@@ -141,10 +143,12 @@ pub fn create_all_builtin_tools(_config: &BuiltinToolsConfig) -> Vec<Box<dyn Too
         Box::new(create_datetime_tool()),
         Box::new(create_uuid_generator_tool()),
         Box::new(create_hash_generator_tool()),
+        Box::new(CodeExecutorTool::new()),
 
         // Math tools
         Box::new(create_calculator_tool()),
         Box::new(create_statistics_tool()),
+        Box::new(CalculatorTool::new()),
     ]
 }
 
@@ -165,6 +169,7 @@ pub fn create_safe_builtin_tools(_workspace_path: PathBuf) -> Vec<Box<dyn Tool>>
         Box::new(create_uuid_generator_tool()),
         Box::new(create_calculator_tool()),
         Box::new(create_statistics_tool()),
+        Box::new(CalculatorTool::new()),
         // Note: File and web tools excluded for security
     ]
 }
@@ -335,8 +340,8 @@ mod tests {
         let config = BuiltinToolsConfig::default();
         let tools = create_all_builtin_tools(&config);
 
-        // 应该包含所有22个内置工具
-        assert_eq!(tools.len(), 22);
+        // 应该包含所有26个内置工具 (原22个 + 4个新工具)
+        assert_eq!(tools.len(), 26);
     }
 
     #[test]
@@ -344,16 +349,16 @@ mod tests {
         let workspace = PathBuf::from("/tmp/test");
         let tools = create_safe_builtin_tools(workspace);
 
-        // 安全工具集应该包含11个工具（排除文件和网络工具）
-        assert_eq!(tools.len(), 11);
+        // 安全工具集应该包含12个工具（排除文件和网络工具，但包含新的CalculatorTool）
+        assert_eq!(tools.len(), 12);
     }
 
     #[test]
     fn test_dev_builtin_tools() {
         let tools = create_dev_builtin_tools();
 
-        // 开发工具集应该包含所有22个工具
-        assert_eq!(tools.len(), 22);
+        // 开发工具集应该包含所有26个工具
+        assert_eq!(tools.len(), 26);
     }
 
     #[test]

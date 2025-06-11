@@ -9,11 +9,80 @@ use serde_json::Value;
 
 use crate::{Result, Error};
 use crate::llm::LlmProvider;
-use crate::tool::Tool;
+use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
 use crate::memory::{MemoryConfig, WorkingMemoryConfig};
 use super::{AgentConfig, BasicAgent, ModelResolver};
 use super::trait_def::Agent;
 use super::types::{VoiceConfig, TelemetrySettings};
+use crate::base::Base;
+use async_trait::async_trait;
+
+/// Wrapper to convert Arc<dyn Tool> to Box<dyn Tool>
+#[derive(Clone)]
+struct ToolWrapper(Arc<dyn Tool>);
+
+impl std::fmt::Debug for ToolWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ToolWrapper")
+            .field("tool_id", &self.0.id())
+            .field("tool_description", &self.0.description())
+            .finish()
+    }
+}
+
+impl Base for ToolWrapper {
+    fn name(&self) -> Option<&str> {
+        self.0.name()
+    }
+
+    fn component(&self) -> crate::logger::Component {
+        self.0.component()
+    }
+
+    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+        self.0.logger()
+    }
+
+    fn set_logger(&mut self, _logger: std::sync::Arc<dyn crate::logger::Logger>) {
+        // Cannot modify Arc content, so we ignore this
+    }
+
+    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+        self.0.telemetry()
+    }
+
+    fn set_telemetry(&mut self, _telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+        // Cannot modify Arc content, so we ignore this
+    }
+}
+
+#[async_trait]
+impl Tool for ToolWrapper {
+    fn id(&self) -> &str {
+        self.0.id()
+    }
+
+    fn description(&self) -> &str {
+        self.0.description()
+    }
+
+    fn schema(&self) -> crate::tool::ToolSchema {
+        self.0.schema()
+    }
+
+    async fn execute(
+        &self,
+        params: Value,
+        context: ToolExecutionContext,
+        options: &ToolExecutionOptions
+    ) -> Result<Value> {
+        self.0.execute(params, context, options).await
+    }
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(self.clone())
+    }
+}
 
 /// Builder for creating agents with a fluent API
 ///
@@ -41,6 +110,8 @@ pub struct AgentBuilder {
     model_name: Option<String>, // New field for string model names
     memory_config: Option<MemoryConfig>,
     model_id: Option<String>,
+    temperature: Option<f32>,
+    max_tokens: Option<u32>,
     voice_config: Option<VoiceConfig>,
     telemetry: Option<TelemetrySettings>,
     working_memory: Option<WorkingMemoryConfig>,
@@ -70,6 +141,8 @@ impl AgentBuilder {
             model_name: None,
             memory_config: None,
             model_id: None,
+            temperature: None,
+            max_tokens: None,
             voice_config: None,
             telemetry: None,
             working_memory: None,
@@ -121,6 +194,18 @@ impl AgentBuilder {
     /// Set the model ID
     pub fn model_id<S: Into<String>>(mut self, model_id: S) -> Self {
         self.model_id = Some(model_id.into());
+        self
+    }
+
+    /// Set the temperature for the model
+    pub fn temperature(mut self, temperature: f32) -> Self {
+        self.temperature = Some(temperature);
+        self
+    }
+
+    /// Set the maximum number of tokens for the model
+    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+        self.max_tokens = Some(max_tokens);
         self
     }
 
@@ -203,6 +288,15 @@ impl AgentBuilder {
     /// Add a tool to the agent
     pub fn tool(mut self, tool: Box<dyn Tool>) -> Self {
         self.tools.push(tool);
+        self
+    }
+
+    /// Add a tool to the agent (Arc version)
+    pub fn add_tool(mut self, tool: Arc<dyn Tool>) -> Self {
+        // Convert Arc to Box by cloning the tool
+        // Note: This requires the Tool trait to implement Clone or we need a different approach
+        // For now, we'll use a workaround
+        self.tools.push(Box::new(ToolWrapper(tool)));
         self
     }
 

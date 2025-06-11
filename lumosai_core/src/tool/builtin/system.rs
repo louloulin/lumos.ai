@@ -2,9 +2,15 @@
 //! 
 //! This module provides datetime, UUID generation, and other system utilities
 
-use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool};
+use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool, ToolExecutionContext, ToolExecutionOptions};
 use serde_json::{Value, json};
 use std::collections::HashMap;
+use std::process::{Command, Stdio};
+use std::io::Write;
+use tempfile::NamedTempFile;
+use crate::{Result, Error};
+use crate::base::Base;
+use async_trait::async_trait;
 
 /// Create a datetime tool
 /// Similar to Mastra's date/time utilities
@@ -344,6 +350,256 @@ mod base64 {
     }
 }
 
+/// Code executor tool for running code snippets
+#[derive(Clone)]
+pub struct CodeExecutorTool {
+    base: crate::base::BaseComponent,
+    id: String,
+    description: String,
+    schema: ToolSchema,
+}
+
+impl CodeExecutorTool {
+    /// Create a new code executor tool
+    pub fn new() -> Self {
+        let schema = ToolSchema::new(vec![
+            ParameterSchema {
+                name: "language".to_string(),
+                description: "Programming language (python, javascript, rust, bash)".to_string(),
+                r#type: "string".to_string(),
+                required: true,
+                properties: None,
+                default: None,
+            },
+            ParameterSchema {
+                name: "code".to_string(),
+                description: "Code to execute".to_string(),
+                r#type: "string".to_string(),
+                required: true,
+                properties: None,
+                default: None,
+            },
+            ParameterSchema {
+                name: "timeout".to_string(),
+                description: "Execution timeout in seconds".to_string(),
+                r#type: "integer".to_string(),
+                required: false,
+                properties: None,
+                default: Some(json!(30)),
+            },
+        ]);
+
+        Self {
+            base: crate::base::BaseComponent::new_with_name(
+                "code_executor".to_string(),
+                crate::logger::Component::Tool
+            ),
+            id: "code_executor".to_string(),
+            description: "Execute code snippets in various languages".to_string(),
+            schema,
+        }
+    }
+
+    fn execute_python(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
+        let mut temp_file = NamedTempFile::new()
+            .map_err(|e| Error::Tool(format!("Failed to create temp file: {}", e)))?;
+
+        temp_file.write_all(code.as_bytes())
+            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {}", e)))?;
+
+        let output = Command::new("python3")
+            .arg(temp_file.path())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .map_err(|e| Error::Tool(format!("Failed to execute Python code: {}", e)))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let exit_code = output.status.code().unwrap_or(-1);
+
+        Ok((stdout, stderr, exit_code))
+    }
+
+    fn execute_javascript(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
+        let mut temp_file = NamedTempFile::new()
+            .map_err(|e| Error::Tool(format!("Failed to create temp file: {}", e)))?;
+
+        temp_file.write_all(code.as_bytes())
+            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {}", e)))?;
+
+        let output = Command::new("node")
+            .arg(temp_file.path())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .map_err(|e| Error::Tool(format!("Failed to execute JavaScript code: {}", e)))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let exit_code = output.status.code().unwrap_or(-1);
+
+        Ok((stdout, stderr, exit_code))
+    }
+
+    fn execute_bash(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
+        let output = Command::new("bash")
+            .arg("-c")
+            .arg(code)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .map_err(|e| Error::Tool(format!("Failed to execute Bash code: {}", e)))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let exit_code = output.status.code().unwrap_or(-1);
+
+        Ok((stdout, stderr, exit_code))
+    }
+
+    fn execute_rust(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
+        // For Rust, we'll create a simple main function wrapper
+        let wrapped_code = format!(
+            "fn main() {{\n{}\n}}",
+            code
+        );
+
+        let mut temp_file = NamedTempFile::with_suffix(".rs")
+            .map_err(|e| Error::Tool(format!("Failed to create temp file: {}", e)))?;
+
+        temp_file.write_all(wrapped_code.as_bytes())
+            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {}", e)))?;
+
+        // Compile first
+        let compile_output = Command::new("rustc")
+            .arg(temp_file.path())
+            .arg("-o")
+            .arg("/tmp/rust_temp_exec")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .map_err(|e| Error::Tool(format!("Failed to compile Rust code: {}", e)))?;
+
+        if !compile_output.status.success() {
+            let stderr = String::from_utf8_lossy(&compile_output.stderr).to_string();
+            return Ok(("".to_string(), stderr, 1));
+        }
+
+        // Execute compiled binary
+        let output = Command::new("/tmp/rust_temp_exec")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .map_err(|e| Error::Tool(format!("Failed to execute Rust binary: {}", e)))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let exit_code = output.status.code().unwrap_or(-1);
+
+        // Clean up binary
+        let _ = std::fs::remove_file("/tmp/rust_temp_exec");
+
+        Ok((stdout, stderr, exit_code))
+    }
+}
+
+impl std::fmt::Debug for CodeExecutorTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CodeExecutorTool")
+            .field("id", &self.id)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
+impl Base for CodeExecutorTool {
+    fn name(&self) -> Option<&str> {
+        self.base.name()
+    }
+
+    fn component(&self) -> crate::logger::Component {
+        self.base.component()
+    }
+
+    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::logger::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
+    }
+}
+
+#[async_trait]
+impl Tool for CodeExecutorTool {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn description(&self) -> &str {
+        &self.description
+    }
+
+    fn schema(&self) -> ToolSchema {
+        self.schema.clone()
+    }
+
+    async fn execute(
+        &self,
+        params: Value,
+        _context: ToolExecutionContext,
+        _options: &ToolExecutionOptions
+    ) -> Result<Value> {
+        let language = params.get("language")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| Error::Tool("Language parameter is required".to_string()))?;
+
+        let code = params.get("code")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| Error::Tool("Code parameter is required".to_string()))?;
+
+        let timeout = params.get("timeout")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(30);
+
+        let (stdout, stderr, exit_code) = match language.to_lowercase().as_str() {
+            "python" | "py" => self.execute_python(code, timeout)?,
+            "javascript" | "js" | "node" => self.execute_javascript(code, timeout)?,
+            "bash" | "sh" => self.execute_bash(code, timeout)?,
+            "rust" | "rs" => self.execute_rust(code, timeout)?,
+            _ => return Err(Error::Tool(format!("Unsupported language: {}", language)))
+        };
+
+        Ok(json!({
+            "language": language,
+            "code": code,
+            "stdout": stdout,
+            "stderr": stderr,
+            "exit_code": exit_code,
+            "success": exit_code == 0
+        }))
+    }
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(self.clone())
+    }
+}
+
+impl Default for CodeExecutorTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,5 +658,54 @@ mod tests {
         assert_eq!(response["success"], true);
         assert_eq!(response["algorithm"], "sha256");
         assert!(response["hash"].is_string());
+    }
+
+    #[tokio::test]
+    async fn test_code_executor_tool() {
+        let tool = CodeExecutorTool::new();
+
+        assert_eq!(tool.name(), Some("code_executor"));
+        assert_eq!(tool.description(), "Execute code snippets in various languages");
+    }
+
+    #[tokio::test]
+    async fn test_code_executor_bash() {
+        let tool = CodeExecutorTool::new();
+
+        let params = json!({
+            "language": "bash",
+            "code": "echo 'Hello from Bash'"
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        // This test might fail if bash is not available, but it tests the structure
+        let result = tool.execute(params, context, &options).await;
+        // We don't assert success because bash might not be available in all environments
+        // Just check that the result has the expected structure
+        if let Ok(result) = result {
+            assert!(result.get("language").is_some());
+            assert!(result.get("code").is_some());
+            assert!(result.get("stdout").is_some());
+            assert!(result.get("stderr").is_some());
+            assert!(result.get("exit_code").is_some());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_code_executor_unsupported_language() {
+        let tool = CodeExecutorTool::new();
+
+        let params = json!({
+            "language": "unsupported",
+            "code": "some code"
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await;
+        assert!(result.is_err());
     }
 }

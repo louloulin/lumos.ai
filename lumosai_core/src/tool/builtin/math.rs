@@ -2,9 +2,12 @@
 //! 
 //! This module provides calculator, statistics, and mathematical operations
 
-use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool};
+use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool, ToolExecutionContext, ToolExecutionOptions};
 use serde_json::{Value, json};
 use std::collections::HashMap;
+use crate::{Result, Error};
+use crate::base::Base;
+use async_trait::async_trait;
 
 /// Create a calculator tool
 /// Similar to Mastra's mathematical computation capabilities
@@ -150,7 +153,7 @@ pub fn create_statistics_tool() -> FunctionTool {
                 .min(15) as usize;
 
             // Convert JSON array to f64 vector
-            let numbers: Result<Vec<f64>, _> = data.iter()
+            let numbers: std::result::Result<Vec<f64>, &str> = data.iter()
                 .map(|v| v.as_f64().ok_or("All data elements must be numbers"))
                 .collect();
 
@@ -208,7 +211,7 @@ pub fn create_statistics_tool() -> FunctionTool {
 }
 
 /// Simple expression evaluator (mock implementation)
-fn evaluate_simple_expression(expr: &str) -> Result<f64, String> {
+fn evaluate_simple_expression(expr: &str) -> std::result::Result<f64, String> {
     let expr = expr.trim().replace(" ", "");
     
     // Very basic calculator - in real implementation would use a proper parser
@@ -303,6 +306,170 @@ fn calculate_variance(data: &[f64]) -> f64 {
     sum_squared_diff / data.len() as f64
 }
 
+/// Calculator tool for mathematical operations
+#[derive(Clone)]
+pub struct CalculatorTool {
+    base: crate::base::BaseComponent,
+    id: String,
+    description: String,
+    schema: ToolSchema,
+}
+
+impl CalculatorTool {
+    /// Create a new calculator tool
+    pub fn new() -> Self {
+        let schema = ToolSchema::new(vec![
+            ParameterSchema {
+                name: "expression".to_string(),
+                description: "Mathematical expression to evaluate".to_string(),
+                r#type: "string".to_string(),
+                required: true,
+                properties: None,
+                default: None,
+            },
+        ]);
+
+        Self {
+            base: crate::base::BaseComponent::new_with_name(
+                "calculator".to_string(),
+                crate::logger::Component::Tool
+            ),
+            id: "calculator".to_string(),
+            description: "Evaluate mathematical expressions".to_string(),
+            schema,
+        }
+    }
+
+    /// Evaluate a simple mathematical expression
+    fn evaluate_expression(&self, expr: &str) -> Result<f64> {
+        // Simple expression evaluator - in a real implementation,
+        // you might use a proper math parser like `meval` crate
+        let cleaned = expr.replace(" ", "");
+
+        // Handle basic operations
+        if let Some(pos) = cleaned.find('+') {
+            let (left, right) = cleaned.split_at(pos);
+            let right = &right[1..]; // Skip the '+'
+            let left_val = self.parse_number(left)?;
+            let right_val = self.parse_number(right)?;
+            return Ok(left_val + right_val);
+        }
+
+        if let Some(pos) = cleaned.find('-') {
+            let (left, right) = cleaned.split_at(pos);
+            let right = &right[1..]; // Skip the '-'
+            let left_val = self.parse_number(left)?;
+            let right_val = self.parse_number(right)?;
+            return Ok(left_val - right_val);
+        }
+
+        if let Some(pos) = cleaned.find('*') {
+            let (left, right) = cleaned.split_at(pos);
+            let right = &right[1..]; // Skip the '*'
+            let left_val = self.parse_number(left)?;
+            let right_val = self.parse_number(right)?;
+            return Ok(left_val * right_val);
+        }
+
+        if let Some(pos) = cleaned.find('/') {
+            let (left, right) = cleaned.split_at(pos);
+            let right = &right[1..]; // Skip the '/'
+            let left_val = self.parse_number(left)?;
+            let right_val = self.parse_number(right)?;
+            if right_val == 0.0 {
+                return Err(Error::Tool("Division by zero".to_string()));
+            }
+            return Ok(left_val / right_val);
+        }
+
+        // If no operation found, try to parse as a number
+        self.parse_number(&cleaned).map_err(|e| e)
+    }
+
+    fn parse_number(&self, s: &str) -> Result<f64> {
+        s.parse::<f64>()
+            .map_err(|_| Error::Tool(format!("Invalid number: {}", s)))
+    }
+}
+
+impl std::fmt::Debug for CalculatorTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CalculatorTool")
+            .field("id", &self.id)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
+impl Base for CalculatorTool {
+    fn name(&self) -> Option<&str> {
+        self.base.name()
+    }
+
+    fn component(&self) -> crate::logger::Component {
+        self.base.component()
+    }
+
+    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::logger::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
+    }
+}
+
+#[async_trait]
+impl Tool for CalculatorTool {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn description(&self) -> &str {
+        &self.description
+    }
+
+    fn schema(&self) -> ToolSchema {
+        self.schema.clone()
+    }
+
+    async fn execute(
+        &self,
+        params: Value,
+        _context: ToolExecutionContext,
+        _options: &ToolExecutionOptions
+    ) -> Result<Value> {
+        let expression = params.get("expression")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| Error::Tool("Expression parameter is required".to_string()))?;
+
+        let result = self.evaluate_expression(expression)?;
+
+        Ok(json!({
+            "expression": expression,
+            "result": result
+        }))
+    }
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(self.clone())
+    }
+}
+
+impl Default for CalculatorTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -353,5 +520,107 @@ mod tests {
         assert_eq!(calculate_median(&data), 3.0);
         // 标准差应该是 sqrt(2.0) ≈ 1.4142135623730951
         assert!((calculate_std_dev(&data) - 1.4142135623730951).abs() < 1e-10);
+    }
+
+    #[tokio::test]
+    async fn test_calculator_tool_basic() {
+        let tool = CalculatorTool::new();
+
+        assert_eq!(tool.name(), Some("calculator"));
+        assert_eq!(tool.description(), "Evaluate mathematical expressions");
+    }
+
+    #[tokio::test]
+    async fn test_calculator_addition() {
+        let tool = CalculatorTool::new();
+
+        let params = json!({
+            "expression": "5 + 3"
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await.unwrap();
+        let value = result.get("result").unwrap().as_f64().unwrap();
+        assert_eq!(value, 8.0);
+    }
+
+    #[tokio::test]
+    async fn test_calculator_subtraction() {
+        let tool = CalculatorTool::new();
+
+        let params = json!({
+            "expression": "10 - 4"
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await.unwrap();
+        let value = result.get("result").unwrap().as_f64().unwrap();
+        assert_eq!(value, 6.0);
+    }
+
+    #[tokio::test]
+    async fn test_calculator_multiplication() {
+        let tool = CalculatorTool::new();
+
+        let params = json!({
+            "expression": "6 * 7"
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await.unwrap();
+        let value = result.get("result").unwrap().as_f64().unwrap();
+        assert_eq!(value, 42.0);
+    }
+
+    #[tokio::test]
+    async fn test_calculator_division() {
+        let tool = CalculatorTool::new();
+
+        let params = json!({
+            "expression": "15 / 3"
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await.unwrap();
+        let value = result.get("result").unwrap().as_f64().unwrap();
+        assert_eq!(value, 5.0);
+    }
+
+    #[tokio::test]
+    async fn test_calculator_division_by_zero() {
+        let tool = CalculatorTool::new();
+
+        let params = json!({
+            "expression": "10 / 0"
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_calculator_invalid_expression() {
+        let tool = CalculatorTool::new();
+
+        let params = json!({
+            "expression": "invalid"
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await;
+        assert!(result.is_err());
     }
 }

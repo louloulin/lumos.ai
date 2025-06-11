@@ -74,6 +74,7 @@ ring = "0.17"
 
 # Additional dependencies for new features
 bytes = "1.5"
+tempfile = "3.8"
 
 [dev-dependencies]
 tokio-test = "0.4"

@@ -60,18 +60,28 @@ pub struct VoiceConfig {
 /// Workflow configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowConfig {
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub description: Option<String>,
     pub trigger: Option<String>,
-    pub steps: Vec<WorkflowStep>,
+    pub steps: Vec<WorkflowStepConfig>,
     pub timeout: Option<u64>,
+    pub max_retries: Option<u32>,
 }
 
-/// Workflow step
+/// Workflow step configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkflowStep {
-    pub agent: String,
+pub struct WorkflowStepConfig {
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub agent: Option<String>,
+    pub tool: Option<String>,
+    pub workflow: Option<String>,
     pub condition: Option<String>,
-    pub input: Option<String>,
+    pub input: Option<serde_json::Value>,
     pub timeout: Option<u64>,
+    pub retries: Option<u32>,
 }
 
 /// RAG configuration
@@ -187,13 +197,41 @@ impl YamlConfig {
                 if workflow.steps.is_empty() {
                     return Err(Error::Configuration(format!("Workflow '{}' must have at least one step", name)));
                 }
-                
+
                 // Validate workflow steps
                 for (i, step) in workflow.steps.iter().enumerate() {
-                    if step.agent.is_empty() {
+                    // At least one of agent, tool, or workflow must be specified
+                    if step.agent.is_none() && step.tool.is_none() && step.workflow.is_none() {
                         return Err(Error::Configuration(format!(
-                            "Workflow '{}' step {} must specify an agent", name, i
+                            "Workflow '{}' step {} must specify an agent, tool, or workflow", name, i
                         )));
+                    }
+
+                    // Validate agent reference if specified
+                    if let Some(agent_name) = &step.agent {
+                        if agent_name.is_empty() {
+                            return Err(Error::Configuration(format!(
+                                "Workflow '{}' step {} agent name cannot be empty", name, i
+                            )));
+                        }
+                    }
+
+                    // Validate tool reference if specified
+                    if let Some(tool_name) = &step.tool {
+                        if tool_name.is_empty() {
+                            return Err(Error::Configuration(format!(
+                                "Workflow '{}' step {} tool name cannot be empty", name, i
+                            )));
+                        }
+                    }
+
+                    // Validate workflow reference if specified
+                    if let Some(workflow_id) = &step.workflow {
+                        if workflow_id.is_empty() {
+                            return Err(Error::Configuration(format!(
+                                "Workflow '{}' step {} workflow ID cannot be empty", name, i
+                            )));
+                        }
                     }
                 }
             }
@@ -303,9 +341,13 @@ agents:
 
 workflows:
   support:
+    id: support_workflow
+    name: Support Workflow
     trigger: user_message
     steps:
-      - agent: assistant
+      - id: step1
+        name: Assistant Step
+        agent: assistant
         condition: general_query
 "#;
         

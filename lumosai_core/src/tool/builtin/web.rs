@@ -2,10 +2,12 @@
 //! 
 //! This module provides HTTP request, web scraping, and API interaction tools
 
-use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool};
+use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool, ToolExecutionContext, ToolExecutionOptions};
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use async_trait::async_trait;
+use crate::{Result, Error};
+use crate::base::Base;
 
 /// Create an HTTP request tool
 /// Similar to Mastra's fetch tool
@@ -242,6 +244,149 @@ pub fn create_url_validator_tool() -> FunctionTool {
     )
 }
 
+/// Web search tool for searching the internet
+#[derive(Clone)]
+pub struct WebSearchTool {
+    base: crate::base::BaseComponent,
+    id: String,
+    description: String,
+    schema: ToolSchema,
+}
+
+impl WebSearchTool {
+    /// Create a new web search tool
+    pub fn new() -> Self {
+        let schema = ToolSchema::new(vec![
+            ParameterSchema {
+                name: "query".to_string(),
+                description: "Search query to execute".to_string(),
+                r#type: "string".to_string(),
+                required: true,
+                properties: None,
+                default: None,
+            },
+            ParameterSchema {
+                name: "max_results".to_string(),
+                description: "Maximum number of results to return".to_string(),
+                r#type: "integer".to_string(),
+                required: false,
+                properties: None,
+                default: Some(json!(10)),
+            },
+        ]);
+
+        Self {
+            base: crate::base::BaseComponent::new_with_name(
+                "web_search".to_string(),
+                crate::logger::Component::Tool
+            ),
+            id: "web_search".to_string(),
+            description: "Search the web for information".to_string(),
+            schema,
+        }
+    }
+}
+
+impl std::fmt::Debug for WebSearchTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WebSearchTool")
+            .field("id", &self.id)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
+impl Base for WebSearchTool {
+    fn name(&self) -> Option<&str> {
+        self.base.name()
+    }
+
+    fn component(&self) -> crate::logger::Component {
+        self.base.component()
+    }
+
+    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::logger::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
+    }
+}
+
+#[async_trait]
+impl Tool for WebSearchTool {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn description(&self) -> &str {
+        &self.description
+    }
+
+    fn schema(&self) -> ToolSchema {
+        self.schema.clone()
+    }
+
+    async fn execute(
+        &self,
+        params: Value,
+        _context: ToolExecutionContext,
+        _options: &ToolExecutionOptions
+    ) -> Result<Value> {
+        let query = params.get("query")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| Error::Tool("Query parameter is required".to_string()))?;
+
+        let max_results = params.get("max_results")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(10);
+
+        // Mock implementation - in a real implementation, this would call a search API
+        let results = vec![
+            json!({
+                "title": format!("Search result 1 for '{}'", query),
+                "url": "https://example.com/1",
+                "snippet": "This is a mock search result snippet..."
+            }),
+            json!({
+                "title": format!("Search result 2 for '{}'", query),
+                "url": "https://example.com/2",
+                "snippet": "Another mock search result snippet..."
+            }),
+        ];
+
+        Ok(json!({
+            "query": query,
+            "results": results[..std::cmp::min(results.len(), max_results as usize)],
+            "total_results": results.len()
+        }))
+    }
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        Box::new(self.clone())
+    }
+}
+
+impl Default for WebSearchTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Create a web search tool function
+pub fn create_web_search_tool() -> WebSearchTool {
+    WebSearchTool::new()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -298,5 +443,41 @@ mod tests {
         let response = result.unwrap();
         assert_eq!(response["is_valid"], true);
         assert_eq!(response["has_protocol"], true);
+    }
+
+    #[tokio::test]
+    async fn test_web_search_tool() {
+        let tool = WebSearchTool::new();
+
+        assert_eq!(tool.name(), Some("web_search"));
+        assert_eq!(tool.description(), "Search the web for information");
+
+        let params = json!({
+            "query": "rust programming",
+            "max_results": 5
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await.unwrap();
+        assert!(result.get("query").is_some());
+        assert!(result.get("results").is_some());
+        assert!(result.get("total_results").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_web_search_tool_missing_query() {
+        let tool = WebSearchTool::new();
+
+        let params = json!({
+            "max_results": 5
+        });
+
+        let context = crate::tool::ToolExecutionContext::default();
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        let result = tool.execute(params, context, &options).await;
+        assert!(result.is_err());
     }
 }

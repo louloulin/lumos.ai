@@ -102,7 +102,7 @@ pub fn page(team_id: i32, rbac: Rbac, form: DatasetForm) -> String {
                                             for dataset in &form.datasets {
                                                 tr {
                                                     td { "{dataset.name}" }
-                                                    td { "{dataset.embeddings_model_name}" }
+                                                    td { "{dataset.embeddings_model_name.as_deref().unwrap_or(\"N/A\")}" }
                                                     td {
                                                         if form.selected_dataset_ids.contains(&dataset.id) {
                                                             CheckBox {

@@ -28,7 +28,7 @@ pub fn MyAssistantCard(team_id: i32, prompt: Prompt) -> Element {
                         if let Some(object_id) = prompt.image_icon_object_id {
                             img {
                                 class: "border border-neutral-content rounded p-2",
-                                src: Image { team_id, id: object_id }.to_string(),
+                                src: format!("/team/{}/image/{}", team_id, object_id),
                                 width: "48",
                                 height: "48"
                             }

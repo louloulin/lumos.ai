@@ -49,31 +49,31 @@ pub fn page(
                         tbody {
                             for team in &teams {
 
-                                if let Some(name) = &team.team_name {
+                                if !team.team_name.is_empty() {
                                     tr {
                                         td {
                                             Avatar {
-                                                name: "{name}",
+                                                name: "{team.team_name}",
                                                 avatar_type: avatar::AvatarType::Team
                                             }
                                             span {
                                                 class: "ml-2 mr-2",
-                                                "{name}"
+                                                "{team.team_name}"
                                             }
-                                            if team.id != team_id {
+                                            if team.team_id != team_id {
                                                 a {
                                                     "data-turbo-frame": "_top",
-                                                    href: crate::routes::team::Index{ team_id: team.id }.to_string(),
+                                                    href: format!("/team/{}", team.team_id),
                                                     "(Switch to this Team)"
                                                 }
                                             }
                                         }
                                         td {
                                             strong {
-                                                "{team.team_owner}"
+                                                "{team.user_email}"
                                             }
                                         }
-                                        if team.team_owner == current_user_email && teams.len() > 1 {
+                                        if team.user_email == current_user_email && teams.len() > 1 {
                                             td {
                                                 class: "text-right",
                                                 DropDown {

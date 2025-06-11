@@ -33,14 +33,14 @@ pub fn page(
 
             // If the user hasn't set their org name or their own name
             // get them to do it.
-            if rbac.can_make_invitations() && (user.first_name.is_none() || team.name.is_none()) {
+            if rbac.can_make_invitations() && (user.first_name.is_none() || team.name.is_empty()) {
                 Card {
                     class: "mb-3",
                     CardHeader {
                         title: "Before you are able to invite people to your team you will need to do the following"
                     }
                     CardBody {
-                        if team.name.is_none() {
+                        if team.name.is_empty() {
                             p {
                                 "Please set your "
                                 a {

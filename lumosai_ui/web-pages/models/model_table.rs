@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use daisy_rsx::*;
-use crate::types::ModelWithPrompt;
+use crate::types::{ModelWithPrompt, ModelType};
 use dioxus::prelude::*;
 
 #[component]
@@ -54,25 +54,25 @@ pub fn ModelTable(models: Vec<ModelWithPrompt>, team_id: i32) -> Element {
                                     class: "max-sm:hidden",
                                     code {
                                         class: "wrap-anywhere",
-                                        "{model.base_url}"
+                                        "{model.base_url.as_deref().unwrap_or("N/A")}"
                                     }
                                 }
                                 td {
                                     super::model_type::Model {
-                                        model_type: model.model_type
+                                        model_type: ModelType::Custom // Default fallback
                                     }
                                 }
                                 td {
                                     class: "max-sm:hidden",
-                                    "{model.tpm_limit}"
+                                    "{model.tpm_limit.map(|x| x.to_string()).unwrap_or_else(|| "N/A".to_string())}"
                                 }
                                 td {
                                     class: "max-sm:hidden",
-                                    "{model.rpm_limit}"
+                                    "{model.rpm_limit.map(|x| x.to_string()).unwrap_or_else(|| "N/A".to_string())}"
                                 }
                                 td {
                                     class: "max-sm:hidden",
-                                    "{model.context_size}"
+                                    "{model.context_size.map(|x| x.to_string()).unwrap_or_else(|| "N/A".to_string())}"
                                 }
                                 td {
                                     Button {

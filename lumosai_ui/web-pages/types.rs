@@ -157,6 +157,14 @@ impl BionicOpenAPI {
     pub fn has_api_key_security(&self) -> bool {
         true // Simplified for UI
     }
+
+    pub fn has_oauth2_security(&self) -> bool {
+        // Simple implementation - check if spec contains oauth2 security
+        self.spec.get("components")
+            .and_then(|c| c.get("securitySchemes"))
+            .map(|s| s.to_string().contains("oauth2"))
+            .unwrap_or(false)
+    }
 }
 
 // Additional types for compatibility
@@ -264,6 +272,9 @@ pub struct RateLimit {
     pub model_id: i32,
     pub requests_per_minute: i32,
     pub tokens_per_minute: i32,
+    pub api_key_id: Option<i32>,
+    pub tpm_limit: Option<i32>,
+    pub rpm_limit: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -378,6 +389,9 @@ pub enum IntegrationType {
     OAuth2,
     ApiKey,
     Custom,
+    #[serde(rename = "MCP_Server")]
+    MCP_Server,
+    BuiltIn,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -399,6 +413,14 @@ pub struct BionicToolDefinition {
     pub name: String,
     pub description: String,
     pub parameters: serde_json::Value,
+    pub function: ToolFunction,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ToolFunction {
+    pub name: String,
+    pub description: Option<String>,
+    pub parameters: Option<serde_json::Value>,
 }
 
 // Additional types for UI components
@@ -429,11 +451,11 @@ pub struct AuditTrail {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ToolCall {
     pub id: String,
-    pub function: ToolFunction,
+    pub function: ToolCallFunction,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ToolFunction {
+pub struct ToolCallFunction {
     pub name: String,
     pub arguments: String,
 }

@@ -48,7 +48,7 @@ pub fn ModelPopup(id: i32, value: String, prompts: Vec<Prompt>) -> Element {
                             }
                             p {
                                 class: "text-sm font-light",
-                                "{prompt.description}"
+                                "{prompt.description.as_deref().unwrap_or("No description")}"
                             }
                         }
                     }

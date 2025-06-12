@@ -5,6 +5,7 @@ This example demonstrates how to use the basic layout components from LumosAI UI
 */
 
 use lumosai_ui::prelude::*;
+use web_pages::base_layout::BaseLayout;
 
 fn main() {
     // This would typically be used in a web application context
@@ -45,7 +46,7 @@ fn BasicApp() -> Element {
                             "New Assistant"
                         }
                         Button {
-                            button_scheme: ButtonScheme::Ghost,
+                            button_scheme: ButtonScheme::Secondary,
                             button_size: ButtonSize::Small,
                             "Settings"
                         }

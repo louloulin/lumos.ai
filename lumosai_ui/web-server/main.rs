@@ -29,6 +29,11 @@ use dioxus::prelude::*;
 use web_pages::base_layout::BaseLayout;
 use web_pages::console::chat_console::ChatConsole;
 
+#[cfg(feature = "fullstack")]
+use dioxus_fullstack::prelude::*;
+#[cfg(feature = "fullstack")]
+use std::net::Ipv4Addr;
+
 // AI功能模块
 mod ai_client;
 mod streaming;
@@ -40,30 +45,35 @@ mod file_handler;
 use ai_client::AIClient;
 use streaming::AppState;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     // Initialize logging
     init_logging();
 
     // Determine launch mode based on features
-    #[cfg(feature = "desktop")]
+    #[cfg(feature = "server")]
+    {
+        println!("🌐 Launching LumosAI Server...");
+        launch_server();
+    }
+
+    #[cfg(all(feature = "desktop", not(feature = "server")))]
     {
         println!("🖥️  Launching LumosAI Desktop Application...");
         launch_desktop();
     }
 
-    #[cfg(all(feature = "fullstack", not(feature = "desktop")))]
+    #[cfg(all(feature = "fullstack", not(feature = "server")))]
     {
         println!("🌐 Launching LumosAI Fullstack Application...");
         launch_fullstack();
     }
 
-    #[cfg(all(not(feature = "desktop"), not(feature = "fullstack")))]
+    #[cfg(all(not(feature = "desktop"), not(feature = "fullstack"), not(feature = "server")))]
     {
         // 检查是否启动API服务器模式
         if std::env::args().any(|arg| arg == "--api-server") {
             println!("🚀 Launching LumosAI API Server...");
-            launch_api_server().await;
+            tokio::runtime::Runtime::new().unwrap().block_on(launch_api_server());
         } else {
             println!("🌐 Launching LumosAI Web Application...");
             launch_web();
@@ -76,12 +86,14 @@ fn launch_desktop() {
     dioxus::launch(App);
 }
 
-#[cfg(all(not(feature = "desktop"), feature = "fullstack"))]
+#[cfg(all(not(feature = "desktop"), feature = "fullstack", not(feature = "server")))]
 fn launch_fullstack() {
     println!("🌐 Starting LumosAI Fullstack Application...");
     println!("📱 Open http://localhost:8080 in your browser");
 
-    dioxus::launch(App);
+    // For fullstack mode, we use dioxus LaunchBuilder
+    dioxus::LaunchBuilder::new()
+        .launch(App);
 }
 
 #[cfg(all(not(feature = "desktop"), not(feature = "fullstack")))]
@@ -89,6 +101,7 @@ fn launch_web() {
     println!("🌐 Starting LumosAI Web Application...");
     println!("📱 This will open in your default browser");
 
+    // For web mode, we use the simple launch
     dioxus::launch(App);
 }
 
@@ -97,6 +110,15 @@ async fn launch_api_server() {
         eprintln!("❌ Failed to start API server: {}", e);
         std::process::exit(1);
     }
+}
+
+#[cfg(feature = "server")]
+fn launch_server() {
+    println!("🌐 Starting LumosAI Fullstack Server...");
+    println!("📱 Open http://localhost:8080 in your browser");
+
+    // For server mode, dioxus::launch automatically sets up the server
+    dioxus::launch(App);
 }
 
 // Main App Component
@@ -127,7 +149,9 @@ enum Route {
 // Route components
 #[component]
 fn Home() -> Element {
-    Dashboard()
+    rsx! {
+        Dashboard {}
+    }
 }
 
 #[component]
@@ -205,22 +229,38 @@ fn Dashboard() -> Element {
 
 #[component]
 fn NavItem(route: Route, icon: &'static str, title: &'static str) -> Element {
-    let nav = use_navigator();
-    let current_route = use_route::<Route>();
-    let is_active = std::mem::discriminant(&current_route) == std::mem::discriminant(&route);
+    #[cfg(not(feature = "server"))]
+    {
+        let nav = use_navigator();
+        let current_route = use_route::<Route>();
+        let is_active = std::mem::discriminant(&current_route) == std::mem::discriminant(&route);
 
-    rsx! {
-        li {
-            button {
-                class: if is_active {
-                    "w-full flex items-center p-3 text-left bg-primary text-primary-content rounded-lg"
-                } else {
-                    "w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg"
-                },
-                onclick: move |_| { nav.push(route.clone()); },
+        rsx! {
+            li {
+                button {
+                    class: if is_active {
+                        "w-full flex items-center p-3 text-left bg-primary text-primary-content rounded-lg"
+                    } else {
+                        "w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg"
+                    },
+                    onclick: move |_| { nav.push(route.clone()); },
 
-                span { class: "text-lg", "{icon}" }
-                span { class: "ml-3", "{title}" }
+                    span { class: "text-lg", "{icon}" }
+                    span { class: "ml-3", "{title}" }
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "server")]
+    {
+        rsx! {
+            li {
+                button {
+                    class: "w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg",
+                    span { class: "text-lg", "{icon}" }
+                    span { class: "ml-3", "{title}" }
+                }
             }
         }
     }

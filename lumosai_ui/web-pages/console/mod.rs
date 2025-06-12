@@ -10,9 +10,6 @@ pub mod prompt_form;
 pub mod tools_modal;
 
 // New streaming chat components
-pub mod chat_console;
-pub mod message_stream;
-pub mod chat_form;
 pub mod message_timeline;
 
 // Enhanced AI Agent UI components

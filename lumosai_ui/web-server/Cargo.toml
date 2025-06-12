@@ -6,9 +6,10 @@ edition = "2021"
 # Enable backtrace feature for panic hook
 [features]
 default = ["desktop"]
-web = ["dep:dioxus", "dioxus/web", "dep:dioxus-web", "dep:dioxus-router"]
-desktop = ["dep:dioxus", "dioxus/desktop", "dep:dioxus-desktop", "dep:dioxus-router"]
-fullstack = ["dep:dioxus", "dioxus/fullstack", "dep:dioxus-fullstack", "dep:dioxus-router"]
+web = ["dioxus/web", "dep:dioxus-web", "dep:dioxus-router", "dep:axum"]
+desktop = ["dioxus/desktop", "dep:dioxus-desktop", "dep:dioxus-router", "dep:axum"]
+server = ["dioxus/server", "dep:dioxus-fullstack", "dep:dioxus-router", "dep:axum"]
+fullstack = ["dioxus/fullstack", "dioxus/router", "dep:dioxus-fullstack", "dep:dioxus-router", "dep:axum"]
 
 [[bin]]
 name = "lumosai-web-server"
@@ -24,14 +25,14 @@ web-pages = { path = "../web-pages" }
 web-assets = { path = "../web-assets" }
 
 # Dioxus framework
-dioxus = { version = "0.6", features = ["router"], optional = true }
+dioxus = { version = "0.6", features = ["router"] }
 dioxus-web = { version = "0.6", optional = true }
 dioxus-desktop = { version = "0.6", optional = true }
 dioxus-router = { version = "0.6", optional = true }
 dioxus-fullstack = { version = "0.6", optional = true }
 
 # Web server (for fullstack mode)
-axum = { version = "0.8", features = ["multipart"] }
+axum = { version = "0.8", features = ["multipart"], optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tower = { version = "0.5.2" }
 tower-http = { version = "0.6.2", features = ["fs", "cors"] }

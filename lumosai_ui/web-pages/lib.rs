@@ -37,6 +37,7 @@ pub mod history;
 pub mod integrations;
 pub mod models;
 pub mod my_assistants;
+pub mod notification_system;
 pub mod pipelines;
 pub mod rate_limits;
 pub mod settings;

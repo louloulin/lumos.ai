@@ -94,6 +94,30 @@ pub mod analytics {
     }
 }
 
+pub mod notification_system {
+    use axum_extra::routing::TypedPath;
+    use serde::Deserialize;
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/app/team/{team_id}/notifications")]
+    pub struct Index {
+        pub team_id: i32,
+    }
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/app/team/{team_id}/notifications/preferences")]
+    pub struct Preferences {
+        pub team_id: i32,
+    }
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/app/team/{team_id}/notifications/{notification_id}/read")]
+    pub struct MarkAsRead {
+        pub team_id: i32,
+        pub notification_id: u64,
+    }
+}
+
 pub mod document_pipelines {
     use axum_extra::routing::TypedPath;
     use serde::Deserialize;

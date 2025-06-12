@@ -15,6 +15,11 @@ pub mod message_stream;
 pub mod chat_form;
 pub mod message_timeline;
 
+// Enhanced AI Agent UI components
+pub mod enhanced_console;
+pub mod file_upload;
+pub mod voice_input;
+
 use crate::types::{Chat, ToolCall};
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -46,6 +51,9 @@ pub struct PendingChat {
 pub enum PendingChatState {
     PendingToolChats(Vec<Chat>, i32),
     PendingUserChat(Box<PendingChat>),
+    Thinking,
+    Streaming,
+    ToolCalling,
     None,
 }
 
@@ -131,4 +139,54 @@ pub fn truncate_title(content: &str) -> String {
     } else {
         content.to_string()
     }
+}
+
+// Enhanced UI types for AI Agent components
+
+/// 对话信息
+#[derive(Debug, Clone, PartialEq)]
+pub struct Conversation {
+    pub id: i64,
+    pub title: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub message_count: usize,
+    pub summary: Option<String>,
+}
+
+/// 聊天历史
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChatHistory {
+    pub conversations: Vec<Conversation>,
+    pub total_count: usize,
+}
+
+/// 获取相对时间显示
+pub fn get_relative_time() -> String {
+    // TODO: 实现真实的相对时间计算
+    "刚刚".to_string()
+}
+
+/// 复制到剪贴板
+pub fn copy_to_clipboard(text: &str) {
+    // TODO: 实现真实的剪贴板操作
+    println!("复制到剪贴板: {}", text);
+}
+
+/// 重新生成回复
+pub fn regenerate_response(chat_id: i64) {
+    // TODO: 实现重新生成功能
+    println!("重新生成回复: {}", chat_id);
+}
+
+/// 朗读文本
+pub fn read_aloud(text: &str) {
+    // TODO: 实现文本转语音功能
+    println!("朗读文本: {}", text);
+}
+
+/// 分享消息
+pub fn share_message(text: &str) {
+    // TODO: 实现消息分享功能
+    println!("分享消息: {}", text);
 }

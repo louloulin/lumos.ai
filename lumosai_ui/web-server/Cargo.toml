@@ -9,7 +9,7 @@ default = ["desktop"]
 web = ["dioxus/web", "dep:dioxus-web", "dep:dioxus-router", "dep:axum"]
 desktop = ["dioxus/desktop", "dep:dioxus-desktop", "dep:dioxus-router", "dep:axum"]
 server = ["dioxus/server", "dep:dioxus-fullstack", "dep:dioxus-router", "dep:axum"]
-fullstack = ["dioxus/fullstack", "dioxus/router", "dep:dioxus-fullstack", "dep:dioxus-router", "dep:axum"]
+fullstack = ["dioxus/fullstack", "dioxus/web", "dioxus/router", "dep:dioxus-fullstack", "dep:dioxus-web", "dep:dioxus-router", "dep:axum"]
 
 [[bin]]
 name = "lumosai-web-server"
@@ -25,7 +25,7 @@ web-pages = { path = "../web-pages" }
 web-assets = { path = "../web-assets" }
 
 # Dioxus framework
-dioxus = { version = "0.6", features = ["router"] }
+dioxus = { version = "0.6", features = ["router", "web"] }
 dioxus-web = { version = "0.6", optional = true }
 dioxus-desktop = { version = "0.6", optional = true }
 dioxus-router = { version = "0.6", optional = true }

@@ -43,6 +43,7 @@ pub fn BaseLayout(props: AppLayoutProps) -> Element {
                     "type": "text/css"
                 }
             }
+
             script {
                 "type": "module",
                 src: "{props.js_href}"

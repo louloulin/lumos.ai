@@ -39,13 +39,18 @@ use std::net::Ipv4Addr;
 
 // AI功能模块
 mod ai_client;
+#[cfg(any(feature = "server", feature = "fullstack"))]
 mod streaming;
+#[cfg(any(feature = "server", feature = "fullstack"))]
 mod api_server;
 mod database;
 mod tools;
+#[cfg(any(feature = "server", feature = "fullstack"))]
 mod file_handler;
 
+#[cfg(any(feature = "server", feature = "fullstack"))]
 use ai_client::AIClient;
+#[cfg(any(feature = "server", feature = "fullstack"))]
 use streaming::AppState;
 
 fn main() {
@@ -73,14 +78,8 @@ fn main() {
 
     #[cfg(all(not(feature = "desktop"), not(feature = "fullstack"), not(feature = "server")))]
     {
-        // 检查是否启动API服务器模式
-        if std::env::args().any(|arg| arg == "--api-server") {
-            println!("🚀 Launching LumosAI API Server...");
-            tokio::runtime::Runtime::new().unwrap().block_on(launch_api_server());
-        } else {
-            println!("🌐 Launching LumosAI Web Application...");
-            launch_web();
-        }
+        println!("🌐 Launching LumosAI Web Application...");
+        launch_web();
     }
 }
 
@@ -89,7 +88,7 @@ fn launch_desktop() {
     dioxus::launch(App);
 }
 
-#[cfg(all(not(feature = "desktop"), feature = "fullstack", not(feature = "server")))]
+#[cfg(all(feature = "fullstack", not(feature = "server")))]
 fn launch_fullstack() {
     println!("🌐 Starting LumosAI Fullstack Application...");
     println!("📱 Open http://localhost:8080 in your browser");
@@ -108,6 +107,7 @@ fn launch_web() {
     dioxus::launch(App);
 }
 
+#[cfg(any(feature = "server", feature = "fullstack"))]
 async fn launch_api_server() {
     if let Err(e) = api_server::start_api_server().await {
         eprintln!("❌ Failed to start API server: {}", e);
@@ -165,7 +165,9 @@ fn Dashboard() -> Element {
             fav_icon_src: "/favicon.svg".to_string(),
             collapse_svg_src: "/icons/collapse.svg".to_string(),
             stylesheets: vec![
+                "https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/dist/tailwind.min.css".to_string(),
                 "https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css".to_string(),
+                "data:text/css,.sidebar{background-color:hsl(var(--b2));border-right:1px solid hsl(var(--b3))}.main-content{background-color:hsl(var(--b1));flex:1}.card{background-color:hsl(var(--b1));border:1px solid hsl(var(--b3));border-radius:0.5rem;box-shadow:0 1px 3px 0 rgba(0,0,0,0.1)}.card-header{border-bottom:1px solid hsl(var(--b3));padding:1rem;font-weight:600}.card-body{padding:1rem}.btn{padding:0.5rem 1rem;border-radius:0.375rem;font-weight:500;transition:all 0.2s;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem}.btn:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,0.1)}.btn-primary{background-color:hsl(var(--p));color:hsl(var(--pc))}.btn-primary:hover{background-color:hsl(var(--p)/0.9)}.btn-secondary{background-color:hsl(var(--s));color:hsl(var(--sc))}.btn-ghost{background-color:transparent;color:hsl(var(--bc))}.btn-ghost:hover{background-color:hsl(var(--b3))}.menu{padding:0.5rem}.menu li{margin-bottom:0.25rem}.menu li a{display:flex;align-items:center;padding:0.75rem 1rem;color:hsl(var(--bc));text-decoration:none;border-radius:0.375rem;transition:all 0.2s}.menu li a:hover{background-color:hsl(var(--b3));transform:translateX(4px)}.menu li a.active{background-color:hsl(var(--p));color:hsl(var(--pc));font-weight:600}.input,.textarea,.select{width:100%;padding:0.75rem;border:1px solid hsl(var(--b3));border-radius:0.375rem;background-color:hsl(var(--b1));color:hsl(var(--bc));transition:all 0.2s}.input:focus,.textarea:focus,.select:focus{outline:none;border-color:hsl(var(--p));box-shadow:0 0 0 3px hsl(var(--p)/0.1)}.textarea{resize:vertical;min-height:4rem}.chat-container{display:flex;flex-direction:column;height:100%}.chat-messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem}.chat-input{border-top:1px solid hsl(var(--b3));padding:1rem;background-color:hsl(var(--b1))}.message{display:flex;gap:0.75rem;max-width:80%}.message.user{flex-direction:row-reverse;margin-left:auto}.message-content{padding:0.75rem 1rem;border-radius:1rem;word-wrap:break-word}.message.user .message-content{background-color:hsl(var(--p));color:hsl(var(--pc));border-bottom-right-radius:0.25rem}.message.assistant .message-content{background-color:hsl(var(--b2));color:hsl(var(--bc));border-bottom-left-radius:0.25rem}.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;padding:1rem}.stat-card{background-color:hsl(var(--b1));border:1px solid hsl(var(--b3));border-radius:0.5rem;padding:1.5rem;transition:all 0.2s}.stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 16px rgba(0,0,0,0.1)}.stat-value{font-size:2rem;font-weight:bold;color:hsl(var(--bc));margin-bottom:0.5rem}.stat-title{font-size:0.875rem;color:hsl(var(--bc)/0.7);text-transform:uppercase;letter-spacing:0.05em}.loading{display:inline-block;width:1rem;height:1rem;border:2px solid hsl(var(--b3));border-radius:50%;border-top-color:hsl(var(--p));animation:spin 1s ease-in-out infinite}@keyframes spin{to{transform:rotate(360deg)}}@media (max-width:768px){.sidebar{position:fixed;top:0;left:0;bottom:0;width:16rem;transform:translateX(-100%);transition:transform 0.3s ease;z-index:50}.sidebar.open{transform:translateX(0)}.dashboard-grid{grid-template-columns:1fr}.message{max-width:95%}}".to_string(),
             ],
             section_class: "p-6 bg-base-100".to_string(),
             js_href: "/app.js".to_string(),

@@ -18,7 +18,7 @@ use crate::app_layout::{Layout, SideBar};
 use crate::types::{Rbac, BionicToolDefinition};
 use crate::console::{ChatWithChunks, PendingChatState};
 use crate::console::console_stream::ConsoleStream;
-// use crate::console::prompt_form::PromptForm;
+use crate::console::chat_input::ChatInput;
 use crate::console::tools_modal::ToolsModal;
 // use crate::console::history_drawer::HistoryDrawer;
 // use crate::console::model_popup::ModelPopup;
@@ -94,12 +94,11 @@ pub fn EnhancedAssistantConsole(
                 }
 
                 // 输入表单区域
-                div {
-                    class: "border-t border-base-300 bg-base-100 p-4",
-                    div {
-                        class: "text-center text-base-content/60",
-                        "输入表单区域 (待实现)"
-                    }
+                ChatInput {
+                    team_id,
+                    conversation_id,
+                    rbac: rbac.clone(),
+                    disabled: _has_pending_chat
                 }
 
                 // 模态框和抽屉（简化实现）

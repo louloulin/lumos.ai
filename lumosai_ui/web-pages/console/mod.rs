@@ -16,9 +16,9 @@ pub mod message_timeline;
 pub mod enhanced_console;
 pub mod file_upload;
 pub mod voice_input;
+pub mod chat_input;
 
 use crate::types::{Chat, ToolCall};
-use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
 // Chat chunks type for UI

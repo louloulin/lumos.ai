@@ -25,13 +25,298 @@ pub mod files {
 
     pub const INDEX_CSS: StaticFile = StaticFile {
         name: "index.css",
-        content: b"/* LumosAI UI styles */",
+        content: include_bytes!("input.css"),
         mime_type: "text/css",
     };
 
     pub const OUTPUT_CSS: StaticFile = StaticFile {
         name: "output.css",
-        content: b"/* Tailwind CSS output */",
+        content: b"/* LumosAI UI Custom Styles */
+
+/* Base layout styles */
+.sidebar {
+    background-color: hsl(var(--b2));
+    border-right: 1px solid hsl(var(--b3));
+}
+
+.main-content {
+    background-color: hsl(var(--b1));
+    flex: 1;
+}
+
+/* Enhanced card styles */
+.card {
+    background-color: hsl(var(--b1));
+    border: 1px solid hsl(var(--b3));
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-bottom: 1px solid hsl(var(--b3));
+    padding: 1rem;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+/* Enhanced button styles */
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    background-color: hsl(var(--p));
+    color: hsl(var(--pc));
+}
+
+.btn-primary:hover {
+    background-color: hsl(var(--p) / 0.9);
+}
+
+.btn-secondary {
+    background-color: hsl(var(--s));
+    color: hsl(var(--sc));
+}
+
+.btn-ghost {
+    background-color: transparent;
+    color: hsl(var(--bc));
+}
+
+.btn-ghost:hover {
+    background-color: hsl(var(--b3));
+}
+
+/* Enhanced menu styles */
+.menu {
+    padding: 0.5rem;
+}
+
+.menu li {
+    margin-bottom: 0.25rem;
+}
+
+.menu li a {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: hsl(var(--bc));
+    text-decoration: none;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+}
+
+.menu li a:hover {
+    background-color: hsl(var(--b3));
+    transform: translateX(4px);
+}
+
+.menu li a.active {
+    background-color: hsl(var(--p));
+    color: hsl(var(--pc));
+    font-weight: 600;
+}
+
+/* Enhanced form styles */
+.input, .textarea, .select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid hsl(var(--b3));
+    border-radius: 0.375rem;
+    background-color: hsl(var(--b1));
+    color: hsl(var(--bc));
+    transition: all 0.2s;
+}
+
+.input:focus, .textarea:focus, .select:focus {
+    outline: none;
+    border-color: hsl(var(--p));
+    box-shadow: 0 0 0 3px hsl(var(--p) / 0.1);
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 4rem;
+}
+
+/* Chat styles */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.chat-input {
+    border-top: 1px solid hsl(var(--b3));
+    padding: 1rem;
+    background-color: hsl(var(--b1));
+}
+
+/* Message styles */
+.message {
+    display: flex;
+    gap: 0.75rem;
+    max-width: 80%;
+}
+
+.message.user {
+    flex-direction: row-reverse;
+    margin-left: auto;
+}
+
+.message-content {
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    word-wrap: break-word;
+}
+
+.message.user .message-content {
+    background-color: hsl(var(--p));
+    color: hsl(var(--pc));
+    border-bottom-right-radius: 0.25rem;
+}
+
+.message.assistant .message-content {
+    background-color: hsl(var(--b2));
+    color: hsl(var(--bc));
+    border-bottom-left-radius: 0.25rem;
+}
+
+/* Dashboard styles */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+.stat-card {
+    background-color: hsl(var(--b1));
+    border: 1px solid hsl(var(--b3));
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    transition: all 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: hsl(var(--bc));
+    margin-bottom: 0.5rem;
+}
+
+.stat-title {
+    font-size: 0.875rem;
+    color: hsl(var(--bc) / 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Loading and status indicators */
+.loading {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid hsl(var(--b3));
+    border-radius: 50%;
+    border-top-color: hsl(var(--p));
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 16rem;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 50;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .message {
+        max-width: 95%;
+    }
+}
+
+/* Utility classes */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.font-bold { font-weight: bold; }
+.font-medium { font-weight: 500; }
+.text-sm { font-size: 0.875rem; }
+.text-xs { font-size: 0.75rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+.text-3xl { font-size: 1.875rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.p-2 { padding: 0.5rem; }
+.p-4 { padding: 1rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 0.5rem; }
+.gap-4 { gap: 1rem; }
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.rounded { border-radius: 0.25rem; }
+.rounded-lg { border-radius: 0.5rem; }
+.shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
+.shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+",
         mime_type: "text/css",
     };
 
@@ -245,42 +530,79 @@ pub mod files {
         mime_type: "image/svg+xml",
     };
 
-    // Legacy compatibility aliases
+    // Legacy compatibility aliases - keep for backward compatibility
+    #[allow(non_upper_case_globals)]
     pub const collapse_svg: StaticFile = COLLAPSE_SVG;
+    #[allow(non_upper_case_globals)]
     pub const index_css: StaticFile = INDEX_CSS;
+    #[allow(non_upper_case_globals)]
     pub const output_css: StaticFile = OUTPUT_CSS;
+    #[allow(non_upper_case_globals)]
     pub const index_js: StaticFile = INDEX_JS;
+    #[allow(non_upper_case_globals)]
     pub const bionic_logo_svg: StaticFile = BIONIC_LOGO_SVG;
+    #[allow(non_upper_case_globals)]
     pub const nav_service_requests_svg: StaticFile = NAV_SERVICE_REQUESTS_SVG;
+    #[allow(non_upper_case_globals)]
     pub const nav_history_svg: StaticFile = NAV_HISTORY_SVG;
+    #[allow(non_upper_case_globals)]
     pub const assistant_svg: StaticFile = ASSISTANT_SVG;
+    #[allow(non_upper_case_globals)]
     pub const nav_audit_svg: StaticFile = NAV_AUDIT_SVG;
+    #[allow(non_upper_case_globals)]
     pub const nav_ccsds_data_svg: StaticFile = NAV_CCSDS_DATA_SVG;
+    #[allow(non_upper_case_globals)]
     pub const nav_api_keys_svg: StaticFile = NAV_API_KEYS_SVG;
+    #[allow(non_upper_case_globals)]
     pub const nav_members_svg: StaticFile = NAV_MEMBERS_SVG;
+    #[allow(non_upper_case_globals)]
     pub const nav_teams_svg: StaticFile = NAV_TEAMS_SVG;
+    #[allow(non_upper_case_globals)]
     pub const nav_phonebook_svg: StaticFile = NAV_PHONEBOOK_SVG;
+    #[allow(non_upper_case_globals)]
     pub const limits_svg: StaticFile = LIMITS_SVG;
+    #[allow(non_upper_case_globals)]
     pub const button_plus_svg: StaticFile = BUTTON_PLUS_SVG;
+    #[allow(non_upper_case_globals)]
     pub const delete_svg: StaticFile = DELETE_SVG;
+    #[allow(non_upper_case_globals)]
     pub const spinner_svg: StaticFile = SPINNER_SVG;
+    #[allow(non_upper_case_globals)]
     pub const tools_svg: StaticFile = TOOLS_SVG;
+    #[allow(non_upper_case_globals)]
     pub const handshake_svg: StaticFile = HANDSHAKE_SVG;
+    #[allow(non_upper_case_globals)]
     pub const read_aloud_loading_svg: StaticFile = READ_ALOUD_LOADING_SVG;
+    #[allow(non_upper_case_globals)]
     pub const read_aloud_stop_svg: StaticFile = READ_ALOUD_STOP_SVG;
+    #[allow(non_upper_case_globals)]
     pub const read_aloud_svg: StaticFile = READ_ALOUD_SVG;
+    #[allow(non_upper_case_globals)]
     pub const tick_copy_svg: StaticFile = TICK_COPY_SVG;
+    #[allow(non_upper_case_globals)]
     pub const copy_svg: StaticFile = COPY_SVG;
+    #[allow(non_upper_case_globals)]
     pub const profile_svg: StaticFile = PROFILE_SVG;
+    #[allow(non_upper_case_globals)]
     pub const ai_svg: StaticFile = AI_SVG;
+    #[allow(non_upper_case_globals)]
     pub const microphone_svg: StaticFile = MICROPHONE_SVG;
+    #[allow(non_upper_case_globals)]
     pub const stop_recording_svg: StaticFile = STOP_RECORDING_SVG;
+    #[allow(non_upper_case_globals)]
     pub const attach_svg: StaticFile = ATTACH_SVG;
+    #[allow(non_upper_case_globals)]
     pub const streaming_stop_svg: StaticFile = STREAMING_STOP_SVG;
+    #[allow(non_upper_case_globals)]
     pub const submit_button_svg: StaticFile = SUBMIT_BUTTON_SVG;
+    #[allow(non_upper_case_globals)]
     pub const button_select_svg: StaticFile = BUTTON_SELECT_SVG;
+    #[allow(non_upper_case_globals)]
     pub const button_edit_svg: StaticFile = BUTTON_EDIT_SVG;
+    #[allow(non_upper_case_globals)]
     pub const menu_delete_svg: StaticFile = MENU_DELETE_SVG;
+    #[allow(non_upper_case_globals)]
     pub const empty_api_keys_svg: StaticFile = EMPTY_API_KEYS_SVG;
+    #[allow(non_upper_case_globals)]
     pub const avatar_svg: StaticFile = AVATAR_SVG;
 }

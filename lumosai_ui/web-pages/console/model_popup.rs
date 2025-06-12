@@ -12,8 +12,7 @@
 */
 
 #![allow(non_snake_case)]
-use web_assets::files::button_select_svg;
-use crate::types::Prompt;
+use web_assets::files::BUTTON_SELECT_SVG;
 use dioxus::prelude::*;
 
 /// 增强的模型选择弹窗

@@ -64,9 +64,9 @@ fn Head(
     rsx! {
 
         ModelPopup {
-            id: prompt.id,
-            value: prompt.name,
-            prompts
+            team_id,
+            current_model: prompt.name,
+            on_close: move |_| {}
         }
         div {
             class: "flex flex-row",

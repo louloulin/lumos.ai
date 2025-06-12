@@ -15,13 +15,25 @@
 #![allow(non_snake_case)]
 use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
-use crate::types::{Rbac, Capability, SinglePrompt, BionicToolDefinition};
+use crate::types::{Rbac, BionicToolDefinition};
 use crate::console::{ChatWithChunks, PendingChatState};
 use crate::console::console_stream::ConsoleStream;
-use crate::console::prompt_form::PromptForm;
+// use crate::console::prompt_form::PromptForm;
 use crate::console::tools_modal::ToolsModal;
-use crate::console::history_drawer::HistoryDrawer;
-use crate::console::model_popup::ModelPopup;
+// use crate::console::history_drawer::HistoryDrawer;
+// use crate::console::model_popup::ModelPopup;
+
+// 临时类型定义
+#[derive(Clone, Debug, PartialEq)]
+pub struct SinglePrompt {
+    pub name: String,
+    pub model_name: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Capability {
+    pub name: String,
+}
 
 /// 增强的助手控制台组件
 #[component]
@@ -40,11 +52,11 @@ pub fn EnhancedAssistantConsole(
     enabled_tools: Vec<String>,
     available_tools: Vec<BionicToolDefinition>,
 ) -> Element {
-    let has_pending_chat = !matches!(&pending_chat_state, PendingChatState::None);
+    let _has_pending_chat = !matches!(&pending_chat_state, PendingChatState::None);
     // 简化实现，移除use_signal依赖
     let show_tools_modal = false;
-    let show_history_drawer = false;
-    let show_model_popup = false;
+    let _show_history_drawer = false;
+    let _show_model_popup = false;
 
     rsx! {
         Layout {
@@ -83,14 +95,10 @@ pub fn EnhancedAssistantConsole(
 
                 // 输入表单区域
                 div {
-                    class: "border-t border-base-300 bg-base-100",
-                    PromptForm {
-                        team_id,
-                        conversation_id,
-                        prompt: prompt.clone(),
-                        is_locked: has_pending_chat,
-                        enabled_tools: enabled_tools.clone(),
-                        capabilities: capabilities.clone()
+                    class: "border-t border-base-300 bg-base-100 p-4",
+                    div {
+                        class: "text-center text-base-content/60",
+                        "输入表单区域 (待实现)"
                     }
                 }
 
@@ -150,7 +158,7 @@ fn ConsoleHeader(
                     div {
                         class: "flex items-center space-x-2 text-sm text-base-content/70",
                         span {
-                            "模型: {prompt.model_name.as_deref().unwrap_or(\"默认\")}"
+                            "模型: {prompt.model_name.as_ref().map(|s| s.as_str()).unwrap_or(\"默认\")}"
                         }
                         span { "•" }
                         span {

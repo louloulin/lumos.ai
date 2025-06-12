@@ -23,8 +23,9 @@ pub fn ModelPopup(
     current_model: String,
     on_close: EventHandler<()>,
 ) -> Element {
-    let mut selected_model = use_signal(|| current_model.clone());
-    let mut show_details = use_signal(|| false);
+    // 简化实现，移除use_signal依赖
+    let selected_model = current_model.clone();
+    let show_details = false;
 
     // 模拟可用模型列表
     let available_models = vec![
@@ -106,24 +107,16 @@ pub fn ModelPopup(
                     for model in &available_models {
                         ModelCard {
                             model: model.clone(),
-                            is_selected: *selected_model.read() == model.id,
-                            on_select: move |id: String| {
-                                selected_model.set(id);
-                            },
-                            on_details: move |id: String| {
-                                selected_model.set(id);
-                                show_details.set(true);
-                            }
+                            is_selected: selected_model == model.id
                         }
                     }
                 }
 
                 // 模型详情
-                if *show_details.read() {
-                    if let Some(model) = available_models.iter().find(|m| m.id == *selected_model.read()) {
+                if show_details {
+                    if let Some(model) = available_models.iter().find(|m| m.id == selected_model) {
                         ModelDetails {
-                            model: model.clone(),
-                            on_close: move |_| show_details.set(false)
+                            model: model.clone()
                         }
                     }
                 }
@@ -140,19 +133,13 @@ pub fn ModelPopup(
 
                     button {
                         class: "btn btn-ghost gap-2",
-                        onclick: move |_| show_details.set(true),
                         span { "ℹ️" }
                         "查看详情"
                     }
 
                     button {
                         class: "btn btn-primary gap-2",
-                        disabled: *selected_model.read() == current_model,
-                        onclick: move |_| {
-                            // TODO: 切换模型
-                            println!("切换到模型: {}", selected_model.read());
-                            on_close.call(());
-                        },
+                        disabled: selected_model == current_model,
                         span { "🔄" }
                         "切换模型"
                     }
@@ -163,7 +150,7 @@ pub fn ModelPopup(
 }
 
 /// 模型信息结构
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct ModelInfo {
     id: String,
     name: String,
@@ -181,8 +168,6 @@ struct ModelInfo {
 fn ModelCard(
     model: ModelInfo,
     is_selected: bool,
-    on_select: EventHandler<String>,
-    on_details: EventHandler<String>,
 ) -> Element {
     rsx! {
         div {
@@ -191,7 +176,7 @@ fn ModelCard(
             } else {
                 "card bg-base-200 border border-base-300 hover:shadow-md cursor-pointer transition-all"
             },
-            onclick: move |_| on_select.call(model.id.clone()),
+            // onclick: move |_| on_select.call(model.id.clone()),
 
             div {
                 class: "card-body p-4",
@@ -263,10 +248,6 @@ fn ModelCard(
 
                     button {
                         class: "btn btn-ghost btn-xs",
-                        onclick: move |e| {
-                            e.stop_propagation();
-                            on_details.call(model.id.clone());
-                        },
                         "详情"
                     }
 
@@ -284,7 +265,6 @@ fn ModelCard(
 #[component]
 fn ModelDetails(
     model: ModelInfo,
-    on_close: EventHandler<()>,
 ) -> Element {
     rsx! {
         div {
@@ -309,7 +289,6 @@ fn ModelDetails(
 
                     button {
                         class: "btn btn-ghost btn-sm",
-                        onclick: move |_| on_close.call(()),
                         "✕"
                     }
                 }

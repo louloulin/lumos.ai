@@ -14,7 +14,6 @@
 
 #![allow(non_snake_case)]
 use dioxus::prelude::*;
-use daisy_rsx::*;
 
 /// 文件上传组件
 #[component]
@@ -23,10 +22,11 @@ pub fn FileUpload(
     conversation_id: Option<i64>,
     on_upload_complete: EventHandler<Vec<String>>,
 ) -> Element {
-    let mut selected_files = use_signal(|| Vec::<String>::new());
-    let mut upload_progress = use_signal(|| 0.0);
-    let mut is_uploading = use_signal(|| false);
-    let mut show_preview = use_signal(|| false);
+    // 简化实现，移除use_signal依赖
+    let selected_files = Vec::<String>::new();
+    let upload_progress = 0.0;
+    let is_uploading = false;
+    let show_preview = false;
 
     rsx! {
         div {
@@ -52,7 +52,7 @@ pub fn FileUpload(
                 // 上传区域
                 div {
                     class: "border-2 border-dashed border-base-300 rounded-lg p-8 mb-6 hover:border-primary transition-colors",
-                    class: if *is_uploading.read() { "pointer-events-none opacity-50" } else { "cursor-pointer" },
+                    class: if is_uploading { "pointer-events-none opacity-50" } else { "cursor-pointer" },
                     
                     div {
                         class: "text-center",
@@ -60,7 +60,7 @@ pub fn FileUpload(
                         // 上传图标
                         div {
                             class: "text-6xl mb-4",
-                            if *is_uploading.read() {
+                            if is_uploading {
                                 "⏳"
                             } else {
                                 "📁"
@@ -68,7 +68,7 @@ pub fn FileUpload(
                         }
                         
                         // 上传提示
-                        if *is_uploading.read() {
+                        if is_uploading {
                             div {
                                 h4 {
                                     class: "text-lg font-semibold mb-2",
@@ -78,12 +78,12 @@ pub fn FileUpload(
                                     class: "w-full bg-base-200 rounded-full h-2 mb-4",
                                     div {
                                         class: "bg-primary h-2 rounded-full transition-all duration-300",
-                                        style: "width: {upload_progress.read()}%"
+                                        style: "width: {upload_progress}%"
                                     }
                                 }
                                 p {
                                     class: "text-sm text-base-content/60",
-                                    "上传进度: {upload_progress.read():.1}%"
+                                    "上传进度: {upload_progress:.1}%"
                                 }
                             }
                         } else {
@@ -122,13 +122,9 @@ pub fn FileUpload(
                 SupportedFileTypes {}
                 
                 // 已选择的文件列表
-                if !selected_files.read().is_empty() {
+                if !selected_files.is_empty() {
                     SelectedFilesList {
-                        files: selected_files.read().clone(),
-                        on_remove: move |index: usize| {
-                            let mut files = selected_files.write();
-                            files.remove(index);
-                        }
+                        files: selected_files.clone()
                     }
                 }
                 
@@ -138,45 +134,30 @@ pub fn FileUpload(
                     
                     button {
                         class: "btn btn-ghost",
-                        disabled: *is_uploading.read(),
+                        disabled: is_uploading,
                         "取消"
                     }
-                    
-                    if !selected_files.read().is_empty() {
+
+                    if !selected_files.is_empty() {
                         button {
                             class: "btn btn-primary gap-2",
-                            disabled: *is_uploading.read(),
-                            onclick: move |_| {
-                                is_uploading.set(true);
-                                // 开始上传
-                                start_upload(
-                                    selected_files.read().clone(),
-                                    team_id,
-                                    conversation_id,
-                                    upload_progress,
-                                    move |files| {
-                                        is_uploading.set(false);
-                                        on_upload_complete.call(files);
-                                    }
-                                );
-                            },
+                            disabled: is_uploading,
                             span { "⬆️" }
-                            "上传文件 ({selected_files.read().len()})"
+                            "上传文件 ({selected_files.len()})"
                         }
                     }
-                    
+
                     button {
                         class: "btn btn-ghost gap-2",
-                        onclick: move |_| show_preview.set(!*show_preview.read()),
                         span { "👁️" }
                         "预览"
                     }
                 }
                 
                 // 文件预览
-                if *show_preview.read() && !selected_files.read().is_empty() {
+                if show_preview && !selected_files.is_empty() {
                     FilePreview {
-                        files: selected_files.read().clone()
+                        files: selected_files.clone()
                     }
                 }
             }
@@ -256,7 +237,6 @@ fn SupportedFileTypes() -> Element {
 #[component]
 fn SelectedFilesList(
     files: Vec<String>,
-    on_remove: EventHandler<usize>,
 ) -> Element {
     rsx! {
         div {
@@ -270,7 +250,7 @@ fn SelectedFilesList(
             div {
                 class: "space-y-2 max-h-40 overflow-y-auto",
                 
-                for (index, file) in files.iter().enumerate() {
+                for (_index, file) in files.iter().enumerate() {
                     div {
                         class: "flex items-center justify-between p-3 bg-base-200 rounded-lg",
                         
@@ -278,7 +258,7 @@ fn SelectedFilesList(
                             class: "flex items-center space-x-3",
                             span {
                                 class: "text-2xl",
-                                get_file_icon(file)
+                                "{get_file_icon(file)}"
                             }
                             div {
                                 p {
@@ -287,14 +267,13 @@ fn SelectedFilesList(
                                 }
                                 p {
                                     class: "text-xs text-base-content/60",
-                                    get_file_size_display(file)
+                                    "{get_file_size_display(file)}"
                                 }
                             }
                         }
                         
                         button {
                             class: "btn btn-ghost btn-xs text-error",
-                            onclick: move |_| on_remove.call(index),
                             "🗑️"
                         }
                     }
@@ -325,7 +304,7 @@ fn FilePreview(files: Vec<String>) -> Element {
                         
                         div {
                             class: "text-4xl mb-2",
-                            get_file_icon(file)
+                            "{get_file_icon(file)}"
                         }
                         
                         p {
@@ -335,7 +314,7 @@ fn FilePreview(files: Vec<String>) -> Element {
                         
                         p {
                             class: "text-xs text-base-content/60",
-                            get_file_type(file)
+                            "{get_file_type(file)}"
                         }
                     }
                 }

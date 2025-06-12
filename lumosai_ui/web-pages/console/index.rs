@@ -43,9 +43,9 @@ pub fn new_conversation(
 fn Head(team_id: i32, rbac: Rbac, prompts: Vec<Prompt>, prompt: SinglePrompt) -> Element {
     rsx! {
         ModelPopup {
-            id: prompt.id,
-            value: prompt.name,
-            prompts
+            team_id,
+            current_model: prompt.name,
+            on_close: move |_| {}
         }
     }
 }

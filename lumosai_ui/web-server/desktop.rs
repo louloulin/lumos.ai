@@ -28,7 +28,11 @@ fn main() {
     #[cfg(feature = "desktop")]
     {
         use dioxus::prelude::*;
-        dioxus::launch(App);
+        use web_pages::dashboard::DashboardPage;
+        use web_pages::types::Rbac;
+
+        // 启动完整的LumosAI Desktop应用
+        dioxus::launch(DesktopApp);
     }
 
     #[cfg(not(feature = "desktop"))]
@@ -72,8 +76,32 @@ fn verify_desktop_functionality() {
 #[cfg(feature = "desktop")]
 mod desktop_app {
     use dioxus::prelude::*;
+    use web_pages::dashboard::DashboardPage;
+    use web_pages::types::Rbac;
 
-    // Main App Component
+    // Desktop App Component - 使用完整的LumosAI Dashboard
+    #[component]
+    pub fn DesktopApp() -> Element {
+        // 模拟RBAC和团队数据
+        let rbac = Rbac {
+            email: "desktop@lumosai.com".to_string(),
+            first_name: Some("Desktop".to_string()),
+            last_name: Some("User".to_string()),
+            team_id: 1,
+            role: "Admin".to_string(),
+        };
+        let team_id = 1;
+
+        rsx! {
+            // 使用完整的Dashboard页面
+            DashboardPage {
+                team_id: team_id,
+                rbac: rbac
+            }
+        }
+    }
+
+    // 简化的App组件（备用）
     #[component]
     pub fn App() -> Element {
         let version = env!("CARGO_PKG_VERSION");
@@ -109,6 +137,6 @@ mod desktop_app {
 }
 
 #[cfg(feature = "desktop")]
-use desktop_app::App;
+use desktop_app::DesktopApp;
 
 

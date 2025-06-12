@@ -16,7 +16,23 @@
 #![allow(non_snake_case)]
 use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
-use crate::types::{Rbac, Prompt, Category, BionicToolDefinition};
+use crate::types::{Rbac, BionicToolDefinition};
+
+// 临时类型定义
+#[derive(Clone, Debug)]
+pub struct Prompt {
+    pub id: i32,
+    pub name: String,
+    pub description: Option<String>,
+    pub visibility: String,
+    pub category_id: Option<i32>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Category {
+    pub id: i32,
+    pub name: String,
+}
 
 /// 增强的助手管理页面
 #[component]

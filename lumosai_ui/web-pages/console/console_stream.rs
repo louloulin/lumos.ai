@@ -59,6 +59,42 @@ pub fn ConsoleStream(
                         }
                     }
                 },
+                PendingChatState::Thinking => rsx! {
+                    div {
+                        class: "flex items-center space-x-3 p-4 bg-purple-50 border border-purple-200 rounded-lg",
+                        div {
+                            class: "animate-pulse rounded-full h-6 w-6 bg-purple-600"
+                        }
+                        div {
+                            class: "text-purple-700",
+                            "🤔 正在思考..."
+                        }
+                    }
+                },
+                PendingChatState::Streaming => rsx! {
+                    div {
+                        class: "flex items-center space-x-3 p-4 bg-green-50 border border-green-200 rounded-lg",
+                        div {
+                            class: "animate-bounce rounded-full h-6 w-6 bg-green-600"
+                        }
+                        div {
+                            class: "text-green-700",
+                            "💬 正在回复..."
+                        }
+                    }
+                },
+                PendingChatState::ToolCalling => rsx! {
+                    div {
+                        class: "flex items-center space-x-3 p-4 bg-orange-50 border border-orange-200 rounded-lg",
+                        div {
+                            class: "animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600"
+                        }
+                        div {
+                            class: "text-orange-700",
+                            "🛠️ 调用工具中..."
+                        }
+                    }
+                },
                 PendingChatState::None => rsx! { div {} }
             }
 

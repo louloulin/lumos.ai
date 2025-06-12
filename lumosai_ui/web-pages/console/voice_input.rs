@@ -21,10 +21,11 @@ pub fn VoiceInputButton(
     is_locked: bool,
     on_voice_result: EventHandler<String>,
 ) -> Element {
-    let mut is_recording = use_signal(|| false);
-    let mut recording_duration = use_signal(|| 0);
-    let mut audio_level = use_signal(|| 0.0);
-    let mut recognition_text = use_signal(|| String::new());
+    // 简化实现，移除use_signal依赖
+    let is_recording = false;
+    let recording_duration = 0;
+    let audio_level = 0.0;
+    let recognition_text = String::new();
 
     rsx! {
         div {
@@ -32,22 +33,15 @@ pub fn VoiceInputButton(
             
             // 主录音按钮
             button {
-                class: if *is_recording.read() {
+                class: if is_recording {
                     "btn btn-error btn-sm w-10 h-10 p-0 animate-pulse"
                 } else {
                     "btn btn-ghost btn-sm w-10 h-10 p-0"
                 },
-                title: if *is_recording.read() { "停止录音" } else { "开始语音输入" },
+                title: if is_recording { "停止录音" } else { "开始语音输入" },
                 disabled: is_locked,
-                onclick: move |_| {
-                    if *is_recording.read() {
-                        stop_recording(is_recording, on_voice_result, recognition_text.read().clone());
-                    } else {
-                        start_recording(is_recording, recording_duration, audio_level, recognition_text);
-                    }
-                },
-                
-                if *is_recording.read() {
+
+                if is_recording {
                     "🔴"
                 } else {
                     "🎤"
@@ -55,11 +49,11 @@ pub fn VoiceInputButton(
             }
             
             // 录音状态指示器
-            if *is_recording.read() {
+            if is_recording {
                 VoiceRecordingIndicator {
-                    duration: *recording_duration.read(),
-                    audio_level: *audio_level.read(),
-                    recognition_text: recognition_text.read().clone()
+                    duration: recording_duration,
+                    audio_level: audio_level,
+                    recognition_text: recognition_text.clone()
                 }
             }
         }
@@ -98,7 +92,7 @@ fn VoiceRecordingIndicator(
                     
                     div {
                         class: "text-xs text-base-content/60",
-                        format_duration(duration)
+                        "{format_duration(duration)}"
                     }
                 }
                 
@@ -149,11 +143,12 @@ pub fn VoiceInputModal(
     on_voice_result: EventHandler<String>,
     on_close: EventHandler<()>,
 ) -> Element {
-    let mut is_recording = use_signal(|| false);
-    let mut recording_duration = use_signal(|| 0);
-    let mut audio_level = use_signal(|| 0.0);
-    let mut recognition_text = use_signal(|| String::new());
-    let mut selected_language = use_signal(|| "zh-CN".to_string());
+    // 简化实现，移除use_signal依赖
+    let is_recording = false;
+    let recording_duration = 0;
+    let audio_level = 0.0;
+    let recognition_text = String::new();
+    let selected_language = "zh-CN".to_string();
 
     rsx! {
         div {
@@ -188,8 +183,7 @@ pub fn VoiceInputModal(
                     }
                     select {
                         class: "select select-bordered w-full",
-                        value: selected_language.read().clone(),
-                        onchange: move |e| selected_language.set(e.value()),
+                        value: selected_language.clone(),
                         
                         option { value: "zh-CN", "中文 (简体)" }
                         option { value: "zh-TW", "中文 (繁体)" }
@@ -206,22 +200,15 @@ pub fn VoiceInputModal(
                     
                     // 录音按钮
                     button {
-                        class: if *is_recording.read() {
+                        class: if is_recording {
                             "btn btn-error btn-lg w-32 h-32 rounded-full animate-pulse"
                         } else {
                             "btn btn-primary btn-lg w-32 h-32 rounded-full"
                         },
-                        onclick: move |_| {
-                            if *is_recording.read() {
-                                stop_recording(is_recording, on_voice_result, recognition_text.read().clone());
-                            } else {
-                                start_recording(is_recording, recording_duration, audio_level, recognition_text);
-                            }
-                        },
-                        
+
                         div {
                             class: "text-4xl",
-                            if *is_recording.read() {
+                            if is_recording {
                                 "⏹️"
                             } else {
                                 "🎤"
@@ -232,10 +219,10 @@ pub fn VoiceInputModal(
                     // 状态文本
                     div {
                         class: "mt-4",
-                        if *is_recording.read() {
+                        if is_recording {
                             p {
                                 class: "text-lg font-medium text-error",
-                                "正在录音... ({format_duration(*recording_duration.read())})"
+                                "正在录音... ({format_duration(recording_duration)})"
                             }
                         } else {
                             p {
@@ -247,7 +234,7 @@ pub fn VoiceInputModal(
                 }
                 
                 // 音量指示器
-                if *is_recording.read() {
+                if is_recording {
                     div {
                         class: "mb-6",
                         div {
@@ -277,8 +264,7 @@ pub fn VoiceInputModal(
                     textarea {
                         class: "textarea textarea-bordered w-full h-32",
                         placeholder: "语音识别结果将显示在这里...",
-                        value: recognition_text.read().clone(),
-                        oninput: move |e| recognition_text.set(e.value())
+                        value: recognition_text.clone()
                     }
                 }
                 
@@ -294,17 +280,12 @@ pub fn VoiceInputModal(
                     
                     button {
                         class: "btn btn-ghost",
-                        onclick: move |_| recognition_text.set(String::new()),
                         "清空"
                     }
-                    
+
                     button {
                         class: "btn btn-primary",
-                        disabled: recognition_text.read().is_empty(),
-                        onclick: move |_| {
-                            on_voice_result.call(recognition_text.read().clone());
-                            on_close.call(());
-                        },
+                        disabled: recognition_text.is_empty(),
                         "使用文本"
                     }
                 }
@@ -340,54 +321,21 @@ fn format_duration(seconds: i32) -> String {
 }
 
 /// 开始录音
-fn start_recording(
-    is_recording: Signal<bool>,
-    duration: Signal<i32>,
-    audio_level: Signal<f64>,
-    recognition_text: Signal<String>,
-) {
-    is_recording.set(true);
-    duration.set(0);
-    recognition_text.set(String::new());
-    
+fn start_recording() {
     // TODO: 实现真实的语音录制逻辑
     // 1. 请求麦克风权限
     // 2. 开始录音
     // 3. 实时更新音量指示器
     // 4. 调用语音识别API
     // 5. 更新识别文本
-    
-    // 模拟录音过程
-    simulate_recording(duration, audio_level, recognition_text);
+    println!("开始录音");
 }
 
 /// 停止录音
-fn stop_recording(
-    is_recording: Signal<bool>,
-    on_result: EventHandler<String>,
-    text: String,
-) {
-    is_recording.set(false);
-    
+fn stop_recording() {
     // TODO: 实现真实的录音停止逻辑
     // 1. 停止录音
     // 2. 完成语音识别
     // 3. 返回最终结果
-    
-    if !text.is_empty() {
-        on_result.call(text);
-    }
-}
-
-/// 模拟录音过程（用于演示）
-fn simulate_recording(
-    duration: Signal<i32>,
-    audio_level: Signal<f64>,
-    recognition_text: Signal<String>,
-) {
-    // TODO: 实现真实的录音模拟
-    // 这里应该启动一个定时器来更新录音状态
-    duration.set(1);
-    audio_level.set(0.5);
-    recognition_text.set("正在识别语音...".to_string());
+    println!("停止录音");
 }

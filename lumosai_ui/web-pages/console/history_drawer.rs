@@ -23,16 +23,17 @@ pub fn HistoryDrawer(
     team_id: i32,
     history: Vec<History>
 ) -> Element {
-    let mut search_query = use_signal(|| String::new());
-    let mut selected_filter = use_signal(|| "all".to_string());
+    // 简化实现，移除use_signal依赖
+    let search_query = String::new();
+    let selected_filter = "all".to_string();
 
     // 过滤历史记录
     let filtered_history = history.iter()
         .filter(|h| {
-            let matches_search = search_query.read().is_empty() ||
-                h.summary.to_lowercase().contains(&search_query.read().to_lowercase());
+            let matches_search = search_query.is_empty() ||
+                h.summary.to_lowercase().contains(&search_query.to_lowercase());
 
-            let matches_filter = match selected_filter.read().as_str() {
+            let matches_filter = match selected_filter.as_str() {
                 "recent" => true, // TODO: 实现时间过滤
                 "favorites" => false, // TODO: 实现收藏过滤
                 _ => true
@@ -70,8 +71,7 @@ pub fn HistoryDrawer(
                             r#type: "text",
                             placeholder: "搜索对话内容...",
                             class: "input input-bordered input-sm",
-                            value: search_query.read().clone(),
-                            oninput: move |e| search_query.set(e.value())
+                            value: search_query.clone()
                         }
                     }
 
@@ -85,12 +85,11 @@ pub fn HistoryDrawer(
                             ("favorites", "收藏")
                         ] {
                             button {
-                                class: if *selected_filter.read() == value {
+                                class: if selected_filter == value {
                                     "btn btn-primary btn-xs"
                                 } else {
                                     "btn btn-ghost btn-xs"
                                 },
-                                onclick: move |_| selected_filter.set(value.to_string()),
                                 "{label}"
                             }
                         }
@@ -106,7 +105,7 @@ pub fn HistoryDrawer(
                             class: "text-center py-8",
                             div {
                                 class: "text-4xl mb-2",
-                                if search_query.read().is_empty() {
+                                if search_query.is_empty() {
                                     "💬"
                                 } else {
                                     "🔍"
@@ -114,7 +113,7 @@ pub fn HistoryDrawer(
                             }
                             p {
                                 class: "text-base-content/60",
-                                if search_query.read().is_empty() {
+                                if search_query.is_empty() {
                                     "暂无对话历史"
                                 } else {
                                     "未找到匹配的对话"
@@ -124,11 +123,11 @@ pub fn HistoryDrawer(
                     } else {
                         ul {
                             class: "space-y-2",
-                            for hist in filtered_history {
+                            for hist in &filtered_history {
                                 li {
                                     class: "w-full",
                                     HistoryItem {
-                                        history: hist.clone(),
+                                        history: (*hist).clone(),
                                         team_id
                                     }
                                 }
@@ -173,13 +172,14 @@ pub fn HistoryDrawer(
 /// 历史记录项组件
 #[component]
 fn HistoryItem(history: History, team_id: i32) -> Element {
-    let mut show_actions = use_signal(|| false);
+    // 简化实现，移除use_signal依赖
+    let show_actions = false;
 
     rsx! {
         div {
             class: "group relative p-3 bg-base-200 hover:bg-base-300 rounded-lg transition-colors",
-            onmouseenter: move |_| show_actions.set(true),
-            onmouseleave: move |_| show_actions.set(false),
+            // onmouseenter: move |_| show_actions.set(true),
+            // onmouseleave: move |_| show_actions.set(false),
 
             a {
                 class: "block",
@@ -201,7 +201,7 @@ fn HistoryItem(history: History, team_id: i32) -> Element {
                         div {
                             class: "flex items-center space-x-2 text-xs text-base-content/60",
                             span {
-                                "📅 {format_relative_time(&history.created_at)}"
+                                "📅 {format_relative_time(&history.created_at.to_string())}"
                             }
                             span {
                                 "💬 ID: {history.id}"
@@ -210,7 +210,7 @@ fn HistoryItem(history: History, team_id: i32) -> Element {
                     }
 
                     // 操作按钮
-                    if *show_actions.read() {
+                    if show_actions {
                         div {
                             class: "flex space-x-1 ml-2",
 

@@ -6,9 +6,9 @@ edition = "2021"
 # Enable backtrace feature for panic hook
 [features]
 default = ["desktop"]
-web = ["dioxus/web", "dioxus-web", "dioxus-router"]
-desktop = ["dioxus/desktop", "dioxus-desktop", "dioxus-router"]
-fullstack = ["dioxus/fullstack", "dioxus-fullstack", "dioxus-router"]
+web = ["dep:dioxus", "dioxus/web", "dep:dioxus-web", "dep:dioxus-router"]
+desktop = ["dep:dioxus", "dioxus/desktop", "dep:dioxus-desktop", "dep:dioxus-router"]
+fullstack = ["dep:dioxus", "dioxus/fullstack", "dep:dioxus-fullstack", "dep:dioxus-router"]
 
 [[bin]]
 name = "lumosai-web-server"

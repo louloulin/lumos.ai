@@ -5,10 +5,10 @@ edition = "2021"
 
 # Enable backtrace feature for panic hook
 [features]
-default = ["web"]
-web = ["dioxus-web"]
-desktop = ["dioxus-desktop"]
-fullstack = ["dioxus-fullstack"]
+default = ["desktop"]
+web = ["dioxus/web", "dioxus-web", "dioxus-router"]
+desktop = ["dioxus/desktop", "dioxus-desktop", "dioxus-router"]
+fullstack = ["dioxus/fullstack", "dioxus-fullstack", "dioxus-router"]
 
 [[bin]]
 name = "lumosai-web-server"
@@ -24,10 +24,10 @@ web-pages = { path = "../web-pages" }
 web-assets = { path = "../web-assets" }
 
 # Dioxus framework
-dioxus = { version = "0.6", features = ["router"] }
+dioxus = { version = "0.6", features = ["router"], optional = true }
 dioxus-web = { version = "0.6", optional = true }
 dioxus-desktop = { version = "0.6", optional = true }
-dioxus-router = { version = "0.6" }
+dioxus-router = { version = "0.6", optional = true }
 dioxus-fullstack = { version = "0.6", optional = true }
 
 # Web server (for fullstack mode)

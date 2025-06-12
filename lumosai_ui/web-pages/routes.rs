@@ -77,6 +77,23 @@ pub mod audit_trail {
     }
 }
 
+pub mod analytics {
+    use axum_extra::routing::TypedPath;
+    use serde::Deserialize;
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/app/team/{team_id}/analytics")]
+    pub struct Index {
+        pub team_id: i32,
+    }
+
+    #[derive(TypedPath, Deserialize)]
+    #[typed_path("/app/team/{team_id}/analytics/export")]
+    pub struct Export {
+        pub team_id: i32,
+    }
+}
+
 pub mod document_pipelines {
     use axum_extra::routing::TypedPath;
     use serde::Deserialize;

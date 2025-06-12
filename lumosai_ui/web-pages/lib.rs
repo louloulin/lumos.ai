@@ -25,6 +25,7 @@ pub mod logout_form;
 pub mod charts;
 
 // Feature modules (UI only)
+pub mod analytics;
 pub mod api_keys;
 pub mod assistants;
 pub mod audit_trail;

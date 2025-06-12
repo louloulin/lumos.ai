@@ -25,7 +25,7 @@ web-pages = { path = "../web-pages" }
 web-assets = { path = "../web-assets" }
 
 # Dioxus framework
-dioxus = { version = "0.6", features = ["router", "web"] }
+dioxus = { version = "0.6", features = ["router"] }
 dioxus-web = { version = "0.6", optional = true }
 dioxus-desktop = { version = "0.6", optional = true }
 dioxus-router = { version = "0.6", optional = true }

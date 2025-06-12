@@ -27,7 +27,10 @@ cargo run --bin lumosai-web-server --features fullstack
 
 use dioxus::prelude::*;
 use web_pages::base_layout::BaseLayout;
-use web_pages::console::chat_console::ChatConsole;
+use web_pages::console::enhanced_console::{EnhancedAssistantConsole, SinglePrompt, Capability};
+use web_pages::types::{Rbac, Visibility};
+use web_pages::app_layout::SideBar;
+use web_pages::console::PendingChatState;
 
 #[cfg(feature = "fullstack")]
 use dioxus_fullstack::prelude::*;
@@ -407,12 +410,48 @@ fn Assistants() -> Element {
 
 #[component]
 fn Console() -> Element {
+    // 创建模拟数据
+    let rbac = Rbac {
+        email: "user@example.com".to_string(),
+        first_name: Some("Demo".to_string()),
+        last_name: Some("User".to_string()),
+        team_id: 1,
+        role: "Admin".to_string(),
+    };
+
+    let prompt = SinglePrompt {
+        name: "AI Assistant".to_string(),
+        model_name: Some("gpt-4".to_string()),
+    };
+
+    let capabilities = vec![
+        Capability {
+            name: "Text Generation".to_string(),
+        }
+    ];
+
     rsx! {
         div {
             class: "h-full flex flex-col",
 
-            // 使用新的聊天控制台组件
-            ChatConsole {}
+            // 使用增强的聊天控制台组件
+            EnhancedAssistantConsole {
+                team_id: 1,
+                conversation_id: None,
+                rbac: rbac,
+                chat_history: vec![],
+                pending_chat_state: PendingChatState::None,
+                prompt: prompt,
+                selected_item: SideBar::Console,
+                title: "AI Console".to_string(),
+                header: rsx! {
+                    h1 { class: "text-xl font-bold", "AI Assistant Console" }
+                },
+                is_tts_disabled: false,
+                capabilities: capabilities,
+                enabled_tools: vec![],
+                available_tools: vec![],
+            }
         }
     }
 }

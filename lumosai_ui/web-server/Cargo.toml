@@ -65,5 +65,7 @@ tokio-stream = "0.1"
 # Database (using in-memory storage for now)
 # sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "migrate"] }
 
+# Time handling
+time = { version = "0.3.36", features = ["serde"] }
+
 [dev-dependencies]
-time = "0.3.36"

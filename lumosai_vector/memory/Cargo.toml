@@ -1,6 +1,6 @@
 [package]
 name = "lumosai-vector-memory"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["Lumos.ai Team <team@lumos.ai>"]
 description = "In-memory vector storage implementation for Lumos"

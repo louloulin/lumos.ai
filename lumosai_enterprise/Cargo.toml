@@ -1,6 +1,6 @@
 [package]
 name = "lumosai_enterprise"
-version = "0.1.1"
+version = "0.1.4"
 edition = "2021"
 description = "Lumos.ai企业级功能扩展模块 - 监控、安全、合规、多租户"
 license = "MIT"

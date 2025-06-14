@@ -1,6 +1,6 @@
 [package]
 name = "lumosai-vector-milvus"
-version = "0.1.1"
+version = "0.1.4"
 edition = "2021"
 authors = ["LumosAI Team <team@lumosai.dev>"]
 description = "Milvus integration for LumosAI vector storage - high-performance vector database"

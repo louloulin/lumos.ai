@@ -1,6 +1,6 @@
 [package]
 name = "lumosai_marketplace"
-version = "0.1.1"
+version = "0.1.4"
 edition = "2021"
 description = "Lumos.ai工具市场建设模块 - 完整的工具生态系统"
 license = "MIT"

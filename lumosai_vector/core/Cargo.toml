@@ -1,6 +1,6 @@
 [package]
 name = "lumosai-vector-core"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["Lumosai Team <team@lumosai.dev>"]
 description = "Core abstractions and traits for Lumosai vector storage system"

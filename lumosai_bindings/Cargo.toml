@@ -1,6 +1,6 @@
 [package]
 name = "lumosai_bindings"
-version = "0.1.1"
+version = "0.1.4"
 edition = "2021"
 description = "Multi-language bindings for Lumos.ai"
 license = "MIT OR Apache-2.0"

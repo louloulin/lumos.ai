@@ -6,8 +6,6 @@ use lumosai_core::{
     llm::{LlmOptions, LlmProvider},
     Message, Role,
 };
-use std::sync::Mutex;
-use futures::stream::{self, BoxStream};
 
 use crate::error::{Error, Result};
 use crate::metrics::{Metric, MetricResult};

@@ -1,18 +1,16 @@
 use clap::Args;
 use std::path::{Path, PathBuf};
 use std::env;
-use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use colored::Colorize;
-use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task;
 use tokio::time::{sleep, Duration};
-use notify::{Watcher, RecursiveMode, Config};
+use notify::{Watcher, RecursiveMode};
 
 use crate::error::{CliResult, CliError};
-use crate::util::{find_project_root, is_lumos_project, ensure_dir_exists};
+use crate::util::is_lumos_project;
 use crate::server::{ui_server, api_server};
 
 /// 开发服务器配置选项

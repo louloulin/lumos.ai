@@ -8,8 +8,7 @@ use dashmap::DashMap;
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use tokio::time::interval;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use futures::future::{ready, FutureExt};
+use futures::future::FutureExt;
 
 use crate::error::{Error, Result};
 use crate::types::{AgentId, AgentCapability, AgentType, AgentLocation};

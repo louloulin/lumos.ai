@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::io::{self, Write};
 use colored::Colorize;
 use crate::error::{CliResult, CliError};
 use std::env;

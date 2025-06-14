@@ -1,15 +1,12 @@
 //! 网络拓扑实现
 
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::collections::HashMap;
 use async_trait::async_trait;
 use parking_lot::RwLock;
-use petgraph::graph::{DiGraph, NodeIndex, EdgeIndex};
+use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::algo::dijkstra;
 use petgraph::visit::{EdgeRef};
-use petgraph::Direction;
 use serde::{Serialize, Deserialize};
-use tokio::sync::RwLock as TokioRwLock;
 
 use crate::error::{Error, Result};
 use crate::types::{AgentId, AgentLocation};

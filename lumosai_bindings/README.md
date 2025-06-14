@@ -197,7 +197,7 @@ await init();
 ### C/Go
 ```bash
 # 下载预编译库
-wget https://github.com/lumosai/lumos.ai/releases/latest/download/liblumosai.so
+wget https://github.com/louloulin/lumos.ai/releases/latest/download/liblumosai.so
 ```
 
 ## 🧪 测试
@@ -290,11 +290,11 @@ pub fn my_custom_tool() -> Arc<dyn Tool> {
 
 ## 🔗 相关链接
 
-- [主项目](https://github.com/lumosai/lumos.ai)
+- [主项目](https://github.com/louloulin/lumos.ai)
 - [官方网站](https://lumosai.com)
 - [文档中心](https://docs.lumosai.com)
-- [社区讨论](https://github.com/lumosai/lumos.ai/discussions)
-- [问题反馈](https://github.com/lumosai/lumos.ai/issues)
+- [社区讨论](https://github.com/louloulin/lumos.ai/discussions)
+- [问题反馈](https://github.com/louloulin/lumos.ai/issues)
 
 ---
 

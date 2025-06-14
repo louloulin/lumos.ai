@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::{Result, Error};
-use crate::agent::{config::AgentConfig, executor::BasicAgent};
+use crate::agent::config::AgentConfig;
 use crate::tool::{FunctionTool, ToolSchema, ParameterSchema};
 use crate::tool::registry::{ToolRegistry, ToolMetadata, ToolCategory};
 

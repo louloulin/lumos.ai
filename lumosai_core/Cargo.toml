@@ -1,10 +1,16 @@
 [package]
 name = "lumosai_core"
-version = "0.1.1"
+version = "0.1.3"
 edition = "2021"
-authors = ["Lumosai Team"]
-description = "Core functionality for the Lumosai framework"
+authors = ["Lumosai Team <team@lumosai.dev>"]
+description = "Core functionality for the Lumosai framework - Enterprise-grade AI agent framework"
 license = "MIT"
+repository = "https://github.com/louloulin/lumos.ai.git"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai_core"
+readme = "README.md"
+keywords = ["ai", "agent", "rust", "framework", "llm"]
+categories = ["development-tools", "api-bindings", "science"]
 
 [lib]
 path = "src/lib.rs"

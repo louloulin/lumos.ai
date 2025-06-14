@@ -1,5 +1,5 @@
 use clap::Args;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::env;
 use colored::Colorize;
 

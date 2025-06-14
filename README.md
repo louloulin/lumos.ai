@@ -6,7 +6,7 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/lumosai/lumosai)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/louloulin/lumos.ai)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/lumosai)
 [![Tests](https://img.shields.io/badge/tests-7%2F7%20passing-brightgreen.svg)](tests/)
 
@@ -280,7 +280,7 @@ We welcome contributions of all kinds! Whether you're fixing bugs, adding featur
 
 ```bash
 # Clone the repository
-git clone https://github.com/lumosai/lumosai.git
+git clone https://github.com/louloulin/lumos.ai.git
 cd lumosai
 
 # Install Rust (if not already installed)
@@ -334,15 +334,15 @@ cargo fmt --check
 
 - **📖 Documentation**: Check our [comprehensive docs](docs/README.md)
 - **💡 Examples**: Browse [example applications](examples/)
-- **🐛 Issues**: Report bugs on [GitHub Issues](https://github.com/lumosai/lumosai/issues)
-- **💬 Discussions**: Ask questions in [GitHub Discussions](https://github.com/lumosai/lumosai/discussions)
+- **🐛 Issues**: Report bugs on [GitHub Issues](https://github.com/louloulin/lumos.ai/issues)
+- **💬 Discussions**: Ask questions in [GitHub Discussions](https://github.com/louloulin/lumos.ai/discussions)
 - **📧 Email**: Contact us at [support@lumosai.com](mailto:support@lumosai.com)
 
 ### 🏆 Contributors
 
 Thanks to all our amazing contributors! 🎉
 
-<a href="https://github.com/lumosai/lumosai/graphs/contributors">
+<a href="https://github.com/louloulin/lumos.ai/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=lumosai/lumosai" />
 </a>
 
@@ -394,7 +394,7 @@ SOFTWARE.
 
 **⭐ Star us on GitHub if you find LumosAI helpful!**
 
-[⭐ Star](https://github.com/lumosai/lumosai) | [🐛 Report Bug](https://github.com/lumosai/lumosai/issues) | [💡 Request Feature](https://github.com/lumosai/lumosai/issues) | [📖 Documentation](docs/README.md)
+[⭐ Star](https://github.com/louloulin/lumos.ai) | [🐛 Report Bug](https://github.com/louloulin/lumos.ai/issues) | [💡 Request Feature](https://github.com/louloulin/lumos.ai/issues) | [📖 Documentation](docs/README.md)
 
 **Built with ❤️ by the LumosAI team**
 

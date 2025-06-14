@@ -263,7 +263,7 @@ cargo run --example marketplace_demo
 ### 开发环境
 ```bash
 # 克隆项目
-git clone https://github.com/lumosai/lumos.ai.git
+git clone https://github.com/louloulin/lumos.ai.git
 cd lumos.ai/lumosai_marketplace
 
 # 安装依赖
@@ -296,7 +296,7 @@ cargo run --example marketplace_demo
 
 ## 🔗 相关链接
 
-- [Lumos.ai 主项目](https://github.com/lumosai/lumos.ai)
+- [Lumos.ai 主项目](https://github.com/louloulin/lumos.ai)
 - [API 文档](https://docs.lumosai.com/marketplace)
 - [开发者指南](https://docs.lumosai.com/developers)
 

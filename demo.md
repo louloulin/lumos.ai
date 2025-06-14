@@ -3420,8 +3420,8 @@ Lumos AI 框架提供了构建现代 AI 应用所需的完整工具链，从简�
 ## 📚 相关资源
 
 - **官方文档**: [https://docs.lumosai.dev](https://docs.lumosai.dev)
-- **GitHub 仓库**: [https://github.com/lumosai/lumosai](https://github.com/lumosai/lumosai)
-- **示例项目**: [https://github.com/lumosai/examples](https://github.com/lumosai/examples)
+- **GitHub 仓库**: [https://github.com/louloulin/lumos.ai](https://github.com/louloulin/lumos.ai)
+- **示例项目**: [https://github.com/louloulin/lumos.ai](https://github.com/louloulin/lumos.ai)
 - **社区论坛**: [https://community.lumosai.dev](https://community.lumosai.dev)
 - **API 参考**: [https://api.lumosai.dev](https://api.lumosai.dev)
 

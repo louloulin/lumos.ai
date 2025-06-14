@@ -4,7 +4,6 @@
 
 use crate::{Result, Error, Message};
 use std::sync::Arc;
-use serde::{Serialize, Deserialize};
 
 // 重导出核心类型
 pub use lumosai_core::agent::session::{

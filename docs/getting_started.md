@@ -242,11 +242,11 @@ println!("缓存命中率: {:.2}%", cache_stats.hit_rate * 100.0);
 - 查看 [API 参考文档](./vector_api_reference.md)
 - 浏览 [示例项目](../examples/)
 - 了解 [架构设计](./architecture.md)
-- 参与 [社区讨论](https://github.com/lumosai/lumosai/discussions)
+- 参与 [社区讨论](https://github.com/louloulin/lumos.ai/discussions)
 
 ## 获取帮助
 
 - 📖 [文档](https://docs.lumosai.dev)
 - 💬 [Discord 社区](https://discord.gg/lumosai)
-- 🐛 [问题反馈](https://github.com/lumosai/lumosai/issues)
+- 🐛 [问题反馈](https://github.com/louloulin/lumos.ai/issues)
 - 📧 [邮件支持](mailto:support@lumosai.dev)

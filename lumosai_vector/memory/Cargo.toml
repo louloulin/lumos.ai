@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Lumos.ai Team <team@lumos.ai>"]
 description = "In-memory vector storage implementation for Lumos"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/lumosai/lumos"
+repository = "https://github.com/louloulin/lumos.ai.git"
 keywords = ["vector", "embedding", "memory", "ai", "search"]
 categories = ["database", "science", "algorithms"]
 

@@ -4,8 +4,7 @@
 
 use lumosai_vector_core::{
     VectorStorage as VectorStorageTrait, Document, DocumentId, IndexConfig,
-    SearchRequest, SearchQuery, SearchResponse, MetadataValue, FilterCondition,
-    IndexInfo, BackendInfo, Result
+    SearchRequest, SearchQuery, MetadataValue, Result
 };
 use std::collections::HashMap;
 use tokio;

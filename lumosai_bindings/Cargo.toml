@@ -4,7 +4,7 @@ version = "0.1.1"
 edition = "2021"
 description = "Multi-language bindings for Lumos.ai"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/lumosai/lumos.ai"
+repository = "https://github.com/louloulin/lumos.ai.git"
 homepage = "https://lumosai.com"
 
 [lib]

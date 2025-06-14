@@ -1,22 +1,19 @@
 //! Agent网络实现
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use async_trait::async_trait;
 use tokio::sync::{mpsc, RwLock, Mutex};
 use tokio::task::JoinHandle;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use dashmap::DashMap;
-use std::fmt;
-use std::time::{SystemTime};
 
 use crate::error::{Error, Result};
 use crate::types::{AgentId, AgentType, AgentStatus, AgentCapability};
-use crate::message::{Message, MessageType, MessageStatus};
+use crate::message::{Message, MessageType};
 use crate::router::{MessageRouter, DefaultMessageRouter};
-use crate::topology::{NetworkTopology, GraphTopology, TopologyType};
+use crate::topology::{NetworkTopology, GraphTopology};
 use crate::discovery::{ServiceDiscovery, InMemoryServiceDiscovery, ServiceRegistration};
 
 /// Agent配置

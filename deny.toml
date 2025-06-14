@@ -99,5 +99,5 @@ unknown-registry = "warn"
 unknown-git = "warn"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
-    "https://github.com/lumosai/lumosai",
+    "https://github.com/louloulin/lumos.ai",
 ]

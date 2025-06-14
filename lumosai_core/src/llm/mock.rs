@@ -7,7 +7,6 @@ use futures::StreamExt;
 // Removed unused imports:
 // use serde_json::Value;
 // use std::sync::Arc;
-use float_cmp::approx_eq;
 
 use crate::error::{Error, Result};
 use crate::llm::{LlmProvider, LlmOptions, Message};

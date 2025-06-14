@@ -9,7 +9,7 @@ use lumosai_core::telemetry::metrics::MetricsCollector;
 use lumosai_core::telemetry::trace::TraceCollector;
 
 use crate::error::{CliResult, CliError};
-use crate::util::{find_project_root, is_lumos_project};
+use crate::util::is_lumos_project;
 use crate::server::monitoring_server;
 
 /// 监控服务器配置选项

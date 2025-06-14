@@ -396,7 +396,7 @@ This project is licensed under the MIT License - see the [LICENSE](../../LICENSE
 
 ## 🆘 Support
 
-- [GitHub Issues](https://github.com/lumosai/lumosai/issues)
+- [GitHub Issues](https://github.com/louloulin/lumos.ai/issues)
 - [Discord Community](https://discord.gg/lumosai)
 - [Documentation](https://docs.lumosai.dev)
 

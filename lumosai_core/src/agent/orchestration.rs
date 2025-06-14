@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc, RwLock, Mutex};
+use tokio::sync::{RwLock, Mutex};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -421,7 +421,7 @@ impl AgentOrchestrator for BasicOrchestrator {
     
     async fn cancel_execution(&self, session_id: &str) -> Result<()> {
         if let Some(session_arc) = self.get_session(session_id).await {
-            let mut session = session_arc.lock().await;
+            let session = session_arc.lock().await;
             
             // 将所有运行中的Agent标记为取消
             let agent_ids: Vec<String> = session.task.participants.clone();

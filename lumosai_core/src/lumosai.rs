@@ -12,7 +12,6 @@ use crate::logger::{Component, Logger, LogLevel, create_logger, create_noop_logg
 use crate::memory::Memory;
 use crate::storage::Storage;
 use crate::telemetry::TelemetrySink;
-use crate::tool::Tool;
 use crate::vector::VectorStorage;
 use crate::workflow::basic::Workflow;
 

@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use crate::error::{Error, Result};
 use crate::tool::Tool;
-use crate::llm::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
+use crate::llm::function_calling::{FunctionDefinition, FunctionCall};
 
 /// Convert a Rust struct to JSON Schema
 /// This can be used with the #[derive(FunctionSchema)] macro

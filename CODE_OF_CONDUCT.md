@@ -93,7 +93,7 @@ We actively encourage participation from people of all backgrounds and identitie
 
 - **📧 General Conduct**: [conduct@lumosai.com](mailto:conduct@lumosai.com)
 - **💬 Community Discord**: [Join our Discord](https://discord.gg/lumosai)
-- **🐛 GitHub Issues**: [Report on GitHub](https://github.com/lumosai/lumosai/issues)
+- **🐛 GitHub Issues**: [Report on GitHub](https://github.com/louloulin/lumos.ai/issues)
 
 ## 🙏 Attribution
 

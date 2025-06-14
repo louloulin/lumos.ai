@@ -4,7 +4,6 @@ use std::process::{Command, Stdio};
 use colored::Colorize;
 use dialoguer::{Input, Select, Confirm, MultiSelect};
 use crate::error::{CliError, CliResult};
-use crate::template::TemplateManager;
 use crate::util::create_dir_all;
 
 pub struct CreateOptions {

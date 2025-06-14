@@ -1,11 +1,14 @@
 [package]
 name = "lumosai-vector-core"
-version = "0.1.1"
+version = "0.1.3"
 edition = "2021"
-authors = ["Lumos.ai Team <team@lumos.ai>"]
-description = "Core abstractions and traits for Lumos vector storage system"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/lumosai/lumos"
+authors = ["Lumosai Team <team@lumosai.dev>"]
+description = "Core abstractions and traits for Lumosai vector storage system"
+license = "MIT"
+repository = "https://github.com/louloulin/lumos.ai.git"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai-vector-core"
+readme = "README.md"
 keywords = ["vector", "embedding", "ai", "rag", "search"]
 categories = ["database", "science", "algorithms"]
 

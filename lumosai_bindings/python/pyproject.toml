@@ -55,9 +55,9 @@ examples = [
 [project.urls]
 Homepage = "https://lumosai.com"
 Documentation = "https://docs.lumosai.com"
-Repository = "https://github.com/lumosai/lumos.ai"
-"Bug Tracker" = "https://github.com/lumosai/lumos.ai/issues"
-Changelog = "https://github.com/lumosai/lumos.ai/blob/main/CHANGELOG.md"
+Repository = "https://github.com/louloulin/lumos.ai"
+"Bug Tracker" = "https://github.com/louloulin/lumos.ai/issues"
+Changelog = "https://github.com/louloulin/lumos.ai/blob/main/CHANGELOG.md"
 
 [tool.maturin]
 python-source = "python"

@@ -20,9 +20,6 @@ use crate::agent::types::{
     AgentStep,
     ToolCall,
     RuntimeContext,
-    DynamicArgument,
-    ToolsInput,
-    ToolsetsInput,
 };
 use crate::voice::{VoiceProvider, VoiceOptions, ListenOptions};
 use crate::workflow::Workflow;

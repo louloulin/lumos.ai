@@ -1,11 +1,11 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use colored::Colorize;
 use tokio::process::Command;
 use crate::error::{CliResult, CliError};
-use crate::util::{find_project_root, is_lumos_project, check_command_available, get_available_port};
+use crate::util::check_command_available;
 use std::env;
 use crate::server::ui_server;
 

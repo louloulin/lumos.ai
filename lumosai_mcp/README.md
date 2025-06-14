@@ -290,7 +290,7 @@ cargo run --example mcp_integration_demo
 
 ## 🔗 相关链接
 
-- [Lumos.ai 主项目](https://github.com/lumosai/lumos.ai)
+- [Lumos.ai 主项目](https://github.com/louloulin/lumos.ai)
 - [MCP协议规范](https://modelcontextprotocol.io/)
 - [Rust文档](https://doc.rust-lang.org/)
 

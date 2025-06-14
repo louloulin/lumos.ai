@@ -176,7 +176,7 @@ impl LumosApp {
         let description = config.description.clone();
 
         // 创建基本的 EnhancedWorkflow
-        let mut workflow = EnhancedWorkflow::new(workflow_id, description);
+        let workflow = EnhancedWorkflow::new(workflow_id, description);
 
         // TODO: 添加步骤配置的处理
         // 这里需要根据 config.steps 来构建工作流步骤

@@ -3,7 +3,6 @@
 //! This module provides a web-based interface for testing and debugging agents
 
 use std::collections::HashMap;
-use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};

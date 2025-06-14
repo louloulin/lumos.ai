@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Lumos.ai AI capability extensions - multimodal, reasoning, and domain-specific features"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/lumosai/lumos.ai"
+repository = "https://github.com/louloulin/lumos.ai.git"
 homepage = "https://lumosai.com"
 
 [lib]

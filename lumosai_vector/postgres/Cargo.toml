@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Lumos.ai Team <team@lumos.ai>"]
 description = "PostgreSQL with pgvector implementation for lumos-vector-core"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/lumosai/lumos"
+repository = "https://github.com/louloulin/lumos.ai.git"
 
 [dependencies]
 # New unified architecture

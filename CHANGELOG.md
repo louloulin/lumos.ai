@@ -97,7 +97,7 @@ tokio = { version = "1.0", features = ["full"] }
 cargo install lumosai-cli
 
 # Build from source
-git clone https://github.com/lumosai/lumosai
+git clone https://github.com/louloulin/lumos.ai.git
 cd lumosai
 cargo build --release
 ```
@@ -178,11 +178,11 @@ Each release includes detailed upgrade guides with:
 - **⚡ Performance** for performance improvements
 
 ### 🔗 Links
-- **📦 Repository**: [GitHub](https://github.com/lumosai/lumosai)
+- **📦 Repository**: [GitHub](https://github.com/louloulin/lumos.ai)
 - **📚 Documentation**: [docs/README.md](docs/README.md)
-- **🐛 Issues**: [GitHub Issues](https://github.com/lumosai/lumosai/issues)
-- **🚀 Releases**: [GitHub Releases](https://github.com/lumosai/lumosai/releases)
+- **🐛 Issues**: [GitHub Issues](https://github.com/louloulin/lumos.ai/issues)
+- **🚀 Releases**: [GitHub Releases](https://github.com/louloulin/lumos.ai/releases)
 
 ---
 
-**For detailed release information, visit our [GitHub Releases](https://github.com/lumosai/lumosai/releases) page.**
+**For detailed release information, visit our [GitHub Releases](https://github.com/louloulin/lumos.ai/releases) page.**

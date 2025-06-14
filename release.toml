@@ -5,7 +5,7 @@
 # 项目信息
 name = "LumosAI"
 description = "企业级 AI 代理框架"
-repository = "https://github.com/lumosai/lumosai"
+repository = "https://github.com/louloulin/lumos.ai.git"
 homepage = "https://lumosai.dev"
 documentation = "https://docs.rs/lumosai"
 
@@ -118,8 +118,8 @@ cargo install lumosai
 ## 🔗 相关链接
 
 - [文档](https://docs.rs/lumosai)
-- [示例](https://github.com/lumosai/lumosai/tree/main/examples)
-- [变更日志](https://github.com/lumosai/lumosai/blob/main/CHANGELOG.md)
+- [示例](https://github.com/louloulin/lumos.ai/tree/main/examples)
+- [变更日志](https://github.com/louloulin/lumos.ai/blob/main/CHANGELOG.md)
 """
 
 [documentation]

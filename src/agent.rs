@@ -2,10 +2,9 @@
 //!
 //! 提供一行代码创建Agent的便利函数，支持智能默认配置。
 
-use crate::{Result, Error, Message, Role};
+use crate::{Result, Message};
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
-use lumosai_core::agent::Agent;
 
 /// 简单Agent类型
 pub type SimpleAgent = Arc<dyn AgentTrait>;

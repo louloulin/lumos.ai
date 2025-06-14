@@ -3,13 +3,12 @@
 //! This module provides a high-level pipeline for implementing RAG systems,
 //! similar to Mastra's document processing pipeline.
 
-use async_trait::async_trait;
 use std::collections::HashMap;
 
 use crate::document::{DocumentChunker, EnhancedChunker};
 use crate::embedding::EmbeddingProvider;
 use crate::error::{RagError, Result};
-use crate::types::{Document, ProcessingConfig, RetrievalOptions, RetrievalResult};
+use crate::types::{Document, ProcessingConfig};
 
 /// RAG Pipeline for processing documents and performing retrieval
 pub struct RagPipeline {

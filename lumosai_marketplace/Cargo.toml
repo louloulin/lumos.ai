@@ -4,7 +4,7 @@ version = "0.1.1"
 edition = "2021"
 description = "Lumos.ai工具市场建设模块 - 完整的工具生态系统"
 license = "MIT"
-repository = "https://github.com/lumosai/lumos.ai"
+repository = "https://github.com/louloulin/lumos.ai.git"
 keywords = ["ai", "agent", "tools", "marketplace", "ecosystem"]
 categories = ["development-tools", "web-programming"]
 

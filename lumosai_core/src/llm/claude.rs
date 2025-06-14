@@ -10,11 +10,10 @@
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use super::{
     LlmProvider, LlmOptions, Message, Role,
-    function_calling::{FunctionDefinition, ToolChoice, FunctionCall},
+    function_calling::{FunctionDefinition, ToolChoice},
     provider::FunctionCallingResponse
 };
 use futures::stream::BoxStream;
@@ -308,7 +307,7 @@ impl ClaudeProvider {
         }
 
         // 创建流式响应处理器
-        use futures::stream::{self, StreamExt};
+        use futures::stream::StreamExt;
 
         let stream = response.bytes_stream().map(|chunk_result| {
             match chunk_result {

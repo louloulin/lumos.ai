@@ -13,11 +13,10 @@ use serde::{Serialize, Deserialize};
 use colored::Colorize;
 
 use lumosai_core::telemetry::metrics::{
-    MetricsCollector, AgentMetrics, ToolMetrics, MemoryMetrics, 
-    MetricsSummary, AgentPerformance, TimeRange
+    MetricsCollector, 
+    MetricsSummary, TimeRange
 };
-use lumosai_core::telemetry::collectors::InMemoryMetricsCollector;
-use lumosai_core::telemetry::trace::{TraceCollector, ExecutionTrace};
+use lumosai_core::telemetry::trace::TraceCollector;
 use crate::error::{CliResult, CliError};
 use crate::util::get_available_port;
 

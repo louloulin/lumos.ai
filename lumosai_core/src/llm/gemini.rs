@@ -7,7 +7,6 @@ use futures::stream::BoxStream;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::HashMap;
 
 use crate::error::{Error, Result};
 use super::{

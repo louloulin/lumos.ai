@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use std::env;
 use tokio::net::TcpListener;
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, middleware, error, Error};
+use actix_web::{web, App, HttpServer, HttpResponse, Responder, middleware};
 use actix_cors::Cors;
 use serde::{Serialize, Deserialize};
 use colored::Colorize;

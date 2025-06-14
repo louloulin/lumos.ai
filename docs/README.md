@@ -49,7 +49,7 @@ Check out [Overview](1_overview.md), [Implementation Summary](implementation_sum
 
 ## 🆘 Need Help?
 
-- **🐛 Found a bug?** [Report it on GitHub](https://github.com/lumosai/lumosai/issues)
+- **🐛 Found a bug?** [Report it on GitHub](https://github.com/louloulin/lumos.ai/issues)
 - **💡 Have a question?** Check our [FAQ](8_faq.md)
 - **📧 Need enterprise support?** [Contact us](mailto:enterprise@lumosai.com)
 

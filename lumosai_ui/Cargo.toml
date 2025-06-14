@@ -6,7 +6,7 @@ version = "0.1.3"
 edition = "2021"
 description = "LumosAI UI components based on bionic-gpt design patterns"
 license = "MIT"
-repository = "https://github.com/lumosai/lumosai"
+repository = "https://github.com/louloulin/lumos.ai.git"
 keywords = ["ui", "web", "components", "lumosai", "ai"]
 categories = ["web-programming", "gui"]
 

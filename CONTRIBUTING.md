@@ -12,7 +12,7 @@ git clone https://github.com/YOUR_USERNAME/lumosai.git
 cd lumosai
 
 # Add the original repository as upstream
-git remote add upstream https://github.com/lumosai/lumosai.git
+git remote add upstream https://github.com/louloulin/lumos.ai.git
 ```
 
 ### 2. 🛠️ Development Setup

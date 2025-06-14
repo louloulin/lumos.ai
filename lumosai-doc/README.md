@@ -241,7 +241,7 @@ docker run -d -p 3000:3000 -v ./data:/app/data lumosai/server:latest
 
 ## 社区和支持
 
-- [GitHub 仓库](https://github.com/lumosai/lumosai) - 代码仓库和问题跟踪
+- [GitHub 仓库](https://github.com/louloulin/lumos.ai) - 代码仓库和问题跟踪
 - [官方网站](https://www.lumosai.org) - 项目官方网站和最新动态
 - [社区论坛](https://community.lumosai.org) - 讨论和问答
 - [Discord 频道](https://discord.gg/lumosai) - 实时交流和社区活动
@@ -282,7 +282,7 @@ docker run -d -p 3000:3000 -v ./data:/app/data lumosai/server:latest
 
 ```
 Zhang, L., et al. (2023). Lumosai: A Distributed AI Agent Framework.
-GitHub repository: https://github.com/lumosai/lumosai
+GitHub repository: https://github.com/louloulin/lumos.ai
 ```
 
 ## 许可证

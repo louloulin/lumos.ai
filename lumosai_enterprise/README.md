@@ -238,7 +238,7 @@ cargo run --example multi_tenant_demo --package lumosai_enterprise
 ## 📞 支持
 
 - **文档**: [Lumos.ai 官方文档](https://docs.lumosai.com)
-- **社区**: [GitHub Discussions](https://github.com/lumosai/lumos.ai/discussions)
+- **社区**: [GitHub Discussions](https://github.com/louloulin/lumos.ai/discussions)
 - **企业支持**: enterprise@lumosai.com
 - **技术支持**: support@lumosai.com
 

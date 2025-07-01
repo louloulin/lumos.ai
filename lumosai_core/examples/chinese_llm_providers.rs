@@ -189,7 +189,7 @@ async fn test_function_calling(
     let functions = vec![
         FunctionDefinition {
             name: "get_weather".to_string(),
-            description: "获取指定城市的天气信息".to_string(),
+            description: Some("获取指定城市的天气信息".to_string()),
             parameters: json!({
                 "type": "object",
                 "properties": {

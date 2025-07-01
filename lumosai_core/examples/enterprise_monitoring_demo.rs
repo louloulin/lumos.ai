@@ -11,6 +11,10 @@
 use std::collections::HashMap;
 use chrono::{Utc, Duration};
 use uuid::Uuid;
+use lumosai_core::telemetry::{
+    MetricsCollector, ToolMetrics, MemoryMetrics, MetricsSummary,
+    AgentPerformance, TimeRange, ResourceUsage
+};
 
 use lumosai_core::{
     telemetry::{
@@ -85,7 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. 业务指标收集演示
     println!("\n💼 3. 业务指标收集演示...");
     let business_config = BusinessMetricsConfig::default();
-    let mut business_collector = BusinessMetricsCollector::new(business_config);
+    let mut business_collector = BusinessMetricsCollector::new();
     
     // 记录用户活动
     let user_activity = UserActivity {
@@ -211,7 +215,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 5. 容量规划演示
     println!("\n📈 5. 容量规划演示...");
     let capacity_config = CapacityPlanningConfig::default();
-    let mut capacity_planner = CapacityPlanner::new(capacity_config);
+    let mut capacity_planner = CapacityPlanner::new();
     
     // 记录资源使用数据
     let resource_usage = ResourceUsagePoint {
@@ -266,7 +270,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 6. SLA监控演示
     println!("\n📋 6. SLA监控演示...");
     let sla_config = SLAMonitoringConfig::default();
-    let mut sla_monitor = SLAMonitor::new(sla_config);
+    let mut sla_monitor = SLAMonitor::new();
     
     // 定义SLA
     let sla = ServiceLevelAgreement {
@@ -352,12 +356,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ).await?;
     
     println!("   📊 SLA报告:");
-    println!("     - 总SLA数: {}", sla_report.sla_summary.total_slas);
-    println!("     - 达标SLA数: {}", sla_report.sla_summary.compliant_slas);
-    println!("     - 违约SLA数: {}", sla_report.sla_summary.violated_slas);
-    println!("     - 整体合规率: {:.1}%", sla_report.sla_summary.overall_compliance_rate);
-    println!("     - 平均可用性: {:.2}%", sla_report.sla_summary.average_availability);
-    println!("     - 平均响应时间: {:.1}ms", sla_report.sla_summary.average_response_time);
+    println!("     {}", sla_report);
     
     // 7. 企业级报告生成
     println!("\n📄 7. 企业级报告生成...");
@@ -372,7 +371,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     if let Some(business_report) = &enterprise_report.business_report {
         println!("     - 月度收入: ${:.2}", business_report.revenue_metrics.monthly_recurring_revenue);
-        println!("     - 活跃用户: {}", business_report.usage_metrics.daily_active_users);
+        println!("     - 活跃用户: {}", business_report.usage_metrics.active_users);
     }
     
     if let Some(anomaly_report) = &enterprise_report.anomaly_report {
@@ -416,21 +415,49 @@ struct MockPerformanceAnalyzer;
 
 #[async_trait::async_trait]
 impl MetricsCollector for MockMetricsCollector {
-    async fn collect_metrics(&self, _agent_id: &str) -> Result<AgentMetrics, LumosError> {
-        Ok(AgentMetrics {
-            agent_id: "mock_agent".to_string(),
-            timestamp: Utc::now(),
-            cpu_usage: 0.5,
-            memory_usage: 0.6,
-            request_count: 100,
-            error_count: 2,
-            average_response_time: 150.0,
-            custom_metrics: HashMap::new(),
+    async fn record_agent_execution(&self, _metrics: AgentMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+
+    async fn record_tool_execution(&self, _metrics: ToolMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+
+    async fn record_memory_operation(&self, _metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+
+    async fn get_metrics_summary(&self, _agent_name: Option<&str>, _from_time: Option<u64>, _to_time: Option<u64>) -> Result<MetricsSummary, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(MetricsSummary {
+            total_executions: 100,
+            successful_executions: 98,
+            failed_executions: 2,
+            avg_execution_time_ms: 150.0,
+            min_execution_time_ms: 50,
+            max_execution_time_ms: 500,
+            total_tokens_used: 15000,
+            avg_tokens_per_execution: 150.0,
+            tool_call_stats: HashMap::new(),
+            time_range: TimeRange { start: 0, end: 1000 },
         })
     }
-    
-    async fn record_metrics(&self, _metrics: AgentMetrics) -> Result<(), LumosError> {
-        Ok(())
+
+    async fn get_agent_performance(&self, _agent_name: &str) -> Result<AgentPerformance, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(AgentPerformance {
+            agent_name: "mock_agent".to_string(),
+            executions_last_24h: 100,
+            success_rate_24h: 98.0,
+            avg_response_time_24h: 150.0,
+            error_rate_trend: vec![(1000, 2.0)],
+            performance_trend: vec![(1000, 150.0)],
+            top_tools: vec![("tool1".to_string(), 50)],
+            resource_usage: ResourceUsage {
+                cpu_usage_percent: 50.0,
+                memory_usage_mb: 512.0,
+                disk_usage_mb: 1024.0,
+                network_io_mb: 100.0,
+            },
+        })
     }
 }
 

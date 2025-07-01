@@ -188,6 +188,10 @@ mod tests {
     
     #[async_trait]
     impl LlmProvider for TestLlmProvider {
+        fn name(&self) -> &str {
+            "test-llm-provider"
+        }
+
         async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> lumosai_core::Result<String> {
             Ok(self.response.lock().unwrap().clone())
         }

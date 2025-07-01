@@ -148,7 +148,6 @@ pub fn create_all_builtin_tools(_config: &BuiltinToolsConfig) -> Vec<Box<dyn Too
         // Math tools
         Box::new(create_calculator_tool()),
         Box::new(create_statistics_tool()),
-        Box::new(CalculatorTool::new()),
     ]
 }
 
@@ -169,7 +168,6 @@ pub fn create_safe_builtin_tools(_workspace_path: PathBuf) -> Vec<Box<dyn Tool>>
         Box::new(create_uuid_generator_tool()),
         Box::new(create_calculator_tool()),
         Box::new(create_statistics_tool()),
-        Box::new(CalculatorTool::new()),
         // Note: File and web tools excluded for security
     ]
 }

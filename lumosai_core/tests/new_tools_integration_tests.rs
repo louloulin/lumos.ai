@@ -3,8 +3,8 @@
 //! 测试AI工具集、数据库工具集和通信工具集的功能
 
 use lumosai_core::tool::builtin::{ai, database, communication};
-use lumosai_core::tool::{ToolExecutionContext, ToolExecutionOptions};
-use serde_json::{json, Value};
+use lumosai_core::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
+use serde_json::json;
 use tokio;
 
 #[tokio::test]

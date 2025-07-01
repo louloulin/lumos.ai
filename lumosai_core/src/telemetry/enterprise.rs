@@ -690,15 +690,58 @@ pub struct AnomalyReport {
 pub struct CapacityPlanner;
 pub struct SLAMonitor;
 
+// SLA相关类型
+#[derive(Debug, Clone)]
+pub struct SLA {
+    pub id: String,
+    pub name: String,
+    pub target: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct SLAMetric {
+    pub sla_id: String,
+    pub value: f64,
+    pub timestamp: DateTime<Utc>,
+}
+
 impl CapacityPlanner {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self
+    }
+
+    pub async fn record_resource_usage(&mut self, _usage: f64) -> Result<(), LumosError> {
+        Ok(())
+    }
+
+    pub async fn generate_capacity_forecast(&self, _resource_type: &str) -> Result<String, LumosError> {
+        Ok("Capacity forecast report".to_string())
+    }
+
+    pub async fn generate_scaling_recommendations(&self) -> Result<Vec<String>, LumosError> {
+        Ok(vec!["Scale up recommendation".to_string()])
+    }
+
+    pub async fn generate_capacity_report(&self) -> Result<String, LumosError> {
+        Ok("Capacity planning report".to_string())
     }
 }
 
 impl SLAMonitor {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self
+    }
+
+    pub async fn add_sla(&mut self, _sla: SLA) -> Result<(), LumosError> {
+        Ok(())
+    }
+
+    pub async fn record_metric(&mut self, _metric: SLAMetric) -> Result<(), LumosError> {
+        Ok(())
+    }
+
+    pub async fn generate_report(&self, _start_time: DateTime<Utc>, _end_time: DateTime<Utc>) -> Result<String, LumosError> {
+        Ok("SLA monitoring report".to_string())
     }
 }
 
@@ -735,7 +778,7 @@ impl ComplianceMonitor {
 }
 
 impl BusinessMetricsCollector {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let now = Utc::now();
         Self {
             revenue_metrics: RevenueMetrics {
@@ -770,6 +813,29 @@ impl BusinessMetricsCollector {
         }
     }
     
+    pub async fn record_user_activity(&mut self, _user_id: &str) -> Result<(), LumosError> {
+        self.usage_metrics.active_users += 1;
+        Ok(())
+    }
+
+    pub async fn record_revenue_event(&mut self, _revenue: f64) -> Result<(), LumosError> {
+        self.revenue_metrics.monthly_recurring_revenue += _revenue;
+        Ok(())
+    }
+
+    pub async fn record_customer_feedback(&mut self, _feedback: f64) -> Result<(), LumosError> {
+        self.customer_metrics.customer_satisfaction = _feedback;
+        Ok(())
+    }
+
+    pub async fn generate_business_report(&self) -> Result<BusinessReport, LumosError> {
+        Ok(BusinessReport {
+            revenue_metrics: self.revenue_metrics.clone(),
+            usage_metrics: self.usage_metrics.clone(),
+            customer_metrics: self.customer_metrics.clone(),
+        })
+    }
+
     async fn record_metric(&mut self, _metric: &EnterpriseMetric) -> Result<(), LumosError> {
         // 简化实现
         Ok(())

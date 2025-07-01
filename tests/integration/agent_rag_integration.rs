@@ -66,7 +66,7 @@ async fn test_agent_rag_knowledge_retrieval() {
     // Test knowledge retrieval
     let search_results = env.rag.search("capital France", 1).await.unwrap();
     assert!(!search_results.is_empty(), "Should find information about France");
-    assert!(search_results[0].content.contains("Paris"), "Should find Paris as capital");
+    assert!(search_results[0].document.content.contains("Paris"), "Should find Paris as capital");
     
     let search_results = env.rag.search("Rust memory", 1).await.unwrap();
     assert!(!search_results.is_empty(), "Should find information about Rust");
@@ -259,7 +259,7 @@ async fn test_agent_rag_scalability() {
     assert!(!search_results.is_empty(), "Should find results in large dataset");
     
     // Test agent performance
-    let (agent_response, agent_duration) = PerformanceTestUtils::measure_time(|| async {
+    let (agent_response, agent_duration) = PerformanceTestUtils::measure_time(async {
         env.agent.generate_simple("Analyze the scalability data").await.unwrap()
     }).await;
     

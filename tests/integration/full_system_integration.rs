@@ -160,16 +160,17 @@ async fn test_error_recovery_workflow() {
     let system = setup_complete_system().await.unwrap();
     
     // Test system resilience to various errors
+    let very_long_input = "x".repeat(10000);
     let error_scenarios = vec![
         ("empty_input", ""),
         ("invalid_request", "!@#$%^&*()"),
-        ("very_long_input", &"x".repeat(10000)),
+        ("very_long_input", &very_long_input),
         ("special_characters", "测试 🚀 émojis and ñoñó"),
     ];
     
     let mut successful_recoveries = 0;
     
-    for (scenario_name, input) in error_scenarios {
+    for (scenario_name, input) in &error_scenarios {
         println!("Testing error scenario: {}", scenario_name);
         
         let result = system.agent.generate_simple(input).await;

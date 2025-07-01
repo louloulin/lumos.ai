@@ -15,8 +15,8 @@ async fn benchmark_agent_creation() {
         || async {
             let _agent = Agent::builder()
                 .name("benchmark-agent")
-                .model("gpt-4")
-                .system_prompt("You are a benchmark test assistant")
+                .model_name("gpt-4")
+                .instructions("You are a benchmark test assistant")
                 .build()
                 .await
                 .unwrap();
@@ -155,8 +155,8 @@ async fn benchmark_agent_memory_usage() {
     for i in 0..agent_count {
         let agent = Agent::builder()
             .name(&format!("memory-test-agent-{}", i))
-            .model("gpt-4")
-            .system_prompt("You are a memory test assistant")
+            .model_name("gpt-4")
+            .instructions("You are a memory test assistant")
             .build()
             .await
             .unwrap();

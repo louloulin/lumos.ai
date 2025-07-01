@@ -1,5 +1,6 @@
 // Concurrent performance tests for LumosAI framework
 use crate::test_config::*;
+use lumosai_vector_core::VectorStorage as VectorStorageTrait;
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -113,8 +114,12 @@ async fn test_concurrent_vector_operations() {
             let mut operation_success = true;
             
             for j in 0..documents_per_operation {
-                let doc = format!("Concurrent document {} from operation {}", j, i);
-                if storage_clone.add_document(&doc).await.is_err() {
+                let doc_content = format!("Concurrent document {} from operation {}", j, i);
+                let doc = lumosai_vector_core::Document::new(
+                    &format!("doc_{}_{}", i, j),
+                    &doc_content
+                ).with_embedding(vec![0.1; 384]);
+                if storage_clone.upsert_documents("default", vec![doc]).await.is_err() {
                     operation_success = false;
                 }
             }
@@ -144,7 +149,9 @@ async fn test_concurrent_vector_operations() {
         let query = format!("Concurrent document {}", i % 10);
         
         let handle = tokio::spawn(async move {
-            storage_clone.search(&query, 5).await.is_ok()
+            let search_request = lumosai_vector_core::SearchRequest::new_text("default", &query)
+                .with_top_k(5);
+            storage_clone.search(search_request).await.is_ok()
         });
         
         search_handles.push(handle);
@@ -215,8 +222,12 @@ async fn test_concurrent_rag_operations() {
                 
                 if op_id % 3 == 0 {
                     // Add document operation
-                    let doc = format!("User {} document {} about topic {}", user_id, op_id, op_id % 5);
-                    if rag_clone.add_document(&doc).await.is_ok() {
+                    let doc_content = format!("User {} document {} about topic {}", user_id, op_id, op_id % 5);
+                    let doc = lumosai_vector_core::Document::new(
+                        &format!("user_{}_{}", user_id, op_id),
+                        &doc_content
+                    ).with_embedding(vec![0.1; 384]);
+                    if rag_clone.storage.upsert_documents("default", vec![doc]).await.is_ok() {
                         user_successes += 1;
                     }
                 } else {
@@ -421,7 +432,12 @@ async fn test_mixed_concurrent_workload() {
                 let storage_clone = storage.clone();
                 let handle = tokio::spawn(async move {
                     let start = Instant::now();
-                    let result = storage_clone.add_document(&format!("Mixed workload document {}", i)).await;
+                    let doc_content = format!("Mixed workload document {}", i);
+                    let doc = lumosai_vector_core::Document::new(
+                        &format!("mixed_{}", i),
+                        &doc_content
+                    ).with_embedding(vec![0.1; 384]);
+                    let result = storage_clone.upsert_documents("default", vec![doc]).await;
                     let duration = start.elapsed();
                     
                     let mut results = results_clone.lock().await;
@@ -450,7 +466,12 @@ async fn test_mixed_concurrent_workload() {
                     let start = Instant::now();
                     
                     // First add document
-                    let doc_result = storage_clone.add_document(&format!("Mixed operation document {}", i)).await;
+                    let doc_content = format!("Mixed operation document {}", i);
+                    let doc = lumosai_vector_core::Document::new(
+                        &format!("mixed_op_{}", i),
+                        &doc_content
+                    ).with_embedding(vec![0.1; 384]);
+                    let doc_result = storage_clone.upsert_documents("default", vec![doc]).await;
                     
                     // Then generate response
                     let agent_result = agent_clone.generate_simple(&format!("Mixed operation request {}", i)).await;

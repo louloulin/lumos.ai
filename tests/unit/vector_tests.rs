@@ -1,6 +1,7 @@
 // Unit tests for Vector Storage system
 use crate::test_config::*;
 use lumosai_core::prelude::*;
+use lumosai_vector_core::VectorStorage as VectorStorageTrait;
 use std::time::Duration;
 
 #[tokio::test]
@@ -54,7 +55,9 @@ async fn test_vector_storage_search() {
     }
     
     // Search for relevant content
-    let results = storage.search("machine learning", 3).await;
+    let search_request = lumosai_vector_core::SearchRequest::new_text("default", "machine learning")
+        .with_top_k(3);
+    let results = storage.search(search_request).await;
     assert!(results.is_ok(), "Search should succeed");
     
     let results = results.unwrap();
@@ -68,7 +71,9 @@ async fn test_vector_storage_search_empty() {
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
     
     // Search in empty storage
-    let results = storage.search("test query", 5).await;
+    let search_request = lumosai_vector_core::SearchRequest::new_text("default", "test query")
+        .with_top_k(5);
+    let results = storage.search(search_request).await;
     assert!(results.is_ok(), "Search in empty storage should succeed");
     
     let results = results.unwrap();
@@ -86,13 +91,15 @@ async fn test_vector_storage_search_no_matches() {
     storage.add_document("Kitchen utensils and cooking techniques").await.unwrap();
     
     // Search for completely unrelated topic
-    let results = storage.search("quantum physics equations", 5).await;
+    let search_request = lumosai_vector_core::SearchRequest::new_text("default", "quantum physics equations")
+        .with_top_k(5);
+    let results = storage.search(search_request).await;
     assert!(results.is_ok(), "Search should succeed even with no matches");
     
     // Results might be empty or have very low scores
     let results = results.unwrap();
-    if !results.is_empty() {
-        for result in &results {
+    if !results.results.is_empty() {
+        for result in &results.results {
             assert!(result.score < 0.5, "Unrelated results should have low scores");
         }
     }
@@ -106,12 +113,16 @@ async fn test_vector_storage_large_document() {
     
     // Test with a large document
     let large_doc = "Large document content. ".repeat(1000);
-    let result = storage.add_document(&large_doc).await;
+    let doc = lumosai_vector_core::Document::new("large_doc", &large_doc)
+        .with_embedding(vec![0.1; 384]);
+    let result = storage.upsert_documents("default", vec![doc]).await;
     
     assert!(result.is_ok(), "Adding large document should succeed");
     
     // Search in the large document
-    let search_results = storage.search("Large document", 1).await;
+    let search_request = lumosai_vector_core::SearchRequest::new_text("default", "Large document")
+        .with_top_k(1);
+    let search_results = storage.search(search_request).await;
     assert!(search_results.is_ok(), "Searching large document should succeed");
 }
 
@@ -150,7 +161,9 @@ async fn test_vector_storage_concurrent_operations() {
         let query = format!("Concurrent {}", i);
         
         let handle = tokio::spawn(async move {
-            storage_clone.search(&query, 2).await
+            let search_request = lumosai_vector_core::SearchRequest::new_text("default", &query)
+                .with_top_k(2);
+            storage_clone.search(search_request).await
         });
         
         search_handles.push(handle);
@@ -183,8 +196,10 @@ async fn test_vector_storage_performance() {
     }
     
     // Measure search performance
-    let (search_result, search_duration) = PerformanceTestUtils::measure_time(|| async {
-        storage.search("Performance test", 5).await
+    let (search_result, search_duration) = PerformanceTestUtils::measure_time(async {
+        let search_request = lumosai_vector_core::SearchRequest::new_text("default", "Performance test")
+            .with_top_k(5);
+        storage.search(search_request).await
     }).await;
     
     assert!(search_result.is_ok(), "Performance test search should succeed");
@@ -246,7 +261,9 @@ async fn test_vector_storage_search_limits() {
     let test_limits = vec![1, 5, 10, 15, 25];
     
     for limit in test_limits {
-        let results = storage.search("Test document", limit).await;
+        let search_request = lumosai_vector_core::SearchRequest::new_text("default", "Test document")
+            .with_top_k(limit);
+        let results = storage.search(search_request).await;
         assert!(results.is_ok(), "Search with limit {} should succeed", limit);
         
         let results = results.unwrap();
@@ -282,7 +299,9 @@ async fn test_vector_storage_memory_usage() {
     }
     
     // Perform searches to ensure everything still works
-    let results = storage.search("Memory test", 10).await;
+    let search_request = lumosai_vector_core::SearchRequest::new_text("default", "Memory test")
+        .with_top_k(10);
+    let results = storage.search(search_request).await;
     assert!(results.is_ok(), "Search after many additions should succeed");
     
     let results = results.unwrap();

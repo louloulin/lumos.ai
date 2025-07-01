@@ -1,5 +1,7 @@
 // Load testing for LumosAI framework
 use crate::test_config::*;
+use lumosai_core::agent::Agent;
+use lumosai_vector_core::VectorStorage as VectorStorageTrait;
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -269,7 +271,11 @@ async fn test_concurrent_component_load() {
         let doc = format!("Concurrent storage document {}", i);
         
         let handle = tokio::spawn(async move {
-            storage_clone.add_document(&doc).await.map(|_| "storage")
+            let document = lumosai_vector_core::Document::new(
+                &format!("concurrent_{}", i),
+                &doc
+            ).with_embedding(vec![0.1; 384]);
+            storage_clone.upsert_documents("default", vec![document]).await.map(|_| "storage")
         });
         
         handles.push(handle);
@@ -434,6 +440,5 @@ async fn execute_load_burst(agent: &Agent, request_count: usize, phase: &str) ->
 }
 
 // Mock types for testing
-type Agent = crate::test_config::TestUtils;
 type VectorStorage = String;
 type RagSystem = String;

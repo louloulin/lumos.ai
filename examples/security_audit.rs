@@ -19,7 +19,7 @@ use chrono::{DateTime, Utc};
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🔒 安全与审计演示");
     println!("==================");
 

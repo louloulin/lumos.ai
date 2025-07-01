@@ -358,11 +358,14 @@ mod tests {
     #[tokio::test]
     async fn test_event_publishing() {
         let event_bus = create_bus(100);
-        
+
+        // 创建一个订阅者以保持通道开放
+        let _receiver = subscribe(&event_bus);
+
         let result = publish(&event_bus, "agent_started", serde_json::json!({
             "agent_id": "test_agent"
         })).await;
-        
+
         assert!(result.is_ok());
     }
     
@@ -394,17 +397,21 @@ mod tests {
     #[tokio::test]
     async fn test_metrics_handler() {
         let event_bus = create_bus(100);
+
+        // 创建一个订阅者以保持通道开放
+        let _receiver = subscribe(&event_bus);
+
         let metrics_handler = register_metrics_handler(&event_bus).await
             .expect("Failed to register metrics handler");
-        
+
         // 发布一些事件
         publish(&event_bus, "agent_started", serde_json::json!({
             "agent_id": "test_agent"
         })).await.expect("Failed to publish event");
-        
+
         // 等待事件处理
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        
+
         let metrics = metrics_handler.get_metrics().await;
         assert!(metrics.get("agent_started").is_some());
         assert!(metrics.get("total_events").is_some());

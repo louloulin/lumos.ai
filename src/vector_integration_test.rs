@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
+    use lumosai_vector_core::VectorStorage as VectorStorageTrait;
     use std::env;
     
     /// 测试内存向量存储

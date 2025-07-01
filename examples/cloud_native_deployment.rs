@@ -16,7 +16,7 @@ use serde_json::json;
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("☁️ 云原生部署演示");
     println!("==================");
     
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示容器化配置
-async fn demo_containerization() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_containerization() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 容器化配置 ===");
     
     // 创建容器配置
@@ -136,7 +136,7 @@ async fn demo_containerization() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示 Kubernetes 部署
-async fn demo_kubernetes_deployment() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_kubernetes_deployment() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: Kubernetes 部署 ===");
     
     // 创建 Kubernetes 部署器
@@ -230,7 +230,7 @@ async fn demo_kubernetes_deployment() -> Result<(), Box<dyn std::error::Error>> 
 }
 
 /// 演示自动扩缩容
-async fn demo_auto_scaling() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_auto_scaling() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 自动扩缩容 ===");
     
     // 创建自动扩缩容器
@@ -352,7 +352,7 @@ async fn demo_auto_scaling() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示服务网格集成
-async fn demo_service_mesh() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_service_mesh() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 服务网格集成 ===");
     
     // 创建服务网格配置
@@ -390,6 +390,7 @@ async fn demo_service_mesh() -> Result<(), Box<dyn std::error::Error>> {
                 per_try_timeout_seconds: 10,
                 retry_on: vec!["5xx".to_string(), "gateway-error".to_string()],
             }),
+            traffic_split: None,
             timeout_seconds: 30,
         },
         TrafficPolicy {
@@ -874,19 +875,19 @@ struct ServiceMeshStatus {
 struct KubernetesDeployer;
 
 impl KubernetesDeployer {
-    fn new(_config: KubernetesConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: KubernetesConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
 
-    async fn generate_deployment_manifest(&self, _service: &ServiceConfig) -> Result<String, Box<dyn std::error::Error>> {
+    async fn generate_deployment_manifest(&self, _service: &ServiceConfig) -> std::result::Result<String, Box<dyn std::error::Error>> {
         Ok("Deployment manifest generated".to_string())
     }
 
-    async fn generate_service_manifest(&self, _service: &ServiceConfig) -> Result<String, Box<dyn std::error::Error>> {
+    async fn generate_service_manifest(&self, _service: &ServiceConfig) -> std::result::Result<String, Box<dyn std::error::Error>> {
         Ok("Service manifest generated".to_string())
     }
 
-    async fn deploy_service(&self, service: &ServiceConfig) -> Result<DeploymentResult, Box<dyn std::error::Error>> {
+    async fn deploy_service(&self, service: &ServiceConfig) -> std::result::Result<DeploymentResult, Box<dyn std::error::Error>> {
         // 模拟部署过程
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -905,7 +906,7 @@ impl KubernetesDeployer {
         })
     }
 
-    async fn generate_ingress_manifest(&self, _config: &IngressConfig) -> Result<String, Box<dyn std::error::Error>> {
+    async fn generate_ingress_manifest(&self, _config: &IngressConfig) -> std::result::Result<String, Box<dyn std::error::Error>> {
         Ok("Ingress manifest generated".to_string())
     }
 }
@@ -913,11 +914,11 @@ impl KubernetesDeployer {
 struct AutoScaler;
 
 impl AutoScaler {
-    fn new(_config: AutoScalerConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: AutoScalerConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
 
-    async fn apply_scaling_policy(&self, _policy: ScalingPolicy) -> Result<(), Box<dyn std::error::Error>> {
+    async fn apply_scaling_policy(&self, _policy: ScalingPolicy) -> std::result::Result<(), Box<dyn std::error::Error>> {
         // 模拟应用扩缩容策略
         Ok(())
     }
@@ -927,7 +928,7 @@ impl AutoScaler {
         _service: &str,
         cpu_usage: f64,
         memory_usage: f64,
-    ) -> Result<ScalingDecision, Box<dyn std::error::Error>> {
+    ) -> std::result::Result<ScalingDecision, Box<dyn std::error::Error>> {
         // 简单的扩缩容逻辑
         let (action, target_replicas, reason) = if cpu_usage > 85.0 || memory_usage > 85.0 {
             if cpu_usage > 95.0 || memory_usage > 95.0 {
@@ -952,21 +953,21 @@ impl AutoScaler {
 struct ServiceMesh;
 
 impl ServiceMesh {
-    fn new(_config: ServiceMeshConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: ServiceMeshConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
 
-    async fn apply_traffic_policy(&self, _policy: TrafficPolicy) -> Result<(), Box<dyn std::error::Error>> {
+    async fn apply_traffic_policy(&self, _policy: TrafficPolicy) -> std::result::Result<(), Box<dyn std::error::Error>> {
         // 模拟应用流量策略
         Ok(())
     }
 
-    async fn apply_security_policy(&self, _policy: SecurityPolicy) -> Result<(), Box<dyn std::error::Error>> {
+    async fn apply_security_policy(&self, _policy: SecurityPolicy) -> std::result::Result<(), Box<dyn std::error::Error>> {
         // 模拟应用安全策略
         Ok(())
     }
 
-    async fn get_status(&self) -> Result<ServiceMeshStatus, Box<dyn std::error::Error>> {
+    async fn get_status(&self) -> std::result::Result<ServiceMeshStatus, Box<dyn std::error::Error>> {
         Ok(ServiceMeshStatus {
             total_services: 8,
             healthy_services: 7,

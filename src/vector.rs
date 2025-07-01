@@ -7,6 +7,7 @@ use std::sync::Arc;
 use lumosai_vector_core::prelude::*;
 
 /// 向量存储抽象 - 使用enum来支持多种存储类型
+#[derive(Clone)]
 pub enum VectorStorage {
     Memory(Arc<lumosai_vector::memory::MemoryVectorStorage>),
     #[cfg(feature = "vector-postgres")]

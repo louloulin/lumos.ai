@@ -507,7 +507,7 @@ struct QuotaConfig {
     grace_period_minutes: u32,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum ResourceType {
     Agents,
     RequestsPerMinute,
@@ -556,7 +556,7 @@ enum BillingCycle {
     Annually,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum UsageMetric {
     AgentRequests,
     StorageGB,
@@ -681,7 +681,7 @@ impl QuotaManager {
         let current_usage = usage_data
             .get(tenant_id)
             .and_then(|tenant_usage| tenant_usage.get(resource_type))
-            .copied()
+            .map(|&value| value)
             .unwrap_or(0);
 
         let quota_limit = match (tenant_id, resource_type) {

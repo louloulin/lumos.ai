@@ -1,6 +1,6 @@
 // Unit tests for Vector Storage system
 use crate::test_config::*;
-use lumosai_core::prelude::*;
+use lumosai::prelude::SearchResult;
 use lumosai_vector_core::VectorStorage as VectorStorageTrait;
 use std::time::Duration;
 
@@ -8,7 +8,7 @@ use std::time::Duration;
 async fn test_vector_storage_creation() {
     init_test_env();
     
-    let storage = VectorStorage::memory().await;
+    let storage = TestUtils::create_test_vector_storage().await;
     assert!(storage.is_ok(), "Vector storage creation should succeed");
 }
 
@@ -18,7 +18,9 @@ async fn test_vector_storage_add_document() {
     
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
     
-    let result = storage.add_document("Test document content").await;
+    let doc = lumosai_vector_core::Document::new("test_doc", "Test document content")
+        .with_embedding(vec![0.1; 384]);
+    let result = storage.upsert_documents("default", vec![doc]).await;
     assert!(result.is_ok(), "Adding document should succeed");
 }
 
@@ -29,8 +31,10 @@ async fn test_vector_storage_add_multiple_documents() {
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
     let documents = TestUtils::generate_test_documents(5);
     
-    for (i, doc) in documents.iter().enumerate() {
-        let result = storage.add_document(doc).await;
+    for (i, doc_content) in documents.iter().enumerate() {
+        let doc = lumosai_vector_core::Document::new(&format!("doc_{}", i), doc_content)
+            .with_embedding(vec![0.1; 384]);
+        let result = storage.upsert_documents("default", vec![doc]).await;
         assert!(result.is_ok(), "Adding document {} should succeed", i);
     }
 }
@@ -50,8 +54,10 @@ async fn test_vector_storage_search() {
         "Robotics and automation systems"
     ];
     
-    for doc in &documents {
-        storage.add_document(doc).await.unwrap();
+    for (i, doc_content) in documents.iter().enumerate() {
+        let doc = lumosai_vector_core::Document::new(&format!("search_doc_{}", i), *doc_content)
+            .with_embedding(vec![0.1; 384]);
+        storage.upsert_documents("default", vec![doc]).await.unwrap();
     }
     
     // Search for relevant content
@@ -61,7 +67,17 @@ async fn test_vector_storage_search() {
     assert!(results.is_ok(), "Search should succeed");
     
     let results = results.unwrap();
-    TestAssertions::assert_valid_search_results(&results, 1);
+    // Convert to the expected type for assertion
+    let converted_results: Vec<SearchResult> = results.results.iter().map(|r| SearchResult {
+        document: lumosai::prelude::Document {
+            id: r.id.clone(),
+            content: r.content.clone().unwrap_or_default(),
+            metadata: std::collections::HashMap::new(),
+        },
+        score: r.score,
+        chunk_index: None,
+    }).collect();
+    TestAssertions::assert_valid_search_results(&converted_results, 1);
 }
 
 #[tokio::test]
@@ -77,7 +93,7 @@ async fn test_vector_storage_search_empty() {
     assert!(results.is_ok(), "Search in empty storage should succeed");
     
     let results = results.unwrap();
-    assert_eq!(results.len(), 0, "Empty storage should return no results");
+    assert_eq!(results.results.len(), 0, "Empty storage should return no results");
 }
 
 #[tokio::test]
@@ -87,8 +103,13 @@ async fn test_vector_storage_search_no_matches() {
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
     
     // Add documents about one topic
-    storage.add_document("Cooking recipes and food preparation").await.unwrap();
-    storage.add_document("Kitchen utensils and cooking techniques").await.unwrap();
+    let doc1 = lumosai_vector_core::Document::new("cooking_doc1", "Cooking recipes and food preparation")
+        .with_embedding(vec![0.1; 384]);
+    storage.upsert_documents("default", vec![doc1]).await.unwrap();
+
+    let doc2 = lumosai_vector_core::Document::new("cooking_doc2", "Kitchen utensils and cooking techniques")
+        .with_embedding(vec![0.1; 384]);
+    storage.upsert_documents("default", vec![doc2]).await.unwrap();
     
     // Search for completely unrelated topic
     let search_request = lumosai_vector_core::SearchRequest::new_text("default", "quantum physics equations")
@@ -140,7 +161,9 @@ async fn test_vector_storage_concurrent_operations() {
         let doc = format!("Concurrent document {}", i);
         
         let handle = tokio::spawn(async move {
-            storage_clone.add_document(&doc).await
+            let document = lumosai_vector_core::Document::new(&format!("concurrent_{}", i), &doc)
+                .with_embedding(vec![0.1; 384]);
+            storage_clone.upsert_documents("default", vec![document]).await
         });
         
         handles.push(handle);
@@ -184,19 +207,23 @@ async fn test_vector_storage_performance() {
     
     // Measure document addition performance
     let (result, add_duration) = PerformanceTestUtils::measure_time(|| async {
-        storage.add_document("Performance test document").await
+        let doc = lumosai_vector_core::Document::new("perf_test", "Performance test document")
+            .with_embedding(vec![0.1; 384]);
+        storage.upsert_documents("default", vec![doc]).await
     }).await;
     
     assert!(result.is_ok(), "Performance test addition should succeed");
     
     // Add a few more documents for search testing
     for i in 0..10 {
-        let doc = format!("Performance test document {}", i);
-        storage.add_document(&doc).await.unwrap();
+        let doc_content = format!("Performance test document {}", i);
+        let doc = lumosai_vector_core::Document::new(&format!("perf_doc_{}", i), &doc_content)
+            .with_embedding(vec![0.1; 384]);
+        storage.upsert_documents("default", vec![doc]).await.unwrap();
     }
     
     // Measure search performance
-    let (search_result, search_duration) = PerformanceTestUtils::measure_time(async {
+    let (search_result, search_duration) = PerformanceTestUtils::measure_time(|| async {
         let search_request = lumosai_vector_core::SearchRequest::new_text("default", "Performance test")
             .with_top_k(5);
         storage.search(search_request).await
@@ -226,22 +253,30 @@ async fn test_vector_storage_edge_cases() {
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
     
     // Test with empty document
-    let result = storage.add_document("").await;
+    let doc = lumosai_vector_core::Document::new("empty_doc", "")
+        .with_embedding(vec![0.1; 384]);
+    let result = storage.upsert_documents("default", vec![doc]).await;
     // Should handle empty documents gracefully
     assert!(result.is_ok() || result.is_err(), "Empty document should be handled");
-    
+
     // Test with whitespace-only document
-    let result = storage.add_document("   \n\t   ").await;
+    let doc = lumosai_vector_core::Document::new("whitespace_doc", "   \n\t   ")
+        .with_embedding(vec![0.1; 384]);
+    let result = storage.upsert_documents("default", vec![doc]).await;
     assert!(result.is_ok() || result.is_err(), "Whitespace document should be handled");
-    
+
     // Test with special characters
     let special_doc = "Document with special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?";
-    let result = storage.add_document(special_doc).await;
+    let doc = lumosai_vector_core::Document::new("special_doc", special_doc)
+        .with_embedding(vec![0.1; 384]);
+    let result = storage.upsert_documents("default", vec![doc]).await;
     assert!(result.is_ok(), "Special characters should be handled");
-    
+
     // Test with unicode content
     let unicode_doc = "Unicode content: 你好世界 🌍 Здравствуй мир";
-    let result = storage.add_document(unicode_doc).await;
+    let doc = lumosai_vector_core::Document::new("unicode_doc", unicode_doc)
+        .with_embedding(vec![0.1; 384]);
+    let result = storage.upsert_documents("default", vec![doc]).await;
     assert!(result.is_ok(), "Unicode content should be handled");
 }
 
@@ -253,8 +288,10 @@ async fn test_vector_storage_search_limits() {
     
     // Add multiple documents
     for i in 0..20 {
-        let doc = format!("Test document number {} with various content", i);
-        storage.add_document(&doc).await.unwrap();
+        let doc_content = format!("Test document number {} with various content", i);
+        let doc = lumosai_vector_core::Document::new(&format!("limit_test_{}", i), &doc_content)
+            .with_embedding(vec![0.1; 384]);
+        storage.upsert_documents("default", vec![doc]).await.unwrap();
     }
     
     // Test different search limits
@@ -268,15 +305,15 @@ async fn test_vector_storage_search_limits() {
         
         let results = results.unwrap();
         assert!(
-            results.len() <= limit,
+            results.results.len() <= limit,
             "Results should not exceed limit of {}",
             limit
         );
-        
+
         // Results should be sorted by relevance (highest score first)
-        for i in 1..results.len() {
+        for i in 1..results.results.len() {
             assert!(
-                results[i-1].score >= results[i].score,
+                results.results[i-1].score >= results.results[i].score,
                 "Results should be sorted by score"
             );
         }
@@ -293,8 +330,10 @@ async fn test_vector_storage_memory_usage() {
     let document_count = 100;
     
     for i in 0..document_count {
-        let doc = format!("Memory test document {} with content about topic {}", i, i % 10);
-        let result = storage.add_document(&doc).await;
+        let doc_content = format!("Memory test document {} with content about topic {}", i, i % 10);
+        let doc = lumosai_vector_core::Document::new(&format!("memory_test_{}", i), &doc_content)
+            .with_embedding(vec![0.1; 384]);
+        let result = storage.upsert_documents("default", vec![doc]).await;
         assert!(result.is_ok(), "Document {} addition should succeed", i);
     }
     
@@ -305,7 +344,17 @@ async fn test_vector_storage_memory_usage() {
     assert!(results.is_ok(), "Search after many additions should succeed");
     
     let results = results.unwrap();
-    TestAssertions::assert_valid_search_results(&results, 1);
+    // Convert to the expected type for assertion
+    let converted_results: Vec<SearchResult> = results.results.iter().map(|r| SearchResult {
+        document: lumosai::prelude::Document {
+            id: r.id.clone(),
+            content: r.content.clone().unwrap_or_default(),
+            metadata: std::collections::HashMap::new(),
+        },
+        score: r.score,
+        chunk_index: None,
+    }).collect();
+    TestAssertions::assert_valid_search_results(&converted_results, 1);
     
     println!("Successfully added {} documents to vector storage", document_count);
 }

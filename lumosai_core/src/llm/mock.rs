@@ -137,7 +137,8 @@ impl LlmProvider for MockLlmProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+    use float_cmp::approx_eq;
+
     const FLOAT_EPSILON: f32 = 1e-6;
     
     #[tokio::test]

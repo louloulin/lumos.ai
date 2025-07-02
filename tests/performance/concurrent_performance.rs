@@ -544,7 +544,7 @@ impl TestMemory {
         }
     }
     
-    async fn store(&self, key: &str, value: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn store(&self, key: &str, value: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut data = self.data.write().await;
         data.insert(key.to_string(), value.to_string());
         Ok(())
@@ -555,11 +555,11 @@ impl TestMemory {
         Ok(data.get(key).cloned())
     }
     
-    async fn update(&self, key: &str, value: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn update(&self, key: &str, value: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.store(key, value).await
     }
     
-    async fn delete(&self, key: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn delete(&self, key: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut data = self.data.write().await;
         data.remove(key);
         Ok(())

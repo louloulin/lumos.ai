@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("🚀 Lumos.ai 高级监控系统演示");
     println!("===============================\n");
 

@@ -18,7 +18,7 @@ use futures::StreamExt;
 use std::io::{self, Write};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 中国LLM提供商示例");
     println!("=" .repeat(50));
 
@@ -70,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_basic_generation(
     provider: &dyn LlmProvider, 
     name: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🔤 基本文本生成 ({})", name);
     
     let options = LlmOptions::default()
@@ -95,7 +95,7 @@ async fn test_basic_generation(
 async fn test_conversation(
     provider: &dyn LlmProvider, 
     name: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("💬 对话测试 ({})", name);
     
     let messages = vec![
@@ -133,7 +133,7 @@ async fn test_conversation(
 async fn test_streaming(
     provider: &dyn LlmProvider,
     name: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🌊 流式生成测试 ({})", name);
 
     let options = LlmOptions::default()
@@ -177,7 +177,7 @@ async fn test_streaming(
 async fn test_function_calling(
     provider: &dyn LlmProvider, 
     name: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🔧 函数调用测试 ({})", name);
     
     if !provider.supports_function_calling() {
@@ -247,7 +247,7 @@ async fn test_function_calling(
 async fn test_streaming(
     provider: &dyn LlmProvider, 
     name: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🌊 流式生成测试 ({})", name);
     
     let options = LlmOptions::default()
@@ -285,7 +285,7 @@ async fn test_streaming(
 async fn test_embeddings(
     provider: &dyn LlmProvider, 
     name: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🔢 Embedding测试 ({})", name);
     
     let text = "人工智能是计算机科学的一个分支";

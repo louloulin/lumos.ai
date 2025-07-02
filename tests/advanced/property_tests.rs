@@ -429,15 +429,15 @@ fn create_calculator_params(operation: &str, a: i32, b: i32) -> std::collections
 }
 
 // Mock implementations for property testing
-async fn create_test_rag_system(_storage: String) -> Result<MockRagSystem, Box<dyn std::error::Error + Send + Sync>> {
+async fn create_test_rag_system(_storage: String) -> std::result::Result<MockRagSystem, Box<dyn std::error::Error + Send + Sync>> {
     Ok(MockRagSystem::new())
 }
 
-async fn create_test_memory() -> Result<MockMemory, Box<dyn std::error::Error + Send + Sync>> {
+async fn create_test_memory() -> std::result::Result<MockMemory, Box<dyn std::error::Error + Send + Sync>> {
     Ok(MockMemory::new())
 }
 
-async fn create_test_tool(_name: &str) -> Result<MockTool, Box<dyn std::error::Error + Send + Sync>> {
+async fn create_test_tool(_name: &str) -> std::result::Result<MockTool, Box<dyn std::error::Error + Send + Sync>> {
     Ok(MockTool::new())
 }
 
@@ -453,7 +453,7 @@ impl MockRagSystem {
         }
     }
     
-    async fn add_document(&self, doc: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn add_document(&self, doc: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut documents = self.documents.write().await;
         documents.push(doc.to_string());
         Ok(())
@@ -492,7 +492,7 @@ impl MockMemory {
         }
     }
     
-    async fn store(&self, key: &str, value: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn store(&self, key: &str, value: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut data = self.data.write().await;
         data.insert(key.to_string(), value.to_string());
         Ok(())
@@ -503,11 +503,11 @@ impl MockMemory {
         Ok(data.get(key).cloned())
     }
     
-    async fn update(&self, key: &str, value: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn update(&self, key: &str, value: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.store(key, value).await
     }
     
-    async fn delete(&self, key: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn delete(&self, key: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut data = self.data.write().await;
         data.remove(key);
         Ok(())
@@ -519,7 +519,7 @@ struct MockTool;
 impl MockTool {
     fn new() -> Self { Self }
     
-    async fn execute(&self, params: std::collections::HashMap<String, serde_json::Value>) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn execute(&self, params: std::collections::HashMap<String, serde_json::Value>) -> std::result::Result<String, Box<dyn std::error::Error + Send + Sync>> {
         // Implement calculator logic for property testing
         if let (Some(op), Some(a), Some(b)) = (
             params.get("operation").and_then(|v| v.as_str()),

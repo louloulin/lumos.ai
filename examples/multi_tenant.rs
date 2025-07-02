@@ -18,7 +18,7 @@ use chrono::{DateTime, Utc};
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🏢 多租户功能演示");
     println!("==================");
     
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示租户管理
-async fn demo_tenant_management() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_tenant_management() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 租户管理 ===");
     
     // 创建租户管理器
@@ -153,7 +153,7 @@ async fn demo_tenant_management() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示资源隔离
-async fn demo_resource_isolation() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_resource_isolation() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: 资源隔离 ===");
     
     // 为不同租户创建隔离的Agent
@@ -242,7 +242,7 @@ async fn demo_resource_isolation() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示配额管理
-async fn demo_quota_management() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_quota_management() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 配额管理 ===");
     
     // 创建配额管理器
@@ -320,7 +320,7 @@ async fn demo_quota_management() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示计费系统
-async fn demo_billing_system() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_billing_system() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 计费系统 ===");
     
     // 创建计费管理器
@@ -420,7 +420,7 @@ async fn demo_billing_system() -> Result<(), Box<dyn std::error::Error>> {
 // ============================================================================
 
 /// 模拟数据访问检查
-async fn simulate_data_access(tenant_id: &str, resource: &str) -> Result<bool, Box<dyn std::error::Error>> {
+async fn simulate_data_access(tenant_id: &str, resource: &str) -> std::result::Result<bool, Box<dyn std::error::Error>> {
     // 简单的访问控制逻辑
     if resource == "customer_data" {
         // 所有租户都可以访问自己的客户数据
@@ -614,24 +614,24 @@ struct TenantManager {
 }
 
 impl TenantManager {
-    fn new(_config: TenantManagerConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: TenantManagerConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             tenants: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         })
     }
 
-    async fn create_tenant(&self, tenant: TenantConfig) -> Result<(), Box<dyn std::error::Error>> {
+    async fn create_tenant(&self, tenant: TenantConfig) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut tenants = self.tenants.lock().await;
         tenants.insert(tenant.id.clone(), tenant);
         Ok(())
     }
 
-    async fn list_tenants(&self) -> Result<Vec<TenantConfig>, Box<dyn std::error::Error>> {
+    async fn list_tenants(&self) -> std::result::Result<Vec<TenantConfig>, Box<dyn std::error::Error>> {
         let tenants = self.tenants.lock().await;
         Ok(tenants.values().cloned().collect())
     }
 
-    async fn get_tenant_status(&self, tenant_id: &str) -> Result<TenantStatus, Box<dyn std::error::Error>> {
+    async fn get_tenant_status(&self, tenant_id: &str) -> std::result::Result<TenantStatus, Box<dyn std::error::Error>> {
         let tenants = self.tenants.lock().await;
 
         if tenants.contains_key(tenant_id) {
@@ -662,20 +662,20 @@ struct QuotaManager {
 }
 
 impl QuotaManager {
-    fn new(_config: QuotaConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: QuotaConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             usage_data: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         })
     }
 
-    async fn record_usage(&self, tenant_id: &str, resource_type: ResourceType, usage: u64) -> Result<(), Box<dyn std::error::Error>> {
+    async fn record_usage(&self, tenant_id: &str, resource_type: ResourceType, usage: u64) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut usage_data = self.usage_data.lock().await;
         let tenant_usage = usage_data.entry(tenant_id.to_string()).or_insert_with(HashMap::new);
         tenant_usage.insert(resource_type, usage);
         Ok(())
     }
 
-    async fn check_quota(&self, tenant_id: &str, resource_type: &ResourceType) -> Result<QuotaStatusInfo, Box<dyn std::error::Error>> {
+    async fn check_quota(&self, tenant_id: &str, resource_type: &ResourceType) -> std::result::Result<QuotaStatusInfo, Box<dyn std::error::Error>> {
         let usage_data = self.usage_data.lock().await;
 
         let current_usage = usage_data
@@ -714,7 +714,7 @@ impl QuotaManager {
         })
     }
 
-    async fn get_usage_statistics(&self, tenant_id: &str) -> Result<UsageStatistics, Box<dyn std::error::Error>> {
+    async fn get_usage_statistics(&self, tenant_id: &str) -> std::result::Result<UsageStatistics, Box<dyn std::error::Error>> {
         let usage_data = self.usage_data.lock().await;
 
         if let Some(tenant_usage) = usage_data.get(tenant_id) {
@@ -759,7 +759,7 @@ impl QuotaManager {
 struct BillingManager;
 
 impl BillingManager {
-    fn new(_config: BillingConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: BillingConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
 
@@ -768,7 +768,7 @@ impl BillingManager {
         tenant_id: &str,
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
-    ) -> Result<Bill, Box<dyn std::error::Error>> {
+    ) -> std::result::Result<Bill, Box<dyn std::error::Error>> {
         let line_items = match tenant_id {
             "tenant_enterprise_001" => vec![
                 BillLineItem {
@@ -836,7 +836,7 @@ impl BillingManager {
     async fn analyze_usage_trends(
         &self,
         _duration: chrono::Duration,
-    ) -> Result<UsageAnalysis, Box<dyn std::error::Error>> {
+    ) -> std::result::Result<UsageAnalysis, Box<dyn std::error::Error>> {
         Ok(UsageAnalysis {
             total_revenue: 15750.0,
             average_revenue_per_tenant: 5250.0,
@@ -866,7 +866,7 @@ impl UsageTracker {
         }
     }
 
-    async fn record_usage(&self, tenant_id: &str, metric: UsageMetric, amount: u64) -> Result<(), Box<dyn std::error::Error>> {
+    async fn record_usage(&self, tenant_id: &str, metric: UsageMetric, amount: u64) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut usage_records = self.usage_records.lock().await;
         let tenant_usage = usage_records.entry(tenant_id.to_string()).or_insert_with(HashMap::new);
         tenant_usage.insert(metric, amount);

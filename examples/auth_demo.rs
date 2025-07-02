@@ -16,7 +16,7 @@ use std::time::Duration;
 use uuid::Uuid;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Lumos.ai Enterprise Authentication System Demo");
     println!("================================================\n");
 

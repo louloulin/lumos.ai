@@ -7,7 +7,7 @@ use chrono::Utc;
 use lumosai_core::security::*;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🔒 Lumos.ai 企业级安全系统演示");
     println!("=====================================\n");
     
@@ -244,7 +244,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示高级安全场景
-async fn demo_advanced_security_scenarios() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_advanced_security_scenarios() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🚀 高级安全场景演示");
     println!("====================");
     

@@ -123,6 +123,8 @@ pub struct AgentBuilder {
     tools: Vec<Box<dyn Tool>>,
     smart_defaults: bool,
     model_resolver: Option<ModelResolver>, // Model resolver for string names
+    tenant_id: Option<String>, // Multi-tenant support
+    isolation_level: Option<String>, // Isolation level for multi-tenancy
 }
 
 impl Default for AgentBuilder {
@@ -154,6 +156,8 @@ impl AgentBuilder {
             tools: Vec::new(),
             smart_defaults: false,
             model_resolver: None,
+            tenant_id: None,
+            isolation_level: None,
         }
     }
 

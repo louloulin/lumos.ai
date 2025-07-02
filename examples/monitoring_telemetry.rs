@@ -18,7 +18,7 @@ use serde_json::json;
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("📊 监控与遥测演示");
     println!("==================");
     
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示基础遥测配置
-async fn demo_basic_telemetry() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_basic_telemetry() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 基础遥测配置 ===");
     
     // 创建遥测配置
@@ -101,7 +101,7 @@ async fn demo_basic_telemetry() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示性能监控
-async fn demo_performance_monitoring() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_performance_monitoring() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: 性能监控 ===");
     
     // 创建性能监控器
@@ -204,7 +204,7 @@ async fn demo_performance_monitoring() -> Result<(), Box<dyn std::error::Error>>
 }
 
 /// 演示 SLA 监控
-async fn demo_sla_monitoring() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_sla_monitoring() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: SLA 监控 ===");
     
     // 创建 SLA 监控器
@@ -305,7 +305,7 @@ async fn demo_sla_monitoring() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示告警系统
-async fn demo_alert_system() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_alert_system() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 告警系统 ===");
     
     // 创建告警管理器
@@ -589,11 +589,11 @@ struct AlertStatistics {
 
 struct TelemetryCollector;
 impl TelemetryCollector {
-    fn new(_config: TelemetryConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: TelemetryConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
     
-    async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn start(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 }
@@ -604,15 +604,15 @@ impl MetricsCollector {
         Self
     }
     
-    async fn increment_counter(&self, _name: &str, _labels: &[(&str, &str)]) -> Result<(), Box<dyn std::error::Error>> {
+    async fn increment_counter(&self, _name: &str, _labels: &[(&str, &str)]) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
-    async fn record_histogram(&self, _name: &str, _value: f64, _labels: &[(&str, &str)]) -> Result<(), Box<dyn std::error::Error>> {
+    async fn record_histogram(&self, _name: &str, _value: f64, _labels: &[(&str, &str)]) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
-    async fn set_gauge(&self, _name: &str, _value: f64, _labels: &[(&str, &str)]) -> Result<(), Box<dyn std::error::Error>> {
+    async fn set_gauge(&self, _name: &str, _value: f64, _labels: &[(&str, &str)]) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 }
@@ -623,37 +623,37 @@ impl TraceCollector {
         Self
     }
     
-    async fn start_span(&self, _name: &str, _attributes: &[(&str, &str)]) -> Result<MockSpan, Box<dyn std::error::Error>> {
+    async fn start_span(&self, _name: &str, _attributes: &[(&str, &str)]) -> std::result::Result<MockSpan, Box<dyn std::error::Error>> {
         Ok(MockSpan)
     }
 }
 
 struct MockSpan;
 impl MockSpan {
-    async fn add_event(&self, _name: &str, _attributes: &[(&str, &str)]) -> Result<(), Box<dyn std::error::Error>> {
+    async fn add_event(&self, _name: &str, _attributes: &[(&str, &str)]) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
-    async fn finish(&self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn finish(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 }
 
 struct PerformanceMonitor;
 impl PerformanceMonitor {
-    fn new(_config: PerformanceConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: PerformanceConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
     
-    async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn start(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
-    async fn record_request_metrics(&self, _metrics: RequestMetrics) -> Result<(), Box<dyn std::error::Error>> {
+    async fn record_request_metrics(&self, _metrics: RequestMetrics) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
-    async fn get_statistics(&self) -> Result<PerformanceStatistics, Box<dyn std::error::Error>> {
+    async fn get_statistics(&self) -> std::result::Result<PerformanceStatistics, Box<dyn std::error::Error>> {
         Ok(PerformanceStatistics {
             total_requests: 8,
             success_rate: 0.875,
@@ -671,11 +671,11 @@ impl SLAMonitor {
         Self
     }
     
-    async fn add_sla(&mut self, _sla: ServiceLevelAgreement) -> Result<(), Box<dyn std::error::Error>> {
+    async fn add_sla(&mut self, _sla: ServiceLevelAgreement) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
-    async fn record_metric(&self, _sla_id: &str, _metric_name: &str, _value: f64) -> Result<(), Box<dyn std::error::Error>> {
+    async fn record_metric(&self, _sla_id: &str, _metric_name: &str, _value: f64) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
@@ -706,19 +706,19 @@ impl SLAMonitor {
 
 struct AlertManager;
 impl AlertManager {
-    fn new(_config: AlertConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: AlertConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
     
-    async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn start(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
-    async fn add_rule(&self, _rule: AlertRule) -> Result<(), Box<dyn std::error::Error>> {
+    async fn add_rule(&self, _rule: AlertRule) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
-    async fn evaluate_metric(&self, _metric_name: &str, _value: f64) -> Result<(), Box<dyn std::error::Error>> {
+    async fn evaluate_metric(&self, _metric_name: &str, _value: f64) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
     
@@ -741,7 +741,7 @@ impl AlertManager {
         ])
     }
     
-    async fn get_statistics(&self) -> Result<AlertStatistics, Box<dyn std::error::Error>> {
+    async fn get_statistics(&self) -> std::result::Result<AlertStatistics, Box<dyn std::error::Error>> {
         Ok(AlertStatistics {
             total_alerts: 15,
             active_alerts: 2,

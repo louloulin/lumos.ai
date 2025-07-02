@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Lumos.ai Performance Benchmark");
     println!("==================================");
 

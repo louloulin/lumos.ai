@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🛠️ 工具集成演示");
     println!("================");
     
@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示自定义工具创建
-async fn demo_custom_tools() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_custom_tools() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 自定义工具创建 ===");
     
     // 创建计算器工具
@@ -73,7 +73,7 @@ async fn demo_custom_tools() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示 Agent 与工具集成
-async fn demo_agent_with_tools() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_agent_with_tools() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: Agent 与工具集成 ===");
     
     // 创建工具
@@ -120,7 +120,7 @@ async fn demo_agent_with_tools() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示复杂工具链
-async fn demo_tool_chain() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_tool_chain() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 复杂工具链 ===");
     
     // 创建数据处理工具链
@@ -157,7 +157,7 @@ async fn demo_tool_chain() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示内置工具使用
-async fn demo_builtin_tools() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_builtin_tools() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 内置工具使用 ===");
     
     // 这里演示如何使用内置工具（如果有的话）

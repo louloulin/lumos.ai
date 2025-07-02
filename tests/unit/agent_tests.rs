@@ -1,18 +1,21 @@
 // Unit tests for Agent system
 use crate::test_config::*;
 use lumosai_core::prelude::*;
+use lumosai_core::llm::MockLlmProvider;
+use lumosai_core::agent::trait_def::Agent as AgentTrait;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[tokio::test]
 async fn test_agent_creation() {
     init_test_env();
     
+    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
     let agent = Agent::builder()
         .name("test-agent")
-        .model("gpt-4")
-        .system_prompt("You are a helpful assistant")
-        .build()
-        .await;
+        .model(llm)
+        .instructions("You are a helpful assistant")
+        .build();
     
     assert!(agent.is_ok(), "Agent creation should succeed");
     
@@ -25,11 +28,11 @@ async fn test_agent_creation_with_invalid_params() {
     init_test_env();
     
     // Test with empty name
+    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
     let result = Agent::builder()
         .name("")
-        .model("gpt-4")
-        .build()
-        .await;
+        .model(llm)
+        .build();
     
     assert!(result.is_err(), "Agent creation with empty name should fail");
 }
@@ -124,12 +127,12 @@ async fn test_agent_builder_pattern() {
     init_test_env();
     
     // Test builder pattern with various configurations
+    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
     let agent = Agent::builder()
         .name("builder-test-agent")
-        .model("gpt-4")
-        .system_prompt("You are a specialized assistant")
-        .build()
-        .await;
+        .model(llm)
+        .instructions("You are a specialized assistant")
+        .build();
     
     assert!(agent.is_ok(), "Builder pattern should work");
     

@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Lumos.ai Simplified API Demo");
     println!("================================");
 

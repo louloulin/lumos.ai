@@ -562,7 +562,7 @@ type TestMemory = MockMemory;
 // Mock implementations
 struct MockRagSystem;
 impl MockRagSystem {
-    async fn add_document(&self, _doc: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn add_document(&self, _doc: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         tokio::time::sleep(Duration::from_millis(10)).await;
         Ok(())
     }
@@ -575,7 +575,7 @@ impl MockRagSystem {
 
 struct MockMemory;
 impl MockMemory {
-    async fn store(&self, _key: &str, _value: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn store(&self, _key: &str, _value: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         tokio::time::sleep(Duration::from_millis(5)).await;
         Ok(())
     }
@@ -585,21 +585,21 @@ impl MockMemory {
         Ok(Some("value".to_string()))
     }
     
-    async fn update(&self, _key: &str, _value: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn update(&self, _key: &str, _value: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         tokio::time::sleep(Duration::from_millis(5)).await;
         Ok(())
     }
     
-    async fn delete(&self, _key: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn delete(&self, _key: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         tokio::time::sleep(Duration::from_millis(3)).await;
         Ok(())
     }
 }
 
-async fn create_test_rag_system(_storage: String) -> Result<MockRagSystem, Box<dyn std::error::Error + Send + Sync>> {
+async fn create_test_rag_system(_storage: String) -> std::result::Result<MockRagSystem, Box<dyn std::error::Error + Send + Sync>> {
     Ok(MockRagSystem)
 }
 
-async fn create_test_memory() -> Result<MockMemory, Box<dyn std::error::Error + Send + Sync>> {
+async fn create_test_memory() -> std::result::Result<MockMemory, Box<dyn std::error::Error + Send + Sync>> {
     Ok(MockMemory)
 }

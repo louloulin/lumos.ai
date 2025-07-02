@@ -29,7 +29,7 @@ use lumosai_core::{
 };
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // 初始化日志
     tracing_subscriber::init();
     
@@ -415,19 +415,19 @@ struct MockPerformanceAnalyzer;
 
 #[async_trait::async_trait]
 impl MetricsCollector for MockMetricsCollector {
-    async fn record_agent_execution(&self, _metrics: AgentMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_agent_execution(&self, _metrics: AgentMetrics) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 
-    async fn record_tool_execution(&self, _metrics: ToolMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_tool_execution(&self, _metrics: ToolMetrics) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 
-    async fn record_memory_operation(&self, _metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_memory_operation(&self, _metrics: MemoryMetrics) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 
-    async fn get_metrics_summary(&self, _agent_name: Option<&str>, _from_time: Option<u64>, _to_time: Option<u64>) -> Result<MetricsSummary, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_metrics_summary(&self, _agent_name: Option<&str>, _from_time: Option<u64>, _to_time: Option<u64>) -> std::result::Result<MetricsSummary, Box<dyn std::error::Error + Send + Sync>> {
         Ok(MetricsSummary {
             total_executions: 100,
             successful_executions: 98,
@@ -442,7 +442,7 @@ impl MetricsCollector for MockMetricsCollector {
         })
     }
 
-    async fn get_agent_performance(&self, _agent_name: &str) -> Result<AgentPerformance, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_agent_performance(&self, _agent_name: &str) -> std::result::Result<AgentPerformance, Box<dyn std::error::Error + Send + Sync>> {
         Ok(AgentPerformance {
             agent_name: "mock_agent".to_string(),
             executions_last_24h: 100,

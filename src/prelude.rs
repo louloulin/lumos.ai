@@ -16,6 +16,7 @@ pub use crate::rag::{RagSystem, SimpleRag, Document, SearchResult};
 
 // Agent相关
 pub use crate::agent::{SimpleAgent, AgentBuilder, AgentResponse};
+pub use lumosai_core::agent::Agent;
 
 // 会话管理
 pub use crate::session::{Session, SessionManager, SessionState};

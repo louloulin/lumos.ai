@@ -14,7 +14,7 @@ use std::time::{Duration, SystemTime};
 use uuid::Uuid;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("🚀 Lumos.ai Enterprise Billing & Resource Management Demo");
     println!("=========================================================\n");
 

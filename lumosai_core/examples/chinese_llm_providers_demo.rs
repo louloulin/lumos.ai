@@ -11,7 +11,7 @@ use lumosai_core::llm::{
 };
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 LumosAI 中文LLM提供商示例");
     println!("================================");
 
@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn test_zhipu_provider() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_zhipu_provider() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n📡 智谱AI (GLM) 示例:");
     println!("-------------------");
     
@@ -81,7 +81,7 @@ async fn test_zhipu_provider() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn test_baidu_provider() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_baidu_provider() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🔥 百度ERNIE 示例:");
     println!("------------------");
     
@@ -133,7 +133,7 @@ async fn test_baidu_provider() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn demo_unified_interface() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_unified_interface() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🔄 统一接口演示:");
     println!("----------------");
     

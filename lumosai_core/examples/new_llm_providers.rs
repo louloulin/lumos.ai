@@ -16,7 +16,7 @@ use lumosai_core::llm::{
 };
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 LumosAI 新LLM提供商示例");
     println!("========================================");
 
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn test_cohere_provider() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_cohere_provider() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🔵 测试 Cohere 提供商");
     println!("----------------------------------------");
     
@@ -80,7 +80,7 @@ async fn test_cohere_provider() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn test_gemini_provider() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_gemini_provider() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🟡 测试 Gemini 提供商");
     println!("----------------------------------------");
     
@@ -124,7 +124,7 @@ async fn test_gemini_provider() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn test_ollama_provider() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_ollama_provider() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🟢 测试 Ollama 提供商");
     println!("----------------------------------------");
     
@@ -165,7 +165,7 @@ async fn test_ollama_provider() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn test_together_provider() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_together_provider() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🟣 测试 Together AI 提供商");
     println!("----------------------------------------");
     
@@ -211,7 +211,7 @@ async fn test_together_provider() -> Result<(), Box<dyn std::error::Error>> {
 
 /// 演示如何使用trait对象来统一处理不同的提供商
 #[allow(dead_code)]
-async fn demo_provider_trait_usage() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_provider_trait_usage() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🔄 演示提供商trait统一使用");
     println!("----------------------------------------");
     
@@ -234,7 +234,7 @@ async fn demo_provider_trait_usage() -> Result<(), Box<dyn std::error::Error>> {
 
 /// 演示如何从环境变量创建提供商
 #[allow(dead_code)]
-async fn demo_env_provider_creation() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_env_provider_creation() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🌍 演示从环境变量创建提供商");
     println!("----------------------------------------");
     

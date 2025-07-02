@@ -39,7 +39,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示身份认证与授权
-async fn demo_authentication_authorization() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_authentication_authorization() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 身份认证与授权 ===");
 
     // 创建安全管理器
@@ -162,7 +162,7 @@ async fn demo_authentication_authorization() -> Result<(), Box<dyn std::error::E
 }
 
 /// 演示数据加密与保护
-async fn demo_data_encryption() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_data_encryption() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: 数据加密与保护 ===");
 
     // 创建加密服务
@@ -260,7 +260,7 @@ async fn demo_data_encryption() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示审计日志系统
-async fn demo_audit_logging() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_audit_logging() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 审计日志系统 ===");
 
     // 创建审计日志记录器
@@ -419,7 +419,7 @@ async fn demo_audit_logging() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示合规性报告
-async fn demo_compliance_reporting() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_compliance_reporting() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 合规性报告 ===");
 
     // 创建合规性报告器
@@ -780,20 +780,20 @@ struct SecurityManager {
 }
 
 impl SecurityManager {
-    fn new(_config: SecurityConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: SecurityConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             users: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
             sessions: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         })
     }
 
-    async fn register_user(&self, user: User) -> Result<(), Box<dyn std::error::Error>> {
+    async fn register_user(&self, user: User) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut users = self.users.lock().await;
         users.insert(user.username.clone(), user);
         Ok(())
     }
 
-    async fn authenticate(&self, username: &str, _password: &str) -> Result<UserSession, Box<dyn std::error::Error>> {
+    async fn authenticate(&self, username: &str, _password: &str) -> std::result::Result<UserSession, Box<dyn std::error::Error>> {
         let users = self.users.lock().await;
 
         if let Some(user) = users.get(username) {
@@ -822,7 +822,7 @@ impl SecurityManager {
         }
     }
 
-    async fn check_permission(&self, session: &UserSession, permission: &str) -> Result<bool, Box<dyn std::error::Error>> {
+    async fn check_permission(&self, session: &UserSession, permission: &str) -> std::result::Result<bool, Box<dyn std::error::Error>> {
         let users = self.users.lock().await;
 
         if let Some(user) = users.get(&session.username) {
@@ -836,11 +836,11 @@ impl SecurityManager {
 struct EncryptionService;
 
 impl EncryptionService {
-    fn new(_config: EncryptionConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: EncryptionConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
 
-    async fn encrypt(&self, data: &str) -> Result<EncryptedData, Box<dyn std::error::Error>> {
+    async fn encrypt(&self, data: &str) -> std::result::Result<EncryptedData, Box<dyn std::error::Error>> {
         // 模拟加密（实际应使用真实的加密算法）
         let encoded = base64::encode(data);
         Ok(EncryptedData {
@@ -852,7 +852,7 @@ impl EncryptionService {
         })
     }
 
-    async fn decrypt(&self, encrypted: &EncryptedData) -> Result<String, Box<dyn std::error::Error>> {
+    async fn decrypt(&self, encrypted: &EncryptedData) -> std::result::Result<String, Box<dyn std::error::Error>> {
         // 模拟解密
         if let Some(encoded) = encrypted.ciphertext.strip_prefix("enc_") {
             let decoded = base64::decode(encoded)?;
@@ -866,11 +866,11 @@ impl EncryptionService {
 struct DataProtectionService;
 
 impl DataProtectionService {
-    fn new(_config: DataProtectionConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: DataProtectionConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
 
-    async fn mask_sensitive_data(&self, data: &str) -> Result<String, Box<dyn std::error::Error>> {
+    async fn mask_sensitive_data(&self, data: &str) -> std::result::Result<String, Box<dyn std::error::Error>> {
         let mut masked = data.to_string();
 
         // 简单的脱敏规则
@@ -950,7 +950,7 @@ impl DataProtectionService {
         Ok(detections)
     }
 
-    async fn sanitize_message(&self, message: &str) -> Result<String, Box<dyn std::error::Error>> {
+    async fn sanitize_message(&self, message: &str) -> std::result::Result<String, Box<dyn std::error::Error>> {
         self.mask_sensitive_data(message).await
     }
 }
@@ -960,13 +960,13 @@ struct AuditLogger {
 }
 
 impl AuditLogger {
-    fn new(_config: AuditConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: AuditConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             events: Arc::new(tokio::sync::Mutex::new(Vec::new())),
         })
     }
 
-    async fn log_event(&self, event: AuditEvent) -> Result<(), Box<dyn std::error::Error>> {
+    async fn log_event(&self, event: AuditEvent) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut events = self.events.lock().await;
         events.push(event);
         Ok(())
@@ -1015,7 +1015,7 @@ impl AuditLogger {
 struct ComplianceReporter;
 
 impl ComplianceReporter {
-    fn new(_config: ComplianceConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(_config: ComplianceConfig) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         Ok(Self)
     }
 
@@ -1024,7 +1024,7 @@ impl ComplianceReporter {
         report_type: ComplianceReportType,
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
-    ) -> Result<ComplianceReport, Box<dyn std::error::Error>> {
+    ) -> std::result::Result<ComplianceReport, Box<dyn std::error::Error>> {
         // 模拟报告生成
         let (compliant, findings) = match report_type {
             ComplianceReportType::GDPR => (
@@ -1083,7 +1083,7 @@ impl ComplianceReporter {
     async fn analyze_compliance_trends(
         &self,
         _duration: chrono::Duration,
-    ) -> Result<ComplianceTrendAnalysis, Box<dyn std::error::Error>> {
+    ) -> std::result::Result<ComplianceTrendAnalysis, Box<dyn std::error::Error>> {
         Ok(ComplianceTrendAnalysis {
             overall_compliance_rate: 0.847,
             improvement_trend: 0.05,
@@ -1135,7 +1135,7 @@ mod regex {
     }
 
     impl Regex {
-        pub fn new(pattern: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        pub fn new(pattern: &str) -> std::result::Result<Self, Box<dyn std::error::Error>> {
             Ok(Self {
                 pattern: pattern.to_string(),
             })

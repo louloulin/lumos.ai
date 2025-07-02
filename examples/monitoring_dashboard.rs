@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use lumosai_core::telemetry::*;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 启动Lumos.ai企业级监控仪表板演示");
     println!("{}", "=".repeat(60));
     
@@ -41,7 +41,7 @@ struct MonitoringSystem {
 }
 
 impl MonitoringSystem {
-    async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+    async fn new() -> std::result::Result<Self, Box<dyn std::error::Error>> {
         // 创建指标收集器
         let metrics_collector = Arc::new(DemoMetricsCollector::new());
         
@@ -80,7 +80,7 @@ impl MonitoringSystem {
         })
     }
     
-    async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn start(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
         println!("🔧 配置监控系统...");
         
         // 配置告警规则
@@ -103,7 +103,7 @@ impl MonitoringSystem {
         Ok(())
     }
     
-    async fn setup_alert_rules(&self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn setup_alert_rules(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
         // 响应时间告警
         let response_time_rule = AlertRule {
             id: "response_time_critical".to_string(),
@@ -199,7 +199,7 @@ impl MonitoringSystem {
 }
 
 /// 运行仪表板演示
-async fn run_dashboard_demo(monitoring_system: &MonitoringSystem) -> Result<(), Box<dyn std::error::Error>> {
+async fn run_dashboard_demo(monitoring_system: &MonitoringSystem) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n🎯 开始监控仪表板演示");
     println!("{}", "=".repeat(60));
     
@@ -587,19 +587,19 @@ impl DemoMetricsCollector {
 
 #[async_trait::async_trait]
 impl MetricsCollector for DemoMetricsCollector {
-    async fn record_agent_execution(&self, _metrics: AgentMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_agent_execution(&self, _metrics: AgentMetrics) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 
-    async fn record_tool_execution(&self, _metrics: ToolMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_tool_execution(&self, _metrics: ToolMetrics) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 
-    async fn record_memory_operation(&self, _metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_memory_operation(&self, _metrics: MemoryMetrics) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 
-    async fn get_agent_performance(&self, _agent_id: &str) -> Result<AgentPerformance, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_agent_performance(&self, _agent_id: &str) -> std::result::Result<AgentPerformance, Box<dyn std::error::Error + Send + Sync>> {
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
         Ok(AgentPerformance {
             agent_name: _agent_id.to_string(),
@@ -622,7 +622,7 @@ impl MetricsCollector for DemoMetricsCollector {
         _agent_id: Option<&str>,
         _start_time: Option<u64>,
         _end_time: Option<u64>,
-    ) -> Result<MetricsSummary, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> std::result::Result<MetricsSummary, Box<dyn std::error::Error + Send + Sync>> {
         let execution_count = *self.execution_count.read().await;
         let is_issue_mode = *self.performance_issue_mode.read().await;
 
@@ -669,7 +669,7 @@ impl PerformanceAnalyzer for DemoPerformanceAnalyzer {
         &self,
         metrics: &[AgentMetrics],
         time_range: TimeRange,
-    ) -> Result<PerformanceAnalysis, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> std::result::Result<PerformanceAnalysis, Box<dyn std::error::Error + Send + Sync>> {
         let score = if metrics.is_empty() {
             50.0
         } else {

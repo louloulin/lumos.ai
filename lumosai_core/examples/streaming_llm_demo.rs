@@ -17,7 +17,7 @@ use std::io::{self, Write};
 use tokio::time::{sleep, Duration};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // 初始化日志
     tracing_subscriber::init();
     
@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_streaming_response(
     provider: &dyn LlmProvider, 
     name: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🔤 基本流式响应 ({})", name);
     
     let options = LlmOptions::default()
@@ -112,7 +112,7 @@ async fn test_streaming_response(
 async fn test_streaming_conversation(
     provider: &dyn LlmProvider, 
     name: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("💬 流式对话测试 ({})", name);
     
     let options = LlmOptions::default()
@@ -163,7 +163,7 @@ async fn test_streaming_conversation(
 async fn test_streaming_creative_writing(
     provider: &dyn LlmProvider, 
     name: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("✍️  创意写作流式测试 ({})", name);
     
     let options = LlmOptions::default()
@@ -212,7 +212,7 @@ async fn test_streaming_creative_writing(
 async fn test_side_by_side_streaming(
     zhipu: &dyn LlmProvider,
     baidu: &dyn LlmProvider,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🔄 并行流式响应对比");
     
     let options = LlmOptions::default()

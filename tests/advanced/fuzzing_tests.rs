@@ -480,15 +480,15 @@ fn generate_fuzz_value() -> String {
 }
 
 // Mock implementations for fuzzing tests
-async fn create_test_rag_system(_storage: String) -> Result<MockRagSystem, Box<dyn std::error::Error + Send + Sync>> {
+async fn create_test_rag_system(_storage: String) -> std::result::Result<MockRagSystem, Box<dyn std::error::Error + Send + Sync>> {
     Ok(MockRagSystem::new())
 }
 
-async fn create_test_memory() -> Result<MockMemory, Box<dyn std::error::Error + Send + Sync>> {
+async fn create_test_memory() -> std::result::Result<MockMemory, Box<dyn std::error::Error + Send + Sync>> {
     Ok(MockMemory::new())
 }
 
-async fn create_test_tool(_name: &str) -> Result<MockTool, Box<dyn std::error::Error + Send + Sync>> {
+async fn create_test_tool(_name: &str) -> std::result::Result<MockTool, Box<dyn std::error::Error + Send + Sync>> {
     Ok(MockTool::new())
 }
 
@@ -496,23 +496,23 @@ async fn create_test_tool(_name: &str) -> Result<MockTool, Box<dyn std::error::E
 struct MockRagSystem;
 impl MockRagSystem {
     fn new() -> Self { Self }
-    async fn add_document(&self, _doc: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> { Ok(()) }
+    async fn add_document(&self, _doc: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> { Ok(()) }
     async fn retrieve(&self, _query: &str, _limit: usize) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> { Ok(vec![]) }
 }
 
 struct MockMemory;
 impl MockMemory {
     fn new() -> Self { Self }
-    async fn store(&self, _key: &str, _value: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> { Ok(()) }
+    async fn store(&self, _key: &str, _value: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> { Ok(()) }
     async fn retrieve(&self, _key: &str) -> Result<Option<String>, Box<dyn std::error::Error + Send + Sync>> { Ok(None) }
-    async fn update(&self, _key: &str, _value: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> { Ok(()) }
-    async fn delete(&self, _key: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> { Ok(()) }
+    async fn update(&self, _key: &str, _value: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> { Ok(()) }
+    async fn delete(&self, _key: &str) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> { Ok(()) }
 }
 
 struct MockTool;
 impl MockTool {
     fn new() -> Self { Self }
-    async fn execute(&self, _params: std::collections::HashMap<String, serde_json::Value>) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn execute(&self, _params: std::collections::HashMap<String, serde_json::Value>) -> std::result::Result<String, Box<dyn std::error::Error + Send + Sync>> {
         Ok("mock result".to_string())
     }
 }

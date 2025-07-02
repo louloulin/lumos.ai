@@ -18,7 +18,7 @@ use tokio::time::{sleep, Duration};
 use async_trait::async_trait;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("📡 事件驱动架构演示");
     println!("====================");
     
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示基础事件系统
-async fn demo_basic_event_system() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_basic_event_system() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 基础事件系统 ===");
     
     // 创建事件总线
@@ -82,7 +82,7 @@ async fn demo_basic_event_system() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示代理事件协作
-async fn demo_agent_event_collaboration() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_agent_event_collaboration() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: 代理事件协作 ===");
     
     let event_bus = Arc::new(EventBus::new());
@@ -150,7 +150,7 @@ async fn demo_agent_event_collaboration() -> Result<(), Box<dyn std::error::Erro
 }
 
 /// 演示复杂事件流
-async fn demo_complex_event_flow() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_complex_event_flow() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 复杂事件流 ===");
     
     let event_bus = Arc::new(EventBus::new());
@@ -228,7 +228,7 @@ async fn demo_complex_event_flow() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 演示事件驱动的客户服务系统
-async fn demo_customer_service_system() -> Result<(), Box<dyn std::error::Error>> {
+async fn demo_customer_service_system() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 事件驱动的客户服务系统 ===");
     
     let event_bus = Arc::new(EventBus::new());
@@ -327,7 +327,7 @@ impl LoggingEventHandler {
 
 #[async_trait]
 impl EventHandler for LoggingEventHandler {
-    async fn handle(&self, event: &Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn handle(&self, event: &Event) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut count = self.processed_count.lock().await;
         *count += 1;
         
@@ -363,7 +363,7 @@ impl AgentEventHandler {
 
 #[async_trait]
 impl EventHandler for AgentEventHandler {
-    async fn handle(&self, event: &Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn handle(&self, event: &Event) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut count = self.processed_count.lock().await;
         *count += 1;
         drop(count);
@@ -432,7 +432,7 @@ impl MonitoringEventHandler {
 
 #[async_trait]
 impl EventHandler for MonitoringEventHandler {
-    async fn handle(&self, event: &Event) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn handle(&self, event: &Event) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut stats = self.monitor.statistics.lock().await;
         stats.total_events += 1;
         *stats.event_types.entry(event.event_type.clone()).or_insert(0) += 1;
@@ -485,7 +485,7 @@ impl CustomerServiceSystem {
         customer_service: Arc<dyn BasicAgent>,
         technical_support: Arc<dyn BasicAgent>,
         escalation_handler: Arc<dyn BasicAgent>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    ) -> std::result::Result<Self, Box<dyn std::error::Error>> {
         let system = Self {
             event_bus: event_bus.clone(),
             statistics: Arc::new(Mutex::new(CustomerServiceStatistics::default())),
@@ -515,7 +515,7 @@ struct CustomerServiceStatistics {
 // 代理创建函数
 // ============================================================================
 
-async fn create_data_processor_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
+async fn create_data_processor_agent() -> std::result::Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
     let responses = vec![
         "数据处理完成。我已经清洗和标准化了原始销售数据，识别出了关键指标和趋势。处理后的数据已准备好进行进一步分析。".to_string(),
     ];
@@ -531,7 +531,7 @@ async fn create_data_processor_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn st
     ))
 }
 
-async fn create_analyzer_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
+async fn create_analyzer_agent() -> std::result::Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
     let responses = vec![
         "分析完成。基于处理后的数据，我发现了以下关键洞察：销售趋势呈上升态势，南部地区表现优于北部地区，2月份增长率达到20%。".to_string(),
     ];
@@ -547,7 +547,7 @@ async fn create_analyzer_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn std::err
     ))
 }
 
-async fn create_reporter_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
+async fn create_reporter_agent() -> std::result::Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
     let responses = vec![
         "报告生成完成。我已经创建了一份综合性的销售分析报告，包含了关键指标、趋势分析和业务建议。报告格式清晰，适合管理层查阅。".to_string(),
     ];
@@ -563,7 +563,7 @@ async fn create_reporter_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn std::err
     ))
 }
 
-async fn create_customer_service_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
+async fn create_customer_service_agent() -> std::result::Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
     let responses = vec![
         "我已经处理了客户的咨询。对于软件启动问题，我提供了基础的故障排除步骤。如果问题持续，建议转给技术支持团队。".to_string(),
         "我为客户提供了软件升级的详细指导，包括下载链接和安装步骤。客户表示满意。".to_string(),
@@ -580,7 +580,7 @@ async fn create_customer_service_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn 
     ))
 }
 
-async fn create_technical_support_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
+async fn create_technical_support_agent() -> std::result::Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
     let responses = vec![
         "技术支持已完成。我诊断了系统性能问题，发现是内存使用过高导致的。已提供了优化建议和解决方案。".to_string(),
         "数据库连接问题已解决。问题是由于防火墙配置导致的，我已经提供了详细的配置修改步骤。".to_string(),
@@ -597,7 +597,7 @@ async fn create_technical_support_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn
     ))
 }
 
-async fn create_escalation_agent() -> Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
+async fn create_escalation_agent() -> std::result::Result<Arc<dyn BasicAgent>, Box<dyn std::error::Error>> {
     let responses = vec![
         "升级处理完成。我已经协调了相关技术团队，为客户提供了专门的解决方案，并安排了后续跟进。".to_string(),
     ];

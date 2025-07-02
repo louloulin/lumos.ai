@@ -60,19 +60,14 @@ pub struct TestUtils;
 
 impl TestUtils {
     /// Create a test agent with mock LLM
-    pub async fn create_test_agent(name: &str) -> Result<SimpleAgent> {
-        lumosai::agent::builder()
-            .name(name)
-            .model("gpt-4")
-            .system_prompt("You are a test assistant")
-            .build()
-            .await
+    pub async fn create_test_agent(_name: &str) -> Result<SimpleAgent> {
+        lumosai::agent::simple("gpt-4", "You are a test assistant").await
     }
 
     /// Create test vector storage
     pub async fn create_test_vector_storage() -> Result<VectorStorage> {
-        // Temporarily disabled - API mismatch
-        Err(Error::Configuration("Test vector storage creation disabled".to_string()))
+        // 使用简化的内存向量存储创建方法
+        lumosai::vector::memory().await
     }
 
     /// Create test RAG system

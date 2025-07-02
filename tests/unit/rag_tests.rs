@@ -10,14 +10,14 @@ async fn test_rag_system_creation() {
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
     
     // Test basic RAG creation
-    let rag_result = create_test_rag_system(storage.clone(), "basic").await;
+    let rag_result = create_test_rag_system("basic", storage.clone()).await;
     assert!(rag_result.is_ok(), "Basic RAG creation should succeed");
     
     // Test RAG with different embedding providers
-    let rag_openai = create_test_rag_system(storage.clone(), "openai").await;
+    let rag_openai = create_test_rag_system("openai", storage.clone()).await;
     assert!(rag_openai.is_ok(), "OpenAI RAG creation should succeed");
     
-    let rag_local = create_test_rag_system(storage.clone(), "local").await;
+    let rag_local = create_test_rag_system("local", storage.clone()).await;
     assert!(rag_local.is_ok(), "Local RAG creation should succeed");
 }
 
@@ -26,7 +26,7 @@ async fn test_rag_document_processing() {
     init_test_env();
     
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
-    let rag = create_test_rag_system(storage, "test").await.unwrap();
+    let rag = create_test_rag_system("test", storage).await.unwrap();
     
     // Test single document processing
     let doc_content = "This is a test document about artificial intelligence and machine learning.";
@@ -71,7 +71,7 @@ async fn test_rag_retrieval_functionality() {
     init_test_env();
     
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
-    let rag = create_test_rag_system(storage, "retrieval_test").await.unwrap();
+    let rag = create_test_rag_system("retrieval_test", storage).await.unwrap();
     
     // Add knowledge base
     let knowledge_docs = vec![
@@ -119,7 +119,7 @@ async fn test_rag_context_generation() {
     init_test_env();
     
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
-    let rag = create_test_rag_system(storage, "context_test").await.unwrap();
+    let rag = create_test_rag_system("context_test", storage).await.unwrap();
     
     // Add domain-specific knowledge
     let domain_docs = vec![
@@ -157,7 +157,7 @@ async fn test_rag_embedding_consistency() {
     init_test_env();
     
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
-    let rag = create_test_rag_system(storage, "embedding_test").await.unwrap();
+    let rag = create_test_rag_system("embedding_test", storage).await.unwrap();
     
     let test_doc = "Consistent embedding test document";
     
@@ -180,7 +180,7 @@ async fn test_rag_error_handling() {
     init_test_env();
     
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
-    let rag = create_test_rag_system(storage, "error_test").await.unwrap();
+    let rag = create_test_rag_system("error_test", storage).await.unwrap();
     
     // Test empty document handling
     let empty_result = rag.add_document("").await;
@@ -206,7 +206,7 @@ async fn test_rag_concurrent_operations() {
     init_test_env();
     
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
-    let rag = create_test_rag_system(storage, "concurrent_test").await.unwrap();
+    let rag = create_test_rag_system("concurrent_test", storage).await.unwrap();
     
     // Concurrent document additions
     let mut add_handles = Vec::new();
@@ -255,7 +255,7 @@ async fn test_rag_performance_baseline() {
     init_test_env();
     
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
-    let rag = create_test_rag_system(storage, "perf_test").await.unwrap();
+    let rag = create_test_rag_system("perf_test", storage).await.unwrap();
     
     // Measure document addition performance
     let (add_result, add_duration) = PerformanceTestUtils::measure_time(|| async {
@@ -293,12 +293,12 @@ async fn test_rag_performance_baseline() {
 }
 
 // Helper functions for RAG testing
-async fn create_test_rag_system(storage: VectorStorage, name: &str) -> Result<RagSystem> {
+async fn create_test_rag_system(name: &str, storage: VectorStorage) -> Result<RagSystem> {
     // Mock RAG system creation - replace with actual implementation
     Ok(MockRagSystem::new(storage, name))
 }
 
-async fn create_test_rag_with_chunking(storage: VectorStorage, strategy: &str) -> Result<RagSystem> {
+async fn create_test_rag_with_chunking(strategy: &str, storage: VectorStorage) -> Result<RagSystem> {
     // Mock RAG system with specific chunking strategy
     Ok(MockRagSystem::with_chunking(storage, strategy))
 }

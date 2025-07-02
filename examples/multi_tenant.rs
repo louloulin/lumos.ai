@@ -17,6 +17,24 @@ use serde_json::json;
 use chrono::{DateTime, Utc};
 use tokio;
 
+// 简单的隔离级别枚举，用于演示
+#[derive(Debug, Clone)]
+pub enum IsolationLevel {
+    Logical,
+    Namespace,
+    Database,
+}
+
+impl IsolationLevel {
+    pub fn to_string(&self) -> String {
+        match self {
+            IsolationLevel::Logical => "logical".to_string(),
+            IsolationLevel::Namespace => "namespace".to_string(),
+            IsolationLevel::Database => "database".to_string(),
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🏢 多租户功能演示");
@@ -174,7 +192,7 @@ async fn demo_resource_isolation() -> std::result::Result<(), Box<dyn std::error
         .instructions("你是企业级AI助手，拥有高级功能")
         .model(enterprise_llm)
         .tenant_id("tenant_enterprise_001")
-        .isolation_level(IsolationLevel::Database)
+        .isolation_level(IsolationLevel::Database.to_string())
         .build()?;
     
     // 专业租户Agent
@@ -184,7 +202,7 @@ async fn demo_resource_isolation() -> std::result::Result<(), Box<dyn std::error
         .instructions("你是专业版AI助手")
         .model(pro_llm)
         .tenant_id("tenant_pro_001")
-        .isolation_level(IsolationLevel::Namespace)
+        .isolation_level(IsolationLevel::Namespace.to_string())
         .build()?;
     
     // 基础租户Agent
@@ -194,7 +212,7 @@ async fn demo_resource_isolation() -> std::result::Result<(), Box<dyn std::error
         .instructions("你是基础版AI助手")
         .model(basic_llm)
         .tenant_id("tenant_basic_001")
-        .isolation_level(IsolationLevel::Logical)
+        .isolation_level(IsolationLevel::Logical.to_string())
         .build()?;
     
     println!("不同租户的Agent已创建，具有不同的隔离级别");

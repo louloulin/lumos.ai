@@ -105,8 +105,7 @@ async fn demo_builder_pattern() -> Result<()> {
     let storage = lumos::vector::builder()
         .backend("memory")
         .batch_size(1000)
-        .build()
-        .await?;
+        .build()?;
     
     println!("✅ 使用构建器创建内存存储成功");
     
@@ -117,7 +116,6 @@ async fn demo_builder_pattern() -> Result<()> {
             .url(&qdrant_url)
             .batch_size(500)
             .build()
-            .await
         {
             Ok(_) => println!("✅ 使用构建器创建Qdrant存储成功"),
             Err(e) => println!("❌ 构建器创建Qdrant存储失败: {}", e),
@@ -131,7 +129,6 @@ async fn demo_builder_pattern() -> Result<()> {
             .url(&weaviate_url)
             .batch_size(200)
             .build()
-            .await
         {
             Ok(_) => println!("✅ 使用构建器创建Weaviate存储成功"),
             Err(e) => println!("❌ 构建器创建Weaviate存储失败: {}", e),

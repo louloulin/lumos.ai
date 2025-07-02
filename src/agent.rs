@@ -30,6 +30,11 @@ pub trait AgentTrait: Send + Sync {
     
     /// 获取Agent描述
     fn description(&self) -> Option<&str>;
+
+    /// 简单生成响应（兼容性方法）
+    async fn generate_simple(&self, message: &str) -> Result<String> {
+        self.chat(message).await
+    }
 }
 
 /// 一行代码创建简单Agent

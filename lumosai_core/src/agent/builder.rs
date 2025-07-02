@@ -167,6 +167,18 @@ impl AgentBuilder {
         self
     }
 
+    /// Set tenant ID for multi-tenant support
+    pub fn tenant_id<S: Into<String>>(mut self, tenant_id: S) -> Self {
+        self.tenant_id = Some(tenant_id.into());
+        self
+    }
+
+    /// Set isolation level for multi-tenancy
+    pub fn isolation_level<S: Into<String>>(mut self, level: S) -> Self {
+        self.isolation_level = Some(level.into());
+        self
+    }
+
     /// Set the agent name
     pub fn name<S: Into<String>>(mut self, name: S) -> Self {
         self.name = Some(name.into());
@@ -402,6 +414,8 @@ impl AgentBuilder {
             metadata: self.metadata,
             max_tool_calls: self.max_tool_calls.or(Some(10)),
             tool_timeout: self.tool_timeout.or(Some(30)),
+            tenant_id: self.tenant_id,
+            isolation_level: self.isolation_level,
         };
 
         // Create agent
@@ -450,6 +464,8 @@ impl AgentBuilder {
             metadata: self.metadata,
             max_tool_calls: self.max_tool_calls.or(Some(10)),
             tool_timeout: self.tool_timeout.or(Some(30)),
+            tenant_id: self.tenant_id,
+            isolation_level: self.isolation_level,
         };
 
         // Create agent

@@ -12,9 +12,7 @@ async fn test_agent_with_rag_basic_flow() {
     let rag = RagSystem::builder()
         .storage(storage)
         .embedding_provider("mock")
-        .build()
-        .await
-        .unwrap();
+        .build().unwrap();
     
     // Add knowledge to RAG
     let knowledge_docs = vec![

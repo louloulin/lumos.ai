@@ -1,6 +1,7 @@
 // Load testing for LumosAI framework
 use crate::test_config::*;
 use lumosai_core::Agent;
+use lumosai::agent::AgentTrait;
 use lumosai_vector_core::VectorStorage as VectorStorageTrait;
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -413,7 +414,7 @@ async fn test_load_test_with_realistic_data() {
 }
 
 // Helper function for load burst testing
-async fn execute_load_burst(agent: Arc<dyn Agent>, request_count: usize, phase: &str) -> (usize, Duration) {
+async fn execute_load_burst(agent: Arc<dyn AgentTrait>, request_count: usize, phase: &str) -> (usize, Duration) {
     let start_time = Instant::now();
     let mut handles = Vec::new();
 

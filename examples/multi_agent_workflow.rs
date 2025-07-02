@@ -7,7 +7,7 @@
 //! - 条件执行和错误处理
 
 use lumosai_core::prelude::*;
-use lumosai_core::agent::{AgentBuilder, trait_def::Agent, types::AgentGenerateOptions};
+use lumosai_core::agent::{AgentBuilder, trait_def::Agent, types::AgentGenerateOptions, AgentTrait};
 use lumosai_core::llm::{MockLlmProvider, Message, Role};
 use std::sync::Arc;
 use std::collections::HashMap;
@@ -270,7 +270,7 @@ async fn demo_conditional_workflow() -> std::result::Result<(), Box<dyn std::err
 // ============================================================================
 
 /// 创建研究员代理
-async fn create_researcher_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_researcher_agent() -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "我已经完成了深入的技术研究。Rust 异步编程的最新发展包括：async/await 语法的稳定、Tokio 生态系统的成熟、以及新的异步特性如 async closures 的提案。".to_string(),
         "研究完成。我收集了相关的代码示例和最佳实践，包括错误处理模式、性能优化技巧和常见陷阱的避免方法。".to_string(),
@@ -288,7 +288,7 @@ async fn create_researcher_agent() -> std::result::Result<Arc<dyn Agent>, Box<dy
 }
 
 /// 创建写作代理
-async fn create_writer_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_writer_agent() -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "我已经创建了详细的文章大纲：1. 引言 2. 异步编程基础 3. 高级特性 4. 最佳实践 5. 性能优化 6. 总结。每个部分都包含了具体的要点和示例。".to_string(),
         "文章撰写完成。我基于研究结果和大纲，撰写了一篇全面的技术文章，涵盖了 Rust 异步编程的核心概念、实用技巧和最佳实践。".to_string(),
@@ -308,7 +308,7 @@ async fn create_writer_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn st
 }
 
 /// 创建审查代理
-async fn create_reviewer_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_reviewer_agent() -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "技术审查完成。文章的技术内容准确，代码示例正确，概念解释清晰。建议在性能部分添加更多的基准测试数据。".to_string(),
         "编辑审查完成。文章结构良好，语言流畅，逻辑清晰。已修正了几处语法错误和术语不一致的问题。".to_string(),
@@ -327,7 +327,7 @@ async fn create_reviewer_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn 
 }
 
 /// 创建发布代理
-async fn create_publisher_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_publisher_agent() -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "发布准备完成。文章已格式化为适合博客发布的格式，添加了适当的标题层级、代码高亮和元数据。SEO 优化也已完成。".to_string(),
     ];
@@ -344,7 +344,7 @@ async fn create_publisher_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn
 }
 
 /// 创建不可靠代理（用于演示错误处理）
-async fn create_unreliable_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_unreliable_agent() -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "主要任务成功完成。这是一个高质量的输出结果。".to_string(),
         // 注意：这个代理会根据输入决定是否"失败"

@@ -102,6 +102,8 @@ impl TypeScriptBindings {
             max_tool_calls: None,
             tool_timeout: None,
             memory_config: None,
+            tenant_id: None,
+            isolation_level: None,
         };
 
         // For now, just return the agent name as ID

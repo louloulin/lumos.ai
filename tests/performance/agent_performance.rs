@@ -18,7 +18,6 @@ async fn benchmark_agent_creation() {
                 .model_name("gpt-4")
                 .instructions("You are a benchmark test assistant")
                 .build()
-                .await
                 .unwrap();
         }
     ).await;
@@ -158,7 +157,6 @@ async fn benchmark_agent_memory_usage() {
             .model_name("gpt-4")
             .instructions("You are a memory test assistant")
             .build()
-            .await
             .unwrap();
         
         agents.push(agent);

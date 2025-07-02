@@ -142,6 +142,8 @@ pub fn create_basic_agent(
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     BasicAgent::new(_config, llm)

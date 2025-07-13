@@ -7,10 +7,26 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
-use crate::error::{Error, Result};
+use crate::error::{Error, Result as LumosResult};
 
 // Re-export new unified architecture
 pub use lumosai_vector::prelude::*;
+
+// Convert from lumosai_core::Error to VectorError
+impl From<Error> for VectorError {
+    fn from(err: Error) -> Self {
+        match err {
+            Error::InvalidInput(msg) => VectorError::InvalidConfig(msg),
+            Error::Storage(msg) => VectorError::StorageBackend(msg),
+            Error::Configuration(msg) => VectorError::InvalidConfig(msg),
+            Error::NotFound(msg) => VectorError::IndexNotFound(msg),
+            Error::AlreadyExists(msg) => VectorError::IndexAlreadyExists(msg),
+            Error::Timeout(msg) => VectorError::QueryTimeout { seconds: 30 },
+            Error::Internal(msg) => VectorError::Internal(msg),
+            _ => VectorError::Internal(err.to_string()),
+        }
+    }
+}
 pub use lumosai_vector::memory::MemoryVectorStorage as NewMemoryVectorStorage;
 
 /// Legacy vector similarity metrics (for backward compatibility)
@@ -134,16 +150,16 @@ pub trait VectorStorage: Send + Sync {
         index_name: &str,
         dimension: usize,
         metric: Option<SimilarityMetric>,
-    ) -> Result<()>;
+    ) -> std::result::Result<(), VectorError>;
 
     /// List all vector indexes
-    async fn list_indexes(&self) -> Result<Vec<String>>;
+    async fn list_indexes(&self) -> std::result::Result<Vec<String>, VectorError>;
 
     /// Get index statistics
-    async fn describe_index(&self, index_name: &str) -> Result<IndexStats>;
+    async fn describe_index(&self, index_name: &str) -> std::result::Result<IndexStats, VectorError>;
 
     /// Delete an index
-    async fn delete_index(&self, index_name: &str) -> Result<()>;
+    async fn delete_index(&self, index_name: &str) -> std::result::Result<(), VectorError>;
 
     /// Insert or update vectors
     async fn upsert(
@@ -152,7 +168,7 @@ pub trait VectorStorage: Send + Sync {
         vectors: Vec<Vec<f32>>,
         ids: Option<Vec<String>>,
         metadata: Option<Vec<HashMap<String, serde_json::Value>>>,
-    ) -> Result<Vec<String>>;
+    ) -> std::result::Result<Vec<String>, VectorError>;
 
     /// Query vectors by similarity
     async fn query(
@@ -162,7 +178,7 @@ pub trait VectorStorage: Send + Sync {
         top_k: usize,
         filter: Option<FilterCondition>,
         include_vectors: bool,
-    ) -> Result<Vec<QueryResult>>;
+    ) -> std::result::Result<Vec<QueryResult>, VectorError>;
 
     /// Update vector by ID
     async fn update_by_id(
@@ -289,7 +305,7 @@ pub fn create_vector_storage(config: Option<VectorStorageConfig>) -> Result<Box<
             }
             #[cfg(not(feature = "qdrant"))]
             {
-                Err(Error::InvalidInput("Qdrant support not enabled. Enable 'qdrant' feature".to_string()))
+                Err(VectorError::InvalidConfig("Qdrant support not enabled. Enable 'qdrant' feature".to_string()))
             }
         },
         VectorStorageConfig::Weaviate { url, api_key } => {
@@ -306,16 +322,16 @@ pub fn create_vector_storage(config: Option<VectorStorageConfig>) -> Result<Box<
             }
             #[cfg(not(feature = "weaviate"))]
             {
-                Err(Error::InvalidInput("Weaviate support not enabled. Enable 'weaviate' feature".to_string()))
+                Err(VectorError::InvalidConfig("Weaviate support not enabled. Enable 'weaviate' feature".to_string()))
             }
         },
         VectorStorageConfig::MongoDB { connection_string: _, database: _ } => {
-            Err(Error::InvalidInput("MongoDB support temporarily disabled due to dependency conflicts".to_string()))
+            Err(VectorError::NotSupported("MongoDB support temporarily disabled due to dependency conflicts".to_string()))
         },
         VectorStorageConfig::PostgreSQL { connection_string: _, database: _ } => {
-            Err(Error::InvalidInput("PostgreSQL support temporarily disabled due to dependency conflicts".to_string()))
+            Err(VectorError::NotSupported("PostgreSQL support temporarily disabled due to dependency conflicts".to_string()))
         },
-        _ => Err(Error::InvalidInput("Unsupported vector storage configuration".to_string())),
+        _ => Err(VectorError::InvalidConfig("Unsupported vector storage configuration".to_string())),
     }
 }
 

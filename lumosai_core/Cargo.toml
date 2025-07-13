@@ -20,17 +20,16 @@ path = "src/lib.rs"
 # path = "src/bin/lumos.rs"
 
 [features]
-weaviate = []
 default = ["macros"]
-sqlite = ["rusqlite"]
-vector_sqlite = ["rusqlite"]
 macros = ["lumos_macro"]
 demos = []
-# Vector storage features (temporarily disabled due to dependency conflicts)
-# qdrant = ["lumosai_stores", "lumosai_stores/qdrant"]
-# mongodb = ["lumosai_stores", "lumosai_stores/mongodb"]
-# postgres = ["lumosai_stores", "lumosai_stores/postgres"]
-# vector_stores = ["lumosai_stores"]
+# Vector storage features
+qdrant = ["lumosai_vector/qdrant"]
+postgres = ["lumosai_vector/postgres"]
+weaviate = ["lumosai_vector/weaviate"]
+# SQLite features
+sqlite = ["rusqlite"]
+vector_sqlite = ["rusqlite"]
 
 [dependencies]
 tokio = { workspace = true }

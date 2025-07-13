@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 use serde_json::Value;
 
-use super::{VectorStorage, IndexStats, QueryResult, SimilarityMetric, FilterCondition};
+use super::{VectorStorage, IndexStats, QueryResult, SimilarityMetric, FilterCondition, VectorError};
 use crate::error::{Error, Result};
 
 /// Vector index information
@@ -154,11 +154,11 @@ impl VectorStorage for MemoryVectorStorage {
         index_name: &str,
         dimension: usize,
         metric: Option<SimilarityMetric>,
-    ) -> Result<()> {
-        let mut indexes = self.indexes.write().map_err(|_| Error::Storage("Failed to acquire write lock".into()))?;
-        
+    ) -> std::result::Result<(), VectorError> {
+        let mut indexes = self.indexes.write().map_err(|_| VectorError::Internal("Failed to acquire write lock".into()))?;
+
         if indexes.contains_key(index_name) {
-            return Err(Error::Storage(format!("Index {} already exists", index_name)));
+            return Err(VectorError::IndexAlreadyExists(index_name.to_string()));
         }
 
         indexes.insert(index_name.to_string(), VectorIndex {
@@ -171,16 +171,16 @@ impl VectorStorage for MemoryVectorStorage {
         Ok(())
     }
 
-    async fn list_indexes(&self) -> Result<Vec<String>> {
-        let indexes = self.indexes.read().map_err(|_| Error::Storage("Failed to acquire read lock".into()))?;
+    async fn list_indexes(&self) -> std::result::Result<Vec<String>, VectorError> {
+        let indexes = self.indexes.read().map_err(|_| VectorError::Internal("Failed to acquire read lock".into()))?;
         Ok(indexes.keys().cloned().collect())
     }
 
-    async fn describe_index(&self, index_name: &str) -> Result<IndexStats> {
-        let indexes = self.indexes.read().map_err(|_| Error::Storage("Failed to acquire read lock".into()))?;
-        
+    async fn describe_index(&self, index_name: &str) -> std::result::Result<IndexStats, VectorError> {
+        let indexes = self.indexes.read().map_err(|_| VectorError::Internal("Failed to acquire read lock".into()))?;
+
         let index = indexes.get(index_name)
-            .ok_or_else(|| Error::Storage(format!("Index {} not found", index_name)))?;
+            .ok_or_else(|| VectorError::IndexNotFound(index_name.to_string()))?;
 
         Ok(IndexStats {
             dimension: index.dimension,
@@ -189,14 +189,14 @@ impl VectorStorage for MemoryVectorStorage {
         })
     }
 
-    async fn delete_index(&self, index_name: &str) -> Result<()> {
-        let mut indexes = self.indexes.write().map_err(|_| Error::Storage("Failed to acquire write lock".into()))?;
+    async fn delete_index(&self, index_name: &str) -> std::result::Result<(), VectorError> {
+        let mut indexes = self.indexes.write().map_err(|_| VectorError::Internal("Failed to acquire write lock".into()))?;
         indexes.remove(index_name);
         Ok(())
     }
 
     /// Insert or update vectors and their metadata
-    /// 
+    ///
     /// Returns a list of vector IDs
     async fn upsert(
         &self,
@@ -204,31 +204,30 @@ impl VectorStorage for MemoryVectorStorage {
         vectors: Vec<Vec<f32>>,
         ids: Option<Vec<String>>,
         metadata: Option<Vec<HashMap<String, serde_json::Value>>>,
-    ) -> Result<Vec<String>> {
-        let mut indexes = self.indexes.write().map_err(|_| Error::Storage("Failed to acquire write lock".into()))?;
-        
+    ) -> std::result::Result<Vec<String>, VectorError> {
+        let mut indexes = self.indexes.write().map_err(|_| VectorError::Internal("Failed to acquire write lock".into()))?;
+
         let index = indexes.get_mut(index_name)
-            .ok_or_else(|| Error::Storage(format!("Index {} not found", index_name)))?;
+            .ok_or_else(|| VectorError::IndexNotFound(index_name.to_string()))?;
 
         let vector_ids = ids.unwrap_or_else(|| vectors.iter().map(|_| Uuid::new_v4().to_string()).collect());
 
         if vector_ids.len() != vectors.len() {
-            return Err(Error::Storage("Number of IDs must match number of vectors".into()));
+            return Err(VectorError::InvalidVector("Number of IDs must match number of vectors".into()));
         }
 
         if let Some(meta) = &metadata {
             if meta.len() != vectors.len() {
-                return Err(Error::Storage("Number of metadata entries must match number of vectors".into()));
+                return Err(VectorError::InvalidVector("Number of metadata entries must match number of vectors".into()));
             }
         }
 
         for (i, (id, vector)) in vector_ids.iter().zip(vectors.iter()).enumerate() {
             if vector.len() != index.dimension {
-                return Err(Error::Storage(format!(
-                    "Vector dimension mismatch: expected {}, got {}",
-                    index.dimension,
-                    vector.len()
-                )));
+                return Err(VectorError::DimensionMismatch {
+                    expected: index.dimension,
+                    actual: vector.len()
+                });
             }
 
             index.vectors.insert(id.clone(), vector.clone());
@@ -251,18 +250,17 @@ impl VectorStorage for MemoryVectorStorage {
         top_k: usize,
         filter: Option<FilterCondition>,
         include_vectors: bool,
-    ) -> Result<Vec<QueryResult>> {
+    ) -> std::result::Result<Vec<QueryResult>, VectorError> {
         let indexes = self.indexes.read().map_err(|_| Error::Storage("Failed to acquire read lock".into()))?;
         
         let index = indexes.get(index_name)
             .ok_or_else(|| Error::Storage(format!("Index {} not found", index_name)))?;
 
         if query_vector.len() != index.dimension {
-            return Err(Error::Storage(format!(
-                "Query vector dimension mismatch: expected {}, got {}",
-                index.dimension,
-                query_vector.len()
-            )));
+            return Err(VectorError::DimensionMismatch {
+                expected: index.dimension,
+                actual: query_vector.len()
+            });
         }
 
         let mut results: Vec<QueryResult> = index.vectors.iter()
@@ -301,23 +299,22 @@ impl VectorStorage for MemoryVectorStorage {
         id: &str,
         vector: Option<Vec<f32>>,
         metadata: Option<HashMap<String, serde_json::Value>>,
-    ) -> Result<()> {
-        let mut indexes = self.indexes.write().map_err(|_| Error::Storage("Failed to acquire write lock".into()))?;
+    ) -> std::result::Result<(), VectorError> {
+        let mut indexes = self.indexes.write().map_err(|_| VectorError::InvalidVector("Failed to acquire write lock".into()))?;
         
         let index = indexes.get_mut(index_name)
-            .ok_or_else(|| Error::Storage(format!("Index {} not found", index_name)))?;
+            .ok_or_else(|| VectorError::InvalidVector(format!("Index {} not found", index_name)))?;
 
         if !index.vectors.contains_key(id) {
-            return Err(Error::Storage(format!("Vector with ID {} not found", id)));
+            return Err(VectorError::InvalidVector(format!("Vector with ID {} not found", id)));
         }
 
         if let Some(new_vector) = vector {
             if new_vector.len() != index.dimension {
-                return Err(Error::Storage(format!(
-                    "Vector dimension mismatch: expected {}, got {}",
-                    index.dimension,
-                    new_vector.len()
-                )));
+                return Err(VectorError::DimensionMismatch {
+                    expected: index.dimension,
+                    actual: new_vector.len()
+                });
             }
             index.vectors.insert(id.to_string(), new_vector);
         }
@@ -329,11 +326,11 @@ impl VectorStorage for MemoryVectorStorage {
         Ok(())
     }
 
-    async fn delete_by_id(&self, index_name: &str, id: &str) -> Result<()> {
-        let mut indexes = self.indexes.write().map_err(|_| Error::Storage("Failed to acquire write lock".into()))?;
-        
+    async fn delete_by_id(&self, index_name: &str, id: &str) -> std::result::Result<(), VectorError> {
+        let mut indexes = self.indexes.write().map_err(|_| VectorError::InvalidVector("Failed to acquire write lock".into()))?;
+
         let index = indexes.get_mut(index_name)
-            .ok_or_else(|| Error::Storage(format!("Index {} not found", index_name)))?;
+            .ok_or_else(|| VectorError::InvalidVector(format!("Index {} not found", index_name)))?;
 
         index.vectors.remove(id);
         index.metadata.remove(id);

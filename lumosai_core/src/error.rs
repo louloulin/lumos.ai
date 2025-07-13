@@ -200,3 +200,9 @@ impl From<String> for Error {
         Error::Configuration(err)
     }
 }
+
+impl From<lumosai_vector::VectorError> for Error {
+    fn from(err: lumosai_vector::VectorError) -> Self {
+        Error::VectorStore(err.to_string())
+    }
+}

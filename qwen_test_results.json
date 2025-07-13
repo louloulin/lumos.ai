@@ -1,0 +1,57 @@
+{
+  "overall_success_rate": 0.0,
+  "total_tests": 9,
+  "passed_tests": 0,
+  "detailed_results": {
+    "basic_chat": {
+      "success": false,
+      "error": "{\"error\":{\"code\":\"invalid_parameter_error\",\"param\":null,\"message\":\"parameter.enable_thinking must be set to false for non-streaming calls\",\"type\":\"invalid_request_error\"},\"id\":\"chatcmpl-626d5210-f92d-9def-8134-0ad33b1639ae\",\"request_id\":\"626d5210-f92d-9def-8134-0ad33b1639ae\"}"
+    },
+    "chinese_conversation": {
+      "success": false,
+      "error": "{\"error\":{\"code\":\"invalid_parameter_error\",\"param\":null,\"message\":\"parameter.enable_thinking must be set to false for non-streaming calls\",\"type\":\"invalid_request_error\"},\"id\":\"chatcmpl-43f8f0f5-0554-9492-a037-05da7b65d2b3\",\"request_id\":\"43f8f0f5-0554-9492-a037-05da7b65d2b3\"}"
+    },
+    "english_conversation": {
+      "success": false,
+      "error": "{\"error\":{\"code\":\"invalid_parameter_error\",\"param\":null,\"message\":\"parameter.enable_thinking must be set to false for non-streaming calls\",\"type\":\"invalid_request_error\"},\"id\":\"chatcmpl-f513d825-899b-93ae-a8a0-af8fa5e2e72d\",\"request_id\":\"f513d825-899b-93ae-a8a0-af8fa5e2e72d\"}"
+    },
+    "multi_turn": {
+      "success": false,
+      "error": "{\"error\":{\"code\":\"invalid_parameter_error\",\"param\":null,\"message\":\"parameter.enable_thinking must be set to false for non-streaming calls\",\"type\":\"invalid_request_error\"},\"id\":\"chatcmpl-061eb3c4-4ec8-924b-8e8c-fa460ccc3360\",\"request_id\":\"061eb3c4-4ec8-924b-8e8c-fa460ccc3360\"}"
+    },
+    "performance": {
+      "total_tests": 5,
+      "success_count": 0,
+      "success_rate": 0.0,
+      "avg_duration": 0,
+      "total_duration": 0.6319308280944824,
+      "results": [
+        {
+          "prompt": "什么是深度学习？",
+          "success": false,
+          "error": "{\"error\":{\"code\":\"invalid_parameter_error\",\"param\":null,\"message\":\"parameter.enable_thinking must be set to false for non-streaming calls\",\"type\":\"invalid_request_error\"},\"id\":\"chatcmpl-a4395116-b9b5-99f7-bd0e-5b58f2775058\",\"request_id\":\"a4395116-b9b5-99f7-bd0e-5b58f2775058\"}"
+        },
+        {
+          "prompt": "解释神经网络的工作原理。",
+          "success": false,
+          "error": "{\"error\":{\"code\":\"invalid_parameter_error\",\"param\":null,\"message\":\"parameter.enable_thinking must be set to false for non-streaming calls\",\"type\":\"invalid_request_error\"},\"id\":\"chatcmpl-f5b48d79-7c2c-9dfa-bf5e-7a0b2d6ecd07\",\"request_id\":\"f5b48d79-7c2c-9dfa-bf5e-7a0b2d6ecd07\"}"
+        },
+        {
+          "prompt": "人工智能的应用领域有哪些？",
+          "success": false,
+          "error": "{\"error\":{\"code\":\"invalid_parameter_error\",\"param\":null,\"message\":\"parameter.enable_thinking must be set to false for non-streaming calls\",\"type\":\"invalid_request_error\"},\"id\":\"chatcmpl-4e2c582e-19b6-9e11-a082-24de9394b2f0\",\"request_id\":\"4e2c582e-19b6-9e11-a082-24de9394b2f0\"}"
+        },
+        {
+          "prompt": "什么是自然语言处理？",
+          "success": false,
+          "error": "{\"error\":{\"code\":\"invalid_parameter_error\",\"param\":null,\"message\":\"parameter.enable_thinking must be set to false for non-streaming calls\",\"type\":\"invalid_request_error\"},\"id\":\"chatcmpl-ffb9dfae-cc53-99ef-94ba-93c1ab7b7c8e\",\"request_id\":\"ffb9dfae-cc53-99ef-94ba-93c1ab7b7c8e\"}"
+        },
+        {
+          "prompt": "机器学习和深度学习的区别是什么？",
+          "success": false,
+          "error": "{\"error\":{\"code\":\"invalid_parameter_error\",\"param\":null,\"message\":\"parameter.enable_thinking must be set to false for non-streaming calls\",\"type\":\"invalid_request_error\"},\"id\":\"chatcmpl-614651b4-9f7e-9af3-a045-83eef419d9db\",\"request_id\":\"614651b4-9f7e-9af3-a045-83eef419d9db\"}"
+        }
+      ]
+    }
+  }
+}

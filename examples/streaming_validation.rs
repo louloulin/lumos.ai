@@ -86,9 +86,10 @@ async fn test_basic_streaming() -> std::result::Result<(), Box<dyn std::error::E
     println!("📊 测试JSON流式响应...");
     let start_time = Instant::now();
     
+    let timestamp = format!("{}", chrono::Utc::now().timestamp());
     let json_chunks = vec![
         r#"{"type":"start","timestamp":"#,
-        &format!("{}", chrono::Utc::now().timestamp()),
+        &timestamp,
         r#""}"#,
         r#"{"type":"data","content":"Hello"}"#,
         r#"{"type":"data","content":" World"}"#,

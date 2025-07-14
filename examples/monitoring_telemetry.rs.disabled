@@ -8,8 +8,9 @@
 
 use lumosai_core::prelude::*;
 use lumosai_core::agent::{AgentBuilder, BasicAgent};
-use lumosai_core::telemetry::{TelemetryCollector, MetricsCollector, TraceCollector};
-use lumosai_core::monitoring::{PerformanceMonitor, SLAMonitor, AlertManager};
+// 注释掉不存在的模块导入
+// use lumosai_core::telemetry::{TelemetryCollector, MetricsCollector, TraceCollector};
+// use lumosai_core::monitoring::{PerformanceMonitor, SLAMonitor, AlertManager};
 use lumosai_core::llm::{MockLlmProvider, Message, Role};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -18,7 +19,7 @@ use serde_json::json;
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("📊 监控与遥测演示");
     println!("==================");
     

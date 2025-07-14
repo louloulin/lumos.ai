@@ -134,9 +134,10 @@ async fn test_openai_compatible_api(api_key: &str, model: &str) -> Result<(), Bo
     // 流式响应测试
     println!("🧪 测试流式响应...");
     let start_time = Instant::now();
+    let options = LlmOptions::default();
     let stream_result = provider.generate_stream(
         "请写一首关于人工智能的短诗。",
-        &LlmOptions::default()
+        &options
     ).await;
     
     match stream_result {

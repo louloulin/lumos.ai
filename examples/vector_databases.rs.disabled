@@ -2,13 +2,13 @@
 //! 
 //! 本示例展示如何使用Lumos与真实的向量数据库（Qdrant、Weaviate、PostgreSQL）进行集成
 
-use lumos::prelude::*;
+use lumosai::prelude::*;
 use std::env;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // 初始化日志
-    tracing_subscriber::init();
+    // tracing_subscriber::init(); // 注释掉缺失的依赖
     
     println!("🚀 Lumos Vector Database Integration Examples");
     println!("==============================================");
@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
 }
 
 /// 演示自动选择向量数据库
-async fn demo_auto_selection() -> Result<()> {
+async fn demo_auto_selection() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n📋 1. 自动选择向量数据库");
     println!("------------------------");
     

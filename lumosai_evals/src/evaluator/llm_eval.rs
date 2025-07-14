@@ -12,7 +12,6 @@ use crate::error::{Error, Result};
 use crate::types::{EvalOptions, EvalResult};
 use crate::evaluator::Evaluator;
 use lumosai_core::llm::{LlmProvider, LlmOptions, Message, Role};
-use crate::metrics::Metric;
 
 /// 配置LLM评估器的选项
 #[derive(Clone, Debug, Deserialize, Serialize)]

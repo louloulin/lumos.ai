@@ -419,7 +419,7 @@ mod tests {
     
     #[test]
     fn test_filter_builder() {
-        let filter = filter()
+        let _filter = filter()
             .agent_ids(vec!["agent_001".to_string()])
             .event_types(vec!["AgentStarted".to_string()])
             .build();

@@ -214,14 +214,14 @@ impl RagBuilder {
     
     /// 构建RAG系统
     pub async fn build(self) -> Result<RagSystem> {
-        let storage = self.storage
+        let _storage = self.storage
             .ok_or_else(|| Error::Config("Storage is required".to_string()))?;
         
         let embedding_provider = self.embedding_provider
             .unwrap_or_else(|| "openai".to_string());
         
         // 创建嵌入提供商
-        let embedding = create_embedding_provider(&embedding_provider).await?;
+        let _embedding = create_embedding_provider(&embedding_provider).await?;
         
         // 创建分块策略
         let chunking_strategy = self.chunking_strategy
@@ -229,14 +229,14 @@ impl RagBuilder {
         let chunk_size = self.chunk_size.unwrap_or(1000);
         let chunk_overlap = self.chunk_overlap.unwrap_or(200);
         
-        let chunker = create_chunking_strategy(&chunking_strategy, chunk_size, chunk_overlap)?;
+        let _chunker = create_chunking_strategy(&chunking_strategy, chunk_size, chunk_overlap)?;
         
         // 创建检索策略
         let retrieval_strategy = self.retrieval_strategy
             .unwrap_or_else(|| "vector".to_string());
         let top_k = self.top_k.unwrap_or(5);
         
-        let retriever = create_retrieval_strategy(&retrieval_strategy, top_k)?;
+        let _retriever = create_retrieval_strategy(&retrieval_strategy, top_k)?;
         
         // 创建简化的RAG实现
         let rag = SimpleRagImpl {

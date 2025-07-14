@@ -263,7 +263,7 @@ mod tests {
     
     #[test]
     fn test_agent_builder() {
-        let builder = builder()
+        let _builder = builder()
             .name("TestAgent")
             .model("gpt-4")
             .system_prompt("You are a test assistant")

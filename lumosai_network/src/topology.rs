@@ -174,7 +174,7 @@ impl NetworkTopology for GraphTopology {
                     .collect();
             
             // 添加双向边
-            for (other_id, other_idx) in existing_nodes {
+            for (_other_id, other_idx) in existing_nodes {
                 // 添加到新节点的边
                 graph.add_edge(
                     node_idx,

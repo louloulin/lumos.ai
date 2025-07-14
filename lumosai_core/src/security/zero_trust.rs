@@ -129,7 +129,7 @@ struct DeviceTrust {
 
 /// 信任级别
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum TrustLevel {
+pub enum TrustLevel {
     Trusted,
     Untrusted,
     Unknown,

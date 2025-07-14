@@ -218,7 +218,7 @@ impl SessionTrait for SimpleSession {
         }
     }
     
-    async fn set_state(&self, state: SessionState) -> Result<()> {
+    async fn set_state(&self, _state: SessionState) -> Result<()> {
         // 这里需要通过存储直接更新状态
         // 暂时返回成功
         Ok(())
@@ -359,7 +359,7 @@ mod tests {
     
     #[test]
     fn test_session_builder() {
-        let builder = builder()
+        let _builder = builder()
             .agent_name("test_agent")
             .user_id("user_123")
             .title("Test Session");

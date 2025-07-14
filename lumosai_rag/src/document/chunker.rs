@@ -332,7 +332,7 @@ impl EnhancedChunker {
     ) -> Result<Vec<Document>> {
         let mut chunks = Vec::new();
         let mut current_chunk = String::new();
-        let mut current_header = String::new();
+        let mut _current_header = String::new();
 
         for line in content.lines() {
             let mut is_header = false;
@@ -346,7 +346,7 @@ impl EnhancedChunker {
                         current_chunk.clear();
                     }
 
-                    current_header = if strip_headers {
+                    _current_header = if strip_headers {
                         line.trim_start_matches(header_level).trim().to_string()
                     } else {
                         line.to_string()
@@ -445,7 +445,7 @@ impl EnhancedChunker {
         let mut current_chunk = String::new();
 
         for line in content.lines() {
-            let mut is_section_start = false;
+            let mut _is_section_start = false;
 
             for section_tag in sections {
                 if line.contains(&format!("<{}>", section_tag)) ||
@@ -454,7 +454,7 @@ impl EnhancedChunker {
                         chunks.push(current_chunk.clone());
                         current_chunk.clear();
                     }
-                    is_section_start = true;
+                    _is_section_start = true;
                     break;
                 }
             }

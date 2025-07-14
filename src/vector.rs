@@ -4,7 +4,6 @@
 
 use crate::{Result, Error};
 use std::sync::Arc;
-use lumosai_vector_core::prelude::*;
 
 /// 向量存储抽象 - 使用enum来支持多种存储类型
 #[derive(Clone)]
@@ -466,14 +465,14 @@ mod tests {
     
     #[tokio::test]
     async fn test_memory_storage_creation() {
-        let storage = memory().await.expect("Failed to create memory storage");
+        let _storage = memory().await.expect("Failed to create memory storage");
         // 简单测试存储是否创建成功
         assert!(true); // 如果能到这里说明创建成功
     }
     
     #[test]
     fn test_builder_pattern() {
-        let builder = builder()
+        let _builder = builder()
             .backend("memory")
             .batch_size(1000);
         

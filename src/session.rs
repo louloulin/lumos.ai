@@ -53,11 +53,11 @@ pub trait SessionTrait: Send + Sync {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let session = lumos::session::create("my_agent", Some("user_123")).await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let session = lumosai::session::create("my_agent", Some("user_123")).await?;
 ///     
 ///     // 添加消息
 ///     let message = Message {
@@ -89,12 +89,12 @@ pub async fn create(agent_name: &str, user_id: Option<&str>) -> Result<Session> 
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let storage = Arc::new(MemorySessionStorage::new());
-///     let session = lumos::session::create_with_storage(
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let storage = Arc::new(lumosai::session::MemorySessionStorage::new());
+///     let session = lumosai::session::create_with_storage(
 ///         "my_agent", 
 ///         Some("user_123"), 
 ///         storage
@@ -124,13 +124,13 @@ pub async fn create_with_storage(
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let storage = Arc::new(MemorySessionStorage::new());
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let storage = Arc::new(lumosai::session::MemorySessionStorage::new());
 ///     
-///     if let Some(session) = lumos::session::load("session_id", storage).await? {
+///     if let Some(session) = lumosai::session::load("session_id", storage).await? {
 ///         println!("Loaded session: {}", session.id());
 ///     }
 ///     
@@ -154,12 +154,12 @@ pub async fn load(
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let storage = Arc::new(MemorySessionStorage::new());
-///     let sessions = lumos::session::list_user_sessions("user_123", storage, Some(10)).await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let storage = Arc::new(lumosai::session::MemorySessionStorage::new());
+///     let sessions = lumosai::session::list_user_sessions("user_123", storage, Some(10)).await?;
 ///     
 ///     for session_meta in sessions {
 ///         println!("Session: {} - {}", session_meta.session_id, session_meta.agent_name);
@@ -237,11 +237,11 @@ impl SessionTrait for SimpleSession {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let session = lumos::session::builder()
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let session = lumosai::session::builder()
 ///         .agent_name("my_agent")
 ///         .user_id("user_123")
 ///         .title("My Chat Session")

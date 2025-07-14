@@ -43,14 +43,14 @@ pub enum SimpleEvent {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let event_bus = lumos::events::create_bus(1000);
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let event_bus = lumosai::events::create_bus(1000);
 ///     
 ///     // 发布事件
-///     lumos::events::publish(&event_bus, "agent_started", serde_json::json!({
+///     lumosai::events::publish(&event_bus, "agent_started", serde_json::json!({
 ///         "agent_id": "agent_001"
 ///     })).await?;
 ///     
@@ -65,19 +65,19 @@ pub fn create_bus(capacity: usize) -> Arc<EventBus> {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let event_bus = lumos::events::create_bus(1000);
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let event_bus = lumosai::events::create_bus(1000);
 ///     
 ///     // 发布Agent启动事件
-///     lumos::events::publish(&event_bus, "agent_started", serde_json::json!({
+///     lumosai::events::publish(&event_bus, "agent_started", serde_json::json!({
 ///         "agent_id": "agent_001"
 ///     })).await?;
 ///     
 ///     // 发布消息事件
-///     lumos::events::publish(&event_bus, "message_sent", serde_json::json!({
+///     lumosai::events::publish(&event_bus, "message_sent", serde_json::json!({
 ///         "from": "agent_001",
 ///         "to": "user",
 ///         "content": "Hello!"
@@ -184,12 +184,12 @@ pub async fn publish(
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let event_bus = lumos::events::create_bus(1000);
-///     let mut receiver = lumos::events::subscribe(&event_bus);
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let event_bus = lumosai::events::create_bus(1000);
+///     let mut receiver = lumosai::events::subscribe(&event_bus);
 ///     
 ///     // 在另一个任务中监听事件
 ///     tokio::spawn(async move {
@@ -209,12 +209,12 @@ pub fn subscribe(event_bus: &EventBus) -> tokio::sync::broadcast::Receiver<Agent
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let event_bus = lumos::events::create_bus(1000);
-///     lumos::events::register_log_handler(&event_bus).await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let event_bus = lumosai::events::create_bus(1000);
+///     lumosai::events::register_log_handler(&event_bus).await?;
 ///     
 ///     // 现在所有事件都会被记录到控制台
 ///     
@@ -230,15 +230,15 @@ pub async fn register_log_handler(event_bus: &EventBus) -> Result<()> {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let event_bus = lumos::events::create_bus(1000);
-///     let metrics_handler = lumos::events::register_metrics_handler(&event_bus).await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let event_bus = lumosai::events::create_bus(1000);
+///     let metrics_handler = lumosai::events::register_metrics_handler(&event_bus).await?;
 ///     
 ///     // 发布一些事件
-///     lumos::events::publish(&event_bus, "agent_started", serde_json::json!({
+///     lumosai::events::publish(&event_bus, "agent_started", serde_json::json!({
 ///         "agent_id": "agent_001"
 ///     })).await?;
 ///     
@@ -259,19 +259,19 @@ pub async fn register_metrics_handler(event_bus: &EventBus) -> Result<Arc<Metric
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let event_bus = lumos::events::create_bus(1000);
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let event_bus = lumosai::events::create_bus(1000);
 ///     
 ///     // 发布一些事件
-///     lumos::events::publish(&event_bus, "agent_started", serde_json::json!({
+///     lumosai::events::publish(&event_bus, "agent_started", serde_json::json!({
 ///         "agent_id": "agent_001"
 ///     })).await?;
 ///     
 ///     // 获取历史
-///     let history = lumos::events::get_history(&event_bus, None).await;
+///     let history = lumosai::events::get_history(&event_bus, None).await;
 ///     println!("Event history: {} events", history.len());
 ///     
 ///     Ok(())
@@ -288,19 +288,19 @@ pub async fn get_history(
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let event_bus = lumos::events::create_bus(1000);
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let event_bus = lumosai::events::create_bus(1000);
 ///     
 ///     // 创建过滤器，只获取特定Agent的事件
-///     let filter = lumos::events::filter()
+///     let filter = lumosai::events::filter()
 ///         .agent_ids(vec!["agent_001".to_string()])
 ///         .event_types(vec!["AgentStarted".to_string(), "MessageSent".to_string()])
 ///         .build();
 ///     
-///     let filtered_history = lumos::events::get_history(&event_bus, Some(filter)).await;
+///     let filtered_history = lumosai::events::get_history(&event_bus, Some(filter)).await;
 ///     
 ///     Ok(())
 /// }

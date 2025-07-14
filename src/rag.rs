@@ -59,12 +59,12 @@ pub trait RagTrait: Send + Sync {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let storage = lumos::vector::memory().await?;
-///     let rag = lumos::rag::simple(storage, "openai").await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let storage = lumosai::vector::memory().await?;
+///     let rag = lumosai::rag::simple(storage, "openai").await?;
 ///     
 ///     // 添加文档
 ///     rag.add_document("AI is transforming the world").await?;
@@ -95,11 +95,11 @@ pub async fn simple(storage: VectorStorage, embedding_provider: &str) -> Result<
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let rag = lumos::rag::auto().await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let rag = lumosai::rag::auto().await?;
 ///     Ok(())
 /// }
 /// ```
@@ -114,13 +114,13 @@ pub async fn auto() -> Result<RagSystem> {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let storage = lumos::vector::memory().await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let storage = lumosai::vector::memory().await?;
 ///     
-///     let rag = lumos::rag::builder()
+///     let rag = lumosai::rag::builder()
 ///         .storage(storage)
 ///         .embedding_provider("openai")
 ///         .chunking_strategy("semantic")

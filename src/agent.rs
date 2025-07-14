@@ -40,11 +40,11 @@ pub trait AgentTrait: Send + Sync {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let agent = lumos::agent::simple("gpt-4", "You are a helpful assistant").await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let agent = lumosai::agent::simple("gpt-4", "You are a helpful assistant").await?;
 ///     
 ///     let response = agent.chat("Hello, how are you?").await?;
 ///     println!("Agent: {}", response);
@@ -67,11 +67,11 @@ pub async fn simple(model: &str, system_prompt: &str) -> Result<SimpleAgent> {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let agent = lumos::agent::auto().await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let agent = lumosai::agent::auto().await?;
 ///     Ok(())
 /// }
 /// ```
@@ -85,11 +85,11 @@ pub async fn auto() -> Result<SimpleAgent> {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let agent = lumos::agent::builder()
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let agent = lumosai::agent::builder()
 ///         .name("ResearchAgent")
 ///         .model("gpt-4")
 ///         .system_prompt("You are a research assistant")

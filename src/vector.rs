@@ -37,11 +37,11 @@ pub type PostgresStorage = lumosai_vector::postgres::PostgresVectorStorage;
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let storage = lumos::vector::memory().await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let storage = lumosai::vector::memory().await?;
 ///     Ok(())
 /// }
 /// ```
@@ -55,11 +55,11 @@ pub async fn memory() -> Result<VectorStorage> {
 ///
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 ///
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let storage = lumos::vector::qdrant("http://localhost:6334").await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let storage = lumosai::vector::qdrant("http://localhost:6334").await?;
 ///     Ok(())
 /// }
 /// ```
@@ -79,11 +79,11 @@ pub async fn qdrant(_url: &str) -> Result<VectorStorage> {
 ///
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 ///
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let storage = lumos::vector::weaviate("http://localhost:8080").await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let storage = lumosai::vector::weaviate("http://localhost:8080").await?;
 ///     Ok(())
 /// }
 /// ```
@@ -113,15 +113,15 @@ pub async fn weaviate(_url: &str) -> Result<VectorStorage> {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     // 使用环境变量或默认配置
-///     let storage = lumos::vector::postgres().await?;
+///     let storage = lumosai::vector::postgres().await?;
 ///     
 ///     // 或者指定连接字符串
-///     let storage = lumos::vector::postgres_with_url("postgresql://user:pass@localhost/db").await?;
+///     let storage = lumosai::vector::postgres_with_url("postgresql://user:pass@localhost/db").await?;
 ///     
 ///     Ok(())
 /// }
@@ -157,12 +157,12 @@ pub async fn postgres_with_url(_database_url: &str) -> Result<VectorStorage> {
 ///
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 ///
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     // 自动检测并创建最佳存储
-///     let storage = lumos::vector::auto().await?;
+///     let storage = lumosai::vector::auto().await?;
 ///     Ok(())
 /// }
 /// ```
@@ -212,11 +212,11 @@ pub async fn auto() -> Result<VectorStorage> {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let storage = lumos::vector::builder()
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let storage = lumosai::vector::builder()
 ///         .backend("postgres")
 ///         .url("postgresql://localhost/lumos")
 ///         .pool_size(10)

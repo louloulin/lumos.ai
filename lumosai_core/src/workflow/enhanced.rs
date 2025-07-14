@@ -34,6 +34,35 @@ pub struct WorkflowStep {
     pub execute: Arc<dyn StepExecutor>,
 }
 
+impl WorkflowStep {
+    /// Create a new workflow step
+    pub fn new(id: String, name: String) -> Self {
+        // Create a simple executor that returns the input
+        struct SimpleExecutor;
+
+        #[async_trait]
+        impl StepExecutor for SimpleExecutor {
+            async fn execute(&self, input: Value, _context: &RuntimeContext) -> Result<Value> {
+                Ok(input)
+            }
+        }
+
+        Self {
+            id,
+            description: Some(name),
+            step_type: StepType::Simple,
+            input_schema: None,
+            output_schema: None,
+            execute: Arc::new(SimpleExecutor),
+        }
+    }
+
+    /// Get the step name
+    pub fn name(&self) -> &str {
+        self.description.as_deref().unwrap_or(&self.id)
+    }
+}
+
 impl std::fmt::Debug for WorkflowStep {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WorkflowStep")

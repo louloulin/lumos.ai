@@ -492,7 +492,7 @@ impl Agent for BasicAgent {
         if response.contains("```json") && response.contains("```") {
             // Try to extract JSON code blocks
             let mut tool_calls = Vec::new();
-            let json_regex = Regex::new(r"```json\s*\n?(.*?)\n?\s*```")
+            let json_regex = Regex::new(r"(?s)```json\s*\n?(.*?)\n?\s*```")
                 .map_err(|e| Error::Tool(format!("Failed to compile JSON regex: {}", e)))?;
             
             for cap in json_regex.captures_iter(response) {

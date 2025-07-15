@@ -191,6 +191,18 @@ pub enum Error {
     /// Timeout errors
     #[error("Timeout: {0}")]
     Timeout(String),
+
+    /// Documentation errors
+    #[error("Documentation error: {0}")]
+    Documentation(String),
+
+    /// Plugin errors
+    #[error("Plugin error: {0}")]
+    Plugin(String),
+
+    /// Distributed system errors
+    #[error("Distributed system error: {0}")]
+    Distributed(String),
 }
 
 impl From<&str> for Error {

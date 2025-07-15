@@ -23,7 +23,32 @@ use crate::agent::types::{
 };
 use crate::voice::{VoiceProvider, VoiceOptions, ListenOptions};
 use crate::workflow::Workflow;
+use crate::agent::config::AgentConfig;
 use tokio::io::AsyncRead;
+use serde::{Serialize, Deserialize};
+
+/// Agent状态枚举
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AgentStatus {
+    /// 初始化中
+    Initializing,
+    /// 就绪状态
+    Ready,
+    /// 运行中
+    Running,
+    /// 暂停状态
+    Paused,
+    /// 错误状态
+    Error(String),
+    /// 停止状态
+    Stopped,
+}
+
+impl Default for AgentStatus {
+    fn default() -> Self {
+        Self::Initializing
+    }
+}
 
 /// Trait for agents that support structured output generation
 #[async_trait]
@@ -233,5 +258,66 @@ pub trait Agent: Base + Send + Sync {
         } else {
             Err(Error::Unsupported("Working memory not enabled for this agent".to_string()))
         }
+    }
+
+    // === 统一Agent接口扩展 ===
+
+    /// 获取Agent的配置信息
+    fn get_config(&self) -> &AgentConfig {
+        // 默认实现，子类应该重写
+        panic!("get_config not implemented")
+    }
+
+    /// 获取Agent的状态信息
+    fn get_status(&self) -> AgentStatus {
+        AgentStatus::Ready
+    }
+
+    /// 设置Agent的状态
+    fn set_status(&mut self, _status: AgentStatus) -> Result<()> {
+        Ok(())
+    }
+
+    /// 获取Agent的元数据
+    fn get_metadata(&self) -> HashMap<String, String> {
+        HashMap::new()
+    }
+
+    /// 设置Agent的元数据
+    fn set_metadata(&mut self, _metadata: HashMap<String, String>) -> Result<()> {
+        Ok(())
+    }
+
+    /// 验证Agent配置
+    fn validate_config(&self) -> Result<()> {
+        Ok(())
+    }
+
+    /// 重新加载Agent配置
+    async fn reload_config(&mut self, _config: AgentConfig) -> Result<()> {
+        Ok(())
+    }
+
+    /// 获取Agent的健康状态
+    async fn health_check(&self) -> Result<HashMap<String, Value>> {
+        let mut health = HashMap::new();
+        health.insert("status".to_string(), serde_json::to_value(self.get_status())?);
+        health.insert("name".to_string(), Value::String(self.get_name().to_string()));
+        health.insert("has_memory".to_string(), Value::Bool(self.has_own_memory()));
+        health.insert("tools_count".to_string(), Value::Number(self.get_tools().len().into()));
+        Ok(health)
+    }
+
+    /// 获取Agent的性能指标
+    async fn get_metrics(&self) -> Result<HashMap<String, Value>> {
+        // 默认返回空指标，子类可以重写
+        Ok(HashMap::new())
+    }
+
+    /// 重置Agent状态
+    async fn reset(&mut self) -> Result<()> {
+        self.clear_memory().await?;
+        self.set_status(AgentStatus::Ready)?;
+        Ok(())
     }
 }

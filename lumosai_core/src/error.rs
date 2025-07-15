@@ -37,6 +37,10 @@ pub enum Error {
     #[error("Storage error: {0}")]
     Storage(String),
 
+    /// System time errors
+    #[error("System time error: {0}")]
+    SystemTime(String),
+
     /// Workflow errors
     #[error("Workflow error: {0}")]
     Workflow(String),

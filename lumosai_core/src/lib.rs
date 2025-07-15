@@ -10,6 +10,7 @@ pub mod llm;
 pub mod logger;
 pub mod lumosai;
 pub mod memory;
+pub mod monitoring;
 pub mod storage;
 pub mod telemetry;
 pub mod security;

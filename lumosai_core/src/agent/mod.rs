@@ -1,6 +1,7 @@
 //! Agent module for LLM-based agents
 
 pub mod config;
+pub mod config_validator;
 pub mod trait_def;
 pub mod executor;
 pub mod evaluation;
@@ -18,6 +19,9 @@ pub mod session;
 pub mod orchestration;
 pub mod events;
 pub mod model_resolver;
+pub mod performance;
+pub mod api_consistency;
+pub mod feature_completion;
 
 #[cfg(feature = "demos")]
 pub mod websocket_demo;

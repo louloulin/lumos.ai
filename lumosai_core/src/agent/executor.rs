@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
-use futures::stream::{self, BoxStream, StreamExt};
+use futures::stream::{self, BoxStream};
+use futures::StreamExt;
+use std::time::Duration;
 use regex::Regex;
 use serde_json::{Value, Map};
 use uuid::Uuid;
@@ -408,19 +410,22 @@ impl Agent for BasicAgent {
     }
     
     fn add_tool(&mut self, tool: Box<dyn Tool>) -> Result<()> {
-        let tool_id = tool.id().to_string();
-        
+        let tool_name = tool.name().unwrap_or("unknown").to_string();
+
         let mut tools = match self.tools.lock() {
             Ok(guard) => guard,
-            Err(_) => return Err(Error::Lock("Could not lock tools".to_string())),
+            Err(poison_error) => {
+                eprintln!("Tools mutex poisoned during add_tool, attempting recovery: {}", poison_error);
+                poison_error.into_inner()
+            }
         };
-        
-        if tools.contains_key(&tool_id) {
-            return Err(Error::AlreadyExists(format!("Tool '{}' already exists", tool_id)));
+
+        if tools.contains_key(&tool_name) {
+            return Err(Error::Tool(format!("Tool '{}' already exists", tool_name)));
         }
         
-        tools.insert(tool_id.clone(), tool);
-        self.logger().debug(&format!("Tool '{}' added to agent '{}'", tool_id, self.name), None);
+        tools.insert(tool_name.clone(), tool);
+        self.logger().debug(&format!("Tool '{}' added to agent '{}'", tool_name, self.name), None);
         
         Ok(())
     }
@@ -428,7 +433,10 @@ impl Agent for BasicAgent {
     fn remove_tool(&mut self, tool_name: &str) -> Result<()> {
         let mut tools = match self.tools.lock() {
             Ok(guard) => guard,
-            Err(_) => return Err(Error::Lock("Could not lock tools".to_string())),
+            Err(poison_error) => {
+                eprintln!("Tools mutex poisoned during remove_tool, attempting recovery: {}", poison_error);
+                poison_error.into_inner()
+            }
         };
         
         if !tools.contains_key(tool_name) {
@@ -463,7 +471,8 @@ impl Agent for BasicAgent {
         if response.contains("```json") && response.contains("```") {
             // Try to extract JSON code blocks
             let mut tool_calls = Vec::new();
-            let json_regex = Regex::new(r"```json\s*\n?(.*?)\n?\s*```").unwrap();
+            let json_regex = Regex::new(r"```json\s*\n?(.*?)\n?\s*```")
+                .map_err(|e| Error::Tool(format!("Failed to compile JSON regex: {}", e)))?;
             
             for cap in json_regex.captures_iter(response) {
                 let json_str = cap[1].trim();
@@ -516,7 +525,8 @@ impl Agent for BasicAgent {
         }
         
         // If JSON extraction didn't work, try the legacy regex pattern
-        let re = Regex::new(r"Using the tool '([^']+)' with parameters: (\{[^}]+\})").unwrap();
+        let re = Regex::new(r"Using the tool '([^']+)' with parameters: (\{[^}]+\})")
+            .map_err(|e| Error::Tool(format!("Failed to compile tool call regex: {}", e)))?;
         
         let mut tool_calls = Vec::new();
         
@@ -540,7 +550,8 @@ impl Agent for BasicAgent {
         
         // Try additional pattern for function-style calls
         if tool_calls.is_empty() {
-            let fn_regex = Regex::new(r"(\w+)\(([^)]*)\)").unwrap();
+            let fn_regex = Regex::new(r"(\w+)\(([^)]*)\)")
+                .map_err(|e| Error::Tool(format!("Failed to compile function call regex: {}", e)))?;
             
             for cap in fn_regex.captures_iter(response) {
                 let tool_name = cap[1].to_string();
@@ -621,6 +632,10 @@ impl Agent for BasicAgent {
         Ok(tool_calls)
     }
 
+
+
+
+
     async fn execute_tool_call(&self, tool_call: &ToolCall) -> Result<Value> {
         let start_time = std::time::Instant::now();
         
@@ -628,7 +643,11 @@ impl Agent for BasicAgent {
         let tool_clone = {
             let tools = match self.tools.lock() {
                 Ok(guard) => guard,
-                Err(_) => return Err(Error::Lock("Could not lock tools".to_string())),
+                Err(poison_error) => {
+                    // Log the error and attempt recovery
+                    eprintln!("Tools mutex poisoned, attempting recovery: {}", poison_error);
+                    poison_error.into_inner()
+                }
             };
             
             let tool = match tools.get(&tool_call.name) {
@@ -672,7 +691,10 @@ impl Agent for BasicAgent {
                 error,
                 input_size_bytes: input_size,
                 output_size_bytes: output_size,
-                timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                timestamp: SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_else(|_| std::time::Duration::from_millis(0))
+                    .as_millis() as u64,
             };
             
             let _ = metrics_collector.record_tool_execution(tool_metrics).await;
@@ -746,7 +768,7 @@ impl Agent for BasicAgent {
         // Initialize comprehensive monitoring
         let start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| Error::SystemTime(format!("Failed to get system time: {}", e)))?
             .as_millis() as u64;
         
         // Create execution context for telemetry
@@ -951,7 +973,10 @@ impl Agent for BasicAgent {
                                             error: None,
                                             input_size_bytes: serde_json::to_string(&call.arguments).unwrap_or_default().len(),
                                             output_size_bytes: serde_json::to_string(&result).unwrap_or_default().len(),
-                                            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                                            timestamp: SystemTime::now()
+                                                .duration_since(UNIX_EPOCH)
+                                                .unwrap_or_else(|_| std::time::Duration::from_millis(0))
+                                                .as_millis() as u64,
                                         };
                                         
                                         let _ = metrics_collector.record_tool_execution(tool_metrics).await;
@@ -1000,7 +1025,10 @@ impl Agent for BasicAgent {
                                             error: Some(e.to_string()),
                                             input_size_bytes: serde_json::to_string(&call.arguments).unwrap_or_default().len(),
                                             output_size_bytes: 0,
-                                            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                                            timestamp: SystemTime::now()
+                                                .duration_since(UNIX_EPOCH)
+                                                .unwrap_or_else(|_| std::time::Duration::from_millis(0))
+                                                .as_millis() as u64,
                                         };
                                         
                                         let _ = metrics_collector.record_tool_execution(tool_metrics).await;
@@ -1162,7 +1190,10 @@ impl Agent for BasicAgent {
                                         error: None,
                                         input_size_bytes: serde_json::to_string(&call.arguments).unwrap_or_default().len(),
                                         output_size_bytes: serde_json::to_string(&result).unwrap_or_default().len(),
-                                        timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                                        timestamp: SystemTime::now()
+                                            .duration_since(UNIX_EPOCH)
+                                            .unwrap_or_else(|_| std::time::Duration::from_millis(0))
+                                            .as_millis() as u64,
                                     };
                                     
                                     let _ = metrics_collector.record_tool_execution(tool_metrics).await;
@@ -1210,7 +1241,10 @@ impl Agent for BasicAgent {
                                         error: Some(e.to_string()),
                                         input_size_bytes: serde_json::to_string(&call.arguments).unwrap_or_default().len(),
                                         output_size_bytes: 0,
-                                        timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                                        timestamp: SystemTime::now()
+                                            .duration_since(UNIX_EPOCH)
+                                            .unwrap_or_else(|_| std::time::Duration::from_millis(0))
+                                            .as_millis() as u64,
                                     };
                                     
                                     let _ = metrics_collector.record_tool_execution(tool_metrics).await;
@@ -1300,7 +1334,7 @@ impl Agent for BasicAgent {
         // Calculate total execution time
         let end_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| Error::SystemTime(format!("Failed to get end time: {}", e)))?
             .as_millis() as u64;
         let total_execution_time = end_time - start_time;
         
@@ -1392,7 +1426,7 @@ impl Agent for BasicAgent {
         
         let stream_start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| Error::SystemTime(format!("Failed to get stream start time: {}", e)))?
             .as_millis() as u64;
         
         let run_id = options.run_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
@@ -1406,7 +1440,7 @@ impl Agent for BasicAgent {
         let run_id = options.run_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
 
         // Generate complete response first
-        let result = self.generate(messages, &AgentGenerateOptions {
+        let result = self.generate_with_steps(messages, &AgentGenerateOptions {
             system_message: None,
             instructions: options.instructions.clone(),
             context: options.context.clone(),
@@ -1419,22 +1453,19 @@ impl Agent for BasicAgent {
             context_window: None,
             llm_options: options.llm_options.clone(),
             ..Default::default()
-        }).await?;
+        }, options.max_steps).await?;
 
-        // Create streaming-like experience by chunking the response
-        let response_chunks = result.response
-            .chars()
-            .collect::<Vec<_>>()
-            .chunks(3)
-            .map(|c| c.iter().collect::<String>())
-            .collect::<Vec<_>>();
+        // Create improved streaming experience with smart chunking
+        let response_chunks = self.create_smart_chunks(&result.response);
 
-        let stream = stream::iter(response_chunks)
-            .map(Ok)
+        let stream = futures::stream::iter(response_chunks)
+            .map(|chunk| Ok(chunk))
             .boxed();
 
         Ok(stream)
     }
+
+
 
     /// 流式输出带回调
     async fn stream_with_callbacks<'a>(
@@ -1445,7 +1476,7 @@ impl Agent for BasicAgent {
         on_finish: Option<Box<dyn FnOnce(AgentGenerateResult) + Send + 'a>>
     ) -> Result<BoxStream<'a, Result<String>>> {
         // 直接生成结果，而不是在后台任务中
-        let generate_result = self.generate(messages, &AgentGenerateOptions {
+        let generate_result = self.generate_with_steps(messages, &AgentGenerateOptions {
             system_message: None,
             instructions: options.instructions.clone(),
             context: options.context.clone(),
@@ -1458,7 +1489,7 @@ impl Agent for BasicAgent {
             context_window: None,
             llm_options: options.llm_options.clone(),
             ..Default::default()
-        }).await?;
+        }, options.max_steps).await?;
 
         // 为每个步骤触发回调
         if let Some(mut on_step) = on_step_finish {
@@ -1481,8 +1512,8 @@ impl Agent for BasicAgent {
             .map(|c| c.iter().collect::<String>())
             .collect::<Vec<_>>();
 
-        let stream = stream::iter(chunks)
-            .map(Ok)
+        let stream = futures::stream::iter(chunks)
+            .map(|chunk| Ok(chunk))
             .boxed();
 
         Ok(stream)
@@ -1526,7 +1557,7 @@ impl BasicAgent {
         let run_id = options.run_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
         // Generate complete response first
-        let result = self.generate(messages, &AgentGenerateOptions {
+        let result = self.generate_with_steps(messages, &AgentGenerateOptions {
             system_message: None,
             instructions: options.instructions.clone(),
             context: options.context.clone(),
@@ -1539,7 +1570,7 @@ impl BasicAgent {
             context_window: None,
             llm_options: options.llm_options.clone(),
             ..Default::default()
-        }).await?;
+        }, options.max_steps).await?;
 
         // Create streaming-like experience by chunking the response
         let response_chunks = result.response
@@ -1549,8 +1580,8 @@ impl BasicAgent {
             .map(|c| c.iter().collect::<String>())
             .collect::<Vec<_>>();
 
-        let stream = stream::iter(response_chunks)
-            .map(Ok)
+        let stream = futures::stream::iter(response_chunks)
+            .map(|chunk| Ok(chunk))
             .boxed();
 
         Ok(stream)
@@ -1565,7 +1596,7 @@ impl BasicAgent {
         on_finish: Option<Box<dyn FnOnce(AgentGenerateResult) + Send + 'a>>
     ) -> Result<BoxStream<'a, Result<String>>> {
         // 直接生成结果，而不是在后台任务中
-        let generate_result = self.generate(messages, &AgentGenerateOptions {
+        let generate_result = self.generate_with_steps(messages, &AgentGenerateOptions {
             system_message: None,
             instructions: options.instructions.clone(),
             context: options.context.clone(),
@@ -1578,7 +1609,7 @@ impl BasicAgent {
             context_window: None,
             llm_options: options.llm_options.clone(),
             ..Default::default()
-        }).await?;
+        }, options.max_steps).await?;
         
         // 为每个步骤触发回调
         if let Some(mut on_step) = on_step_finish {
@@ -1601,8 +1632,8 @@ impl BasicAgent {
             .map(|c| c.iter().collect::<String>())
             .collect::<Vec<_>>();
         
-        let stream = stream::iter(chunks)
-            .map(Ok)
+        let stream = futures::stream::iter(chunks)
+            .map(|chunk| Ok(chunk))
             .boxed();
         
         Ok(stream)
@@ -1621,14 +1652,22 @@ impl BasicAgent {
     async fn get_memory_value(&self, key: &str) -> Result<Option<Value>> {
         match &self.working_memory {
             Some(wm) => wm.get_value(key).await,
-            None => Err(Error::Memory("Working memory not initialized".to_string())),
+            None => {
+                // Gracefully handle uninitialized memory by returning None
+                self.logger().warn("Working memory not initialized, returning None for key", None);
+                Ok(None)
+            }
         }
     }
     
     async fn set_memory_value(&self, key: &str, value: Value) -> Result<()> {
         match &self.working_memory {
             Some(wm) => wm.set_value(key, value).await,
-            None => Err(Error::Memory("Working memory not initialized".to_string())),
+            None => {
+                // Log warning but don't fail - graceful degradation
+                self.logger().warn("Working memory not initialized, cannot set value", None);
+                Err(Error::Memory("Working memory not initialized. Please initialize working memory before setting values.".to_string()))
+            }
         }
     }
     
@@ -1646,4 +1685,80 @@ impl BasicAgent {
         }
     }
 
+    /// Internal generate method to avoid trait conflicts
+    async fn generate_internal(&self, messages: &[Message], options: &AgentGenerateOptions) -> Result<AgentGenerateResult> {
+        // Use the existing generate implementation
+        self.generate_with_steps(messages, options, options.max_steps).await
+    }
+
+    /// Internal stream method to avoid trait conflicts
+    async fn stream_internal<'a>(&'a self, messages: &'a [Message], options: &'a AgentStreamOptions) -> Result<BoxStream<'a, Result<String>>> {
+        // Directly implement streaming logic to avoid recursion
+        let stream_start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| Error::SystemTime(format!("Failed to get stream start time: {}", e)))?
+            .as_millis() as u64;
+
+        let run_id = options.run_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
+
+        self.logger().info(&format!("Starting enhanced streaming generation (run_id: {})", run_id), None);
+
+        // Generate complete response first
+        let result = self.generate_with_steps(messages, &AgentGenerateOptions {
+            system_message: None,
+            instructions: options.instructions.clone(),
+            context: options.context.clone(),
+            memory_options: options.memory_options.clone(),
+            thread_id: options.thread_id.clone(),
+            resource_id: options.resource_id.clone(),
+            run_id: Some(run_id.clone()),
+            max_steps: options.max_steps,
+            tool_choice: options.tool_choice.clone(),
+            context_window: None,
+            llm_options: options.llm_options.clone(),
+            ..Default::default()
+        }, options.max_steps).await?;
+
+        // Create improved streaming experience with smart chunking
+        let response_chunks = self.create_smart_chunks(&result.response);
+
+        let stream = futures::stream::iter(response_chunks)
+            .map(|chunk| Ok(chunk))
+            .boxed();
+
+        Ok(stream)
+    }
 }
+
+impl BasicAgent {
+    /// Create smart chunks that respect word and sentence boundaries
+    fn create_smart_chunks(&self, text: &str) -> Vec<String> {
+        let mut chunks = Vec::new();
+        let mut current_chunk = String::new();
+        let target_chunk_size = 50; // Characters per chunk
+
+        for word in text.split_whitespace() {
+            if current_chunk.len() + word.len() + 1 > target_chunk_size && !current_chunk.is_empty() {
+                chunks.push(current_chunk.clone());
+                current_chunk.clear();
+            }
+
+            if !current_chunk.is_empty() {
+                current_chunk.push(' ');
+            }
+            current_chunk.push_str(word);
+        }
+
+        if !current_chunk.is_empty() {
+            chunks.push(current_chunk);
+        }
+
+        // If no chunks were created, return the original text
+        if chunks.is_empty() && !text.is_empty() {
+            chunks.push(text.to_string());
+        }
+
+        chunks
+    }
+}
+

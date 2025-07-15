@@ -518,6 +518,7 @@ impl CachePlugin {
                 dependencies: vec![],
                 capabilities: vec![PluginCapability::Storage],
                 hooks: vec![
+                    PluginHook::BeforeMessageProcess,
                     PluginHook::BeforeResponseGenerate,
                     PluginHook::AfterResponseGenerate,
                 ],
@@ -579,6 +580,18 @@ impl Plugin for CachePlugin {
         data: Option<serde_json::Value>,
     ) -> Result<PluginResult> {
         match hook {
+            PluginHook::BeforeMessageProcess => {
+                println!("Cache plugin: Processing message for agent: {}", context.agent_name);
+                // Check if we have cached data for this message
+                if let Some(message_data) = data {
+                    let cache_key = self.generate_cache_key(context, &message_data);
+                    if let Some(_cached_response) = self.cache.get(&cache_key) {
+                        println!("Cache plugin: Found cached data for key: {}", cache_key);
+                    } else {
+                        println!("Cache plugin: No cached data for key: {}", cache_key);
+                    }
+                }
+            }
             PluginHook::BeforeResponseGenerate => {
                 if let Some(request_data) = data {
                     let cache_key = self.generate_cache_key(context, &request_data);
@@ -592,7 +605,7 @@ impl Plugin for CachePlugin {
                 if let Some(response_data) = data {
                     // In a real implementation, you'd also need the request data to generate the key
                     // This is simplified for demonstration
-                    let cache_key = format!("{}:response", context.agent_name);
+                    let _cache_key = format!("{}:response", context.agent_name);
                     // Note: This is simplified. In a real implementation, you'd need mutable access.
                     // self.cache.insert(cache_key, response_data);
                     println!("Cached response for agent: {}", context.agent_name);
@@ -600,7 +613,7 @@ impl Plugin for CachePlugin {
             }
             _ => {}
         }
-        
+
         Ok(PluginResult::Continue)
     }
     

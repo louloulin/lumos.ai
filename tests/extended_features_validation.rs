@@ -8,7 +8,7 @@ use lumosai_core::agent::config::AgentConfig;
 use lumosai_core::llm::mock::MockLlmProvider;
 use lumosai_core::documentation::{ApiDocumentationGenerator, DocumentationFormat};
 use lumosai_core::plugin::{PluginManager, LoggingPlugin, CachePlugin, Plugin, PluginHook, PluginContext};
-use lumosai_core::distributed::{DistributedAgentManager, ClusterConfig, RoundRobinLoadBalancer};
+use lumosai_core::distributed::{ClusterConfig, RoundRobinLoadBalancer};
 use lumosai_core::error::Result;
 
 /// 测试文档生成功能
@@ -143,7 +143,7 @@ async fn test_plugin_configuration() -> Result<()> {
 #[tokio::test]
 async fn test_distributed_system_basics() -> Result<()> {
     // 创建集群配置
-    let cluster_config = ClusterConfig {
+    let _cluster_config = ClusterConfig {
         cluster_name: "test_cluster".to_string(),
         node_id: "node_1".to_string(),
         bind_address: "127.0.0.1".to_string(),
@@ -382,10 +382,15 @@ async fn test_comprehensive_integration() -> Result<()> {
         name: "integration_test_agent".to_string(),
         instructions: "Comprehensive integration test agent".to_string(),
         model_id: Some("test-model".to_string()),
-        memory_config: None,
+        memory_config: Some(lumosai_core::memory::MemoryConfig::default()),
         voice_config: None,
         telemetry: None,
-        working_memory: None,
+        working_memory: Some(lumosai_core::memory::WorkingMemoryConfig {
+            enabled: true,
+            template: None,
+            content_type: None,
+            max_capacity: Some(100),
+        }),
         enable_function_calling: Some(true),
         context: None,
         metadata: None,

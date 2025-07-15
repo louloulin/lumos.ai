@@ -95,14 +95,35 @@ impl BasicAgent {
         } else {
             None
         };
-        
+
+        // Initialize memory (if configured)
+        let memory = if let Some(memory_config) = &config.memory_config {
+            // Create a basic memory with working memory
+            let working_memory_arc = working_memory.as_ref().map(|wm| {
+                // Convert Box<dyn WorkingMemory> to Arc<dyn WorkingMemory>
+                // This is a workaround - ideally we should store Arc directly
+                use crate::memory::BasicWorkingMemory;
+                Arc::new(BasicWorkingMemory::new(crate::memory::WorkingMemoryConfig {
+                    enabled: true,
+                    template: None,
+                    content_type: None,
+                    max_capacity: Some(100),
+                })) as Arc<dyn crate::memory::WorkingMemory>
+            });
+
+            let basic_memory = crate::memory::BasicMemory::new(working_memory_arc, None);
+            Some(Arc::new(basic_memory) as Arc<dyn crate::memory::Memory>)
+        } else {
+            None
+        };
+
         Self {
             base: BaseComponent::new(component_config),
             name: config.name,
             instructions: config.instructions,
             llm,
             tools: Arc::new(Mutex::new(HashMap::new())),
-            memory: config.memory_config.and_then(|_| None), // This will be implemented later
+            memory,
             working_memory,
             voice: config.voice_config.and_then(|_| None),
             temperature: None,

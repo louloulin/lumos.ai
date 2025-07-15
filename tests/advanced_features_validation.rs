@@ -131,7 +131,7 @@ async fn test_api_consistency_check() {
             ("type".to_string(), "test".to_string()),
         ])),
         max_tool_calls: Some(5),
-        tool_timeout: Some(Duration::from_secs(30)),
+        tool_timeout: Some(30),
     };
     
     let llm = Arc::new(MockLlmProvider::new(vec![
@@ -178,7 +178,7 @@ async fn test_feature_completeness_check() {
             ("capabilities".to_string(), "advanced".to_string()),
         ])),
         max_tool_calls: Some(10),
-        tool_timeout: Some(Duration::from_secs(60)),
+        tool_timeout: Some(60),
     };
     
     let llm = Arc::new(MockLlmProvider::new(vec![
@@ -318,7 +318,7 @@ async fn test_comprehensive_integration() {
             ("environment".to_string(), "test".to_string()),
         ])),
         max_tool_calls: Some(15),
-        tool_timeout: Some(Duration::from_secs(120)),
+        tool_timeout: Some(120),
     };
     
     let llm = Arc::new(MockLlmProvider::new(vec![

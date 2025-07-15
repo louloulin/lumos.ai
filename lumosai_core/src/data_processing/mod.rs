@@ -324,14 +324,14 @@ impl AdvancedDataProcessor {
     }
     
     /// 验证数据
-    async fn validate_data(&self, data: &serde_json::Value, schema: &serde_json::Value) -> Result<bool> {
+    async fn validate_data(&self, _data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
         // 简化的验证逻辑
         // 实际实现应该使用JSON Schema验证
         Ok(true)
     }
     
     /// 检查条件
-    async fn check_conditions(&self, conditions: &[String], data: &serde_json::Value) -> Result<bool> {
+    async fn check_conditions(&self, _conditions: &[String], _data: &serde_json::Value) -> Result<bool> {
         // 简化的条件检查
         // 实际实现应该支持复杂的条件表达式
         Ok(true)
@@ -456,7 +456,7 @@ impl DataProcessor for TextProcessor {
         })
     }
     
-    async fn validate(&self, data: &serde_json::Value, schema: &serde_json::Value) -> Result<bool> {
+    async fn validate(&self, data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
         Ok(data.is_string())
     }
     
@@ -514,7 +514,7 @@ impl DataProcessor for NumberProcessor {
         })
     }
     
-    async fn validate(&self, data: &serde_json::Value, schema: &serde_json::Value) -> Result<bool> {
+    async fn validate(&self, data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
         Ok(data.is_number())
     }
     
@@ -591,7 +591,7 @@ impl DataProcessor for ArrayProcessor {
         })
     }
     
-    async fn validate(&self, data: &serde_json::Value, schema: &serde_json::Value) -> Result<bool> {
+    async fn validate(&self, data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
         Ok(data.is_array())
     }
     
@@ -643,7 +643,7 @@ impl DataProcessor for ObjectProcessor {
         })
     }
     
-    async fn validate(&self, data: &serde_json::Value, schema: &serde_json::Value) -> Result<bool> {
+    async fn validate(&self, data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
         Ok(data.is_object())
     }
     

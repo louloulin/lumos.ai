@@ -127,18 +127,18 @@ impl Default for ChainContext {
 }
 
 /// Agent 链式操作构建器
-pub struct AgentChain<'a> {
+pub struct AgentChain {
     /// 关联的 Agent
-    agent: &'a dyn AgentTrait,
+    agent: Arc<dyn AgentTrait>,
     /// 链式上下文
     context: ChainContext,
     /// 是否自动保存历史
     auto_save_history: bool,
 }
 
-impl<'a> AgentChain<'a> {
+impl AgentChain {
     /// 创建新的链式操作
-    pub fn new(agent: &'a dyn AgentTrait) -> Self {
+    pub fn new(agent: Arc<dyn AgentTrait>) -> Self {
         Self {
             agent,
             context: ChainContext::new(),
@@ -147,7 +147,7 @@ impl<'a> AgentChain<'a> {
     }
     
     /// 从现有上下文创建链式操作
-    pub fn with_context(agent: &'a dyn AgentTrait, context: ChainContext) -> Self {
+    pub fn with_context(agent: Arc<dyn AgentTrait>, context: ChainContext) -> Self {
         Self {
             agent,
             context,
@@ -243,7 +243,7 @@ impl<'a> AgentChain<'a> {
         }
         
         Ok(ChainResponse {
-            content: response.response,
+            content: response.response.clone(),
             chain: self,
             full_response: response,
         })
@@ -273,7 +273,7 @@ impl<'a> AgentChain<'a> {
         }
         
         Ok(ChainResponse {
-            content: response.response,
+            content: response.response.clone(),
             chain: self,
             full_response: response,
         })
@@ -375,7 +375,7 @@ pub struct ChainResponse {
     /// 响应内容
     pub content: String,
     /// 链式操作对象（用于继续对话）
-    pub chain: AgentChain<'static>,
+    pub chain: AgentChain,
     /// 完整的 Agent 响应
     pub full_response: AgentGenerateResult,
 }
@@ -387,7 +387,7 @@ impl ChainResponse {
     }
     
     /// 添加用户消息
-    pub fn then_say(self, message: impl Into<String>) -> AgentChain<'static> {
+    pub fn then_say(self, message: impl Into<String>) -> AgentChain {
         self.chain.say(message)
     }
     
@@ -402,7 +402,7 @@ impl ChainResponse {
     }
     
     /// 获取链式操作对象
-    pub fn chain(self) -> AgentChain<'static> {
+    pub fn chain(self) -> AgentChain {
         self.chain
     }
 }
@@ -410,18 +410,18 @@ impl ChainResponse {
 /// 为 Agent trait 添加链式操作扩展
 pub trait AgentChainExt {
     /// 开始链式操作
-    fn chain(&self) -> AgentChain<'_>;
-    
+    fn chain(&self) -> AgentChain;
+
     /// 使用指定上下文开始链式操作
-    fn chain_with_context(&self, context: ChainContext) -> AgentChain<'_>;
+    fn chain_with_context(&self, context: ChainContext) -> AgentChain;
 }
 
-impl<T: AgentTrait> AgentChainExt for T {
-    fn chain(&self) -> AgentChain<'_> {
-        AgentChain::new(self)
+impl<T: AgentTrait + Clone + 'static> AgentChainExt for T {
+    fn chain(&self) -> AgentChain {
+        AgentChain::new(Arc::new(self.clone()))
     }
-    
-    fn chain_with_context(&self, context: ChainContext) -> AgentChain<'_> {
-        AgentChain::with_context(self, context)
+
+    fn chain_with_context(&self, context: ChainContext) -> AgentChain {
+        AgentChain::with_context(Arc::new(self.clone()), context)
     }
 }

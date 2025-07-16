@@ -22,6 +22,7 @@ pub mod model_resolver;
 pub mod performance;
 pub mod api_consistency;
 pub mod feature_completion;
+pub mod chain;
 
 #[cfg(feature = "demos")]
 pub mod websocket_demo;

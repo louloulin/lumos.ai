@@ -6,7 +6,7 @@
 //! - 工具调用和结果处理
 //! - 内置工具使用
 
-use lumosai_core::agent::{AgentBuilder, BasicAgent, AgentTrait};
+use lumosai_core::agent::{AgentBuilder, AgentTrait};
 use lumosai_core::base::{Base, BaseComponent};
 use lumosai_core::tool::{Tool, ToolSchema, ParameterSchema, ToolExecutionContext, ToolExecutionOptions, SchemaFormat};
 use lumosai_core::llm::{MockLlmProvider};
@@ -14,7 +14,6 @@ use lumosai_core::logger::Component as LogComponent;
 use lumosai_core::telemetry::TelemetrySink;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use std::collections::HashMap;
 use async_trait::async_trait;
 use tokio;
 

@@ -1,7 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 use serde::{Serialize, Deserialize};
-use crate::error::{Error, Result};
 use crate::agent::trait_def::Agent;
 use crate::llm::Message;
 

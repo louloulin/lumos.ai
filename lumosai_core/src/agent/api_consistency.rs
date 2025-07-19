@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use crate::error::{Error, Result};
+
 use crate::agent::trait_def::{Agent, AgentStatus};
 use crate::llm::Message;
 

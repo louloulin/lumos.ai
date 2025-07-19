@@ -10,7 +10,7 @@ use lumosai_core::agent::{
     BasicAgent,
 };
 use lumosai_core::llm::{LlmProvider, LlmOptions, Message, Role};
-use lumosai_core::tool::{Tool, FunctionTool, ParameterSchema, ToolSchema};
+use lumosai_core::tool::{FunctionTool, ParameterSchema, ToolSchema};
 use std::sync::Arc;
 use async_trait::async_trait;
 use serde_json::json;
@@ -77,12 +77,12 @@ async fn test_performance_monitoring() {
     // 模拟多个请求
     for i in 0..5 {
         let timer = monitor.start_request();
-        
+
         // 模拟处理时间
         tokio::time::sleep(Duration::from_millis(50 + i * 10)).await;
-        
-        if i % 4 == 0 {
-            timer.finish_error(); // 模拟一个错误
+
+        if i == 4 {
+            timer.finish_error(); // 只有最后一个是错误
         } else {
             timer.finish_success();
         }

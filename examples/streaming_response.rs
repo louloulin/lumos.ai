@@ -6,7 +6,7 @@
 //! - 事件驱动流处理
 //! - WebSocket 流式连接
 
-use lumosai_core::agent::{AgentBuilder, AgentTrait};
+use lumosai_core::agent::AgentBuilder;
 use lumosai_core::agent::streaming::{StreamingAgent, AgentEvent, StreamingConfig, IntoStreaming};
 use lumosai_core::llm::{MockLlmProvider, Message, Role};
 use lumosai_core::agent::types::AgentGenerateOptions;

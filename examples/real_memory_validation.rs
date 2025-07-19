@@ -1,14 +1,13 @@
 use lumosai_core::llm::{QwenProvider, QwenApiType, Message, Role};
 use lumosai_core::agent::{BasicAgent, AgentConfig};
 use lumosai_core::memory::{
-    Memory, MemoryConfig, WorkingMemoryConfig, BasicMemory,
+    MemoryConfig, WorkingMemoryConfig,
     create_working_memory, create_semantic_memory
 };
 use lumosai_core::Agent;
 use std::time::Instant;
 use std::sync::Arc;
 use tokio;
-use serde_json::json;
 
 /// 真实内存管理系统验证测试
 /// 使用实际的LumosAI API进行内存管理功能验证

@@ -5,10 +5,10 @@
 //! 2. YAML/TOML configuration support
 //! 3. Configuration-driven agent creation
 
-use lumosai_core::{Result, Error};
+use lumosai_core::Result;
 use lumosai_core::agent::{AgentBuilder, ModelResolver};
 use lumosai_core::app::LumosApp;
-use lumosai_core::config::{ConfigLoader, YamlConfig, ConfigFormat};
+use lumosai_core::config::{ConfigLoader, YamlConfig};
 use std::env;
 
 #[tokio::main]

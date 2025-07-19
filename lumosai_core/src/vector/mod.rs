@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
-use crate::error::{Error, Result as LumosResult};
+use crate::error::Error;
 
 // Re-export new unified architecture
 pub use lumosai_vector::prelude::*;

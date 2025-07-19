@@ -305,7 +305,7 @@ async fn test_function_calling() -> std::result::Result<(), Box<dyn std::error::
     let start_time = Instant::now();
     
     // 创建带有工具的选项
-    let mut options = LlmOptions::default();
+    let options = LlmOptions::default();
     // 注意：这里可能需要根据实际API调整工具定义格式
     
     let response = llm.generate(prompt, &options).await?;

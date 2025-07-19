@@ -1,8 +1,7 @@
 use lumosai_core::llm::{QwenProvider, QwenApiType, Message, Role};
 use lumosai_core::agent::{BasicAgent, AgentConfig};
-use lumosai_core::agent::streaming::{StreamingAgent, AgentEvent, IntoStreaming};
+use lumosai_core::agent::streaming::{AgentEvent, IntoStreaming};
 use lumosai_core::agent::types::AgentGenerateOptions;
-use lumosai_core::Agent;
 use std::time::Instant;
 use std::sync::Arc;
 use tokio;

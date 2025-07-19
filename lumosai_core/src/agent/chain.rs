@@ -416,12 +416,7 @@ pub trait AgentChainExt {
     fn chain_with_context(&self, context: ChainContext) -> AgentChain;
 }
 
-impl<T: AgentTrait + Clone + 'static> AgentChainExt for T {
-    fn chain(&self) -> AgentChain {
-        AgentChain::new(Arc::new(self.clone()))
-    }
+// For now, disable the generic implementation since BasicAgent cannot be cloned
+// We'll need to implement this differently for specific agent types
 
-    fn chain_with_context(&self, context: ChainContext) -> AgentChain {
-        AgentChain::with_context(Arc::new(self.clone()), context)
-    }
-}
+// Specific implementation for BasicAgent will be added in executor.rs

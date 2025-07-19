@@ -5,8 +5,7 @@ use lumosai_core::llm::{QwenProvider, QwenApiType, Message, Role};
 use lumosai_core::tool::toolset::ToolDefinition;
 use std::time::Instant;
 use std::sync::Arc;
-use std::collections::HashMap;
-use serde_json::{Value, json};
+use serde_json::json;
 use tokio;
 
 /// 真实工具调用验证测试

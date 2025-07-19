@@ -6,12 +6,9 @@
 //! - 代理间协作
 //! - 条件执行和错误处理
 
-use lumosai_core::prelude::*;
-use lumosai_core::agent::{AgentBuilder, trait_def::Agent, types::AgentGenerateOptions};
-use lumosai_core::llm::{MockLlmProvider, Message, Role};
+use lumosai_core::agent::{AgentBuilder, trait_def::Agent};
+use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
-use std::collections::HashMap;
-use serde_json::{json, Value};
 use tokio;
 
 #[tokio::main]

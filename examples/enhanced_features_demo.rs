@@ -43,7 +43,7 @@ async fn demo_enhanced_workflow() -> Result<()> {
     
     // 执行工作流
     let input_data = json!({"data": "sample input"});
-    let context = RuntimeContext::default();
+    let _context = RuntimeContext::default();
 
     println!("  工作流已创建");
     println!("  工作流类型: 增强工作流");
@@ -58,6 +58,7 @@ async fn demo_enhanced_tools() -> Result<()> {
     
     // 创建工具包装器
     struct MockTool {
+        #[allow(dead_code)]
         name: String,
     }
     

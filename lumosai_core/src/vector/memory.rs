@@ -5,7 +5,7 @@ use uuid::Uuid;
 use serde_json::Value;
 
 use super::{VectorStorage, IndexStats, QueryResult, SimilarityMetric, FilterCondition, VectorError};
-use crate::error::{Error, Result};
+use crate::error::Error;
 
 /// Vector index information
 #[derive(Debug)]

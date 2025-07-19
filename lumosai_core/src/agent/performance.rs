@@ -1,6 +1,5 @@
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize};
 use crate::error::{Error, Result};
 

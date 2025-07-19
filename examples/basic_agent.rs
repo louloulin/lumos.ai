@@ -6,7 +6,7 @@
 //! - 不同 LLM 提供商集成
 //! - 基础对话功能
 
-use lumosai_core::agent::{AgentBuilder, BasicAgent, AgentTrait};
+use lumosai_core::agent::{AgentBuilder, AgentTrait};
 use lumosai_core::base::Base;
 use lumosai_core::llm::{MockLlmProvider};
 use std::sync::Arc;

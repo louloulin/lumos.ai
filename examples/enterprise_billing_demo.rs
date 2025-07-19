@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut usage_tracker = UsageTracker::new();
     let mut billing_engine = BillingEngine::new();
     let payment_processor = MockPaymentProcessor::new().with_failure_rate(0.02); // 2% 失败率
-    let mut resource_manager = IntelligentResourceManager::new();
+    let resource_manager = IntelligentResourceManager::new();
     
     println!("✅ 订阅管理器初始化完成");
     println!("✅ 使用量跟踪器初始化完成");

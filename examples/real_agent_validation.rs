@@ -1,7 +1,7 @@
 use lumosai_core::agent::{BasicAgent, AgentConfig};
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::Agent;
-use lumosai_core::llm::{QwenProvider, QwenApiType, LlmProvider, Message, Role, LlmOptions};
+use lumosai_core::llm::{QwenProvider, QwenApiType, LlmProvider, Message, Role};
 use std::time::Instant;
 use std::sync::Arc;
 use tokio;

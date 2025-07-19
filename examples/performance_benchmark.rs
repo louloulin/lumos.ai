@@ -4,10 +4,9 @@
 //! against the traditional builder pattern to validate our improvements.
 
 use lumosai_core::agent::{quick, web_agent, AgentBuilder};
-use lumosai_core::Agent;
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio;
 
 #[tokio::main]
@@ -173,7 +172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn get_memory_usage() -> usize {
     // In a real implementation, this would use system APIs to get actual memory usage
     // For this demo, we'll return a placeholder value
-    use std::alloc::{GlobalAlloc, Layout, System};
+    
     
     // This is a simplified estimation - in production you'd use proper memory profiling
     std::process::id() as usize % 1000 // Placeholder

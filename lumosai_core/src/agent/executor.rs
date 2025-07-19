@@ -4,9 +4,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
-use futures::stream::{self, BoxStream};
+use futures::stream::BoxStream;
 use futures::StreamExt;
-use std::time::Duration;
+
 use regex::Regex;
 use serde_json::{Value, Map};
 use uuid::Uuid;
@@ -17,6 +17,7 @@ use crate::error::{Error, Result};
 use crate::logger::{Component, Logger};
 use crate::llm::{LlmProvider, LlmOptions, Message, Role, FunctionDefinition, ToolChoice as LlmToolChoice};
 use crate::memory::Memory;
+use crate::agent::trait_def::AgentStatus;
 use crate::telemetry::{TelemetrySink, MetricsCollector, TraceCollector, AgentMetrics, ExecutionContext, StepType as TraceStepType, TokenUsage as TelemetryTokenUsage, TraceStep};
 use crate::tool::{Tool, ToolExecutionOptions, ToolExecutionContext};
 use crate::llm::function_calling_utils;
@@ -72,6 +73,8 @@ pub struct BasicAgent {
     metrics_collector: Option<Arc<dyn MetricsCollector>>,
     /// Trace collector for execution tracing
     trace_collector: Option<Arc<dyn TraceCollector>>,
+    /// Agent status
+    status: AgentStatus,
 }
 
 impl BasicAgent {
@@ -134,6 +137,7 @@ impl BasicAgent {
             telemetry: None,
             metrics_collector: None,
             trace_collector: None,
+            status: AgentStatus::Ready,
         }
     }
     
@@ -1567,6 +1571,27 @@ impl Agent for BasicAgent {
             )) as Arc<dyn WorkingMemory>
         })
     }
+
+    /// Get the current status of the agent
+    fn get_status(&self) -> AgentStatus {
+        self.status.clone()
+    }
+
+    /// Set the status of the agent
+    fn set_status(&mut self, status: AgentStatus) -> Result<()> {
+        self.status = status;
+        Ok(())
+    }
+
+    /// Reset the agent state
+    async fn reset(&mut self) -> Result<()> {
+        // Only clear memory if it exists
+        if self.working_memory.is_some() {
+            let _ = self.clear_memory().await; // Ignore errors
+        }
+        self.set_status(AgentStatus::Ready)?;
+        Ok(())
+    }
 }
 
 impl BasicAgent {
@@ -1782,4 +1807,7 @@ impl BasicAgent {
         chunks
     }
 }
+
+// Chain operations are temporarily disabled for BasicAgent
+// due to the complexity of implementing Clone for all internal components
 

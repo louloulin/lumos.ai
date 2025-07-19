@@ -6,8 +6,8 @@
 //! - 向量搜索和相似度计算
 //! - 性能对比测试
 
-use lumosai_core::prelude::*;
-use lumosai_core::vector::{MemoryVectorStorage, VectorStorage, SimilarityMetric, IndexStats};
+
+use lumosai_core::vector::{MemoryVectorStorage, VectorStorage, SimilarityMetric};
 use serde_json::json;
 use std::collections::HashMap;
 use std::time::Instant;

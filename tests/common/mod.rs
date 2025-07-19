@@ -4,4 +4,3 @@ pub mod performance;
 
 pub use test_utils::*;
 pub use test_data::*;
-pub use performance::*;

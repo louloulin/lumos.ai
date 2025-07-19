@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
         name: index_name.to_string(),
         dimension: 384, // Common dimension for sentence transformers
         metric: SimilarityMetric::Cosine,
-        metadata: HashMap::new(),
+        options: HashMap::new(),
     };
     
     println!("📊 Creating vector index: {}", index_name);
@@ -120,6 +120,7 @@ async fn main() -> Result<()> {
         filter: None,
         include_metadata: true,
         include_vectors: false,
+        options: HashMap::new(),
     };
     
     let search_response = storage.search(search_request).await?;

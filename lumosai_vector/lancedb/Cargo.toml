@@ -53,15 +53,15 @@ metrics = []
 compression = []
 
 [[example]]
-name = "basic_usage"
+name = "lancedb_basic_usage"
 required-features = []
 
 [[example]]
-name = "batch_operations"
+name = "lancedb_batch_operations"
 required-features = []
 
 [[example]]
-name = "vector_search"
+name = "lancedb_vector_search"
 required-features = []
 
 

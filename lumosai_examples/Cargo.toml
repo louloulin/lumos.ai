@@ -34,7 +34,7 @@ evals = ["lumosai_evals"]
 macros = ["lumos_macro"]
 
 [[example]]
-name = "basic_usage"
+name = "examples_basic_usage"
 path = "src/basic_usage.rs"
 
 [[example]]
@@ -106,7 +106,7 @@ name = "advanced_tools_demo"
 path = "examples/advanced_tools_demo.rs"
 
 [[example]]
-name = "simplified_api_demo"
+name = "examples_simplified_api_demo"
 path = "src/simplified_api_demo.rs"
 
 [[example]]

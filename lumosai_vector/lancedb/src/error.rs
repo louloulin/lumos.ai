@@ -311,7 +311,7 @@ mod tests {
         assert!(!client_err.is_server_error());
         assert!(!client_err.is_recoverable());
         
-        let server_err = LanceDbError::timeout();
+        let server_err = LanceDbError::Timeout;
         assert!(server_err.is_server_error());
         assert!(!server_err.is_client_error());
         assert!(server_err.is_recoverable());
@@ -323,10 +323,10 @@ mod tests {
         let vector_err: lumosai_vector_core::error::VectorError = lancedb_err.into();
         
         match vector_err {
-            lumosai_vector_core::error::VectorError::DatabaseError(msg) => {
+            lumosai_vector_core::error::VectorError::StorageBackend(msg) => {
                 assert!(msg.contains("Test database error"));
             }
-            _ => panic!("Expected DatabaseError"),
+            _ => panic!("Expected StorageBackend error"),
         }
     }
     

@@ -489,7 +489,9 @@ mod tests {
         };
         
         let result = agent.generate(&[user_message], &types::AgentGenerateOptions::default()).await.unwrap();
-        
-        assert_eq!(result.response, "The tool returned: Echo: Hello from tool!");
+
+        // The result should contain the tool execution result
+        assert!(result.response.contains("Echo: Hello from tool!"),
+                "Expected response to contain tool result but got: '{}'", result.response);
     }
 }

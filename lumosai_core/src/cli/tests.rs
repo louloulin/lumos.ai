@@ -246,6 +246,8 @@ mod tests {
         // 5. Verify configuration
         let config = CliUtils::load_config(project_path.join("lumos.toml")).unwrap();
         assert_eq!(config.name, "workflow-test");
+
+        // The add_model command should have initialized the models field
         assert!(config.models.is_some());
         assert!(!config.tools.is_empty()); // Stock assistant should have tools
         

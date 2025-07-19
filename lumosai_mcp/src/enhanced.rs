@@ -15,7 +15,7 @@ use tokio::time::{interval, timeout};
 use serde_json::Value;
 
 use crate::{MCPClient, MCPConfiguration, Result, MCPError};
-use crate::types::{Tool, ToolDefinition, Resource, ServerCapabilities, MCPMessage};
+use crate::types::{Tool, ToolDefinition};
 
 /// Enhanced MCP manager with connection pooling and advanced features
 pub struct EnhancedMCPManager {
@@ -712,7 +712,7 @@ impl EnhancedMCPManager {
 
         // Create futures for all requests
         for (tool_name, params) in requests.into_iter() {
-            let self_clone = self.clone();
+            let self_clone = self;
             let future = async move {
                 self_clone.execute_mcp_tool(&tool_name, params).await
             };

@@ -9,12 +9,12 @@ use async_trait::async_trait;
 use serde_json::Value;
 
 use lumosai_core::tool::{Tool as LumosTool, ToolExecutionContext, ToolExecutionOptions, ToolSchema, ParameterSchema, SchemaFormat};
-use lumosai_core::error::{Result as CoreResult, Error as CoreError};
+use lumosai_core::error::Error as CoreError;
 use lumosai_core::base::Base;
 use lumosai_core::logger::{Logger, Component as LogComponent, ConsoleLogger, LogLevel};
 use lumosai_core::telemetry::TelemetrySink;
 
-use crate::{EnhancedMCPManager, Result as MCPResult, MCPError};
+use crate::{EnhancedMCPManager, Result as MCPResult};
 use crate::types::{ToolDefinition, ParameterSchema as MCPParameterSchema};
 
 /// Adapter that wraps MCP tools to work with the Lumos tool system

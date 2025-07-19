@@ -5,13 +5,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use lumosai_core::{Agent, AgentBuilder, Tool, LlmProvider};
+use lumosai_core::prelude::*;
 use crate::error::{BindingError, Result};
 
 /// 跨语言Agent包装器
 pub struct CrossLangAgent {
     /// 内部Rust Agent实例
-    inner: Agent,
+    inner: Box<dyn Agent>,
     
     /// 运行时状态
     runtime: Arc<tokio::runtime::Runtime>,
@@ -171,7 +171,7 @@ pub struct RuntimeConfig {
 
 impl CrossLangAgent {
     /// 创建新的跨语言Agent
-    pub fn new(agent: Agent) -> Self {
+    pub fn new(agent: Box<dyn Agent>) -> Self {
         let runtime = Arc::new(
             tokio::runtime::Runtime::new()
                 .expect("Failed to create tokio runtime")

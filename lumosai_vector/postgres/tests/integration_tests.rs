@@ -20,7 +20,7 @@ async fn test_postgres_basic_operations() -> Result<()> {
         name: "test_index".to_string(),
         dimension: 384,
         metric: SimilarityMetric::Cosine,
-        metadata: HashMap::new(),
+        options: HashMap::new(),
     };
     
     storage.create_index(index_config).await?;
@@ -63,6 +63,7 @@ async fn test_postgres_basic_operations() -> Result<()> {
         filter: None,
         include_metadata: true,
         include_vectors: false,
+        options: HashMap::new(),
     };
     
     let response = storage.search(search_request).await?;

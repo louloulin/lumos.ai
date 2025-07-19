@@ -177,7 +177,7 @@ impl PluginManager {
     pub async fn unregister_plugin(&mut self, name: &str) -> Result<()> {
         if let Some(plugin) = self.plugins.remove(name) {
             // 关闭插件
-            let mut plugin_mut = plugin.as_ref();
+            let plugin_mut = plugin.as_ref();
             // Note: This is a simplified approach. In a real implementation,
             // you'd need a way to get mutable access to the plugin.
             

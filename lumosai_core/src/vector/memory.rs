@@ -377,7 +377,7 @@ mod tests {
         
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].id, "id1");
-        assert!(approx_eq!(f32, results[0].score, 1.0, epsilon = FLOAT_EPSILON));
+        assert!((results[0].score - 1.0).abs() < FLOAT_EPSILON);
         
         // 检查索引统计信息
         let stats = storage.describe_index("test_index").await.unwrap();
@@ -414,7 +414,7 @@ mod tests {
             None,
             false,
         ).await.unwrap();
-        assert!(approx_eq!(f32, cosine_results[0].score, 1.0, epsilon = FLOAT_EPSILON)); // C should match perfectly
+        assert!((cosine_results[0].score - 1.0).abs() < FLOAT_EPSILON); // C should match perfectly
         assert!(cosine_results[1].score < 1.0); // A and B should have lower scores
         
         // Test Euclidean similarity
@@ -427,7 +427,7 @@ mod tests {
             None,
             false,
         ).await.unwrap();
-        assert!(approx_eq!(f32, euclidean_results[0].score, 1.0, epsilon = FLOAT_EPSILON)); // C should match perfectly
+        assert!((euclidean_results[0].score - 1.0).abs() < FLOAT_EPSILON); // C should match perfectly
         assert!(euclidean_results[1].score < 1.0); // A and B should have lower scores
         
         // Test Dot product similarity
@@ -440,7 +440,7 @@ mod tests {
             None,
             false,
         ).await.unwrap();
-        assert!(approx_eq!(f32, dot_results[0].score, 2.0, epsilon = FLOAT_EPSILON)); // C should have dot product of 2
+        assert!((dot_results[0].score - 2.0).abs() < FLOAT_EPSILON); // C should have dot product of 2
         assert!(dot_results[1].score < 2.0); // A and B should have lower scores
     }
 } 

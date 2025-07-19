@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumosAI 开发控制台</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar-transition { transition: transform 0.3s ease-in-out; }
+        .code-editor { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; }
+        .workflow-node { 
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .workflow-node:hover { 
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .status-running { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- 侧边栏 -->
+    <div id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white shadow-lg sidebar-transition z-50">
+        <div class="p-6 border-b">
+            <h1 class="text-2xl font-bold text-gray-800">
+                <i class="fas fa-robot text-blue-500 mr-2"></i>
+                LumosAI
+            </h1>
+            <p class="text-sm text-gray-600 mt-1">开发控制台</p>
+        </div>
+        
+        <nav class="mt-6">
+            <a href="#dashboard" class="nav-item active flex items-center px-6 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+                <i class="fas fa-tachometer-alt mr-3"></i>
+                仪表板
+            </a>
+            <a href="#agents" class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+                <i class="fas fa-user-robot mr-3"></i>
+                Agent管理
+            </a>
+            <a href="#workflows" class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+                <i class="fas fa-project-diagram mr-3"></i>
+                工作流
+            </a>
+            <a href="#tools" class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+                <i class="fas fa-tools mr-3"></i>
+                工具管理
+            </a>
+            <a href="#monitoring" class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+                <i class="fas fa-chart-line mr-3"></i>
+                性能监控
+            </a>
+            <a href="#logs" class="nav-item flex items-center px-6 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+                <i class="fas fa-file-alt mr-3"></i>
+                日志查看
+            </a>
+        </nav>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="ml-64 min-h-screen">
+        <!-- 顶部栏 -->
+        <header class="bg-white shadow-sm border-b px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <button id="sidebar-toggle" class="text-gray-500 hover:text-gray-700 mr-4">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 id="page-title" class="text-xl font-semibold text-gray-800">仪表板</h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center text-sm text-gray-600">
+                        <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        服务器运行中
+                    </div>
+                    <button class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 页面内容 -->
+        <main class="p-6">
+            <!-- 仪表板页面 -->
+            <div id="dashboard-page" class="page-content">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- 统计卡片 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                <i class="fas fa-user-robot text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">活跃Agent</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="active-agents">3</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                <i class="fas fa-project-diagram text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">运行中工作流</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="running-workflows">2</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                                <i class="fas fa-tools text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">可用工具</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="available-tools">12</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                                <i class="fas fa-clock text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">平均响应时间</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="avg-response">1.2s</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速操作 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">快速操作</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                            <i class="fas fa-plus text-blue-500 mr-2"></i>
+                            创建新Agent
+                        </button>
+                        <button class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
+                            <i class="fas fa-play text-green-500 mr-2"></i>
+                            运行工作流
+                        </button>
+                        <button class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
+                            <i class="fas fa-wrench text-purple-500 mr-2"></i>
+                            添加工具
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 最近活动 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">最近活动</h3>
+                    <div class="space-y-4" id="recent-activities">
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">研究助手Agent已启动</p>
+                                <p class="text-xs text-gray-500">2分钟前</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                            <div class="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">数据分析工作流执行完成</p>
+                                <p class="text-xs text-gray-500">5分钟前</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                            <div class="w-2 h-2 bg-yellow-500 rounded-full mr-3"></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">新工具已添加: 天气查询</p>
+                                <p class="text-xs text-gray-500">10分钟前</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent管理页面 -->
+            <div id="agents-page" class="page-content hidden">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-6 border-b">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-800">Agent管理</h3>
+                            <button class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                                <i class="fas fa-plus mr-2"></i>新建Agent
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="agents-grid">
+                            <!-- Agent卡片将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 工作流页面 -->
+            <div id="workflows-page" class="page-content hidden">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-6 border-b">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-800">工作流管理</h3>
+                            <button class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                                <i class="fas fa-plus mr-2"></i>新建工作流
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div id="workflow-canvas" class="min-h-96 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                            <div class="text-center text-gray-500">
+                                <i class="fas fa-project-diagram text-4xl mb-4"></i>
+                                <p>拖拽创建工作流</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 其他页面内容... -->
+            <div id="tools-page" class="page-content hidden">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">工具管理</h3>
+                    <p class="text-gray-600">工具管理功能开发中...</p>
+                </div>
+            </div>
+
+            <div id="monitoring-page" class="page-content hidden">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">性能监控</h3>
+                    <p class="text-gray-600">性能监控功能开发中...</p>
+                </div>
+            </div>
+
+            <div id="logs-page" class="page-content hidden">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">日志查看</h3>
+                    <div class="bg-black text-green-400 p-4 rounded-lg font-mono text-sm">
+                        <div>[2024-01-20 10:30:15] INFO: LumosAI服务器启动成功</div>
+                        <div>[2024-01-20 10:30:16] INFO: Agent "研究助手" 已加载</div>
+                        <div>[2024-01-20 10:30:17] INFO: 工作流引擎初始化完成</div>
+                        <div>[2024-01-20 10:30:18] INFO: Web UI服务器运行在 http://localhost:4003</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="workflow-editor.js"></script>
+</body>
+</html>

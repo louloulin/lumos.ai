@@ -1,0 +1,30 @@
+[package]
+name = "{{project_name}}"
+version = "0.1.0"
+edition = "2021"
+description = "{{description}}"
+
+[dependencies]
+lumosai_core = { path = "../../lumosai_core" }
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Optional: Add specific LLM providers
+{{#if use_openai}}
+# OpenAI provider is included in lumosai_core
+{{/if}}
+
+{{#if use_anthropic}}
+# Anthropic provider is included in lumosai_core
+{{/if}}
+
+{{#if use_local}}
+# Local LLM support
+{{/if}}
+
+[dev-dependencies]
+tempfile = "3.8"

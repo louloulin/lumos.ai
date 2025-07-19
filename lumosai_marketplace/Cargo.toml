@@ -28,7 +28,7 @@ tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
 # Search and indexing
-tantivy = "0.21"
+tantivy = "0.22"
 fuzzy-matcher = "0.3"
 
 # Security and validation

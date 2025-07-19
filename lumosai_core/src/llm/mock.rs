@@ -212,7 +212,7 @@ mod tests {
         
         for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
             assert!(
-                approx_eq!(f32, *a, *e, epsilon = FLOAT_EPSILON),
+                (*a - *e).abs() < FLOAT_EPSILON,
                 "向量元素 {} 不相等: {} != {}", i, a, e
             );
         }

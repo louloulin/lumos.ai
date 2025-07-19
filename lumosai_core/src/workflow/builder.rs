@@ -8,8 +8,50 @@ use std::sync::Arc;
 use serde_json::Value;
 use crate::{Result, Error};
 use crate::agent::trait_def::Agent;
-use crate::config::{WorkflowConfig, WorkflowStepConfig};
+use crate::config::{WorkflowConfig, WorkflowStepConfig as ConfigWorkflowStepConfig};
 use super::{EnhancedWorkflow, WorkflowStep, StepType, StepExecutor};
+
+/// Enhanced workflow step configuration that supports chain-style API
+#[derive(Debug, Clone)]
+pub struct WorkflowStepConfig {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub agent: Option<Box<dyn Agent>>,
+    pub tool: Option<String>,
+    pub workflow: Option<String>,
+    pub instructions: String,
+    pub dependencies: Vec<String>,
+    pub condition: Option<Box<dyn Fn(&serde_json::Value) -> bool + Send + Sync>>,
+    pub branch_true: Option<String>,
+    pub branch_false: Option<String>,
+    pub parallel: bool,
+    pub timeout: Option<u64>,
+    pub max_retries: Option<u32>,
+    pub input: Option<serde_json::Value>,
+}
+
+impl Default for WorkflowStepConfig {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            name: String::new(),
+            description: None,
+            agent: None,
+            tool: None,
+            workflow: None,
+            instructions: String::new(),
+            dependencies: Vec::new(),
+            condition: None,
+            branch_true: None,
+            branch_false: None,
+            parallel: false,
+            timeout: None,
+            max_retries: None,
+            input: None,
+        }
+    }
+}
 
 /// Builder for creating workflows from configuration
 pub struct WorkflowBuilder {
@@ -104,8 +146,56 @@ impl WorkflowBuilder {
         self
     }
 
-    /// Add a step configuration
-    pub fn add_step_config(mut self, step_config: WorkflowStepConfig) -> Self {
+    /// Add a step configuration (legacy config format)
+    pub fn add_step_config(mut self, step_config: ConfigWorkflowStepConfig) -> Self {
+        // Convert legacy config to new format
+        let enhanced_config = WorkflowStepConfig {
+            id: step_config.id.unwrap_or_else(|| format!("step_{}", self.steps.len())),
+            name: step_config.name.unwrap_or_else(|| format!("Step {}", self.steps.len() + 1)),
+            description: step_config.description,
+            agent: None, // Will be resolved later
+            tool: step_config.tool,
+            workflow: step_config.workflow,
+            instructions: "Execute step".to_string(),
+            dependencies: Vec::new(),
+            condition: None,
+            branch_true: None,
+            branch_false: None,
+            parallel: false,
+            timeout: step_config.timeout,
+            max_retries: step_config.retries,
+            input: step_config.input,
+        };
+        self.steps.push(enhanced_config);
+        self
+    }
+
+    /// Add a step with enhanced configuration
+    pub fn add_step(mut self, step_config: WorkflowStepConfig) -> Self {
+        self.steps.push(step_config);
+        self
+    }
+
+    /// Add a simple step with id and agent
+    pub fn step<S: Into<String>>(mut self, step_id: S, agent: impl crate::agent::trait_def::Agent + 'static) -> Self {
+        let step_id = step_id.into();
+        let step_config = WorkflowStepConfig {
+            id: step_id.clone(),
+            name: step_id.clone(),
+            description: None,
+            agent: Some(Box::new(agent)),
+            tool: None,
+            workflow: None,
+            instructions: format!("Execute step: {}", step_id),
+            dependencies: Vec::new(),
+            condition: None,
+            branch_true: None,
+            branch_false: None,
+            parallel: false,
+            timeout: Some(30),
+            max_retries: Some(3),
+            input: None,
+        };
         self.steps.push(step_config);
         self
     }
@@ -114,6 +204,97 @@ impl WorkflowBuilder {
     pub fn register_agent(mut self, name: String, agent: Arc<dyn Agent>) -> Self {
         self.agents.insert(name, agent);
         self
+    }
+
+    /// Add a step that executes after the previous step (chain-style API)
+    pub fn then<S: Into<String>>(mut self, step_id: S, agent: impl crate::agent::trait_def::Agent + 'static) -> Self {
+        let step_id = step_id.into();
+        let last_step_id = self.get_last_step_id();
+
+        let step_config = WorkflowStepConfig {
+            id: step_id.clone(),
+            name: step_id.clone(),
+            agent: Some(Box::new(agent)),
+            instructions: format!("Execute step: {}", step_id),
+            dependencies: if let Some(last_id) = last_step_id {
+                vec![last_id]
+            } else {
+                vec![]
+            },
+            timeout: Some(30),
+            max_retries: Some(3),
+            ..Default::default()
+        };
+
+        self.steps.push(step_config);
+        self
+    }
+
+    /// Add a conditional branch (chain-style API)
+    pub fn branch<F, S1: Into<String>, S2: Into<String>>(
+        mut self,
+        condition: F,
+        true_step: S1,
+        false_step: S2
+    ) -> Self
+    where
+        F: Fn(&serde_json::Value) -> bool + Send + Sync + 'static
+    {
+        let true_step_id = true_step.into();
+        let false_step_id = false_step.into();
+        let last_step_id = self.get_last_step_id();
+
+        // Create a conditional step that determines which branch to take
+        let condition_step = WorkflowStepConfig {
+            id: "branch_condition".to_string(),
+            name: "Branch Condition".to_string(),
+            agent: None, // This is a logic-only step
+            instructions: "Evaluate branch condition".to_string(),
+            dependencies: if let Some(last_id) = last_step_id {
+                vec![last_id]
+            } else {
+                vec![]
+            },
+            condition: Some(Box::new(condition)),
+            branch_true: Some(true_step_id),
+            branch_false: Some(false_step_id),
+            ..Default::default()
+        };
+
+        self.steps.push(condition_step);
+        self
+    }
+
+    /// Add parallel steps (chain-style API)
+    pub fn parallel<S: Into<String>>(mut self, step_ids: Vec<S>) -> Self {
+        let last_step_id = self.get_last_step_id();
+        let dependencies = if let Some(last_id) = last_step_id {
+            vec![last_id]
+        } else {
+            vec![]
+        };
+
+        // Create parallel steps with the same dependencies
+        for step_id in step_ids {
+            let step_id = step_id.into();
+            let step_config = WorkflowStepConfig {
+                id: step_id.clone(),
+                name: step_id.clone(),
+                agent: None, // Will need to be set separately
+                instructions: format!("Execute parallel step: {}", step_id),
+                dependencies: dependencies.clone(),
+                parallel: true,
+                ..Default::default()
+            };
+            self.steps.push(step_config);
+        }
+
+        self
+    }
+
+    /// Get the ID of the last added step
+    fn get_last_step_id(&self) -> Option<String> {
+        self.steps.last().map(|step| step.id.clone())
     }
 
     /// Build the workflow

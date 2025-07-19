@@ -351,7 +351,8 @@ mod tests {
     async fn test_message_operations() {
         let storage = MemoryStorage::new("test".to_string());
         
-        // Create test messages
+        // Create test messages with different timestamps
+        let now = Utc::now();
         let messages = vec![
             Message {
                 id: "msg1".to_string(),
@@ -359,7 +360,7 @@ mod tests {
                 content: "Message 1".to_string(),
                 role: "user".to_string(),
                 message_type: "text".to_string(),
-                created_at: Utc::now(),
+                created_at: now - chrono::Duration::seconds(1), // Earlier message
             },
             Message {
                 id: "msg2".to_string(),
@@ -367,7 +368,7 @@ mod tests {
                 content: "Message 2".to_string(),
                 role: "assistant".to_string(),
                 message_type: "text".to_string(),
-                created_at: Utc::now(),
+                created_at: now, // Later message
             },
         ];
         

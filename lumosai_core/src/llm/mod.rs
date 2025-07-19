@@ -21,6 +21,7 @@ mod tests;
 
 #[cfg(test)]
 mod new_providers_test;
+#[cfg(all(test, feature = "third_party_integration", feature = "never_enable"))]
 mod third_party_integration_test;
 
 

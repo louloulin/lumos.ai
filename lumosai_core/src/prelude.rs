@@ -123,6 +123,12 @@ pub fn hash_tool() -> Box<dyn crate::tool::Tool> {
     Box::new(create_hash_generator_tool())
 }
 
+// Additional convenience functions for examples
+pub fn weather_tool() -> Box<dyn crate::tool::Tool> {
+    // For now, return a web request tool that can be used for weather APIs
+    Box::new(create_http_request_tool())
+}
+
 // Re-export provider convenience functions
 pub use crate::agent::convenience::{
     openai, openai_with_key, openai_builder,

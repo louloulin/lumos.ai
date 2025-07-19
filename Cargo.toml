@@ -7,7 +7,7 @@ members = [
     "lumosai_network",
     "lumos_macro",
     "lumosai_mcp",
-    "lumosai_marketplace",
+    # "lumosai_marketplace", # 暂时禁用，需要修复编译错误
     "lumosai_examples",
     "lumosai_derive",
     "lumosai_enterprise",
@@ -181,3 +181,36 @@ criterion = { version = "0.5", features = ["html_reports"] }
 [[bench]]
 name = "performance_benchmarks"
 harness = false
+
+# 新增示例
+[[example]]
+name = "hello_world"
+path = "examples/01_getting_started/hello_world.rs"
+
+[[example]]
+name = "quick_api"
+path = "examples/01_getting_started/quick_api.rs"
+
+[[example]]
+name = "basic_tools"
+path = "examples/01_getting_started/basic_tools.rs"
+
+[[example]]
+name = "custom_tools"
+path = "examples/02_intermediate/custom_tools.rs"
+
+[[example]]
+name = "chain_workflow"
+path = "examples/03_advanced/chain_workflow.rs"
+
+[[example]]
+name = "mcp_integration"
+path = "examples/04_production/mcp_integration.rs"
+
+[[example]]
+name = "tool_marketplace"
+path = "examples/04_production/tool_marketplace.rs"
+
+[[example]]
+name = "performance_monitoring"
+path = "examples/04_production/performance_monitoring.rs"

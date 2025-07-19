@@ -227,6 +227,7 @@ pub struct ProjectConfig {
     /// Default AI model to use
     pub default_model: Option<String>,
     /// Model configurations
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub models: Option<HashMap<String, serde_json::Value>>,
 }
 

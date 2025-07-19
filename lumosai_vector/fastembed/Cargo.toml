@@ -47,13 +47,13 @@ minilm-models = []
 multilingual-models = []
 
 [[example]]
-name = "basic_embedding"
+name = "fastembed_basic_embedding"
 required-features = []
 
 [[example]]
-name = "batch_embedding"
+name = "fastembed_batch_embedding"
 required-features = []
 
 [[example]]
-name = "vector_search"
+name = "fastembed_vector_search"
 required-features = []

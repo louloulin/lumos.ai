@@ -1275,6 +1275,9 @@ impl AutoScaler {
         Ok(*self.current_instances.get(tenant_id).unwrap_or(&1))
     }
 }
+
+#[cfg(test)]
+mod tests {
     use super::*;
     
     #[tokio::test]

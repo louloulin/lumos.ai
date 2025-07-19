@@ -54,15 +54,15 @@ metrics = []
 auth = []
 
 [[example]]
-name = "basic_usage"
+name = "milvus_basic_usage"
 required-features = []
 
 [[example]]
-name = "batch_operations"
+name = "milvus_batch_operations"
 required-features = []
 
 
 
 [[example]]
-name = "collection_management"
+name = "milvus_collection_management"
 required-features = []

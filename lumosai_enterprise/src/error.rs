@@ -243,7 +243,7 @@ impl EnterpriseError {
         matches!(
             self,
             EnterpriseError::InsufficientResources(_) |
-            EnterpriseError::QuotaExceeded(_) |
+            EnterpriseError::QuotaExceeded { .. } |
             EnterpriseError::CapacityPlanning(_)
         )
     }
@@ -272,7 +272,11 @@ mod tests {
         assert!(auth_err.is_fatal());
         assert!(auth_err.is_security_related());
         
-        let quota_err = EnterpriseError::QuotaExceeded("配额超限".to_string());
+        let quota_err = EnterpriseError::QuotaExceeded {
+            tenant_id: "test_tenant".to_string(),
+            resource_type: "CPU".to_string(),
+            requested: 100,
+        };
         assert!(!quota_err.is_temporary());
         assert!(!quota_err.is_security_related());
         assert!(quota_err.is_resource_related());

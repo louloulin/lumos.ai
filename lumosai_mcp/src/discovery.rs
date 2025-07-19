@@ -8,7 +8,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::{MCPConfiguration, ServerDefinition, EnhancedMCPManager, Result, MCPError};
 

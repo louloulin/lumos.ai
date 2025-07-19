@@ -1449,7 +1449,7 @@ impl Agent for BasicAgent {
     ) -> Result<BoxStream<'a, Result<String>>> {
 
         
-        let stream_start_time = SystemTime::now()
+        let _stream_start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| Error::SystemTime(format!("Failed to get stream start time: {}", e)))?
             .as_millis() as u64;

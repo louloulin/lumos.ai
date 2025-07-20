@@ -9,10 +9,10 @@
 
 use lumosai_core::prelude::*;
 use lumosai_core::llm::MockLlmProvider;
-use lumosai_core::workflow::WorkflowBuilder;
+use lumosai_core::agent::AgentTrait; // 正确的Agent trait导入
 use std::sync::Arc;
 use anyhow::Result;
-use tracing::{info, error};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,189 +34,190 @@ async fn main() -> Result<()> {
         "我已经完成了归档。".to_string(),
     ]));
 
-    // 创建不同的Agent
-    let research_agent = quick_agent("researcher", "专业研究员")
+    // 创建不同的Agent (使用Arc来共享)
+    let research_agent = Arc::new(quick_agent("researcher", "专业研究员")
         .model(llm.clone())
         .tools(vec![web_search(), file_reader()])
-        .build()?;
+        .build()?);
 
-    let analysis_agent = quick_agent("analyst", "数据分析师")
+    let analysis_agent = Arc::new(quick_agent("analyst", "数据分析师")
         .model(llm.clone())
         .tools(vec![calculator(), statistics()])
-        .build()?;
+        .build()?);
 
-    let report_agent = quick_agent("reporter", "报告撰写专家")
+    let report_agent = Arc::new(quick_agent("reporter", "报告撰写专家")
         .model(llm.clone())
         .tools(vec![file_writer()])
-        .build()?;
+        .build()?);
 
-    let review_agent = quick_agent("reviewer", "质量审核员")
+    let review_agent = Arc::new(quick_agent("reviewer", "质量审核员")
         .model(llm.clone())
-        .build()?;
+        .build()?);
 
-    let publish_agent = quick_agent("publisher", "发布专员")
+    let publish_agent = Arc::new(quick_agent("publisher", "发布专员")
         .model(llm.clone())
-        .build()?;
+        .build()?);
 
-    let archive_agent = quick_agent("archiver", "归档管理员")
+    let archive_agent = Arc::new(quick_agent("archiver", "归档管理员")
         .model(llm.clone())
-        .build()?;
+        .build()?);
 
     // 1. 基础链式工作流 - 类似Mastra的.then()语法
     println!("\n1️⃣ 基础链式工作流");
     println!("------------------");
 
-    let basic_chain = WorkflowBuilder::new()
-        .id("basic_chain")
-        .name("Basic Chain Workflow")
-        .description("基础的链式工作流")
-        .step("research", research_agent.clone())
-        .then("analysis", analysis_agent.clone())
-        .then("report", report_agent.clone())
-        .then("review", review_agent.clone())
-        .build()?;
+    // 手动链式执行演示
+    info!("✅ 开始基础链式工作流");
 
-    info!("✅ 基础链式工作流创建成功");
-    info!("📊 工作流信息:");
-    info!("   - ID: {}", basic_chain.get_id());
-    info!("   - 步骤数量: {}", basic_chain.get_steps().len());
+    let topic = "AI在教育领域的应用";
 
-    // 执行基础链式工作流
-    let input_data = serde_json::json!({
-        "topic": "AI在教育领域的应用",
-        "deadline": "2024-12-31"
-    });
+    // Step 1: Research
+    println!("🔍 步骤1: 研究阶段");
+    let research_result = research_agent.generate_simple(&format!("请研究: {}", topic)).await?;
+    println!("研究结果: {}", research_result);
 
-    match basic_chain.execute(input_data).await {
-        Ok(result) => {
-            info!("✅ 基础链式工作流执行成功");
-            println!("📄 执行结果: {}", serde_json::to_string_pretty(&result)?);
-        }
-        Err(e) => {
-            error!("❌ 基础链式工作流执行失败: {}", e);
-        }
-    }
+    // Step 2: Analysis
+    println!("📊 步骤2: 分析阶段");
+    let analysis_result = analysis_agent.generate_simple(&format!("请分析以下研究结果: {}", research_result)).await?;
+    println!("分析结果: {}", analysis_result);
 
-    // 2. 条件分支工作流 - 类似Mastra的.branch()语法
+    // Step 3: Report
+    println!("📝 步骤3: 报告阶段");
+    let report_result = report_agent.generate_simple(&format!("请基于以下分析撰写报告: {}", analysis_result)).await?;
+    println!("报告结果: {}", report_result);
+
+    // Step 4: Review
+    println!("✅ 步骤4: 审核阶段");
+    let review_result = review_agent.generate_simple(&format!("请审核以下报告: {}", report_result)).await?;
+    println!("审核结果: {}", review_result);
+
+    info!("✅ 基础链式工作流执行成功");
+
+    // 2. 条件分支工作流演示
     println!("\n2️⃣ 条件分支工作流");
     println!("------------------");
 
-    let branch_workflow = WorkflowBuilder::new()
-        .id("branch_workflow")
-        .name("Conditional Branch Workflow")
-        .description("包含条件分支的工作流")
-        .step("research", research_agent.clone())
-        .then("analysis", analysis_agent.clone())
-        .branch(
-            |result| {
-                // 模拟质量检查条件
-                result.get("quality_score")
-                    .and_then(|v| v.as_f64())
-                    .map(|score| score > 0.8)
-                    .unwrap_or(false)
-            },
-            "publish",  // 质量好 -> 发布
-            "review"    // 质量差 -> 审核
-        )
-        .build()?;
+    let topic2 = "机器学习最新进展";
+    let quality_score = 0.9; // 模拟质量分数
 
-    info!("✅ 条件分支工作流创建成功");
+    // Step 1: Research
+    println!("🔍 步骤1: 研究阶段");
+    let research_result2 = research_agent.generate_simple(&format!("请研究: {}", topic2)).await?;
+    println!("研究结果: {}", research_result2);
 
-    // 执行条件分支工作流
-    let branch_input = serde_json::json!({
-        "topic": "机器学习最新进展",
-        "quality_score": 0.9  // 高质量分数，应该走发布分支
-    });
+    // Step 2: Analysis
+    println!("📊 步骤2: 分析阶段");
+    let analysis_result2 = analysis_agent.generate_simple(&format!("请分析以下研究结果: {}", research_result2)).await?;
+    println!("分析结果: {}", analysis_result2);
 
-    match branch_workflow.execute(branch_input).await {
-        Ok(result) => {
-            info!("✅ 条件分支工作流执行成功");
-            println!("📄 分支执行结果: {}", serde_json::to_string_pretty(&result)?);
-        }
-        Err(e) => {
-            error!("❌ 条件分支工作流执行失败: {}", e);
-        }
+    // Step 3: 条件分支
+    println!("🔀 步骤3: 条件分支 (质量分数: {})", quality_score);
+    if quality_score > 0.8 {
+        println!("✅ 质量高，直接发布");
+        let publish_result = publish_agent.generate_simple(&format!("请发布以下内容: {}", analysis_result2)).await?;
+        println!("发布结果: {}", publish_result);
+    } else {
+        println!("⚠️ 质量需要改进，进入审核");
+        let review_result2 = review_agent.generate_simple(&format!("请审核以下内容: {}", analysis_result2)).await?;
+        println!("审核结果: {}", review_result2);
     }
 
-    // 3. 并行处理工作流 - 类似Mastra的.parallel()语法
+    info!("✅ 条件分支工作流执行成功");
+
+    // 3. 并行处理工作流演示
     println!("\n3️⃣ 并行处理工作流");
     println!("------------------");
 
-    let parallel_workflow = WorkflowBuilder::new()
-        .id("parallel_workflow")
-        .name("Parallel Processing Workflow")
-        .description("包含并行处理的工作流")
-        .step("research", research_agent.clone())
-        .parallel(vec!["analysis_a", "analysis_b", "analysis_c"])
-        .then("merge", report_agent.clone())
-        .then("final_review", review_agent.clone())
-        .build()?;
+    let topic3 = "分布式AI系统";
 
-    info!("✅ 并行处理工作流创建成功");
+    // Step 1: Research
+    println!("🔍 步骤1: 研究阶段");
+    let research_result3 = research_agent.generate_simple(&format!("请研究: {}", topic3)).await?;
+    println!("研究结果: {}", research_result3);
 
-    // 执行并行处理工作流
-    let parallel_input = serde_json::json!({
-        "topic": "分布式AI系统",
-        "parallel_tasks": ["性能分析", "安全分析", "成本分析"]
-    });
+    // Step 2: 并行分析
+    println!("🔄 步骤2: 并行分析阶段");
+    let tasks = vec!["性能分析", "安全分析", "成本分析"];
 
-    match parallel_workflow.execute(parallel_input).await {
-        Ok(result) => {
-            info!("✅ 并行处理工作流执行成功");
-            println!("📄 并行执行结果: {}", serde_json::to_string_pretty(&result)?);
-        }
-        Err(e) => {
-            error!("❌ 并行处理工作流执行失败: {}", e);
-        }
-    }
+    // 使用tokio::join!进行并行执行
+    let prompt_a = format!("请进行{}，基于: {}", tasks[0], research_result3);
+    let prompt_b = format!("请进行{}，基于: {}", tasks[1], research_result3);
+    let prompt_c = format!("请进行{}，基于: {}", tasks[2], research_result3);
+    let (analysis_a, analysis_b, analysis_c) = tokio::join!(
+        analysis_agent.generate_simple(&prompt_a),
+        analysis_agent.generate_simple(&prompt_b),
+        analysis_agent.generate_simple(&prompt_c)
+    );
 
-    // 4. 复杂混合工作流 - 组合多种模式
+    let analysis_a = analysis_a?;
+    let analysis_b = analysis_b?;
+    let analysis_c = analysis_c?;
+
+    println!("并行分析结果A: {}", analysis_a);
+    println!("并行分析结果B: {}", analysis_b);
+    println!("并行分析结果C: {}", analysis_c);
+
+    // Step 3: 合并结果
+    println!("🔗 步骤3: 合并结果");
+    let combined_analysis = format!("{}\n{}\n{}", analysis_a, analysis_b, analysis_c);
+    let merge_result = report_agent.generate_simple(&format!("请合并以下分析结果: {}", combined_analysis)).await?;
+    println!("合并结果: {}", merge_result);
+
+    info!("✅ 并行处理工作流执行成功");
+
+    // 4. 复杂混合工作流演示 - 组合多种模式
     println!("\n4️⃣ 复杂混合工作流");
     println!("------------------");
 
-    let complex_workflow = WorkflowBuilder::new()
-        .id("complex_workflow")
-        .name("Complex Mixed Workflow")
-        .description("组合多种模式的复杂工作流")
-        .step("initial_research", research_agent.clone())
-        .parallel(vec!["deep_analysis", "quick_analysis"])
-        .then("synthesis", analysis_agent.clone())
-        .branch(
-            |result| {
-                result.get("confidence")
-                    .and_then(|v| v.as_f64())
-                    .map(|conf| conf > 0.7)
-                    .unwrap_or(false)
-            },
-            "direct_publish",
-            "additional_review"
-        )
-        .then("final_archive", archive_agent.clone())
-        .build()?;
+    let topic4 = "下一代AI架构设计";
+    let confidence_threshold = 0.7;
 
-    info!("✅ 复杂混合工作流创建成功");
-    info!("📊 复杂工作流统计:");
-    info!("   - 总步骤数: {}", complex_workflow.get_steps().len());
-    info!("   - 包含并行处理: ✓");
-    info!("   - 包含条件分支: ✓");
-    info!("   - 包含链式调用: ✓");
+    // Step 1: 初始研究
+    println!("🔍 步骤1: 初始研究");
+    let initial_research = research_agent.generate_simple(&format!("请深入研究: {}", topic4)).await?;
+    println!("初始研究结果: {}", initial_research);
 
-    // 执行复杂混合工作流
-    let complex_input = serde_json::json!({
-        "topic": "下一代AI架构设计",
-        "priority": "high",
-        "confidence": 0.85
-    });
+    // Step 2: 并行深度和快速分析
+    println!("🔄 步骤2: 并行深度和快速分析");
+    let deep_prompt = format!("请进行深度分析，基于: {}", initial_research);
+    let quick_prompt = format!("请进行快速分析，基于: {}", initial_research);
+    let (deep_analysis, quick_analysis) = tokio::join!(
+        analysis_agent.generate_simple(&deep_prompt),
+        analysis_agent.generate_simple(&quick_prompt)
+    );
 
-    match complex_workflow.execute(complex_input).await {
-        Ok(result) => {
-            info!("✅ 复杂混合工作流执行成功");
-            println!("📄 复杂执行结果: {}", serde_json::to_string_pretty(&result)?);
-        }
-        Err(e) => {
-            error!("❌ 复杂混合工作流执行失败: {}", e);
-        }
+    let deep_analysis = deep_analysis?;
+    let quick_analysis = quick_analysis?;
+
+    println!("深度分析结果: {}", deep_analysis);
+    println!("快速分析结果: {}", quick_analysis);
+
+    // Step 3: 综合分析
+    println!("🔗 步骤3: 综合分析");
+    let combined = format!("深度分析: {}\n快速分析: {}", deep_analysis, quick_analysis);
+    let synthesis = analysis_agent.generate_simple(&format!("请综合以下分析: {}", combined)).await?;
+    println!("综合分析结果: {}", synthesis);
+
+    // Step 4: 条件分支 (模拟置信度检查)
+    let confidence = 0.85; // 模拟置信度
+    println!("🔀 步骤4: 条件分支 (置信度: {})", confidence);
+
+    if confidence > confidence_threshold {
+        println!("✅ 置信度高，直接发布");
+        let publish_result = publish_agent.generate_simple(&format!("请发布以下内容: {}", synthesis)).await?;
+        println!("发布结果: {}", publish_result);
+    } else {
+        println!("⚠️ 置信度低，需要额外审核");
+        let additional_review = review_agent.generate_simple(&format!("请额外审核: {}", synthesis)).await?;
+        println!("额外审核结果: {}", additional_review);
     }
+
+    // Step 5: 最终归档
+    println!("📁 步骤5: 最终归档");
+    let archive_result = archive_agent.generate_simple(&format!("请归档以下内容: {}", synthesis)).await?;
+    println!("归档结果: {}", archive_result);
+
+    info!("✅ 复杂混合工作流执行成功");
 
     // 5. 性能对比测试
     println!("\n5️⃣ 性能对比测试");
@@ -224,22 +225,16 @@ async fn main() -> Result<()> {
 
     let start_time = std::time::Instant::now();
 
-    // 创建多个链式工作流测试性能
-    let mut workflows = Vec::new();
-    for i in 0..10 {
-        let workflow = WorkflowBuilder::new()
-            .id(&format!("perf_test_{}", i))
-            .name(&format!("Performance Test {}", i))
-            .step("step1", research_agent.clone())
-            .then("step2", analysis_agent.clone())
-            .then("step3", report_agent.clone())
-            .build()?;
-        workflows.push(workflow);
+    // 简单的性能测试 - 连续执行多个Agent调用
+    for i in 0..3 {
+        println!("🔄 性能测试 {}/3", i + 1);
+        let test_result = research_agent.generate_simple(&format!("测试查询 {}", i + 1)).await?;
+        println!("测试结果 {}: {}", i + 1, test_result);
     }
 
-    let creation_time = start_time.elapsed();
-    info!("⏱️ 创建10个链式工作流耗时: {:?}", creation_time);
-    info!("📊 平均每个工作流创建时间: {:?}", creation_time / 10);
+    let elapsed_time = start_time.elapsed();
+    info!("⏱️ 性能测试耗时: {:?}", elapsed_time);
+    info!("📊 平均每次调用时间: {:?}", elapsed_time / 3);
 
     println!("\n🎉 链式工作流示例完成!");
     println!("\n📚 下一步学习:");
@@ -255,75 +250,52 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_chain_workflow_creation() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
-        
-        let agent1 = quick_agent("agent1", "Test agent 1")
+    async fn test_agent_chain_execution() {
+        let llm = Arc::new(MockLlmProvider::new(vec![
+            "研究结果".to_string(),
+            "分析结果".to_string(),
+        ]));
+
+        let agent1 = Arc::new(quick_agent("agent1", "Test agent 1")
             .model(llm.clone())
             .build()
-            .expect("Agent创建失败");
-        
-        let agent2 = quick_agent("agent2", "Test agent 2")
+            .expect("Agent创建失败"));
+
+        let agent2 = Arc::new(quick_agent("agent2", "Test agent 2")
             .model(llm.clone())
             .build()
-            .expect("Agent创建失败");
+            .expect("Agent创建失败"));
 
-        let workflow = WorkflowBuilder::new()
-            .id("test_chain")
-            .name("Test Chain")
-            .step("step1", agent1)
-            .then("step2", agent2)
-            .build();
+        // 测试链式执行
+        let result1 = agent1.generate_simple("测试输入").await.expect("Agent1执行失败");
+        let result2 = agent2.generate_simple(&format!("基于: {}", result1)).await.expect("Agent2执行失败");
 
-        assert!(workflow.is_ok());
-        let workflow = workflow.unwrap();
-        assert_eq!(workflow.get_id(), "test_chain");
-        assert_eq!(workflow.get_steps().len(), 2);
+        assert!(!result1.is_empty());
+        assert!(!result2.is_empty());
     }
 
     #[tokio::test]
-    async fn test_branch_workflow() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
-        
-        let agent = quick_agent("agent", "Test agent")
+    async fn test_parallel_execution() {
+        let llm = Arc::new(MockLlmProvider::new(vec![
+            "并行任务1结果".to_string(),
+            "并行任务2结果".to_string(),
+            "并行任务3结果".to_string(),
+        ]));
+
+        let agent = Arc::new(quick_agent("agent", "Test agent")
             .model(llm)
             .build()
-            .expect("Agent创建失败");
+            .expect("Agent创建失败"));
 
-        let workflow = WorkflowBuilder::new()
-            .id("test_branch")
-            .name("Test Branch")
-            .step("step1", agent)
-            .branch(
-                |_| true,  // 总是返回true
-                "true_step",
-                "false_step"
-            )
-            .build();
+        // 测试并行执行
+        let (result1, result2, result3) = tokio::join!(
+            agent.generate_simple("任务1"),
+            agent.generate_simple("任务2"),
+            agent.generate_simple("任务3")
+        );
 
-        assert!(workflow.is_ok());
-        let workflow = workflow.unwrap();
-        assert_eq!(workflow.get_id(), "test_branch");
-    }
-
-    #[tokio::test]
-    async fn test_parallel_workflow() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
-        
-        let agent = quick_agent("agent", "Test agent")
-            .model(llm)
-            .build()
-            .expect("Agent创建失败");
-
-        let workflow = WorkflowBuilder::new()
-            .id("test_parallel")
-            .name("Test Parallel")
-            .step("initial", agent)
-            .parallel(vec!["task1", "task2", "task3"])
-            .build();
-
-        assert!(workflow.is_ok());
-        let workflow = workflow.unwrap();
-        assert_eq!(workflow.get_id(), "test_parallel");
+        assert!(result1.is_ok());
+        assert!(result2.is_ok());
+        assert!(result3.is_ok());
     }
 }

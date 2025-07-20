@@ -109,6 +109,9 @@ oas3 = "0.16.1"
 comrak = { version = "0.39.0", features = ["shortcodes"] }
 mime = "0.3.0"
 
+# 日志
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
 # 测试工具
 tokio-test = "0.4"
 mockall = "0.11"
@@ -168,6 +171,8 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 futures = { workspace = true }
 tracing = { workspace = true }
+anyhow = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 reqwest = { workspace = true, optional = true }
 sqlx = { workspace = true, optional = true }

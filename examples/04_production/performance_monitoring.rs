@@ -9,6 +9,7 @@
 
 use lumosai_core::prelude::*;
 use lumosai_core::llm::MockLlmProvider;
+use lumosai_core::agent::AgentTrait; // 正确的Agent trait导入
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
@@ -98,7 +99,8 @@ impl PerformanceMonitor {
         
         // 保持最近1000条记录
         if metrics.len() > 1000 {
-            metrics.drain(0..metrics.len() - 1000);
+            let excess = metrics.len() - 1000;
+            metrics.drain(0..excess);
         }
     }
 
@@ -208,13 +210,13 @@ pub struct PerformanceStats {
 
 /// 性能监控装饰器
 pub struct MonitoredAgent {
-    agent: Box<dyn Agent>,
+    agent: Box<dyn AgentTrait>,
     monitor: Arc<PerformanceMonitor>,
     agent_id: String,
 }
 
 impl MonitoredAgent {
-    pub fn new(agent: Box<dyn Agent>, monitor: Arc<PerformanceMonitor>) -> Self {
+    pub fn new(agent: Box<dyn AgentTrait>, monitor: Arc<PerformanceMonitor>) -> Self {
         let agent_id = agent.get_name().to_string();
         Self {
             agent,
@@ -224,27 +226,15 @@ impl MonitoredAgent {
     }
 }
 
-#[async_trait::async_trait]
-impl Agent for MonitoredAgent {
-    fn get_name(&self) -> &str {
-        &self.agent_id
-    }
-
-    fn get_instructions(&self) -> &str {
-        self.agent.get_instructions()
-    }
-
-    fn get_tools(&self) -> &[Box<dyn Tool>] {
-        self.agent.get_tools()
-    }
-
-    async fn generate(&self, input: &str) -> Result<AgentResponse> {
+impl MonitoredAgent {
+    /// 监控Agent的generate方法
+    pub async fn generate_monitored(&self, input: &str) -> Result<String> {
         let start_time = Instant::now();
         let start_memory = get_memory_usage();
         let start_cpu = get_cpu_usage();
 
-        let result = self.agent.generate(input).await;
-        
+        let result = self.agent.generate_simple(input).await;
+
         let duration = start_time.elapsed();
         let end_memory = get_memory_usage();
         let end_cpu = get_cpu_usage();
@@ -262,7 +252,7 @@ impl Agent for MonitoredAgent {
 
         self.monitor.record_metric(metric).await;
 
-        result
+        result.map_err(|e| anyhow::Error::new(e))
     }
 }
 
@@ -318,9 +308,9 @@ async fn main() -> Result<()> {
     for (i, query) in test_queries.iter().enumerate() {
         info!("🔄 执行测试 {}/{}: {}", i + 1, test_queries.len(), query);
         
-        match monitored_agent.generate(query).await {
+        match monitored_agent.generate_monitored(query).await {
             Ok(response) => {
-                info!("✅ 测试成功: {}", response.content);
+                info!("✅ 测试成功: {}", response);
             }
             Err(e) => {
                 error!("❌ 测试失败: {}", e);
@@ -383,7 +373,7 @@ async fn main() -> Result<()> {
         let handle = tokio::spawn(async move {
             for j in 0..5 {
                 let query = format!("计算 {} * {}", i, j);
-                let _ = agent.generate(&query).await;
+                let _ = agent.generate_monitored(&query).await;
             }
         });
         

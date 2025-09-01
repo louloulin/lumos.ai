@@ -1,6 +1,6 @@
 // Integration tests for Agent + RAG system
 use crate::test_config::*;
-use lumosai_core::prelude::*;
+use lumosai::prelude::*;
 use std::time::Duration;
 
 #[tokio::test]
@@ -9,10 +9,7 @@ async fn test_agent_with_rag_basic_flow() {
     
     // Setup RAG system
     let storage = TestUtils::create_test_vector_storage().await.unwrap();
-    let rag = RagSystem::builder()
-        .storage(storage)
-        .embedding_provider("mock")
-        .build().unwrap();
+    let rag = lumosai::rag::simple(storage, "mock").await.unwrap();
     
     // Add knowledge to RAG
     let knowledge_docs = vec![
@@ -145,34 +142,41 @@ async fn test_agent_rag_concurrent_operations() {
     }
     
     // Test concurrent agent and RAG operations
-    let mut handles = Vec::new();
-    
+    let mut agent_handles = Vec::new();
+    let mut rag_handles = Vec::new();
+
     // Concurrent agent generations
     for i in 0..3 {
         let agent = env.agent.clone();
         let message = format!("Concurrent agent message {}", i);
-        
+
         let handle = tokio::spawn(async move {
             agent.generate_simple(&message).await
         });
-        handles.push(handle);
+        agent_handles.push(handle);
     }
-    
+
     // Concurrent RAG searches
     for i in 0..3 {
         let rag = env.rag.clone();
         let query = format!("Concurrent test {}", i);
-        
+
         let handle = tokio::spawn(async move {
             rag.search(&query, 2).await
         });
-        handles.push(handle);
+        rag_handles.push(handle);
     }
-    
-    // Wait for all operations to complete
-    for (i, handle) in handles.into_iter().enumerate() {
+
+    // Wait for all agent operations to complete
+    for (i, handle) in agent_handles.into_iter().enumerate() {
         let result = handle.await;
-        assert!(result.is_ok(), "Concurrent operation {} should succeed", i);
+        assert!(result.is_ok(), "Concurrent agent operation {} should succeed", i);
+    }
+
+    // Wait for all RAG operations to complete
+    for (i, handle) in rag_handles.into_iter().enumerate() {
+        let result = handle.await;
+        assert!(result.is_ok(), "Concurrent RAG operation {} should succeed", i);
     }
     
     println!("Concurrent operations test completed successfully");
@@ -257,7 +261,7 @@ async fn test_agent_rag_scalability() {
     assert!(!search_results.is_empty(), "Should find results in large dataset");
     
     // Test agent performance
-    let (agent_response, agent_duration) = PerformanceTestUtils::measure_time(async {
+    let (agent_response, agent_duration) = PerformanceTestUtils::measure_time(|| async {
         env.agent.generate_simple("Analyze the scalability data").await.unwrap()
     }).await;
     

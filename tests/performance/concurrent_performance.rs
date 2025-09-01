@@ -223,11 +223,8 @@ async fn test_concurrent_rag_operations() {
                 if op_id % 3 == 0 {
                     // Add document operation
                     let doc_content = format!("User {} document {} about topic {}", user_id, op_id, op_id % 5);
-                    let doc = lumosai_vector_core::Document::new(
-                        &format!("user_{}_{}", user_id, op_id),
-                        &doc_content
-                    ).with_embedding(vec![0.1; 384]);
-                    if rag_clone.storage.upsert_documents("default", vec![doc]).await.is_ok() {
+                    // Use RAG system to add document instead of direct storage access
+                    if rag_clone.add_document(&doc_content).await.is_ok() {
                         user_successes += 1;
                     }
                 } else {

@@ -1,6 +1,7 @@
 // Performance tests for Agent system
 use crate::test_config::*;
-use lumosai_core::prelude::*;
+use lumosai::prelude::*;
+use lumosai_core::Agent; // Import the trait for generate_simple
 use std::time::Duration;
 
 #[tokio::test]
@@ -13,12 +14,7 @@ async fn benchmark_agent_creation() {
         "agent_creation",
         iterations,
         || async {
-            let _agent = Agent::builder()
-                .name("benchmark-agent")
-                .model_name("gpt-4")
-                .instructions("You are a benchmark test assistant")
-                .build()
-                .unwrap();
+            let _agent = lumosai::agent::simple("gpt-4", "You are a benchmark test assistant").await.unwrap();
         }
     ).await;
     
@@ -152,12 +148,7 @@ async fn benchmark_agent_memory_usage() {
     let start_time = std::time::Instant::now();
     
     for i in 0..agent_count {
-        let agent = Agent::builder()
-            .name(&format!("memory-test-agent-{}", i))
-            .model_name("gpt-4")
-            .instructions("You are a memory test assistant")
-            .build()
-            .unwrap();
+        let agent = lumosai::agent::simple("gpt-4", "You are a memory test assistant").await.unwrap();
         
         agents.push(agent);
     }

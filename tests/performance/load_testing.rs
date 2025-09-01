@@ -153,7 +153,7 @@ async fn test_spike_load_handling() {
     let spike_load = 50;
     
     println!("Phase 1: Normal load ({} requests)", normal_load);
-    let (normal_success, normal_time) = execute_load_burst(&agent, normal_load, "normal").await;
+    let (normal_success, normal_time) = execute_load_burst(agent.clone(), normal_load, "normal").await;
     let normal_throughput = normal_success as f64 / normal_time.as_secs_f64();
     
     // Small delay
@@ -161,7 +161,7 @@ async fn test_spike_load_handling() {
     
     // Phase 2: Spike load
     println!("Phase 2: Spike load ({} requests)", spike_load);
-    let (spike_success, spike_time) = execute_load_burst(&agent, spike_load, "spike").await;
+    let (spike_success, spike_time) = execute_load_burst(agent.clone(), spike_load, "spike").await;
     let spike_throughput = spike_success as f64 / spike_time.as_secs_f64();
     
     // Small delay
@@ -169,7 +169,7 @@ async fn test_spike_load_handling() {
     
     // Phase 3: Return to normal
     println!("Phase 3: Return to normal ({} requests)", normal_load);
-    let (recovery_success, recovery_time) = execute_load_burst(&agent, normal_load, "recovery").await;
+    let (recovery_success, recovery_time) = execute_load_burst(agent.clone(), normal_load, "recovery").await;
     let recovery_throughput = recovery_success as f64 / recovery_time.as_secs_f64();
     
     println!("Spike test results:");
@@ -260,7 +260,9 @@ async fn test_concurrent_component_load() {
         let message = format!("Concurrent agent operation {}", i);
         
         let handle = tokio::spawn(async move {
-            agent_clone.generate_simple(&message).await.map(|_| "agent")
+            agent_clone.generate_simple(&message).await
+                .map(|_| "agent")
+                .map_err(|e| lumosai::Error::Agent(e.to_string()))
         });
         
         handles.push(handle);
@@ -276,7 +278,9 @@ async fn test_concurrent_component_load() {
                 &format!("concurrent_{}", i),
                 &doc
             ).with_embedding(vec![0.1; 384]);
-            storage_clone.upsert_documents("default", vec![document]).await.map(|_| "storage")
+            storage_clone.upsert_documents("default", vec![document]).await
+                .map(|_| "storage")
+                .map_err(|e| lumosai::Error::Storage(e.to_string()))
         });
         
         handles.push(handle);
@@ -288,7 +292,9 @@ async fn test_concurrent_component_load() {
         let query = format!("Concurrent RAG query {}", i);
         
         let handle = tokio::spawn(async move {
-            rag_clone.search(&query, 3).await.map(|_| "rag")
+            rag_clone.search(&query, 3).await
+                .map(|_| "rag")
+                .map_err(|e| lumosai::Error::Rag(e.to_string()))
         });
         
         handles.push(handle);
@@ -339,10 +345,12 @@ async fn test_load_test_with_realistic_data() {
     let agent = TestUtils::create_test_agent("realistic_load_agent").await.unwrap();
     
     // Realistic load test with varied request sizes and types
+    let medium_query = "Explain machine learning ".repeat(10);
+    let long_query = "Tell me about artificial intelligence ".repeat(50);
     let test_scenarios = vec![
         ("short_query", "Hello", 20),
-        ("medium_query", &"Explain machine learning ".repeat(10), 15),
-        ("long_query", &"Tell me about artificial intelligence ".repeat(50), 10),
+        ("medium_query", &medium_query, 15),
+        ("long_query", &long_query, 10),
         ("complex_query", "Analyze the implications of quantum computing on cryptography and provide detailed examples", 5),
     ];
     

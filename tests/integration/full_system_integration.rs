@@ -26,12 +26,12 @@ async fn test_complete_ai_workflow() {
     }
     
     // Step 2: Retrieve relevant context
-    let context = system.rag.retrieve_context(user_question, 3).await.unwrap();
+    let context = system.rag.search(user_question, 3).await.unwrap();
     assert!(!context.is_empty(), "Should retrieve relevant context");
     
     // Step 3: Generate response with agent
-    let enhanced_prompt = format!("Context: {}\n\nQuestion: {}", context, user_question);
-    let response = system.agent.generate_with_context(&enhanced_prompt).await.unwrap();
+    let enhanced_prompt = format!("Context: {:?}\n\nQuestion: {}", context, user_question);
+    let response = system.agent.generate_simple(&enhanced_prompt).await.unwrap();
     
     // Verify response quality
     assert!(!response.is_empty(), "Response should not be empty");
@@ -319,14 +319,14 @@ async fn test_data_consistency_across_components() {
     system.memory.store("consistency_test", test_data).await.unwrap();
     
     // Retrieve from both systems
-    let rag_results = system.rag.retrieve("LumosAI framework", 1).await.unwrap();
+    let rag_results = system.rag.search("LumosAI framework", 1).await.unwrap();
     let memory_result = system.memory.retrieve("consistency_test").await.unwrap();
     
     // Verify consistency
     assert!(!rag_results.is_empty(), "RAG should find the data");
     assert!(memory_result.is_some(), "Memory should contain the data");
     
-    let rag_content = &rag_results[0].content;
+    let rag_content = &rag_results[0].document.content;
     let memory_content = memory_result.unwrap();
     
     assert_eq!(rag_content, &memory_content, "Data should be consistent across components");
@@ -369,8 +369,8 @@ async fn create_test_tools() -> Result<HashMap<String, TestTool>> {
 
 #[derive(Clone)]
 struct TestSystem {
-    agent: Agent,
-    rag: RagSystem,
+    agent: std::sync::Arc<dyn lumosai::agent::AgentTrait>,
+    rag: std::sync::Arc<dyn lumosai::rag::RagTrait>,
     memory: TestMemory,
     tools: HashMap<String, TestTool>,
     sessions: std::sync::Arc<tokio::sync::RwLock<HashMap<String, TestSession>>>,
@@ -378,9 +378,10 @@ struct TestSystem {
 }
 
 impl TestSystem {
-    async fn create_agent(&self, name: &str, prompt: &str) -> Result<Agent> {
-        // Mock agent creation
-        Ok(Agent::new(name, prompt))
+    async fn create_agent(&self, name: &str, _prompt: &str) -> Result<std::sync::Arc<dyn lumosai::agent::AgentTrait>> {
+        // Mock agent creation using the test utils
+        TestUtils::create_test_agent(name).await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
     }
     
     async fn create_agent_with_tools(&self, name: &str, prompt: &str, tool_names: Vec<&str>) -> Result<AgentWithTools> {
@@ -521,11 +522,11 @@ impl AgentWithTools {
 #[derive(Clone)]
 struct TestSession {
     user_id: String,
-    agent: Agent,
+    agent: std::sync::Arc<dyn lumosai::agent::AgentTrait>,
 }
 
 impl TestSession {
-    fn new(user_id: &str, agent: Agent) -> Self {
+    fn new(user_id: &str, agent: std::sync::Arc<dyn lumosai::agent::AgentTrait>) -> Self {
         Self {
             user_id: user_id.to_string(),
             agent,
@@ -543,6 +544,7 @@ impl TestSession {
         }
         
         self.agent.generate_simple(message).await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
     }
 }
 

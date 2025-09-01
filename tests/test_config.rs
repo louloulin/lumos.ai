@@ -9,10 +9,8 @@ static INIT: Once = Once::new();
 pub fn init_test_env() {
     INIT.call_once(|| {
         // Initialize logging for tests
-        let _ = env_logger::builder()
-            .filter_level(log::LevelFilter::Debug)
-            .is_test(true)
-            .try_init();
+        // Simple initialization without env_logger dependency
+        println!("Test environment initialized");
     });
 }
 

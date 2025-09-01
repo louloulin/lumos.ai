@@ -223,31 +223,28 @@ LumosAI follows a modular, layered architecture designed for scalability and mai
 ## 📚 Documentation
 
 ### 📖 User Guides
-- [🚀 Getting Started Guide](docs/getting-started.md) - Your first steps with LumosAI
-- [🤖 Agent Development](docs/agents.md) - Creating and customizing agents
-- [🧠 RAG Implementation](docs/rag.md) - Building retrieval-augmented generation systems
-- [🔄 Workflow Orchestration](docs/workflows.md) - Multi-agent collaboration patterns
-- [🛠️ Tool Development](docs/tools.md) - Creating custom tools for agents
-- [💾 Memory Management](docs/memory.md) - Persistent context and state management
+- [🚀 Getting Started Guide](docs/getting_started.md) - Your first steps with LumosAI
+- [📖 Overview](docs/1_overview.md) - Project overview and introduction
+- [🏗️ Architecture](docs/2_architecture.md) - System architecture and design
+- [⚙️ Tech Stack](docs/3_tech_stack.md) - Technology stack and dependencies
+- [🔧 Core Components](docs/4_core_components.md) - Core framework components
 
 ### 🔧 Technical References
-- [📋 API Reference](docs/api/README.md) - Complete API documentation
-- [🏗️ Architecture Guide](docs/architecture.md) - System design and components
-- [⚙️ Configuration](docs/configuration.md) - Framework configuration options
-- [🔌 Integrations](docs/integrations.md) - Third-party service integrations
-- [🚀 Deployment](docs/deployment.md) - Production deployment strategies
+- [📋 API Reference](docs/5_api_reference.md) - Complete API documentation
+- [🛠️ Development Guide](docs/6_development_guide.md) - Development setup and guidelines
+- [🚀 Deployment Guide](docs/7_deployment_guide.md) - Production deployment strategies
+- [🧠 Vector Databases](docs/VECTOR_DATABASES.md) - Vector database integration guide
+- [📊 Vector API Reference](docs/vector_api_reference.md) - Vector operations API
 
 ### 🛡️ Enterprise Features
-- [🔐 Security Guide](docs/security.md) - Authentication, authorization, and compliance
-- [📊 Monitoring & Observability](docs/monitoring.md) - Metrics, logging, and tracing
-- [🏢 Multi-Tenancy](docs/multi-tenancy.md) - Tenant isolation and management
-- [⚡ Performance Optimization](docs/performance.md) - Scaling and optimization strategies
+- [⚡ Chain Operations](docs/CHAIN_OPERATIONS_BEST_PRACTICES.md) - Best practices for chain operations
+- [🔧 DSL Macros](docs/dsl_macros.md) - Domain-specific language macros
+- [🚀 Release Guide](docs/RELEASE_GUIDE.md) - Release management and versioning
 
 ### 💡 Tutorials & Examples
-- [🎯 Use Cases](docs/use-cases.md) - Real-world application scenarios
-- [🧪 Testing Guide](docs/testing.md) - Testing strategies and best practices
-- [🔄 Migration Guide](docs/migration.md) - Upgrading between versions
-- [❓ FAQ](docs/faq.md) - Frequently asked questions
+- [🧪 Testing Guide](docs/testing/README.md) - Testing strategies and best practices
+- [❓ FAQ](docs/8_faq.md) - Frequently asked questions
+- [🚀 Quick Start](docs/QUICK_START.md) - Quick start guide
 
 ---
 

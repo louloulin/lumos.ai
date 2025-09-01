@@ -37,6 +37,10 @@ pub enum Error {
     #[error("Storage error: {0}")]
     Storage(String),
 
+    /// System time errors
+    #[error("System time error: {0}")]
+    SystemTime(String),
+
     /// Workflow errors
     #[error("Workflow error: {0}")]
     Workflow(String),
@@ -187,6 +191,18 @@ pub enum Error {
     /// Timeout errors
     #[error("Timeout: {0}")]
     Timeout(String),
+
+    /// Documentation errors
+    #[error("Documentation error: {0}")]
+    Documentation(String),
+
+    /// Plugin errors
+    #[error("Plugin error: {0}")]
+    Plugin(String),
+
+    /// Distributed system errors
+    #[error("Distributed system error: {0}")]
+    Distributed(String),
 }
 
 impl From<&str> for Error {
@@ -198,5 +214,11 @@ impl From<&str> for Error {
 impl From<String> for Error {
     fn from(err: String) -> Self {
         Error::Configuration(err)
+    }
+}
+
+impl From<lumosai_vector::VectorError> for Error {
+    fn from(err: lumosai_vector::VectorError) -> Self {
+        Error::VectorStore(err.to_string())
     }
 }

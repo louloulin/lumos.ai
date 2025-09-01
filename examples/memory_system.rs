@@ -10,7 +10,6 @@ use lumosai_core::agent::{AgentBuilder, AgentTrait};
 use lumosai_core::memory::{MemoryConfig, working::{WorkingMemoryConfig, create_working_memory}};
 use lumosai_core::llm::{MockLlmProvider, Message, Role};
 use std::sync::Arc;
-use std::collections::HashMap;
 use tokio;
 
 #[tokio::main]
@@ -148,7 +147,7 @@ async fn demo_conversation_memory() -> std::result::Result<(), Box<dyn std::erro
         println!("AI: {}", response);
 
         // 显示当前记忆状态
-        if let Some(memory) = memory_agent.get_memory() {
+        if let Some(_memory) = memory_agent.get_memory() {
             println!("记忆状态: 已配置内存系统");
         }
     }

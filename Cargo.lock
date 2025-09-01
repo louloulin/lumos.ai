@@ -8311,6 +8311,7 @@ version = "0.1.4"
 dependencies = [
  "async-trait",
  "chrono",
+ "criterion",
  "futures",
  "lumos_macro",
  "lumosai-vector-core",
@@ -8325,8 +8326,10 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "tempfile",
  "thiserror 1.0.69",
  "tokio",
+ "tokio-test",
  "tracing",
  "uuid",
 ]

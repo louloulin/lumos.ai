@@ -226,7 +226,7 @@ pub fn data_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
 /// ```
 pub fn memory_vector_storage(dimensions: usize, capacity: Option<usize>) -> crate::Result<Box<dyn VectorStorage>> {
     let config = VectorStorageConfig::Memory { dimensions, capacity };
-    create_vector_storage(Some(config))
+    create_vector_storage(Some(config)).map_err(|e| crate::Error::Storage(e.to_string()))
 }
 
 // External vector storage convenience functions temporarily disabled due to dependency conflicts

@@ -26,7 +26,7 @@ struct StepNode {
 
 /// 工作流图
 #[derive(Clone, Default)]
-struct WorkflowGraph {
+pub struct WorkflowGraph {
     /// 初始节点
     initial: Vec<String>,
     /// 节点之间的连接关系

@@ -7,7 +7,7 @@
 //! - RAG Agent 集成
 
 use lumosai_core::agent::{AgentBuilder, AgentTrait};
-use lumosai_core::rag::{RagPipeline, BasicRagPipeline, DocumentSource, QueryResult as RagQueryResult, ChunkConfig};
+use lumosai_core::rag::{RagPipeline, BasicRagPipeline, DocumentSource, ChunkConfig};
 use lumosai_core::vector::{MemoryVectorStorage, VectorStorage};
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;

@@ -48,18 +48,18 @@ pub struct OrchestrationResult {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let agent1 = lumos::agent::simple("gpt-4", "You are a researcher").await?;
-///     let agent2 = lumos::agent::simple("gpt-4", "You are a writer").await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let agent1 = lumosai::agent::simple("gpt-4", "You are a researcher").await?;
+///     let agent2 = lumosai::agent::simple("gpt-4", "You are a writer").await?;
 ///     
-///     let task = lumos::orchestration::task()
+///     let task = lumosai::orchestration::task()
 ///         .name("Research and Write")
 ///         .description("Research a topic and write about it")
 ///         .agents(vec![agent1, agent2])
-///         .pattern(lumos::orchestration::Pattern::Sequential)
+///         .pattern(Pattern::Sequential)
 ///         .input(serde_json::json!({"topic": "AI in healthcare"}))
 ///         .build();
 ///     
@@ -74,20 +74,20 @@ pub fn task() -> TaskBuilder {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     let agent1 = lumos::agent::simple("gpt-4", "You are a researcher").await?;
-///     let agent2 = lumos::agent::simple("gpt-4", "You are a writer").await?;
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+///     let agent1 = lumosai::agent::simple("gpt-4", "You are a researcher").await?;
+///     let agent2 = lumosai::agent::simple("gpt-4", "You are a writer").await?;
 ///     
-///     let task = lumos::orchestration::task()
+///     let task = lumosai::orchestration::task()
 ///         .name("Research and Write")
 ///         .agents(vec![agent1, agent2])
-///         .pattern(lumos::orchestration::Pattern::Sequential)
+///         .pattern(Pattern::Sequential)
 ///         .build();
 ///     
-///     let result = lumos::orchestration::execute(task).await?;
+///     let result = lumosai::orchestration::execute(task).await?;
 ///     println!("Task completed: {:?}", result);
 ///     
 ///     Ok(())
@@ -145,16 +145,16 @@ pub async fn execute(task: CollaborationTask) -> Result<OrchestrationResult> {
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     let agents = vec![
-///         lumos::agent::simple("gpt-4", "You are a researcher").await?,
-///         lumos::agent::simple("gpt-4", "You are a writer").await?,
+///         lumosai::agent::simple("gpt-4", "You are a researcher").await?,
+///         lumosai::agent::simple("gpt-4", "You are a writer").await?,
 ///     ];
 ///     
-///     let result = lumos::orchestration::sequential(
+///     let result = lumosai::orchestration::sequential(
 ///         "Research and Write",
 ///         agents,
 ///         serde_json::json!({"topic": "AI"})
@@ -182,16 +182,16 @@ pub async fn sequential(
 /// 
 /// # 示例
 /// ```rust,no_run
-/// use lumos::prelude::*;
+/// use lumosai::prelude::*;
 /// 
 /// #[tokio::main]
-/// async fn main() -> Result<()> {
+/// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     let agents = vec![
-///         lumos::agent::simple("gpt-4", "You are an analyst").await?,
-///         lumos::agent::simple("gpt-4", "You are a critic").await?,
+///         lumosai::agent::simple("gpt-4", "You are an analyst").await?,
+///         lumosai::agent::simple("gpt-4", "You are a critic").await?,
 ///     ];
 ///     
-///     let result = lumos::orchestration::parallel(
+///     let result = lumosai::orchestration::parallel(
 ///         "Analyze and Critique",
 ///         agents,
 ///         serde_json::json!({"content": "Some content to analyze"})

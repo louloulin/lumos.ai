@@ -4,7 +4,7 @@
 //! inspired by Mastra's model creation patterns.
 
 use std::sync::Arc;
-use crate::llm::{LlmProvider, OpenAiProvider, AnthropicProvider, QwenProvider};
+use crate::llm::{LlmProvider, OpenAiProvider, AnthropicProvider, QwenProvider, DeepSeekProvider};
 use crate::Result;
 
 /// Create an OpenAI provider with simplified configuration
@@ -96,7 +96,7 @@ pub fn deepseek(model: &str) -> Result<Arc<dyn LlmProvider>> {
     let api_key = std::env::var("DEEPSEEK_API_KEY")
         .map_err(|_| crate::Error::Configuration("DEEPSEEK_API_KEY environment variable not set".to_string()))?;
 
-    Ok(Arc::new(QwenProvider::new(api_key, model.to_string(), "https://dashscope.aliyuncs.com/compatible-mode/v1")))
+    Ok(Arc::new(DeepSeekProvider::new(api_key, Some(model.to_string()))))
 }
 
 /// Create a DeepSeek provider with configuration builder (plan4.md API)
@@ -126,7 +126,7 @@ pub fn deepseek_builder(model: &str) -> Result<ModelBuilder> {
 /// let provider = deepseek_with_key("your-api-key", "deepseek-chat");
 /// ```
 pub fn deepseek_with_key(api_key: &str, model: &str) -> Arc<dyn LlmProvider> {
-    Arc::new(QwenProvider::new(api_key.to_string(), model.to_string(), "https://dashscope.aliyuncs.com/compatible-mode/v1"))
+    Arc::new(DeepSeekProvider::new(api_key.to_string(), Some(model.to_string())))
 }
 
 /// Create a Qwen provider with simplified configuration

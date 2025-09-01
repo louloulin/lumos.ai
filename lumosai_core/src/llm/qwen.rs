@@ -266,7 +266,7 @@ impl QwenProvider {
         Self::new_with_api_type(
             api_key,
             model,
-            "https://dashscope.aliyuncs.com/api/v1",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
             QwenApiType::DashScope
         )
     }
@@ -276,7 +276,7 @@ impl QwenProvider {
         Self::new_with_api_type(
             api_key,
             model,
-            "https://dashscope.aliyuncs.com/api/v1",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
             QwenApiType::DashScope
         )
     }
@@ -355,14 +355,44 @@ impl LlmProvider for QwenProvider {
     async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
         match self.api_type {
             QwenApiType::OpenAICompatible => {
-                let request = CreateChatCompletionRequestArgs::default()
-                    .model(&self.model)
-                    .messages(self.convert_messages(messages))
-                    .build()?;
+                // For Qwen models, we need to use direct HTTP requests to handle enable_thinking parameter
+                let messages_json: Vec<serde_json::Value> = messages.iter().map(|msg| {
+                    json!({
+                        "role": match msg.role {
+                            Role::System => "system",
+                            Role::User => "user",
+                            Role::Assistant => "assistant",
+                            _ => "user"
+                        },
+                        "content": msg.content
+                    })
+                }).collect();
 
-                let response = self.client.chat().create(request).await?;
-                
-                if let Some(choice) = response.choices.first() {
+                let request = json!({
+                    "model": self.model,
+                    "messages": messages_json,
+                    "max_tokens": options.max_tokens.unwrap_or(1024),
+                    "temperature": options.temperature.unwrap_or(0.7),
+                    "enable_thinking": false
+                });
+
+                let client = reqwest::Client::new();
+                let response = client
+                    .post("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
+                    .header("Authorization", format!("Bearer {}", self.api_key))
+                    .header("Content-Type", "application/json")
+                    .json(&request)
+                    .send()
+                    .await
+                    .map_err(|e| Error::Llm(e.to_string()))?;
+
+                let response_text = response.text().await
+                    .map_err(|e| Error::Llm(e.to_string()))?;
+
+                let response_json: OpenAICompatResponse = serde_json::from_str(&response_text)
+                    .map_err(|e| Error::Llm(format!("Failed to parse response: {}\nResponse text: {}", e, response_text)))?;
+
+                if let Some(choice) = response_json.choices.first() {
                     if let Some(content) = &choice.message.content {
                         Ok(content.clone())
                     } else {

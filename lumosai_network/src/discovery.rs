@@ -8,7 +8,6 @@ use dashmap::DashMap;
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use tokio::time::interval;
-use futures::future::FutureExt;
 
 use crate::error::{Error, Result};
 use crate::types::{AgentId, AgentCapability, AgentType, AgentLocation};
@@ -183,7 +182,7 @@ impl InMemoryServiceDiscovery {
                     .collect();
                 
                 for id in expired_ids {
-                    if let Some((_, registration)) = discovery.registrations.remove(&id) {
+                    if let Some((_, _registration)) = discovery.registrations.remove(&id) {
                         // 通知监听器
                         let listeners = discovery.listeners.read().await;
                         for listener in listeners.iter() {

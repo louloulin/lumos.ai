@@ -1,0 +1,89 @@
+[report]
+# 输出格式
+out = ["Html", "Xml", "Json"]
+
+# 输出目录
+output-dir = "target/tarpaulin"
+
+# 包含的文件模式
+include-tests = true
+
+# 排除的文件模式
+exclude = [
+    "*/tests/*",
+    "*/benches/*",
+    "*/examples/*",
+    "*/target/*",
+    "*/.github/*",
+    "*/scripts/*",
+]
+
+# 排除的行模式
+exclude-lines = [
+    "#\\[derive\\(",
+    "unreachable!",
+    "unimplemented!",
+    "panic!",
+    "todo!",
+    "debug_assert",
+    "#\\[cfg\\(test\\)\\]",
+]
+
+# 超时设置（秒）
+timeout = 120
+
+# 并发设置
+jobs = 1
+
+# 详细输出
+verbose = true
+
+# 失败时继续
+fail-under = 70
+
+# 忽略恐慌
+ignore-panics = true
+
+# 计数类型
+count = true
+
+# 分支覆盖
+branch = true
+
+# 前向边缘覆盖
+forward = true
+
+# 包含所有包
+all = true
+
+# 工作空间成员
+workspace = true
+
+# 特性
+features = "default"
+
+# 排除的包
+exclude = [
+    "lumosai_examples",
+    "lumosai_cli",
+]
+
+# 目标架构
+target = "x86_64-pc-windows-msvc"
+
+# 运行类型
+run-types = ["Tests", "Doctests"]
+
+# 引擎
+engine = "llvm"
+
+# 跟踪孤立函数
+track-orphans = true
+
+# 后处理
+post-args = ["--", "--test-threads=1"]
+
+# 环境变量
+[env]
+RUST_BACKTRACE = "1"
+RUST_LOG = "debug"

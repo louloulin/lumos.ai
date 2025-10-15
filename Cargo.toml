@@ -4,8 +4,8 @@ members = [
     "lumosai_examples",
     "lumosai_vector",
     "lumosai_rag",
+    "lumosai_cli",
     # 暂时排除有编译问题的包
-    # "lumosai_cli",
     # "lumosai_evals",
     # "lumosai_network",
     # "lumos_macro",

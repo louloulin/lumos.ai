@@ -741,7 +741,12 @@ workflow.wait_for_human("approval", json!({
     - 实现 Mock 嵌入生成器用于演示
     - 集成 Agent 进行基于检索的问答
     - 中文界面友好，输出质量良好
-- [ ] **重新启用 `lumosai_cli`** - 下一个目标
+- [x] **重新启用 `lumosai_cli`** ✅ **已完成 (2025-01-15)**
+  - 成功将 lumosai_cli 添加到 workspace
+  - 版本更新到 0.2.0
+  - 编译成功，CLI 工具正常运行
+  - 创建了 cli_basic_demo 示例演示 CLI 功能
+  - CLI 工具显示版本信息：Lumosai CLI v0.2.0
 - [ ] **重新启用 `lumosai_network`** - 可能合并到 core
 
 ##### 🔧 **API 重设计**

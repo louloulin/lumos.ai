@@ -116,3 +116,7 @@ path = "src/test_prelude_comprehensive.rs"
 [[example]]
 name = "rag_basic_demo"
 path = "src/rag_basic_demo.rs"
+
+[[example]]
+name = "cli_basic_demo"
+path = "src/cli_basic_demo.rs"

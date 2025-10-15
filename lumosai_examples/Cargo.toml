@@ -1,6 +1,6 @@
 [package]
 name = "lumosai_examples"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["Lumosai Team"]
 description = "Examples for the Lumosai framework"
@@ -107,3 +107,7 @@ path = "src/deepseek_app.rs"
 [[example]]
 name = "simplified_api_demo"
 path = "src/simplified_api_demo.rs"
+
+[[bin]]
+name = "test_prelude_comprehensive"
+path = "src/test_prelude_comprehensive.rs"

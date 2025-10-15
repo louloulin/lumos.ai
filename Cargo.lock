@@ -5450,7 +5450,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5602,7 +5602,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_core"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-openai",
@@ -5646,7 +5646,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_examples"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5666,7 +5666,7 @@ dependencies = [
 
 [[package]]
 name = "lumosai_vector"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "lumosai-vector-core",
  "lumosai-vector-fastembed",

@@ -1,7 +1,11 @@
+// This example is temporarily disabled because it depends on lumosai_mcp
+// which is excluded from the simplified workspace
+
+/*
 use lumosai_core::agent::{create_basic_agent, Agent, BasicAgent};
 use lumosai_core::llm::{LlmProvider, MockLlmProvider};
 use lumosai_core::{Error, Result};
-use lumosai_mcp::{MCPConfiguration, ServerDefinition};
+// use lumosai_mcp::{MCPConfiguration, ServerDefinition}; // Package excluded
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -98,5 +102,15 @@ async fn main() -> Result<()> {
         .await
         .map_err(|e| Error::Other(format!("Failed to disconnect: {:?}", e)))?;
 
+    Ok(())
+}
+*/
+
+// Simplified placeholder main function
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("🔌 MCP DSL Example (Temporarily Disabled)");
+    println!("This example depends on lumosai_mcp which is excluded from the simplified workspace.");
+    println!("It will be re-enabled in a future version.");
     Ok(())
 }

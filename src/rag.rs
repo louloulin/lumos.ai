@@ -10,7 +10,7 @@ use std::sync::Arc;
 pub type RagSystem = Arc<dyn RagTrait>;
 
 /// 简单RAG实现
-pub type SimpleRag = lumosai_rag::pipeline::RagPipeline;
+// pub type SimpleRag = lumosai_rag::pipeline::RagPipeline; // Temporarily disabled - package excluded
 
 /// 文档类型
 #[derive(Debug, Clone, Serialize, Deserialize)]

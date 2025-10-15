@@ -1,4 +1,4 @@
-use lumos_macro::rag_pipeline;
+// use lumos_macro::rag_pipeline; // Package excluded - temporarily disabled
 use lumosai_core::rag::{DocumentSource, RagPipeline, RagPipelineBuilder};
 use lumosai_core::Result;
 

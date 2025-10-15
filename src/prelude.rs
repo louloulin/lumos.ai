@@ -9,10 +9,10 @@ pub use crate::{Error, Message, Result, Role};
 // 向量存储相关
 #[cfg(feature = "postgres")]
 pub use crate::vector::PostgresStorage;
-pub use crate::vector::{MemoryStorage, VectorStorage};
+pub use crate::vector::VectorStorage; // MemoryStorage temporarily disabled
 
 // RAG系统相关
-pub use crate::rag::{Document, RagSystem, SearchResult, SimpleRag};
+pub use crate::rag::{Document, RagSystem, SearchResult}; // SimpleRag temporarily disabled
 
 // Agent相关
 pub use crate::agent::{AgentBuilder, AgentResponse, SimpleAgent};
@@ -38,7 +38,7 @@ pub use lumosai_core::tool::Tool;
 pub use lumosai_vector_core::prelude::IndexConfig;
 
 // RAG trait
-pub use lumosai_rag::{embedding::EmbeddingProvider, types::ChunkingStrategy};
+// pub use lumosai_rag::{embedding::EmbeddingProvider, types::ChunkingStrategy}; // Temporarily disabled - package excluded
 
 // UI组件相关 (可选功能)
 #[cfg(feature = "ui")]

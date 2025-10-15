@@ -232,13 +232,13 @@ mod tests {
             "agent_001",
             "You are agent 1",
             mock_llm1,
-        )) as Arc<dyn AgentTrait>;
+        )) as Arc<dyn Agent>;
 
         let agent2 = Arc::new(create_basic_agent(
             "agent_002",
             "You are agent 2",
             mock_llm2,
-        )) as Arc<dyn AgentTrait>;
+        )) as Arc<dyn Agent>;
 
         // 创建协作任务
         let task = CollaborationTask {
@@ -317,13 +317,13 @@ mod tests {
             "parallel_agent_001",
             "You are parallel agent 1",
             mock_llm1,
-        )) as Arc<dyn AgentTrait>;
+        )) as Arc<dyn Agent>;
 
         let agent2 = Arc::new(create_basic_agent(
             "parallel_agent_002",
             "You are parallel agent 2",
             mock_llm2,
-        )) as Arc<dyn AgentTrait>;
+        )) as Arc<dyn Agent>;
 
         // 创建并行协作任务
         let task = CollaborationTask {

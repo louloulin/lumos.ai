@@ -21,6 +21,10 @@ impl MockLlmProvider {
 
 #[async_trait]
 impl LlmProvider for MockLlmProvider {
+    fn name(&self) -> &str {
+        "MockLlmProvider"
+    }
+
     async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> LumusResult<String> {
         Ok(self.response.clone())
     }

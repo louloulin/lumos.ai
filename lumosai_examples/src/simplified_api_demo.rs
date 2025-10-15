@@ -26,6 +26,10 @@ impl DeepSeekLlmAdapter {
 // 手动实现LlmProvider trait
 #[async_trait]
 impl LlmProvider for DeepSeekLlmAdapter {
+    fn name(&self) -> &str {
+        "DeepSeekLlmAdapter"
+    }
+
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String, Error> {
         self.provider.generate(prompt, options).await
     }

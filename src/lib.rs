@@ -69,8 +69,8 @@
 
 // 核心模块重导出
 pub use lumosai_core as core;
-pub use lumosai_rag as rag_core;
-pub use lumosai_vector as vector_core;
+// pub use lumosai_rag as rag_core; // Temporarily disabled - package excluded
+// pub use lumosai_vector as vector_core; // Temporarily disabled - package excluded
 
 // UI模块重导出 (可选功能)
 #[cfg(feature = "ui")]

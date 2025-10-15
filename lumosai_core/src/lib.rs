@@ -39,7 +39,7 @@ pub mod workflow;
 
 pub use agent::{
     create_basic_agent, AgentConfig, AgentFactory, AgentGenerateOptions, AgentStreamOptions,
-    AgentTrait as Agent, BasicAgent,
+    Agent, BasicAgent,
 };
 pub use base::{Base, BaseComponent, ComponentConfig};
 /// Re-export common types and traits

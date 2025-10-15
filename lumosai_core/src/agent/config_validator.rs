@@ -31,16 +31,23 @@ impl ConfigValidator {
             Box::new(|value: &Value| {
                 if let Some(name) = value.as_str() {
                     if name.trim().is_empty() {
-                        return Err(Error::Validation("Agent name cannot be empty".to_string()));
+                        return Err(Error::Validation {
+                            field: "name".to_string(),
+                            message: "Agent name cannot be empty".to_string(),
+                        });
                     }
                     if name.len() > 100 {
-                        return Err(Error::Validation(
-                            "Agent name too long (max 100 characters)".to_string(),
-                        ));
+                        return Err(Error::Validation {
+                            field: "name".to_string(),
+                            message: "Agent name too long (max 100 characters)".to_string(),
+                        });
                     }
                     Ok(())
                 } else {
-                    Err(Error::Validation("Agent name must be a string".to_string()))
+                    Err(Error::Validation {
+                        field: "name".to_string(),
+                        message: "Agent name must be a string".to_string(),
+                    })
                 }
             }),
         );
@@ -49,21 +56,30 @@ impl ConfigValidator {
         self.add_rule("model", Box::new(|value: &Value| {
             if let Some(model) = value.as_str() {
                 if model.trim().is_empty() {
-                    return Err(Error::Validation("Model name cannot be empty".to_string()));
+                    return Err(Error::Validation {
+                        field: "model".to_string(),
+                        message: "Model name cannot be empty".to_string(),
+                    });
                 }
                 // 验证支持的模型格式
                 let valid_patterns = [
                     "gpt-", "claude-", "qwen", "gemini", "llama", "mistral", "yi-"
                 ];
                 if !valid_patterns.iter().any(|pattern| model.contains(pattern)) {
-                    return Err(Error::Validation(format!(
-                        "Unsupported model '{}'. Supported models: GPT, Claude, Qwen, Gemini, Llama, Mistral, Yi",
-                        model
-                    )));
+                    return Err(Error::Validation {
+                        field: "model".to_string(),
+                        message: format!(
+                            "Unsupported model '{}'. Supported models: GPT, Claude, Qwen, Gemini, Llama, Mistral, Yi",
+                            model
+                        ),
+                    });
                 }
                 Ok(())
             } else {
-                Err(Error::Validation("Model must be a string".to_string()))
+                Err(Error::Validation {
+                    field: "model".to_string(),
+                    message: "Model must be a string".to_string(),
+                })
             }
         }));
 
@@ -73,15 +89,17 @@ impl ConfigValidator {
             Box::new(|value: &Value| {
                 if let Some(temp) = value.as_f64() {
                     if temp < 0.0 || temp > 2.0 {
-                        return Err(Error::Validation(
-                            "Temperature must be between 0.0 and 2.0".to_string(),
-                        ));
+                        return Err(Error::Validation {
+                            field: "temperature".to_string(),
+                            message: "Temperature must be between 0.0 and 2.0".to_string(),
+                        });
                     }
                     Ok(())
                 } else {
-                    Err(Error::Validation(
-                        "Temperature must be a number".to_string(),
-                    ))
+                    Err(Error::Validation {
+                        field: "temperature".to_string(),
+                        message: "Temperature must be a number".to_string(),
+                    })
                 }
             }),
         );
@@ -92,15 +110,17 @@ impl ConfigValidator {
             Box::new(|value: &Value| {
                 if let Some(tokens) = value.as_u64() {
                     if tokens == 0 || tokens > 100000 {
-                        return Err(Error::Validation(
-                            "Max tokens must be between 1 and 100000".to_string(),
-                        ));
+                        return Err(Error::Validation {
+                            field: "max_tokens".to_string(),
+                            message: "Max tokens must be between 1 and 100000".to_string(),
+                        });
                     }
                     Ok(())
                 } else {
-                    Err(Error::Validation(
-                        "Max tokens must be a positive integer".to_string(),
-                    ))
+                    Err(Error::Validation {
+                        field: "max_tokens".to_string(),
+                        message: "Max tokens must be a positive integer".to_string(),
+                    })
                 }
             }),
         );
@@ -124,7 +144,10 @@ impl ConfigValidator {
     pub fn validate_agent_config(&self, config: &AgentConfig) -> Result<()> {
         // 转换为JSON进行验证
         let config_json = serde_json::to_value(config)
-            .map_err(|e| Error::Validation(format!("Failed to serialize config: {}", e)))?;
+            .map_err(|e| Error::Validation {
+                field: "config".to_string(),
+                message: format!("Failed to serialize config: {}", e),
+            })?;
 
         self.validate_json(&config_json)
     }
@@ -133,15 +156,18 @@ impl ConfigValidator {
     pub fn validate_json(&self, config: &Value) -> Result<()> {
         let config_obj = config
             .as_object()
-            .ok_or_else(|| Error::Validation("Configuration must be an object".to_string()))?;
+            .ok_or_else(|| Error::Validation {
+                field: "config".to_string(),
+                message: "Configuration must be an object".to_string(),
+            })?;
 
         // 检查必需字段
         for required_field in &self.required_fields {
             if !config_obj.contains_key(required_field) {
-                return Err(Error::Validation(format!(
-                    "Missing required field: {}",
-                    required_field
-                )));
+                return Err(Error::Validation {
+                    field: required_field.to_string(),
+                    message: format!("Missing required field: {}", required_field),
+                });
             }
         }
 
@@ -149,7 +175,10 @@ impl ConfigValidator {
         for (field, value) in config_obj {
             if let Some(rule) = self.validation_rules.get(field) {
                 rule(value).map_err(|e| {
-                    Error::Validation(format!("Validation failed for field '{}': {}", field, e))
+                    Error::Validation {
+                        field: field.to_string(),
+                        message: format!("Validation failed for field '{}': {}", field, e),
+                    }
                 })?;
             }
         }

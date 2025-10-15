@@ -37,6 +37,10 @@ impl MockLlmWithFunctionCalling {
 
 #[async_trait]
 impl LlmProvider for MockLlmWithFunctionCalling {
+    fn name(&self) -> &str {
+        "MockLlmWithFunctionCalling"
+    }
+
     async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
         if self.supports_function_calling {
             Ok("I'll use function calling to help you.".to_string())

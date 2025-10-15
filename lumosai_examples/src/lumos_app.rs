@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use lumos_macro::{agent, tools};
+// use lumos_macro::{agent, tools}; // Package excluded - temporarily disabled
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::llm::{DeepSeekProvider, LlmOptions, LlmProvider, Message, Role};
 use lumosai_core::{Agent, Result};
@@ -36,6 +36,10 @@ impl DeepSeekLlmAdapter {
 // 手动实现LlmProvider trait
 #[async_trait]
 impl LlmProvider for DeepSeekLlmAdapter {
+    fn name(&self) -> &str {
+        "DeepSeekLlmAdapter"
+    }
+
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String> {
         self.provider.generate(prompt, options).await
     }
@@ -64,7 +68,8 @@ impl LlmProvider for DeepSeekLlmAdapter {
 }
 
 // 使用tools!宏定义工具
-tools! {
+/*
+// tools! { // Macro temporarily disabled
     {
         name: "stock_price",
         description: "获取股票的实时价格信息，包括当前价格、涨跌幅等",
@@ -242,6 +247,7 @@ tools! {
         }
     }
 }
+*/
 
 // 创建DeepSeek提供者的辅助函数
 fn create_deepseek_provider() -> DeepSeekLlmAdapter {
@@ -250,14 +256,14 @@ fn create_deepseek_provider() -> DeepSeekLlmAdapter {
 }
 
 // 使用优化后的agent!宏 - 新的简化语法
-fn create_stock_agent() -> impl lumosai_core::Agent {
-    agent! {
-        name: "stock_agent",
-        instructions: "你是一个专业的股票分析师和投资顾问，擅长分析股票价格、市场趋势和相关新闻。你可以使用专业工具来获取实时股票数据和新闻信息，为用户提供准确、及时的投资建议。请用中文回答，并在适当时候调用相应的工具。",
-        provider: create_deepseek_provider(),
-        tools: [stock_price, stock_news]
-    }
-}
+// fn create_stock_agent() -> impl lumosai_core::Agent {
+//     agent! { // Macro temporarily disabled
+//         name: "stock_agent",
+//         instructions: "你是一个专业的股票分析师和投资顾问，擅长分析股票价格、市场趋势和相关新闻。你可以使用专业工具来获取实时股票数据和新闻信息，为用户提供准确、及时的投资建议。请用中文回答，并在适当时候调用相应的工具。",
+//         provider: create_deepseek_provider(),
+//         tools: [stock_price, stock_news]
+//     }
+// }
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -279,7 +285,7 @@ async fn main() -> Result<()> {
     println!("✅ 正在初始化Lumos股票助手...");
 
     // 暂时直接使用agent，不使用lumos!宏
-    let app = create_stock_agent();
+    // let app = create_stock_agent(); // Function temporarily disabled
 
     println!("✅ 应用初始化完成！");
     println!("📱 应用名称: Lumos股票助手");
@@ -323,17 +329,20 @@ async fn main() -> Result<()> {
             name: None,
         };
 
-        match app
-            .generate(&[user_message], &AgentGenerateOptions::default())
-            .await
-        {
-            Ok(result) => {
-                println!("\n💬 Lumos股票助手: {}", result.response);
-            }
-            Err(e) => {
-                println!("❌ 错误: {}", e);
-            }
-        }
+        // match app
+        //     .generate(&[user_message], &AgentGenerateOptions::default())
+        //     .await
+        // {
+        //     Ok(result) => {
+        //         println!("\n💬 Lumos股票助手: {}", result.response);
+        //     }
+        //     Err(e) => {
+        //         println!("❌ 错误: {}", e);
+        //     }
+        // }
+
+        // 临时替代输出
+        println!("\n💬 Lumos股票助手: 功能暂时禁用（宏系统正在修复中）");
 
         // 添加延迟避免API限制
         println!("\n⏳ 等待3秒后继续下一个查询...");

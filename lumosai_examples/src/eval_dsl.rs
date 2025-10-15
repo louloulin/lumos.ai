@@ -1,8 +1,12 @@
+// This example is temporarily disabled because it depends on lumosai_evals
+// which is excluded from the simplified workspace
+
+/*
 use async_trait::async_trait;
 use lumosai_core::agent::{create_basic_agent, Agent};
 use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::Result;
-use lumosai_evals::{Metric, MetricResult};
+// use lumosai_evals::{Metric, MetricResult}; // Package excluded
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -174,5 +178,15 @@ async fn main() -> Result<()> {
     println!("- 灵活的评分机制");
     println!("- 详细的结果报告");
 
+    Ok(())
+}
+*/
+
+// Simplified placeholder main function
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("📊 Evaluation DSL Example (Temporarily Disabled)");
+    println!("This example depends on lumosai_evals which is excluded from the simplified workspace.");
+    println!("It will be re-enabled in a future version.");
     Ok(())
 }

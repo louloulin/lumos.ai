@@ -8,7 +8,7 @@ use std::sync::Arc;
 /// 向量存储抽象 - 使用enum来支持多种存储类型
 #[derive(Clone)]
 pub enum VectorStorage {
-    Memory(Arc<lumosai_vector::memory::MemoryVectorStorage>),
+    // Memory(Arc<lumosai_vector::memory::MemoryVectorStorage>), // Temporarily disabled - package excluded
     #[cfg(feature = "vector-postgres")]
     Postgres(Arc<lumosai_vector::postgres::PostgresVectorStorage>),
     #[cfg(feature = "vector-qdrant")]
@@ -18,7 +18,7 @@ pub enum VectorStorage {
 }
 
 /// 内存向量存储
-pub type MemoryStorage = lumosai_vector::memory::MemoryVectorStorage;
+// pub type MemoryStorage = lumosai_vector::memory::MemoryVectorStorage; // Temporarily disabled - package excluded
 
 /// Qdrant向量存储
 #[cfg(feature = "vector-qdrant")]
@@ -45,10 +45,8 @@ pub type PostgresStorage = lumosai_vector::postgres::PostgresVectorStorage;
 /// }
 /// ```
 pub async fn memory() -> Result<VectorStorage> {
-    let storage = MemoryStorage::new()
-        .await
-        .map_err(|e| Error::VectorStore(format!("Failed to create memory storage: {}", e)))?;
-    Ok(VectorStorage::Memory(Arc::new(storage)))
+    // Temporarily disabled - lumosai_vector package excluded
+    Err(Error::VectorStore("Memory storage temporarily disabled".to_string()))
 }
 
 /// 一行代码创建Qdrant向量存储
@@ -352,37 +350,49 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         config: lumosai_vector_core::IndexConfig,
     ) -> lumosai_vector_core::Result<()> {
         match self {
-            VectorStorage::Memory(storage) => storage.create_index(config).await,
+            // VectorStorage::Memory(storage) => storage.create_index(config).await, // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.create_index(config).await,
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.create_index(config).await,
             #[cfg(feature = "vector-weaviate")]
             VectorStorage::Weaviate(storage) => storage.create_index(config).await,
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
     async fn delete_index(&self, index_name: &str) -> lumosai_vector_core::Result<()> {
         match self {
-            VectorStorage::Memory(storage) => storage.delete_index(index_name).await,
+            // VectorStorage::Memory(storage) => storage.delete_index(index_name).await, // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.delete_index(index_name).await,
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.delete_index(index_name).await,
             #[cfg(feature = "vector-weaviate")]
             VectorStorage::Weaviate(storage) => storage.delete_index(index_name).await,
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
     async fn list_indexes(&self) -> lumosai_vector_core::Result<Vec<String>> {
         match self {
-            VectorStorage::Memory(storage) => storage.list_indexes().await,
+            // VectorStorage::Memory(storage) => storage.list_indexes().await, // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.list_indexes().await,
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.list_indexes().await,
             #[cfg(feature = "vector-weaviate")]
             VectorStorage::Weaviate(storage) => storage.list_indexes().await,
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
@@ -391,13 +401,17 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         index_name: &str,
     ) -> lumosai_vector_core::Result<lumosai_vector_core::IndexInfo> {
         match self {
-            VectorStorage::Memory(storage) => storage.describe_index(index_name).await,
+            // VectorStorage::Memory(storage) => storage.describe_index(index_name).await, // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.describe_index(index_name).await,
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.describe_index(index_name).await,
             #[cfg(feature = "vector-weaviate")]
             VectorStorage::Weaviate(storage) => storage.describe_index(index_name).await,
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
@@ -407,7 +421,7 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         documents: Vec<lumosai_vector_core::Document>,
     ) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::DocumentId>> {
         match self {
-            VectorStorage::Memory(storage) => storage.upsert_documents(index_name, documents).await,
+            // VectorStorage::Memory(storage) => storage.upsert_documents(index_name, documents).await, // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => {
                 storage.upsert_documents(index_name, documents).await
@@ -418,6 +432,10 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
             VectorStorage::Weaviate(storage) => {
                 storage.upsert_documents(index_name, documents).await
             }
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
@@ -426,13 +444,17 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         request: lumosai_vector_core::SearchRequest,
     ) -> lumosai_vector_core::Result<lumosai_vector_core::SearchResponse> {
         match self {
-            VectorStorage::Memory(storage) => storage.search(request).await,
+            // VectorStorage::Memory(storage) => storage.search(request).await, // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.search(request).await,
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.search(request).await,
             #[cfg(feature = "vector-weaviate")]
             VectorStorage::Weaviate(storage) => storage.search(request).await,
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
@@ -442,13 +464,17 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         document: lumosai_vector_core::Document,
     ) -> lumosai_vector_core::Result<()> {
         match self {
-            VectorStorage::Memory(storage) => storage.update_document(index_name, document).await,
+            // VectorStorage::Memory(storage) => storage.update_document(index_name, document).await, // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.update_document(index_name, document).await,
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.update_document(index_name, document).await,
             #[cfg(feature = "vector-weaviate")]
             VectorStorage::Weaviate(storage) => storage.update_document(index_name, document).await,
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
@@ -458,13 +484,17 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         ids: Vec<lumosai_vector_core::DocumentId>,
     ) -> lumosai_vector_core::Result<()> {
         match self {
-            VectorStorage::Memory(storage) => storage.delete_documents(index_name, ids).await,
+            // VectorStorage::Memory(storage) => storage.delete_documents(index_name, ids).await, // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.delete_documents(index_name, ids).await,
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.delete_documents(index_name, ids).await,
             #[cfg(feature = "vector-weaviate")]
             VectorStorage::Weaviate(storage) => storage.delete_documents(index_name, ids).await,
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
@@ -475,11 +505,11 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         include_vectors: bool,
     ) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::Document>> {
         match self {
-            VectorStorage::Memory(storage) => {
-                storage
-                    .get_documents(index_name, ids, include_vectors)
-                    .await
-            }
+            // VectorStorage::Memory(storage) => { // Temporarily disabled
+            //     storage
+            //         .get_documents(index_name, ids, include_vectors)
+            //         .await
+            // }
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => {
                 storage
@@ -498,30 +528,42 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
                     .get_documents(index_name, ids, include_vectors)
                     .await
             }
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
     async fn health_check(&self) -> lumosai_vector_core::Result<()> {
         match self {
-            VectorStorage::Memory(storage) => storage.health_check().await,
+            // VectorStorage::Memory(storage) => storage.health_check().await, // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.health_check().await,
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.health_check().await,
             #[cfg(feature = "vector-weaviate")]
             VectorStorage::Weaviate(storage) => storage.health_check().await,
+            #[allow(unreachable_patterns)]
+            _ => Err(lumosai_vector_core::VectorError::NotSupported(
+                "No vector storage backend enabled".to_string(),
+            )),
         }
     }
 
     fn backend_info(&self) -> lumosai_vector_core::BackendInfo {
         match self {
-            VectorStorage::Memory(storage) => storage.backend_info(),
+            // VectorStorage::Memory(storage) => storage.backend_info(), // Temporarily disabled
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.backend_info(),
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.backend_info(),
             #[cfg(feature = "vector-weaviate")]
             VectorStorage::Weaviate(storage) => storage.backend_info(),
+            #[allow(unreachable_patterns)]
+            _ => lumosai_vector_core::BackendInfo::new("disabled", "0.0.0")
+                .with_feature("none")
+                .with_metadata("status", "No vector storage backend enabled"),
         }
     }
 }

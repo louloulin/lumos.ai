@@ -165,7 +165,9 @@ pub use crate::llm::{LlmOptions, Message, Role};
 ///     .build()?;
 /// ```
 pub fn quick_agent(name: &str, instructions: &str) -> AgentBuilder {
-    Agent::quick(name, instructions)
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
 }
 
 /// Create a web-enabled agent with common web tools
@@ -180,7 +182,10 @@ pub fn quick_agent(name: &str, instructions: &str) -> AgentBuilder {
 ///     .build()?;
 /// ```
 pub fn web_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
-    Agent::quick(name, instructions).with_web_tools()
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .with_web_tools()
 }
 
 /// Create a file-enabled agent with common file tools
@@ -195,7 +200,10 @@ pub fn web_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
 ///     .build()?;
 /// ```
 pub fn file_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
-    Agent::quick(name, instructions).with_file_tools()
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .with_file_tools()
 }
 
 /// Create a data processing agent with common data tools
@@ -210,7 +218,9 @@ pub fn file_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
 ///     .build()?;
 /// ```
 pub fn data_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
-    Agent::quick(name, instructions)
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
         .with_data_tools()
         .with_math_tools()
 }

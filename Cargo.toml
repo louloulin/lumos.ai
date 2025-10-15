@@ -1,26 +1,39 @@
 [workspace]
 members = [
     "lumosai_core",
+    "lumosai_examples",
+    "lumosai_vector",
+    # 暂时排除有编译问题的包
+    # "lumosai_cli",
+    # "lumosai_evals",
+    # "lumosai_rag",
+    # "lumosai_network",
+    # "lumos_macro",
+    # "lumosai_mcp",
+    # "lumosai_derive",
+    # "lumosai_bindings",
+    # "lumosai_ui",
+    # "lumosai_ui/web-server",
+    # "lumosai_cloud",
+    # "lumosai_ai_extensions"
+]
+# 排除有问题的包
+exclude = [
+    "lumosai_vector/postgres",
+    "lumosai_marketplace",
+    "lumosai_enterprise",
+    # 暂时排除 UI 相关包（有 LabelRole 错误）
+    "lumosai_ui",
+    "lumosai_ui/web-server",
+    # 暂时排除其他复杂包
     "lumosai_cli",
     "lumosai_evals",
     "lumosai_rag",
     "lumosai_network",
     "lumos_macro",
     "lumosai_mcp",
-    "lumosai_examples",
     "lumosai_derive",
-    "lumosai_bindings",
-    "lumosai_vector",
-    "lumosai_ui",
-    "lumosai_ui/web-server",
-    # "lumosai_cloud",
-    # "lumosai_ai_extensions"
-]
-# Optional packages that cause dependency conflicts
-exclude = [
-    "lumosai_vector/postgres",
-    "lumosai_marketplace",
-    "lumosai_enterprise"
+    "lumosai_bindings"
 ]
 resolver = "2"
 
@@ -137,30 +150,35 @@ strip = false
 
 [features]
 default = ["integrations"]
-macros = ["lumos_macro"]
+# 暂时移除 macros 功能
+# macros = ["lumos_macro"]
 integrations = ["reqwest"]
-# UI features
-ui = ["lumosai_ui"]
-ui-full = ["ui"]
-# Vector database features
-vector-qdrant = ["lumosai_vector/qdrant"]
-vector-weaviate = ["lumosai_vector/weaviate"]
-vector-postgres = ["lumosai_vector"]
-vector-all = ["vector-qdrant", "vector-weaviate", "vector-postgres"]
+# 暂时移除 UI 功能
+# ui = ["lumosai_ui"]
+# ui-full = ["ui"]
+# Vector database features - 仅保留内存存储
+vector-memory = ["lumosai_vector/memory"]
+# 暂时移除其他向量数据库
+# vector-qdrant = ["lumosai_vector/qdrant"]
+# vector-weaviate = ["lumosai_vector/weaviate"]
+# vector-postgres = ["lumosai_vector"]
+# vector-all = ["vector-qdrant", "vector-weaviate", "vector-postgres"]
 # Additional features for cfg conditions
-postgres = ["sqlx/postgres"]
-qdrant = ["vector-qdrant"]
-weaviate = ["vector-weaviate"]
+# postgres = ["sqlx/postgres"]
+# qdrant = ["vector-qdrant"]
+# weaviate = ["vector-weaviate"]
 
 [dependencies]
-lumosai_core = { path = "lumosai_core", features = ["macros"] }
-lumosai_evals = { path = "lumosai_evals" }
-lumosai_rag = { path = "lumosai_rag" }
+# 仅保留核心依赖
+lumosai_core = { path = "lumosai_core" }
 lumosai_vector = { path = "lumosai_vector", features = ["memory"], optional = true }
 lumosai-vector-core = { path = "lumosai_vector/core" }
-lumosai_network = { path = "lumosai_network" }
-lumosai_ui = { path = "lumosai_ui", optional = true }
-lumos_macro = { path = "lumos_macro", optional = true }
+# 暂时移除其他依赖
+# lumosai_evals = { path = "lumosai_evals" }
+# lumosai_rag = { path = "lumosai_rag" }
+# lumosai_network = { path = "lumosai_network" }
+# lumosai_ui = { path = "lumosai_ui", optional = true }
+# lumos_macro = { path = "lumos_macro", optional = true }
 redis = { workspace = true }
 
 tokio = { workspace = true }

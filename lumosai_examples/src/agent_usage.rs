@@ -228,6 +228,10 @@ pub mod tests {
 
     #[async_trait]
     impl LlmProvider for MockLlmProvider {
+        fn name(&self) -> &str {
+            "MockLlmProvider"
+        }
+
         async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
             let mut current = self
                 .current_response

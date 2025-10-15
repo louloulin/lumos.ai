@@ -569,8 +569,8 @@ mod tests {
         );
         let filter = QdrantFilterConverter::convert_filter(condition).unwrap();
 
-        assert!(filter.must.is_some());
-        assert_eq!(filter.must.unwrap().len(), 1);
+        assert!(!filter.must.is_empty());
+        assert_eq!(filter.must.len(), 1);
     }
 
     #[test]
@@ -585,8 +585,8 @@ mod tests {
         let condition = FilterCondition::And(conditions);
         let filter = QdrantFilterConverter::convert_filter(condition).unwrap();
 
-        assert!(filter.must.is_some());
-        assert_eq!(filter.must.unwrap().len(), 2);
+        assert!(!filter.must.is_empty());
+        assert_eq!(filter.must.len(), 2);
     }
 
     #[test]
@@ -604,19 +604,19 @@ mod tests {
         let condition = FilterCondition::Or(conditions);
         let filter = QdrantFilterConverter::convert_filter(condition).unwrap();
 
-        assert!(filter.should.is_some());
-        assert_eq!(filter.should.unwrap().len(), 2);
+        assert!(!filter.should.is_empty());
+        assert_eq!(filter.should.len(), 2);
     }
 
     #[test]
     fn test_range_filters() {
         let gt_condition = FilterCondition::Gt("score".to_string(), MetadataValue::Float(0.5));
         let gt_filter = QdrantFilterConverter::convert_filter(gt_condition).unwrap();
-        assert!(gt_filter.must.is_some());
+        assert!(!gt_filter.must.is_empty());
 
         let lt_condition = FilterCondition::Lt("score".to_string(), MetadataValue::Float(0.9));
         let lt_filter = QdrantFilterConverter::convert_filter(lt_condition).unwrap();
-        assert!(lt_filter.must.is_some());
+        assert!(!lt_filter.must.is_empty());
     }
 
     #[test]
@@ -628,7 +628,7 @@ mod tests {
         let condition = FilterCondition::In("category".to_string(), values);
         let filter = QdrantFilterConverter::convert_filter(condition).unwrap();
 
-        assert!(filter.must.is_some());
-        assert_eq!(filter.must.unwrap().len(), 1);
+        assert!(!filter.must.is_empty());
+        assert_eq!(filter.must.len(), 1);
     }
 }

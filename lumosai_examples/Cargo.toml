@@ -12,6 +12,7 @@ lumosai_core = { path = "../lumosai_core" }
 lumosai_rag = { path = "../lumosai_rag" }
 lumosai_network = { path = "../lumosai_network" }
 lumosai_mcp = { path = "../lumosai_mcp" }
+lumos_macro = { path = "../lumos_macro" }
 # 暂时移除其他依赖
 # lumosai_derive = { path = "../lumosai_derive" }
 # lumosai_rag = { path = "../lumosai_rag", optional = true }
@@ -130,3 +131,7 @@ path = "src/network_basic_demo.rs"
 [[example]]
 name = "mcp_basic_demo"
 path = "src/mcp_basic_demo.rs"
+
+[[example]]
+name = "macro_basic_demo"
+path = "src/macro_basic_demo.rs"

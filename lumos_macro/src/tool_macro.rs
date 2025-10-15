@@ -5,7 +5,7 @@ use std::str::FromStr;
 use syn::spanned::Spanned;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, Expr, Ident, ItemFn, LitStr, Token,
+    parse_macro_input, Expr, Ident, ItemFn, LitStr, Token, FnArg, PatType, Type,
 };
 
 use crate::parser::{parse_tool_macro, ToolDef};
@@ -18,24 +18,21 @@ pub struct ToolAttributes {
 
 impl Parse for ToolAttributes {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        let _ = syn::parenthesized!(content in input);
-
         let mut name = None;
         let mut description = None;
 
-        while !content.is_empty() {
-            let key: Ident = content.parse()?;
-            let _: Token![:] = content.parse()?;
+        while !input.is_empty() {
+            let key: Ident = input.parse()?;
+            let _: Token![=] = input.parse()?;
 
             match key.to_string().as_str() {
                 "name" => {
-                    name = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
+                    name = Some(input.parse()?);
+                    let _: Option<Token![,]> = input.parse()?;
                 }
                 "description" => {
-                    description = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
+                    description = Some(input.parse()?);
+                    let _: Option<Token![,]> = input.parse()?;
                 }
                 _ => {
                     return Err(syn::Error::new(
@@ -48,13 +45,13 @@ impl Parse for ToolAttributes {
 
         let name = name.ok_or_else(|| {
             syn::Error::new(
-                content.span(),
+                input.span(),
                 "Missing 'name' attribute in tool definition",
             )
         })?;
         let description = description.ok_or_else(|| {
             syn::Error::new(
-                content.span(),
+                input.span(),
                 "Missing 'description' attribute in tool definition",
             )
         })?;
@@ -63,94 +60,8 @@ impl Parse for ToolAttributes {
     }
 }
 
-// 参数属性解析
-pub struct ParameterAttributes {
-    pub name: LitStr,
-    pub description: LitStr,
-    pub type_: LitStr,
-    pub required: bool,
-}
-
-impl Parse for ParameterAttributes {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        let _ = syn::parenthesized!(content in input);
-
-        let mut name = None;
-        let mut description = None;
-        let mut type_ = None;
-        let mut required = None;
-
-        while !content.is_empty() {
-            let key: Ident = content.parse()?;
-            let _: Token![:] = content.parse()?;
-
-            match key.to_string().as_str() {
-                "name" => {
-                    name = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
-                }
-                "description" => {
-                    description = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
-                }
-                "r#type" | "type" => {
-                    type_ = Some(content.parse()?);
-                    let _: Option<Token![,]> = content.parse()?;
-                }
-                "required" => {
-                    let expr: Expr = content.parse()?;
-                    if let Expr::Lit(syn::ExprLit {
-                        lit: syn::Lit::Bool(b),
-                        ..
-                    }) = expr
-                    {
-                        required = Some(b.value);
-                    } else {
-                        return Err(syn::Error::new(
-                            expr.span(),
-                            "Expected boolean literal for 'required' attribute",
-                        ));
-                    }
-                    let _: Option<Token![,]> = content.parse()?;
-                }
-                _ => {
-                    return Err(syn::Error::new(
-                        key.span(),
-                        "Unknown attribute in parameter definition",
-                    ))
-                }
-            }
-        }
-
-        let name = name.ok_or_else(|| {
-            syn::Error::new(
-                content.span(),
-                "Missing 'name' attribute in parameter definition",
-            )
-        })?;
-        let description = description.ok_or_else(|| {
-            syn::Error::new(
-                content.span(),
-                "Missing 'description' attribute in parameter definition",
-            )
-        })?;
-        let type_ = type_.ok_or_else(|| {
-            syn::Error::new(
-                content.span(),
-                "Missing 'type' attribute in parameter definition",
-            )
-        })?;
-        let required = required.unwrap_or(false);
-
-        Ok(ParameterAttributes {
-            name,
-            description,
-            type_,
-            required,
-        })
-    }
-}
+// Import ParameterAttributes from parent module
+use crate::ParameterAttributes;
 
 // ToolExecuteArgs结构体定义
 pub struct ToolExecuteArgs {
@@ -223,18 +134,33 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     // Extract parameter metadata from attributes
     let mut parameters = Vec::new();
+    let mut param_extractions = Vec::new();
+    let mut param_names = Vec::new();
+
     for param in fn_params.iter() {
         if let syn::FnArg::Typed(pat_type) = param {
             if let syn::Pat::Ident(pat_ident) = &*pat_type.pat {
-                let _param_name = &pat_ident.ident; // 标记为未使用
+                let param_name = &pat_ident.ident;
+                let param_type = &pat_type.ty;
 
                 // Find parameter attributes
-                for attr in &pat_ident.attrs {
+                for attr in &pat_type.attrs {
                     if attr.path().is_ident("parameter") {
-                        let param_attr = syn::parse2::<ParameterAttributes>(
-                            attr.meta.require_list().unwrap().tokens.clone(),
-                        )
-                        .unwrap();
+                        let param_attr = match &attr.meta {
+                            syn::Meta::List(meta_list) => {
+                                match syn::parse2::<ParameterAttributes>(meta_list.tokens.clone()) {
+                                    Ok(attr) => attr,
+                                    Err(e) => {
+                                        let error = syn::Error::new(attr.span(), format!("Failed to parse parameter attributes: {}", e));
+                                        return error.to_compile_error().into();
+                                    }
+                                }
+                            }
+                            _ => {
+                                let error = syn::Error::new(attr.span(), "Parameter attribute must be a list");
+                                return error.to_compile_error().into();
+                            }
+                        };
                         let name = param_attr.name.value();
                         let description = param_attr.description.value();
                         let type_ = param_attr.type_.value();
@@ -251,6 +177,38 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
                             }
                         };
                         parameters.push(param_schema);
+
+                        // Generate parameter extraction code
+                        let extraction = match type_.as_str() {
+                            "string" => quote! {
+                                let #param_name: #param_type = params.get(#name)
+                                    .and_then(|v| v.as_str())
+                                    .ok_or_else(|| lumosai_core::Error::InvalidInput(format!("Missing or invalid parameter: {}", #name)))?
+                                    .to_string();
+                            },
+                            "number" => quote! {
+                                let #param_name: #param_type = params.get(#name)
+                                    .and_then(|v| v.as_f64())
+                                    .ok_or_else(|| lumosai_core::Error::InvalidInput(format!("Missing or invalid parameter: {}", #name)))?;
+                            },
+                            "integer" => quote! {
+                                let #param_name: #param_type = params.get(#name)
+                                    .and_then(|v| v.as_i64())
+                                    .ok_or_else(|| lumosai_core::Error::InvalidInput(format!("Missing or invalid parameter: {}", #name)))?;
+                            },
+                            "boolean" => quote! {
+                                let #param_name: #param_type = params.get(#name)
+                                    .and_then(|v| v.as_bool())
+                                    .ok_or_else(|| lumosai_core::Error::InvalidInput(format!("Missing or invalid parameter: {}", #name)))?;
+                            },
+                            _ => quote! {
+                                let #param_name: #param_type = serde_json::from_value(
+                                    params.get(#name).cloned().unwrap_or(serde_json::Value::Null)
+                                ).map_err(|e| lumosai_core::Error::InvalidInput(format!("Invalid parameter {}: {}", #name, e)))?;
+                            }
+                        };
+                        param_extractions.push(extraction);
+                        param_names.push(param_name);
                     }
                 }
             }
@@ -262,20 +220,56 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
         ToolSchema {
             parameters: vec![
                 #(#parameters),*
-            ]
+            ],
+            json_schema: None,
+            format: SchemaFormat::Parameters,
+            output_schema: None,
         }
     };
 
+    // Create a renamed version of the original function with parameter attributes removed
+    let impl_fn_name = syn::Ident::new(&format!("{}_impl", fn_name), fn_name.span());
+    let mut impl_input = input.clone();
+    impl_input.sig.ident = impl_fn_name.clone();
+
+    // Remove parameter attributes from the implementation function
+    for param in impl_input.sig.inputs.iter_mut() {
+        if let syn::FnArg::Typed(pat_type) = param {
+            pat_type.attrs.retain(|attr| !attr.path().is_ident("parameter"));
+        }
+    }
+
     // Generate the FunctionTool implementation
     let expanded = quote! {
-        pub fn #fn_name() -> Box<dyn Tool> {
+        // Preserve the original function with a renamed identifier
+        #impl_input
+
+        // Import necessary types (but avoid conflicts)
+        #[allow(unused_imports)]
+        use lumosai_core::tool::{FunctionTool, ParameterSchema, SchemaFormat, ToolSchema};
+        #[allow(unused_imports)]
+        use lumosai_core::Error;
+        #[allow(unused_imports)]
+        use serde_json::Value;
+
+        // Create the tool factory function
+        pub fn #fn_name() -> Box<dyn lumosai_core::tool::Tool> {
             Box::new(FunctionTool::new(
                 #tool_name.to_string(),
                 #tool_description.to_string(),
                 #schema_def,
-                |params| {
-                    // The actual implementation function
-                    #fn_body
+                |params: Value| -> lumosai_core::Result<Value> {
+                    // 将 Value 转换为对象以便访问参数
+                    let params = params.as_object()
+                        .ok_or_else(|| lumosai_core::Error::InvalidInput("Parameters must be a JSON object".to_string()))?;
+
+                    #(#param_extractions)*
+
+                    // 调用重命名的原始函数
+                    let result = #impl_fn_name(#(#param_names),*)?;
+
+                    // 将结果转换为 Value
+                    Ok(result)
                 },
             ))
         }

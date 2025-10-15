@@ -8,7 +8,7 @@ members = [
     # 暂时排除有编译问题的包
     # "lumosai_evals",
     "lumosai_network",
-    # "lumos_macro",
+    "lumos_macro",
     "lumosai_mcp",
     # "lumosai_derive",
     # "lumosai_bindings",

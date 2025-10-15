@@ -63,6 +63,8 @@ pub fn tool(attr: TokenStream, item: TokenStream) -> TokenStream {
     tool_macro::tool_macro(attr, item)
 }
 
+
+
 struct ToolAttributes {
     name: LitStr,
     description: LitStr,
@@ -112,10 +114,6 @@ impl Parse for ParameterAttributes {
         let mut description = None;
         let mut type_ = None;
         let mut required = None;
-
-        let content;
-        syn::parenthesized!(content in input);
-        let input = &content;
 
         while !input.is_empty() {
             let ident: Ident = input.parse()?;

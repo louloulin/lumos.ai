@@ -9,6 +9,7 @@ license = "MIT"
 [dependencies]
 # 仅保留核心依赖
 lumosai_core = { path = "../lumosai_core" }
+lumosai_rag = { path = "../lumosai_rag" }
 # 暂时移除其他依赖
 # lumosai_derive = { path = "../lumosai_derive" }
 # lumosai_rag = { path = "../lumosai_rag", optional = true }
@@ -111,3 +112,7 @@ path = "src/simplified_api_demo.rs"
 [[bin]]
 name = "test_prelude_comprehensive"
 path = "src/test_prelude_comprehensive.rs"
+
+[[example]]
+name = "rag_basic_demo"
+path = "src/rag_basic_demo.rs"

@@ -3,10 +3,10 @@ members = [
     "lumosai_core",
     "lumosai_examples",
     "lumosai_vector",
+    "lumosai_rag",
     # 暂时排除有编译问题的包
     # "lumosai_cli",
     # "lumosai_evals",
-    # "lumosai_rag",
     # "lumosai_network",
     # "lumos_macro",
     # "lumosai_mcp",
@@ -28,7 +28,6 @@ exclude = [
     # 暂时排除其他复杂包
     "lumosai_cli",
     "lumosai_evals",
-    "lumosai_rag",
     "lumosai_network",
     "lumos_macro",
     "lumosai_mcp",

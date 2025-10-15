@@ -6239,6 +6239,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "lumosai_evals"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "futures",
+ "lumosai_core",
+ "mockall",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "lumosai_examples"
 version = "0.2.0"
 dependencies = [
@@ -6249,6 +6268,7 @@ dependencies = [
  "futures",
  "lumos_macro",
  "lumosai_core",
+ "lumosai_evals",
  "lumosai_mcp",
  "lumosai_network",
  "lumosai_rag",

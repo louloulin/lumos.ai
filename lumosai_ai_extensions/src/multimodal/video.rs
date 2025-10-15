@@ -22,7 +22,7 @@ impl VideoProcessor {
     pub async fn new(config: VideoConfig) -> Result<Self> {
         Ok(Self { config })
     }
-    
+
     pub async fn process_video(
         &self,
         data: Vec<u8>,

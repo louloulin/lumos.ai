@@ -1,13 +1,15 @@
 //! Web-related tools inspired by Mastra's web tools
-//! 
+//!
 //! This module provides HTTP request, web scraping, and API interaction tools
 
-use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool, ToolExecutionContext, ToolExecutionOptions};
-use serde_json::{Value, json};
-use std::collections::HashMap;
-use async_trait::async_trait;
-use crate::{Result, Error};
 use crate::base::Base;
+use crate::tool::{
+    FunctionTool, ParameterSchema, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
+};
+use crate::{Error, Result};
+use async_trait::async_trait;
+use serde_json::{json, Value};
+use std::collections::HashMap;
 
 /// Create an HTTP request tool
 /// Similar to Mastra's fetch tool
@@ -52,11 +54,13 @@ pub fn create_http_request_tool() -> FunctionTool {
         "Make HTTP requests to web APIs and websites",
         schema,
         |params| {
-            let url = params.get("url")
+            let url = params
+                .get("url")
                 .and_then(|v| v.as_str())
                 .ok_or("URL is required")?;
-            
-            let method = params.get("method")
+
+            let method = params
+                .get("method")
                 .and_then(|v| v.as_str())
                 .unwrap_or("GET");
 
@@ -110,14 +114,15 @@ pub fn create_web_scraper_tool() -> FunctionTool {
         "Scrape content from web pages",
         schema,
         |params| {
-            let url = params.get("url")
+            let url = params
+                .get("url")
                 .and_then(|v| v.as_str())
                 .ok_or("URL is required")?;
-            
-            let selector = params.get("selector")
-                .and_then(|v| v.as_str());
-            
-            let extract_text = params.get("extract_text")
+
+            let selector = params.get("selector").and_then(|v| v.as_str());
+
+            let extract_text = params
+                .get("extract_text")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
 
@@ -177,14 +182,16 @@ pub fn create_json_api_tool() -> FunctionTool {
         "Make JSON API requests with automatic parsing",
         schema,
         |params| {
-            let url = params.get("url")
+            let url = params
+                .get("url")
                 .and_then(|v| v.as_str())
                 .ok_or("URL is required")?;
-            
-            let method = params.get("method")
+
+            let method = params
+                .get("method")
                 .and_then(|v| v.as_str())
                 .unwrap_or("GET");
-            
+
             let data = params.get("data");
             let auth_token = params.get("auth_token").and_then(|v| v.as_str());
 
@@ -206,23 +213,22 @@ pub fn create_json_api_tool() -> FunctionTool {
 
 /// Create a URL validator tool
 pub fn create_url_validator_tool() -> FunctionTool {
-    let schema = ToolSchema::new(vec![
-        ParameterSchema {
-            name: "url".to_string(),
-            description: "The URL to validate".to_string(),
-            r#type: "string".to_string(),
-            required: true,
-            properties: None,
-            default: None,
-        },
-    ]);
+    let schema = ToolSchema::new(vec![ParameterSchema {
+        name: "url".to_string(),
+        description: "The URL to validate".to_string(),
+        r#type: "string".to_string(),
+        required: true,
+        properties: None,
+        default: None,
+    }]);
 
     FunctionTool::new(
         "url_validator",
         "Validate URL format and accessibility",
         schema,
         |params| {
-            let url = params.get("url")
+            let url = params
+                .get("url")
                 .and_then(|v| v.as_str())
                 .ok_or("URL is required")?;
 
@@ -278,7 +284,7 @@ impl WebSearchTool {
         Self {
             base: crate::base::BaseComponent::new_with_name(
                 "web_search".to_string(),
-                crate::logger::Component::Tool
+                crate::logger::Component::Tool,
             ),
             id: "web_search".to_string(),
             description: "Search the web for information".to_string(),
@@ -340,13 +346,15 @@ impl Tool for WebSearchTool {
         &self,
         params: Value,
         _context: ToolExecutionContext,
-        _options: &ToolExecutionOptions
+        _options: &ToolExecutionOptions,
     ) -> Result<Value> {
-        let query = params.get("query")
+        let query = params
+            .get("query")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::Tool("Query parameter is required".to_string()))?;
 
-        let max_results = params.get("max_results")
+        let max_results = params
+            .get("max_results")
             .and_then(|v| v.as_u64())
             .unwrap_or(10);
 
@@ -394,16 +402,18 @@ mod tests {
     #[tokio::test]
     async fn test_http_request_tool() {
         let tool = create_http_request_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("url".to_string(), json!("https://api.example.com/data"));
         params.insert("method".to_string(), json!("GET"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["status"], 200);
         assert_eq!(response["url"], "https://api.example.com/data");
@@ -413,16 +423,18 @@ mod tests {
     #[tokio::test]
     async fn test_web_scraper_tool() {
         let tool = create_web_scraper_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("url".to_string(), json!("https://example.com"));
         params.insert("selector".to_string(), json!("h1"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["url"], "https://example.com");
         assert_eq!(response["selector"], "h1");
@@ -431,15 +443,17 @@ mod tests {
     #[tokio::test]
     async fn test_url_validator_tool() {
         let tool = create_url_validator_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("url".to_string(), json!("https://example.com"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["is_valid"], true);
         assert_eq!(response["has_protocol"], true);

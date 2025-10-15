@@ -1,17 +1,17 @@
 //! 智能告警引擎 - 企业级监控和自动化响应系统
-//! 
+//!
 //! 提供基于规则的智能告警、自动化响应和告警生命周期管理
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use std::time::{SystemTime, UNIX_EPOCH};
-use async_trait::async_trait;
 
+use super::alerts::{AlertCondition, AlertEvent, AlertRule, AlertSeverity, AlertStatus};
 use super::metrics::{MetricsCollector, MetricsSummary};
-use super::alerts::{AlertRule, AlertEvent, AlertStatus, AlertSeverity, AlertCondition};
 
 /// 智能告警引擎配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,13 +182,13 @@ pub trait AutomationExecutor: Send + Sync {
         alert: &AlertEvent,
         context: &AlertContext,
     ) -> Result<AlertActionResult, Box<dyn std::error::Error + Send + Sync>>;
-    
+
     /// 检查操作执行状态
     async fn check_action_status(
         &self,
         action_id: &str,
     ) -> Result<ActionStatus, Box<dyn std::error::Error + Send + Sync>>;
-    
+
     /// 取消操作执行
     async fn cancel_action(
         &self,
@@ -221,44 +221,48 @@ impl AutomationExecutor for DefaultAutomationExecutor {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
-        
+
         println!("🤖 执行自动化操作: {} (ID: {})", action.name, action_id);
         println!("   告警: {} - {}", alert.title, alert.description);
         println!("   上下文: {} / {}", context.source, context.resource);
-        
+
         // 模拟操作执行
-        let result: Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> = match action.action_type {
-            AutomationActionType::RestartService => {
-                println!("   🔄 重启服务: {}", context.resource);
-                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                Ok(serde_json::json!({"service": context.resource, "status": "restarted"}))
-            },
-            AutomationActionType::ScaleUp => {
-                println!("   📈 扩容资源: {}", context.resource);
-                tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-                Ok(serde_json::json!({"resource": context.resource, "action": "scaled_up", "instances": 3}))
-            },
-            AutomationActionType::SendNotification => {
-                println!("   📧 发送通知: {}", alert.title);
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                Ok(serde_json::json!({"notification": "sent", "channels": ["email", "slack"]}))
-            },
-            AutomationActionType::CallWebhook => {
-                println!("   🔗 调用Webhook: {:?}", action.parameters.get("url"));
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-                Ok(serde_json::json!({"webhook": "called", "status": "success"}))
-            },
-            _ => {
-                println!("   ⚠️  操作类型暂未实现: {:?}", action.action_type);
-                Ok(serde_json::json!({"status": "not_implemented"}))
-            }
-        };
-        
+        let result: Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> =
+            match action.action_type {
+                AutomationActionType::RestartService => {
+                    println!("   🔄 重启服务: {}", context.resource);
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    Ok(serde_json::json!({"service": context.resource, "status": "restarted"}))
+                }
+                AutomationActionType::ScaleUp => {
+                    println!("   📈 扩容资源: {}", context.resource);
+                    tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+                    Ok(
+                        serde_json::json!({"resource": context.resource, "action": "scaled_up", "instances": 3}),
+                    )
+                }
+                AutomationActionType::SendNotification => {
+                    println!("   📧 发送通知: {}", alert.title);
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                    Ok(serde_json::json!({"notification": "sent", "channels": ["email", "slack"]}))
+                }
+                AutomationActionType::CallWebhook => {
+                    println!("   🔗 调用Webhook: {:?}", action.parameters.get("url"));
+                    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+                    Ok(serde_json::json!({"webhook": "called", "status": "success"}))
+                }
+                _ => {
+                    println!("   ⚠️  操作类型暂未实现: {:?}", action.action_type);
+                    Ok(serde_json::json!({"status": "not_implemented"}))
+                }
+            };
+
         let execution_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_millis() as u64 - start_time;
-        
+            .as_millis() as u64
+            - start_time;
+
         match result {
             Ok(result_data) => {
                 println!("   ✅ 操作执行成功 (耗时: {}ms)", execution_time);
@@ -270,7 +274,7 @@ impl AutomationExecutor for DefaultAutomationExecutor {
                     result: Some(result_data),
                     error: None,
                 })
-            },
+            }
             Err(e) => {
                 println!("   ❌ 操作执行失败: {}", e);
                 Ok(AlertActionResult {
@@ -284,7 +288,7 @@ impl AutomationExecutor for DefaultAutomationExecutor {
             }
         }
     }
-    
+
     async fn check_action_status(
         &self,
         action_id: &str,
@@ -293,7 +297,7 @@ impl AutomationExecutor for DefaultAutomationExecutor {
         println!("🔍 检查操作状态: {}", action_id);
         Ok(ActionStatus::Success)
     }
-    
+
     async fn cancel_action(
         &self,
         action_id: &str,
@@ -322,7 +326,10 @@ impl SmartAlertEngine {
     }
 
     /// 添加告警规则
-    pub async fn add_rule(&self, rule: AlertRule) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn add_rule(
+        &self,
+        rule: AlertRule,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut rules = self.rules.write().await;
         rules.insert(rule.id.clone(), rule);
         println!("✅ 添加告警规则: {}", rules.len());
@@ -330,7 +337,10 @@ impl SmartAlertEngine {
     }
 
     /// 移除告警规则
-    pub async fn remove_rule(&self, rule_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn remove_rule(
+        &self,
+        rule_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut rules = self.rules.write().await;
         rules.remove(rule_id);
         println!("🗑️  移除告警规则: {}", rule_id);
@@ -364,9 +374,9 @@ impl SmartAlertEngine {
 
     /// 告警检查循环
     async fn alert_check_loop(&self) {
-        let mut interval = tokio::time::interval(
-            tokio::time::Duration::from_secs(self.config.check_interval_seconds)
-        );
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(
+            self.config.check_interval_seconds,
+        ));
 
         loop {
             interval.tick().await;
@@ -408,30 +418,40 @@ impl SmartAlertEngine {
     }
 
     /// 评估规则条件
-    async fn evaluate_rule_condition(&self, rule: &AlertRule) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    async fn evaluate_rule_condition(
+        &self,
+        rule: &AlertRule,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         // 获取相关指标
-        let metrics = self.metrics_collector.get_metrics_summary(None, None, None).await?;
+        let metrics = self
+            .metrics_collector
+            .get_metrics_summary(None, None, None)
+            .await?;
 
         match &rule.condition {
             AlertCondition::ResponseTime { threshold_ms, .. } => {
                 Ok(metrics.avg_execution_time_ms > *threshold_ms as f64)
-            },
-            AlertCondition::ErrorRate { threshold_percent, .. } => {
+            }
+            AlertCondition::ErrorRate {
+                threshold_percent, ..
+            } => {
                 let error_rate = if metrics.total_executions > 0 {
                     (metrics.failed_executions as f64 / metrics.total_executions as f64) * 100.0
                 } else {
                     0.0
                 };
                 Ok(error_rate > *threshold_percent)
-            },
+            }
             AlertCondition::MemoryUsage { threshold_mb, .. } => {
                 // 简化的内存使用检查
                 Ok(metrics.avg_execution_time_ms > (*threshold_mb as f64 * 10.0))
-            },
-            AlertCondition::CpuUsage { threshold_percent, .. } => {
+            }
+            AlertCondition::CpuUsage {
+                threshold_percent, ..
+            } => {
                 // 简化的CPU使用检查
                 Ok(metrics.avg_execution_time_ms > (*threshold_percent as f64 * 20.0))
-            },
+            }
             _ => Ok(false),
         }
     }
@@ -457,17 +477,32 @@ impl SmartAlertEngine {
     }
 
     /// 从规则创建告警
-    async fn create_alert_from_rule(&self, rule: &AlertRule) -> Result<AlertEvent, Box<dyn std::error::Error + Send + Sync>> {
+    async fn create_alert_from_rule(
+        &self,
+        rule: &AlertRule,
+    ) -> Result<AlertEvent, Box<dyn std::error::Error + Send + Sync>> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
 
-        let metrics = self.metrics_collector.get_metrics_summary(None, None, None).await?;
+        let metrics = self
+            .metrics_collector
+            .get_metrics_summary(None, None, None)
+            .await?;
         let mut alert_metrics = HashMap::new();
-        alert_metrics.insert("avg_execution_time".to_string(), metrics.avg_execution_time_ms);
-        alert_metrics.insert("total_executions".to_string(), metrics.total_executions as f64);
-        alert_metrics.insert("failed_executions".to_string(), metrics.failed_executions as f64);
+        alert_metrics.insert(
+            "avg_execution_time".to_string(),
+            metrics.avg_execution_time_ms,
+        );
+        alert_metrics.insert(
+            "total_executions".to_string(),
+            metrics.total_executions as f64,
+        );
+        alert_metrics.insert(
+            "failed_executions".to_string(),
+            metrics.failed_executions as f64,
+        );
 
         Ok(AlertEvent {
             id: Uuid::new_v4().to_string(),
@@ -486,7 +521,10 @@ impl SmartAlertEngine {
     }
 
     /// 处理触发的告警
-    async fn handle_triggered_alert(&self, alert: AlertEvent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn handle_triggered_alert(
+        &self,
+        alert: AlertEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         println!("🚨 触发告警: {} - {}", alert.title, alert.description);
 
         // 添加到活跃告警列表
@@ -513,7 +551,10 @@ impl SmartAlertEngine {
     }
 
     /// 执行自动化响应
-    async fn execute_automation_response(&self, alert: &AlertEvent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn execute_automation_response(
+        &self,
+        alert: &AlertEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let rules = self.rules.read().await;
         if let Some(rule) = rules.get(&alert.rule_id) {
             for channel_id in &rule.channels {
@@ -527,11 +568,15 @@ impl SmartAlertEngine {
                             metadata: HashMap::new(),
                         };
 
-                        match self.automation_executor.execute_action(action, alert, &context).await {
+                        match self
+                            .automation_executor
+                            .execute_action(action, alert, &context)
+                            .await
+                        {
                             Ok(result) => {
                                 println!("✅ 自动化响应执行成功: {:?}", result.status);
                                 self.update_automation_statistics(true).await;
-                            },
+                            }
                             Err(e) => {
                                 println!("❌ 自动化响应执行失败: {}", e);
                                 self.update_automation_statistics(false).await;
@@ -547,9 +592,9 @@ impl SmartAlertEngine {
 
     /// 自动恢复检查循环
     async fn auto_recovery_loop(&self) {
-        let mut interval = tokio::time::interval(
-            tokio::time::Duration::from_secs(self.config.auto_recovery_check_seconds)
-        );
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(
+            self.config.auto_recovery_check_seconds,
+        ));
 
         loop {
             interval.tick().await;
@@ -578,7 +623,7 @@ impl SmartAlertEngine {
                             SystemTime::now()
                                 .duration_since(UNIX_EPOCH)
                                 .unwrap()
-                                .as_millis() as u64
+                                .as_millis() as u64,
                         );
 
                         resolved_alerts.push((alert_id.clone(), resolved_alert));
@@ -613,7 +658,7 @@ impl SmartAlertEngine {
         }
 
         let mut interval = tokio::time::interval(
-            tokio::time::Duration::from_secs(60) // 每分钟检查一次升级
+            tokio::time::Duration::from_secs(60), // 每分钟检查一次升级
         );
 
         loop {
@@ -633,16 +678,25 @@ impl SmartAlertEngine {
             .unwrap()
             .as_millis() as u64;
 
-        let escalation_threshold = self.config.escalation_config.escalation_time_minutes * 60 * 1000;
+        let escalation_threshold =
+            self.config.escalation_config.escalation_time_minutes * 60 * 1000;
 
         for alert in active_alerts.values_mut() {
             if alert.status == AlertStatus::Active {
                 let alert_age = now - alert.triggered_at;
 
                 if alert_age > escalation_threshold {
-                    if let Some(new_severity) = self.config.escalation_config.severity_escalation.get(&alert.severity) {
+                    if let Some(new_severity) = self
+                        .config
+                        .escalation_config
+                        .severity_escalation
+                        .get(&alert.severity)
+                    {
                         if new_severity != &alert.severity {
-                            println!("⬆️  告警升级: {} ({:?} -> {:?})", alert.title, alert.severity, new_severity);
+                            println!(
+                                "⬆️  告警升级: {} ({:?} -> {:?})",
+                                alert.title, alert.severity, new_severity
+                            );
                             alert.severity = new_severity.clone();
                         }
                     }
@@ -659,8 +713,14 @@ impl SmartAlertEngine {
         stats.total_alerts += 1;
         stats.active_alerts += 1;
 
-        *stats.alerts_by_severity.entry(alert.severity.clone()).or_insert(0) += 1;
-        *stats.alerts_by_rule.entry(alert.rule_id.clone()).or_insert(0) += 1;
+        *stats
+            .alerts_by_severity
+            .entry(alert.severity.clone())
+            .or_insert(0) += 1;
+        *stats
+            .alerts_by_rule
+            .entry(alert.rule_id.clone())
+            .or_insert(0) += 1;
     }
 
     /// 更新解决统计信息
@@ -674,8 +734,10 @@ impl SmartAlertEngine {
 
             // 更新平均解决时间
             let total_resolved = stats.resolved_alerts as f64;
-            stats.avg_resolution_time_minutes =
-                (stats.avg_resolution_time_minutes * (total_resolved - 1.0) + resolution_time as f64) / total_resolved;
+            stats.avg_resolution_time_minutes = (stats.avg_resolution_time_minutes
+                * (total_resolved - 1.0)
+                + resolution_time as f64)
+                / total_resolved;
         }
     }
 
@@ -715,7 +777,10 @@ impl SmartAlertEngine {
     }
 
     /// 确认告警
-    pub async fn acknowledge_alert(&self, alert_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn acknowledge_alert(
+        &self,
+        alert_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut active_alerts = self.active_alerts.write().await;
         if let Some(alert) = active_alerts.get_mut(alert_id) {
             alert.status = AlertStatus::Acknowledged;
@@ -723,7 +788,7 @@ impl SmartAlertEngine {
                 SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
-                    .as_millis() as u64
+                    .as_millis() as u64,
             );
             println!("✅ 告警已确认: {}", alert.title);
         }
@@ -731,7 +796,10 @@ impl SmartAlertEngine {
     }
 
     /// 手动解决告警
-    pub async fn resolve_alert(&self, alert_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn resolve_alert(
+        &self,
+        alert_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut active_alerts = self.active_alerts.write().await;
         if let Some(alert) = active_alerts.remove(alert_id) {
             let mut resolved_alert = alert;
@@ -740,7 +808,7 @@ impl SmartAlertEngine {
                 SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
-                    .as_millis() as u64
+                    .as_millis() as u64,
             );
 
             // 更新历史记录

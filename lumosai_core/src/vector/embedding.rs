@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use rand::Rng;
+use std::sync::Arc;
 
 use super::types::EmbeddingService;
 use crate::error::Result;
@@ -70,23 +70,20 @@ mod tests {
     #[tokio::test]
     async fn test_random_embedding() {
         let service = RandomEmbeddingService::default();
-        let texts = vec![
-            "Hello, world!".to_string(),
-            "How are you?".to_string(),
-        ];
+        let texts = vec!["Hello, world!".to_string(), "How are you?".to_string()];
 
         let embeddings = service.embed_texts(&texts).await.unwrap();
-        
+
         // Check count
         assert_eq!(embeddings.len(), texts.len());
-        
+
         // Check dimensions
         for embedding in &embeddings {
             assert_eq!(embedding.len(), service.embedding_dimension());
-            
+
             // Check normalization (length should be approximately 1.0)
             let length: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
             assert!((length - 1.0).abs() < 1e-5);
         }
     }
-} 
+}

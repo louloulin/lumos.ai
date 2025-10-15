@@ -1,10 +1,10 @@
 //! 云服务适配器模块
-//! 
+//!
 //! 提供对主要云服务提供商的集成支持，包括：
 //! - AWS (Amazon Web Services)
 //! - Azure (Microsoft Azure)
 //! - GCP (Google Cloud Platform)
-//! 
+//!
 //! 这些适配器简化了在不同云平台上部署和运行LumosAI应用的过程。
 
 pub mod aws;
@@ -37,7 +37,11 @@ pub trait CloudAdapter: Send + Sync {
     async fn get_deployment_status(&self, deployment_id: &str) -> Result<DeploymentStatus>;
 
     /// 更新部署
-    async fn update_deployment(&self, deployment_id: &str, config: &DeploymentConfig) -> Result<DeploymentResult>;
+    async fn update_deployment(
+        &self,
+        deployment_id: &str,
+        config: &DeploymentConfig,
+    ) -> Result<DeploymentResult>;
 
     /// 删除部署
     async fn delete_deployment(&self, deployment_id: &str) -> Result<()>;
@@ -46,13 +50,25 @@ pub trait CloudAdapter: Send + Sync {
     async fn get_logs(&self, deployment_id: &str, options: &LogOptions) -> Result<Vec<LogEntry>>;
 
     /// 获取服务指标
-    async fn get_metrics(&self, deployment_id: &str, options: &MetricsOptions) -> Result<MetricsData>;
+    async fn get_metrics(
+        &self,
+        deployment_id: &str,
+        options: &MetricsOptions,
+    ) -> Result<MetricsData>;
 
     /// 配置自动扩缩容
-    async fn configure_autoscaling(&self, deployment_id: &str, config: &AutoscalingConfig) -> Result<()>;
+    async fn configure_autoscaling(
+        &self,
+        deployment_id: &str,
+        config: &AutoscalingConfig,
+    ) -> Result<()>;
 
     /// 配置负载均衡
-    async fn configure_load_balancer(&self, deployment_id: &str, config: &LoadBalancerConfig) -> Result<()>;
+    async fn configure_load_balancer(
+        &self,
+        deployment_id: &str,
+        config: &LoadBalancerConfig,
+    ) -> Result<()>;
 }
 
 /// 云服务类型

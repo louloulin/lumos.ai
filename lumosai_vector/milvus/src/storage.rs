@@ -1,18 +1,18 @@
 //! Milvus storage implementation
 
-use std::collections::HashMap;
 use async_trait::async_trait;
+use std::collections::HashMap;
 
 use lumosai_vector_core::{
-    traits::{VectorStorage, BackendInfo},
-    types::*,
     error::Result,
+    traits::{BackendInfo, VectorStorage},
+    types::*,
 };
 
 use crate::{
+    client::MilvusClient,
     config::MilvusConfig,
     error::{MilvusError, MilvusResult},
-    client::MilvusClient,
     types::{CollectionSchema, MilvusEntity},
     utils,
 };
@@ -21,7 +21,7 @@ use crate::{
 pub struct MilvusStorage {
     /// Milvus client
     client: MilvusClient,
-    
+
     /// Configuration
     config: MilvusConfig,
 }
@@ -30,22 +30,22 @@ impl MilvusStorage {
     /// Create a new Milvus storage instance
     pub async fn new(config: MilvusConfig) -> MilvusResult<Self> {
         config.validate()?;
-        
+
         let client = MilvusClient::new(config.clone()).await?;
-        
+
         Ok(Self { client, config })
     }
-    
+
     /// Get the client
     pub fn client(&self) -> &MilvusClient {
         &self.client
     }
-    
+
     /// Get the configuration
     pub fn config(&self) -> &MilvusConfig {
         &self.config
     }
-    
+
     /// Convert similarity metric to Milvus metric type
     fn similarity_to_metric_type(&self, metric: &SimilarityMetric) -> &'static str {
         match metric {
@@ -56,7 +56,7 @@ impl MilvusStorage {
             SimilarityMetric::Hamming => "HAMMING",
         }
     }
-    
+
     /// Convert index type to Milvus index type
     fn index_type_to_milvus(&self, index_type: &crate::config::IndexType) -> &'static str {
         match index_type {
@@ -69,11 +69,11 @@ impl MilvusStorage {
             crate::config::IndexType::AUTOINDEX => "AUTOINDEX",
         }
     }
-    
+
     /// Build index parameters based on index type
     fn build_index_params(&self, index_type: &crate::config::IndexType) -> serde_json::Value {
         let params = &self.config.index_config.index_params;
-        
+
         match index_type {
             crate::config::IndexType::IVF_FLAT | crate::config::IndexType::IVF_SQ8 => {
                 serde_json::json!({
@@ -101,15 +101,15 @@ impl MilvusStorage {
             _ => serde_json::json!({}),
         }
     }
-    
+
     /// Build search parameters
     fn build_search_params(&self, metric_type: &str) -> serde_json::Value {
         let params = &self.config.index_config.index_params;
-        
+
         match self.config.index_config.default_index_type {
-            crate::config::IndexType::IVF_FLAT | 
-            crate::config::IndexType::IVF_SQ8 | 
-            crate::config::IndexType::IVF_PQ => {
+            crate::config::IndexType::IVF_FLAT
+            | crate::config::IndexType::IVF_SQ8
+            | crate::config::IndexType::IVF_PQ => {
                 serde_json::json!({
                     "nprobe": params.nprobe.unwrap_or(10)
                 })
@@ -122,7 +122,7 @@ impl MilvusStorage {
             _ => serde_json::json!({}),
         }
     }
-    
+
     /// Convert filter condition to Milvus expression
     fn build_filter_expression(&self, filter: &FilterCondition) -> MilvusResult<String> {
         match filter {
@@ -160,12 +160,8 @@ impl MilvusStorage {
                 let values_str = formatted_values.join(", ");
                 Ok(format!("{} not in [{}]", field, values_str))
             }
-            FilterCondition::Exists(field) => {
-                Ok(format!("{} != null", field))
-            }
-            FilterCondition::NotExists(field) => {
-                Ok(format!("{} == null", field))
-            }
+            FilterCondition::Exists(field) => Ok(format!("{} != null", field)),
+            FilterCondition::NotExists(field) => Ok(format!("{} == null", field)),
             FilterCondition::Contains(field, substring) => {
                 // Milvus doesn't have direct string contains, use JSON contains for metadata
                 if field == "metadata" {
@@ -177,9 +173,7 @@ impl MilvusStorage {
             FilterCondition::StartsWith(field, prefix) => {
                 Ok(format!("{} like '{}%'", field, prefix))
             }
-            FilterCondition::EndsWith(field, suffix) => {
-                Ok(format!("{} like '%{}'", field, suffix))
-            }
+            FilterCondition::EndsWith(field, suffix) => Ok(format!("{} like '%{}'", field, suffix)),
             FilterCondition::Regex(field, pattern) => {
                 // Milvus doesn't support regex directly, convert to like if possible
                 Ok(format!("{} like '{}'", field, pattern))
@@ -204,7 +198,7 @@ impl MilvusStorage {
             }
         }
     }
-    
+
     /// Format a metadata value for Milvus expression
     fn format_value(&self, value: &MetadataValue) -> MilvusResult<String> {
         match value {
@@ -213,12 +207,12 @@ impl MilvusStorage {
             MetadataValue::Float(f) => Ok(f.to_string()),
             MetadataValue::Boolean(b) => Ok(b.to_string()),
             MetadataValue::Null => Ok("null".to_string()),
-            MetadataValue::Array(_) => {
-                Err(MilvusError::InvalidData("Array values not supported in filters".to_string()))
-            }
-            MetadataValue::Object(_) => {
-                Err(MilvusError::InvalidData("Object values not supported in filters".to_string()))
-            }
+            MetadataValue::Array(_) => Err(MilvusError::InvalidData(
+                "Array values not supported in filters".to_string(),
+            )),
+            MetadataValue::Object(_) => Err(MilvusError::InvalidData(
+                "Object values not supported in filters".to_string(),
+            )),
         }
     }
 }
@@ -226,55 +220,87 @@ impl MilvusStorage {
 #[async_trait]
 impl VectorStorage for MilvusStorage {
     type Config = MilvusConfig;
-    
+
     async fn create_index(&self, config: IndexConfig) -> Result<()> {
         // Check if collection already exists
-        if self.client.has_collection(&config.name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))? {
-            return Err(lumosai_vector_core::error::VectorError::IndexAlreadyExists(format!("Collection '{}' already exists", config.name)));
+        if self
+            .client
+            .has_collection(&config.name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+        {
+            return Err(lumosai_vector_core::error::VectorError::IndexAlreadyExists(
+                format!("Collection '{}' already exists", config.name),
+            ));
         }
 
         // Create collection schema
         let schema = CollectionSchema::document_schema(&config.name, config.dimension);
 
         // Create collection
-        self.client.create_collection(schema).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
-        
+        self.client
+            .create_collection(schema)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+
         // Create index if auto-create is enabled
         if self.config.index_config.auto_create_index {
-            let index_type = self.index_type_to_milvus(&self.config.index_config.default_index_type);
+            let index_type =
+                self.index_type_to_milvus(&self.config.index_config.default_index_type);
             let metric_type = self.similarity_to_metric_type(&config.metric);
             let params = self.build_index_params(&self.config.index_config.default_index_type);
-            
+
             self.client
                 .create_index(&config.name, "vector", index_type, metric_type, params)
                 .await
                 .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
         }
-        
+
         Ok(())
     }
-    
+
     async fn list_indexes(&self) -> Result<Vec<String>> {
-        let collections = self.client.list_collections().await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+        let collections = self
+            .client
+            .list_collections()
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
         Ok(collections)
     }
-    
+
     async fn describe_index(&self, index_name: &str) -> Result<IndexInfo> {
-        if !self.client.has_collection(index_name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))? {
-            return Err(MilvusError::not_found(format!("Collection '{}' not found", index_name)).into());
+        if !self
+            .client
+            .has_collection(index_name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+        {
+            return Err(
+                MilvusError::not_found(format!("Collection '{}' not found", index_name)).into(),
+            );
         }
-        
-        let collection_info = self.client.describe_collection(index_name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
-        let stats = self.client.get_collection_stats(index_name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
-        
+
+        let collection_info = self
+            .client
+            .describe_collection(index_name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+        let stats = self
+            .client
+            .get_collection_stats(index_name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+
         // Extract vector dimension from schema
-        let dimension = collection_info.schema.fields
+        let dimension = collection_info
+            .schema
+            .fields
             .iter()
             .find(|f| f.name == "vector")
             .and_then(|f| f.type_params.as_ref())
             .and_then(|tp| tp.dim)
             .unwrap_or(384); // Default dimension
-        
+
         Ok(IndexInfo {
             name: index_name.to_string(),
             dimension,
@@ -286,39 +312,66 @@ impl VectorStorage for MilvusStorage {
             metadata: HashMap::new(),
         })
     }
-    
+
     async fn delete_index(&self, index_name: &str) -> Result<()> {
-        if !self.client.has_collection(index_name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))? {
-            return Err(lumosai_vector_core::error::VectorError::IndexNotFound(format!("Collection '{}' not found", index_name)));
+        if !self
+            .client
+            .has_collection(index_name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+        {
+            return Err(lumosai_vector_core::error::VectorError::IndexNotFound(
+                format!("Collection '{}' not found", index_name),
+            ));
         }
 
-        self.client.drop_collection(index_name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+        self.client
+            .drop_collection(index_name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
         Ok(())
     }
 
-    async fn upsert_documents(&self, index_name: &str, documents: Vec<Document>) -> Result<Vec<DocumentId>> {
+    async fn upsert_documents(
+        &self,
+        index_name: &str,
+        documents: Vec<Document>,
+    ) -> Result<Vec<DocumentId>> {
         if documents.is_empty() {
             return Ok(Vec::new());
         }
 
-        if !self.client.has_collection(index_name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))? {
-            return Err(lumosai_vector_core::error::VectorError::IndexNotFound(format!("Collection '{}' not found", index_name)));
+        if !self
+            .client
+            .has_collection(index_name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+        {
+            return Err(lumosai_vector_core::error::VectorError::IndexNotFound(
+                format!("Collection '{}' not found", index_name),
+            ));
         }
 
         // Validate documents have embeddings
         for doc in &documents {
             if doc.embedding.is_none() {
-                return Err(lumosai_vector_core::error::VectorError::InvalidVector(format!("Document '{}' missing embedding", doc.id)));
+                return Err(lumosai_vector_core::error::VectorError::InvalidVector(
+                    format!("Document '{}' missing embedding", doc.id),
+                ));
             }
         }
 
         // Convert documents to Milvus entities
-        let entities = utils::documents_to_entities(&documents).map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+        let entities = utils::documents_to_entities(&documents)
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
 
         // Insert entities in batches
         let batch_size = self.config.performance.batch_size;
         for chunk in entities.chunks(batch_size) {
-            self.client.insert(index_name, chunk).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            self.client
+                .insert(index_name, chunk)
+                .await
+                .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
         }
 
         // Return document IDs
@@ -326,15 +379,24 @@ impl VectorStorage for MilvusStorage {
     }
 
     async fn search(&self, request: SearchRequest) -> Result<SearchResponse> {
-        if !self.client.has_collection(&request.index_name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))? {
-            return Err(lumosai_vector_core::error::VectorError::IndexNotFound(format!("Collection '{}' not found", request.index_name)));
+        if !self
+            .client
+            .has_collection(&request.index_name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+        {
+            return Err(lumosai_vector_core::error::VectorError::IndexNotFound(
+                format!("Collection '{}' not found", request.index_name),
+            ));
         }
 
         // Extract vector from query
         let query_vector = match &request.query {
             SearchQuery::Vector(vector) => vector.clone(),
             SearchQuery::Text(_) => {
-                return Err(lumosai_vector_core::error::VectorError::OperationFailed("Text queries not supported yet".to_string()));
+                return Err(lumosai_vector_core::error::VectorError::OperationFailed(
+                    "Text queries not supported yet".to_string(),
+                ));
             }
         };
 
@@ -342,17 +404,24 @@ impl VectorStorage for MilvusStorage {
         let search_params = self.build_search_params(metric_type);
 
         let output_fields = if request.include_metadata {
-            vec!["id".to_string(), "content".to_string(), "metadata".to_string()]
+            vec![
+                "id".to_string(),
+                "content".to_string(),
+                "metadata".to_string(),
+            ]
         } else {
             vec!["id".to_string()]
         };
 
-        let filter_expr = request.filter.as_ref()
+        let filter_expr = request
+            .filter
+            .as_ref()
             .map(|f| self.build_filter_expression(f))
             .transpose()
             .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
 
-        let search_response = self.client
+        let search_response = self
+            .client
             .search(
                 &request.index_name,
                 &[query_vector],
@@ -370,7 +439,12 @@ impl VectorStorage for MilvusStorage {
 
         if let Some(ids) = &search_response.results.ids.str_id {
             for (i, id) in ids.data.iter().enumerate() {
-                let score = search_response.results.scores.get(i).copied().unwrap_or(0.0);
+                let score = search_response
+                    .results
+                    .scores
+                    .get(i)
+                    .copied()
+                    .unwrap_or(0.0);
 
                 let mut result = SearchResult::new(id.clone(), score);
 
@@ -403,8 +477,15 @@ impl VectorStorage for MilvusStorage {
             return Ok(());
         }
 
-        if !self.client.has_collection(index_name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))? {
-            return Err(lumosai_vector_core::error::VectorError::index_not_found(format!("Collection '{}' not found", index_name)));
+        if !self
+            .client
+            .has_collection(index_name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+        {
+            return Err(lumosai_vector_core::error::VectorError::index_not_found(
+                format!("Collection '{}' not found", index_name),
+            ));
         }
 
         // Build delete expression
@@ -420,13 +501,25 @@ impl VectorStorage for MilvusStorage {
         Ok(())
     }
 
-    async fn get_documents(&self, index_name: &str, ids: Vec<DocumentId>, include_vectors: bool) -> Result<Vec<Document>> {
+    async fn get_documents(
+        &self,
+        index_name: &str,
+        ids: Vec<DocumentId>,
+        include_vectors: bool,
+    ) -> Result<Vec<Document>> {
         if ids.is_empty() {
             return Ok(Vec::new());
         }
 
-        if !self.client.has_collection(index_name).await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))? {
-            return Err(lumosai_vector_core::error::VectorError::IndexNotFound(format!("Collection '{}' not found", index_name)));
+        if !self
+            .client
+            .has_collection(index_name)
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+        {
+            return Err(lumosai_vector_core::error::VectorError::IndexNotFound(
+                format!("Collection '{}' not found", index_name),
+            ));
         }
 
         // Build query expression
@@ -435,13 +528,23 @@ impl VectorStorage for MilvusStorage {
 
         // Select fields based on include_vectors flag
         let output_fields = if include_vectors {
-            vec!["id".to_string(), "content".to_string(), "vector".to_string(), "metadata".to_string()]
+            vec![
+                "id".to_string(),
+                "content".to_string(),
+                "vector".to_string(),
+                "metadata".to_string(),
+            ]
         } else {
-            vec!["id".to_string(), "content".to_string(), "metadata".to_string()]
+            vec![
+                "id".to_string(),
+                "content".to_string(),
+                "metadata".to_string(),
+            ]
         };
 
         // Execute query
-        let query_response = self.client
+        let query_response = self
+            .client
             .query(index_name, &query_expr, &output_fields, None, None)
             .await
             .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
@@ -465,12 +568,18 @@ impl VectorStorage for MilvusStorage {
     }
 
     async fn health_check(&self) -> Result<()> {
-        let is_healthy = self.client.health_check().await.map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+        let is_healthy = self
+            .client
+            .health_check()
+            .await
+            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
 
         if is_healthy {
             Ok(())
         } else {
-            Err(lumosai_vector_core::error::VectorError::ConnectionFailed("Milvus service is not healthy".to_string()))
+            Err(lumosai_vector_core::error::VectorError::ConnectionFailed(
+                "Milvus service is not healthy".to_string(),
+            ))
         }
     }
 
@@ -486,6 +595,9 @@ impl VectorStorage for MilvusStorage {
             .with_metadata("endpoint", self.config.endpoint.clone())
             .with_metadata("database", self.config.database.clone())
             .with_metadata("batch_size", self.config.performance.batch_size as i64)
-            .with_metadata("consistency_level", format!("{:?}", self.config.collection_config.consistency_level))
+            .with_metadata(
+                "consistency_level",
+                format!("{:?}", self.config.collection_config.consistency_level),
+            )
     }
 }

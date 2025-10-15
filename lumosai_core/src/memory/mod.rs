@@ -3,10 +3,10 @@
 #![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
 #![allow(unexpected_cfgs, unused_assignments)]
 
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use crate::llm::Message;
 use crate::Result;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// 语义回忆配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,7 +88,7 @@ impl Default for MemoryConfig {
 pub trait Memory: Send + Sync {
     /// Store a message in memory
     async fn store(&self, message: &Message) -> Result<()>;
-    
+
     /// Retrieve messages from memory
     async fn retrieve(&self, config: &MemoryConfig) -> Result<Vec<Message>>;
 
@@ -99,71 +99,42 @@ pub trait Memory: Send + Sync {
 }
 
 // 模块声明
-pub mod working;
+pub mod basic;
+pub mod enhanced;
+pub mod processor;
 pub mod semantic;
 pub mod semantic_memory;
-pub mod basic;
-pub mod thread;
 pub mod session;
-pub mod processor;
-pub mod enhanced;
+pub mod thread;
+pub mod working;
 
 // #[cfg(test)]
 // mod processor_tests;
 
 // 重新导出
-pub use working::{
-    WorkingMemory, 
-    WorkingMemoryContent, 
-    WorkingMemoryConfig, 
-    BasicWorkingMemory, 
-    create_working_memory
-}; 
-pub use semantic_memory::{
-    SemanticMemoryTrait as SemanticMemory, 
-    SemanticSearchOptions, 
-    SemanticSearchResult, 
-    create_semantic_memory,
-};
 pub use basic::BasicMemory;
-pub use thread::{
-    MemoryThread,
-    MemoryThreadStorage,
-    MemoryThreadManager,
-    CreateThreadParams,
-    UpdateThreadParams,
-    GetMessagesParams,
-    MessageFilter,
-    MemoryOptions,
-    ThreadStats,
-};
-pub use session::{
-    Session,
-    SessionManager,
-    SessionState,
-    SessionContext,
-    SessionConfig,
-    CreateSessionParams,
-    UpdateSessionParams,
-    SessionStats,
-    ActionItem,
-    Priority,
+pub use enhanced::{
+    EnhancedMemory, ImportanceProcessor, MemoryEntry, MemoryEntryType, MemoryQueryOptions,
 };
 pub use processor::{
-    MemoryProcessor,
-    MemoryProcessorOptions,
-    MessageLimitProcessor,
-    RoleFilterProcessor,
-    DeduplicationProcessor,
-    CompositeProcessor,
-    create_default_processor_chain,
+    create_default_processor_chain, CompositeProcessor, DeduplicationProcessor, MemoryProcessor,
+    MemoryProcessorOptions, MessageLimitProcessor, RoleFilterProcessor,
 };
-pub use enhanced::{
-    EnhancedMemory,
-    MemoryEntry,
-    MemoryEntryType,
-    MemoryQueryOptions,
-    ImportanceProcessor,
+pub use semantic_memory::{
+    create_semantic_memory, SemanticMemoryTrait as SemanticMemory, SemanticSearchOptions,
+    SemanticSearchResult,
+};
+pub use session::{
+    ActionItem, CreateSessionParams, Priority, Session, SessionConfig, SessionContext,
+    SessionManager, SessionState, SessionStats, UpdateSessionParams,
+};
+pub use thread::{
+    CreateThreadParams, GetMessagesParams, MemoryOptions, MemoryThread, MemoryThreadManager,
+    MemoryThreadStorage, MessageFilter, ThreadStats, UpdateThreadParams,
+};
+pub use working::{
+    create_working_memory, BasicWorkingMemory, WorkingMemory, WorkingMemoryConfig,
+    WorkingMemoryContent,
 };
 
 /// 添加兼容函数，用于创建基本工作内存

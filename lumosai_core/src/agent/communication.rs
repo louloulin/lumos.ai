@@ -1,5 +1,5 @@
 //! Agent间通信系统
-//! 
+//!
 //! 提供Agent之间的消息传递、协作和协调功能
 
 use std::collections::HashMap;
@@ -186,7 +186,7 @@ impl AgentCommunicationManager {
     /// 注册Agent
     pub async fn register_agent(&self, agent_id: String, agent: Arc<dyn Agent>) -> Result<()> {
         let (sender, mut receiver) = mpsc::unbounded_channel::<AgentMessage>();
-        
+
         // 注册Agent
         {
             let mut agents = self.agents.write().await;
@@ -248,10 +248,10 @@ impl AgentCommunicationManager {
     /// 发送请求并等待响应
     pub async fn send_request(&self, mut message: AgentMessage) -> Result<AgentMessage> {
         message.requires_response = true;
-        
+
         // 创建响应通道
         let (response_sender, response_receiver) = tokio::sync::oneshot::channel();
-        
+
         // 注册待处理的响应
         {
             let mut pending = self.pending_responses.write().await;
@@ -412,10 +412,10 @@ mod tests {
     #[tokio::test]
     async fn test_communication_manager() {
         let manager = create_communication_manager();
-        
+
         // 测试基本功能
         assert_eq!(manager.get_registered_agents().await.len(), 0);
-        
+
         let history = manager.get_message_history(Some(10)).await;
         assert_eq!(history.len(), 0);
     }

@@ -1,17 +1,17 @@
 //! Enhanced tool system based on Rig's design
-//! 
+//!
 //! Provides advanced tool capabilities with dynamic dispatch,
 //! streaming support, and enhanced metadata.
 
-use std::collections::HashMap;
-use std::sync::Arc;
 use async_trait::async_trait;
+use futures::Stream;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use futures::Stream;
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use crate::{Result, Error};
 use crate::agent::types::RuntimeContext;
+use crate::{Error, Result};
 // Note: We define our own types to avoid conflicts with existing tool system
 
 /// Enhanced tool trait with additional capabilities
@@ -21,41 +21,41 @@ pub trait EnhancedTool: Send + Sync {
     fn category(&self) -> ToolCategory {
         ToolCategory::General
     }
-    
+
     /// Get tool capabilities
     fn capabilities(&self) -> Vec<ToolCapability> {
         vec![ToolCapability::Basic]
     }
-    
+
     /// Get tool configuration schema
     fn config_schema(&self) -> Option<Value> {
         None
     }
-    
+
     /// Configure the tool with settings
     async fn configure(&mut self, config: Value) -> Result<()> {
         // Default implementation ignores configuration
         let _ = config;
         Ok(())
     }
-    
+
     /// Validate tool arguments before execution
     async fn validate_args(&self, args: &Value) -> Result<()> {
         // Default implementation accepts all arguments
         let _ = args;
         Ok(())
     }
-    
+
     /// Get tool usage statistics
     fn get_stats(&self) -> ToolStats {
         ToolStats::default()
     }
-    
+
     /// Reset tool state
     async fn reset(&mut self) -> Result<()> {
         Ok(())
     }
-    
+
     /// Check if tool is healthy
     async fn health_check(&self) -> Result<ToolHealth> {
         Ok(ToolHealth {
@@ -177,8 +177,12 @@ pub enum HealthStatus {
 #[async_trait]
 pub trait StreamingTool: EnhancedTool {
     /// Execute tool with streaming output
-    async fn execute_stream(&self, args: Value, context: &RuntimeContext) -> Result<Box<dyn Stream<Item = Result<Value>> + Send + Unpin>>;
-    
+    async fn execute_stream(
+        &self,
+        args: Value,
+        context: &RuntimeContext,
+    ) -> Result<Box<dyn Stream<Item = Result<Value>> + Send + Unpin>>;
+
     /// Get streaming configuration
     fn streaming_config(&self) -> StreamingConfig {
         StreamingConfig::default()
@@ -210,8 +214,12 @@ impl Default for StreamingConfig {
 #[async_trait]
 pub trait BatchTool: EnhancedTool {
     /// Execute tool with batch input
-    async fn execute_batch(&self, batch_args: Vec<Value>, context: &RuntimeContext) -> Result<Vec<Result<Value>>>;
-    
+    async fn execute_batch(
+        &self,
+        batch_args: Vec<Value>,
+        context: &RuntimeContext,
+    ) -> Result<Vec<Result<Value>>>;
+
     /// Get batch configuration
     fn batch_config(&self) -> BatchConfig {
         BatchConfig::default()
@@ -244,12 +252,12 @@ impl Default for BatchConfig {
 pub trait CacheableTool: EnhancedTool {
     /// Get cache key for given arguments
     fn cache_key(&self, args: &Value) -> String;
-    
+
     /// Get cache TTL (seconds)
     fn cache_ttl(&self) -> u64 {
         3600 // 1 hour default
     }
-    
+
     /// Check if result should be cached
     fn should_cache(&self, args: &Value, result: &Value) -> bool {
         let _ = (args, result);
@@ -264,7 +272,7 @@ pub trait RateLimitedTool: EnhancedTool {
     fn rate_limit(&self) -> RateLimit {
         RateLimit::default()
     }
-    
+
     /// Check if execution is allowed
     async fn check_rate_limit(&self, context: &RuntimeContext) -> Result<bool>;
 }
@@ -316,8 +324,6 @@ impl<T> EnhancedToolWrapper<T> {
             capabilities,
         }
     }
-    
-
 }
 
 impl<T> EnhancedToolWrapper<T> {

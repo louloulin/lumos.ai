@@ -1,13 +1,13 @@
 //! OpenTelemetry集成模块
-//! 
+//!
 //! 提供与OpenTelemetry的集成功能，包括指标导出、追踪和配置管理。
 
 use crate::telemetry::metrics::*;
 use crate::telemetry::trace::*;
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use serde::{Deserialize, Serialize};
 
 /// OpenTelemetry集成配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -197,16 +197,28 @@ pub struct HistogramBucket {
 #[async_trait]
 pub trait OtelExporter: Send + Sync {
     /// 导出spans
-    async fn export_spans(&self, spans: Vec<OtelSpan>) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn export_spans(
+        &self,
+        spans: Vec<OtelSpan>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 导出指标
-    async fn export_metrics(&self, metrics: Vec<OtelMetric>) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn export_metrics(
+        &self,
+        metrics: Vec<OtelMetric>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 强制刷新
-    async fn force_flush(&self, timeout: Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn force_flush(
+        &self,
+        timeout: Duration,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 关闭导出器
-    async fn shutdown(&self, timeout: Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn shutdown(
+        &self,
+        timeout: Duration,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// HTTP OTLP导出器
@@ -226,8 +238,11 @@ impl HttpOtlpExporter {
     /// 创建新的HTTP OTLP导出器
     pub fn new(endpoint: String) -> Self {
         let mut headers = HashMap::new();
-        headers.insert("Content-Type".to_string(), "application/x-protobuf".to_string());
-        
+        headers.insert(
+            "Content-Type".to_string(),
+            "application/x-protobuf".to_string(),
+        );
+
         Self {
             endpoint,
             client: reqwest::Client::new(),
@@ -235,13 +250,13 @@ impl HttpOtlpExporter {
             timeout: Duration::from_secs(10),
         }
     }
-    
+
     /// 设置认证头
     pub fn with_auth_header(mut self, name: String, value: String) -> Self {
         self.headers.insert(name, value);
         self
     }
-    
+
     /// 设置超时
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
@@ -249,7 +264,10 @@ impl HttpOtlpExporter {
     }
 
     /// 将spans序列化为OTLP格式
-    fn serialize_spans_to_otlp(&self, spans: &[OtelSpan]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+    fn serialize_spans_to_otlp(
+        &self,
+        spans: &[OtelSpan],
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
         // 简化的OTLP序列化 - 在实际实现中应该使用protobuf
         let otlp_data = serde_json::json!({
             "resourceSpans": [{
@@ -333,7 +351,10 @@ impl HttpOtlpExporter {
     }
 
     /// 将metrics序列化为OTLP格式
-    fn serialize_metrics_to_otlp(&self, metrics: &[OtelMetric]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+    fn serialize_metrics_to_otlp(
+        &self,
+        metrics: &[OtelMetric],
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
         let otlp_data = serde_json::json!({
             "resourceMetrics": [{
                 "resource": {
@@ -391,7 +412,10 @@ impl HttpOtlpExporter {
 
 #[async_trait]
 impl OtelExporter for HttpOtlpExporter {
-    async fn export_spans(&self, spans: Vec<OtelSpan>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn export_spans(
+        &self,
+        spans: Vec<OtelSpan>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if spans.is_empty() {
             return Ok(());
         }
@@ -399,7 +423,8 @@ impl OtelExporter for HttpOtlpExporter {
         let traces_endpoint = format!("{}/v1/traces", self.endpoint);
         let payload = self.serialize_spans_to_otlp(&spans)?;
 
-        let mut request = self.client
+        let mut request = self
+            .client
             .post(&traces_endpoint)
             .timeout(self.timeout)
             .header("Content-Type", "application/x-protobuf");
@@ -416,11 +441,18 @@ impl OtelExporter for HttpOtlpExporter {
             return Err(format!("OTLP export failed: {} - {}", status, error_text).into());
         }
 
-        println!("✅ Successfully exported {} spans to {}", spans.len(), traces_endpoint);
+        println!(
+            "✅ Successfully exported {} spans to {}",
+            spans.len(),
+            traces_endpoint
+        );
         Ok(())
     }
 
-    async fn export_metrics(&self, metrics: Vec<OtelMetric>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn export_metrics(
+        &self,
+        metrics: Vec<OtelMetric>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if metrics.is_empty() {
             return Ok(());
         }
@@ -428,7 +460,8 @@ impl OtelExporter for HttpOtlpExporter {
         let metrics_endpoint = format!("{}/v1/metrics", self.endpoint);
         let payload = self.serialize_metrics_to_otlp(&metrics)?;
 
-        let mut request = self.client
+        let mut request = self
+            .client
             .post(&metrics_endpoint)
             .timeout(self.timeout)
             .header("Content-Type", "application/x-protobuf");
@@ -445,18 +478,28 @@ impl OtelExporter for HttpOtlpExporter {
             return Err(format!("OTLP export failed: {} - {}", status, error_text).into());
         }
 
-        println!("✅ Successfully exported {} metrics to {}", metrics.len(), metrics_endpoint);
+        println!(
+            "✅ Successfully exported {} metrics to {}",
+            metrics.len(),
+            metrics_endpoint
+        );
         Ok(())
     }
 
-    async fn force_flush(&self, timeout: Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn force_flush(
+        &self,
+        timeout: Duration,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 实现强制刷新逻辑 - 等待所有待处理的导出完成
         tokio::time::sleep(std::cmp::min(timeout, Duration::from_millis(100))).await;
         println!("🔄 OTLP exporter force flush completed");
         Ok(())
     }
 
-    async fn shutdown(&self, timeout: Duration) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn shutdown(
+        &self,
+        timeout: Duration,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 实现优雅关闭逻辑
         self.force_flush(timeout).await?;
         println!("🛑 OTLP exporter shutdown completed");
@@ -487,24 +530,43 @@ impl OtelMetricsCollector {
 
 #[async_trait]
 impl MetricsCollector for OtelMetricsCollector {
-    async fn record_agent_execution(&self, metrics: AgentMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_agent_execution(
+        &self,
+        metrics: AgentMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 委托给内部收集器
         self.inner.record_agent_execution(metrics).await
     }
-    
-    async fn record_tool_execution(&self, metrics: ToolMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+
+    async fn record_tool_execution(
+        &self,
+        metrics: ToolMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.inner.record_tool_execution(metrics).await
     }
-    
-    async fn record_memory_operation(&self, metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+
+    async fn record_memory_operation(
+        &self,
+        metrics: MemoryMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.inner.record_memory_operation(metrics).await
     }
-    
-    async fn get_metrics_summary(&self, agent_name: Option<&str>, from_time: Option<u64>, to_time: Option<u64>) -> Result<MetricsSummary, Box<dyn std::error::Error + Send + Sync>> {
-        self.inner.get_metrics_summary(agent_name, from_time, to_time).await
+
+    async fn get_metrics_summary(
+        &self,
+        agent_name: Option<&str>,
+        from_time: Option<u64>,
+        to_time: Option<u64>,
+    ) -> Result<MetricsSummary, Box<dyn std::error::Error + Send + Sync>> {
+        self.inner
+            .get_metrics_summary(agent_name, from_time, to_time)
+            .await
     }
-    
-    async fn get_agent_performance(&self, agent_name: &str) -> Result<AgentPerformance, Box<dyn std::error::Error + Send + Sync>> {
+
+    async fn get_agent_performance(
+        &self,
+        agent_name: &str,
+    ) -> Result<AgentPerformance, Box<dyn std::error::Error + Send + Sync>> {
         self.inner.get_agent_performance(agent_name).await
     }
 }

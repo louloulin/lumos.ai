@@ -77,7 +77,7 @@ async fn list_assistants() -> Json<Vec<Assistant>> {
             created_at: "2024-01-05T09:15:00Z".to_string(),
         },
     ];
-    
+
     Json(assistants)
 }
 
@@ -100,7 +100,7 @@ async fn chat_completion(Json(payload): Json<ChatRequest>) -> Result<Json<ChatRe
         "Thank you for your message: '{}'. This is a demo response from the LumosAI assistant. In a real implementation, this would connect to an AI service.",
         payload.message
     );
-    
+
     Ok(Json(ChatResponse {
         response,
         assistant_id: payload.assistant_id.unwrap_or(1),

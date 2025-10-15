@@ -1,5 +1,5 @@
 //! 记忆系统演示
-//! 
+//!
 //! 展示如何使用记忆系统，包括：
 //! - 工作记忆配置
 //! - 多轮对话记忆
@@ -7,8 +7,11 @@
 //! - 记忆检索和总结
 
 use lumosai_core::agent::{AgentBuilder, AgentTrait};
-use lumosai_core::memory::{MemoryConfig, working::{WorkingMemoryConfig, create_working_memory}};
-use lumosai_core::llm::{MockLlmProvider, Message, Role};
+use lumosai_core::llm::{Message, MockLlmProvider, Role};
+use lumosai_core::memory::{
+    working::{create_working_memory, WorkingMemoryConfig},
+    MemoryConfig,
+};
 use std::sync::Arc;
 use tokio;
 
@@ -16,26 +19,26 @@ use tokio;
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("💾 记忆系统演示");
     println!("================");
-    
+
     // 演示1: 基础记忆配置
     demo_basic_memory().await?;
-    
+
     // 演示2: 多轮对话记忆
     demo_conversation_memory().await?;
-    
+
     // 演示3: 记忆管理功能
     demo_memory_management().await?;
-    
+
     // 演示4: 记忆检索和总结
     demo_memory_retrieval().await?;
-    
+
     Ok(())
 }
 
 /// 演示基础记忆配置
 async fn demo_basic_memory() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示1: 基础记忆配置 ===");
-    
+
     // 创建记忆配置
     let memory_config = WorkingMemoryConfig {
         enabled: true,
@@ -51,13 +54,23 @@ async fn demo_basic_memory() -> std::result::Result<(), Box<dyn std::error::Erro
 
     // 创建工作记忆实例
     let working_memory = create_working_memory(&memory_config)?;
-    
+
     // 添加一些测试消息到工作内存
     let messages = vec![
         Message::new(Role::User, "你好，我是新用户".to_string(), None, None),
-        Message::new(Role::Assistant, "你好！欢迎使用我们的服务。我是你的AI助手。".to_string(), None, None),
+        Message::new(
+            Role::Assistant,
+            "你好！欢迎使用我们的服务。我是你的AI助手。".to_string(),
+            None,
+            None,
+        ),
         Message::new(Role::User, "我想了解一下你的功能".to_string(), None, None),
-        Message::new(Role::Assistant, "我可以帮助你回答问题、提供信息、协助完成任务等。".to_string(), None, None),
+        Message::new(
+            Role::Assistant,
+            "我可以帮助你回答问题、提供信息、协助完成任务等。".to_string(),
+            None,
+            None,
+        ),
     ];
 
     // 将消息存储到工作内存中
@@ -72,7 +85,10 @@ async fn demo_basic_memory() -> std::result::Result<(), Box<dyn std::error::Erro
         messages_array.push(serde_json::to_value(&message)?);
 
         if let serde_json::Value::Object(ref mut map) = content.content {
-            map.insert("messages".to_string(), serde_json::Value::Array(messages_array));
+            map.insert(
+                "messages".to_string(),
+                serde_json::Value::Array(messages_array),
+            );
         }
 
         working_memory.update(content).await?;
@@ -85,14 +101,14 @@ async fn demo_basic_memory() -> std::result::Result<(), Box<dyn std::error::Erro
             println!("  消息数量: {}", msgs_array.len());
         }
     }
-    
+
     Ok(())
 }
 
 /// 演示多轮对话记忆
 async fn demo_conversation_memory() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示2: 多轮对话记忆 ===");
-    
+
     // 创建对话响应序列
     let conversation_responses = vec![
         "你好张三！很高兴认识你。25岁正是学习和成长的好年龄。我会记住你的信息。".to_string(),
@@ -102,7 +118,7 @@ async fn demo_conversation_memory() -> std::result::Result<(), Box<dyn std::erro
         "根据我们的对话，我了解到你是一个25岁的程序员，名叫张三，热爱编程（特别是Rust）和阅读。你似乎是一个很有学习热情的人。".to_string(),
     ];
     let llm_provider = Arc::new(MockLlmProvider::new(conversation_responses));
-    
+
     // 创建记忆配置
     let working_memory_config = WorkingMemoryConfig {
         enabled: true,
@@ -128,10 +144,10 @@ async fn demo_conversation_memory() -> std::result::Result<(), Box<dyn std::erro
         .model(llm_provider)
         .memory_config(memory_config)
         .build()?;
-    
+
     // 模拟多轮对话
     println!("开始多轮对话演示:");
-    
+
     let conversations = vec![
         "我叫张三，今年25岁",
         "我的爱好是编程和阅读",
@@ -139,7 +155,7 @@ async fn demo_conversation_memory() -> std::result::Result<(), Box<dyn std::erro
         "请告诉我，你还记得我的名字和年龄吗？",
         "请总结一下你对我的了解",
     ];
-    
+
     for (i, input) in conversations.iter().enumerate() {
         let response = memory_agent.generate_simple(input).await?;
         println!("\n第{}轮对话:", i + 1);
@@ -151,14 +167,14 @@ async fn demo_conversation_memory() -> std::result::Result<(), Box<dyn std::erro
             println!("记忆状态: 已配置内存系统");
         }
     }
-    
+
     Ok(())
 }
 
 /// 演示记忆管理功能
 async fn demo_memory_management() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 记忆管理功能 ===");
-    
+
     // 创建记忆配置
     let memory_config = WorkingMemoryConfig {
         enabled: true,
@@ -168,7 +184,7 @@ async fn demo_memory_management() -> std::result::Result<(), Box<dyn std::error:
     };
 
     let working_memory = create_working_memory(&memory_config)?;
-    
+
     // 添加多个消息来触发记忆管理
     let test_messages = vec![
         ("用户", "第一条消息"),
@@ -183,9 +199,13 @@ async fn demo_memory_management() -> std::result::Result<(), Box<dyn std::error:
         ("助手", "我收到了你的第五条消息"),
         ("用户", "第六条消息"), // 这条应该触发记忆管理
     ];
-    
+
     for (i, (role, content)) in test_messages.iter().enumerate() {
-        let message_role = if *role == "用户" { Role::User } else { Role::Assistant };
+        let message_role = if *role == "用户" {
+            Role::User
+        } else {
+            Role::Assistant
+        };
         let message = Message::new(message_role, content.to_string(), None, None);
 
         // 将消息添加到工作内存
@@ -199,13 +219,15 @@ async fn demo_memory_management() -> std::result::Result<(), Box<dyn std::error:
         messages_array.push(serde_json::to_value(&message)?);
 
         if let serde_json::Value::Object(ref mut map) = memory_content.content {
-            map.insert("messages".to_string(), serde_json::Value::Array(messages_array.clone()));
+            map.insert(
+                "messages".to_string(),
+                serde_json::Value::Array(messages_array.clone()),
+            );
         }
 
         working_memory.update(memory_content).await?;
 
-        println!("添加第{}条消息后: {} 消息",
-            i + 1, messages_array.len());
+        println!("添加第{}条消息后: {} 消息", i + 1, messages_array.len());
 
         // 检查是否触发了记忆管理
         if messages_array.len() < i + 1 {
@@ -225,14 +247,14 @@ async fn demo_memory_management() -> std::result::Result<(), Box<dyn std::error:
             }
         }
     }
-    
+
     Ok(())
 }
 
 /// 演示记忆检索和总结
 async fn demo_memory_retrieval() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示4: 记忆检索和总结 ===");
-    
+
     // 创建记忆配置
     let memory_config = WorkingMemoryConfig {
         enabled: true,
@@ -242,7 +264,7 @@ async fn demo_memory_retrieval() -> std::result::Result<(), Box<dyn std::error::
     };
 
     let working_memory = create_working_memory(&memory_config)?;
-    
+
     // 添加一个完整的对话历史
     let conversation_history = vec![
         (Role::User, "你好，我是李四"),
@@ -258,7 +280,7 @@ async fn demo_memory_retrieval() -> std::result::Result<(), Box<dyn std::error::
         (Role::User, "你能推荐一些学习资源吗？"),
         (Role::Assistant, "推荐《Rust程序设计语言》和官方文档。"),
     ];
-    
+
     // 将对话历史添加到工作内存
     let mut memory_content = working_memory.get().await?;
     let mut messages_array = vec![];
@@ -269,7 +291,10 @@ async fn demo_memory_retrieval() -> std::result::Result<(), Box<dyn std::error::
     }
 
     if let serde_json::Value::Object(ref mut map) = memory_content.content {
-        map.insert("messages".to_string(), serde_json::Value::Array(messages_array.clone()));
+        map.insert(
+            "messages".to_string(),
+            serde_json::Value::Array(messages_array.clone()),
+        );
     }
 
     working_memory.update(memory_content).await?;
@@ -297,7 +322,8 @@ async fn demo_memory_retrieval() -> std::result::Result<(), Box<dyn std::error::
 
     // 模拟记忆总结
     println!("\n记忆总结:");
-    let all_messages: Vec<Message> = messages_array.iter()
+    let all_messages: Vec<Message> = messages_array
+        .iter()
         .filter_map(|v| serde_json::from_value(v.clone()).ok())
         .collect();
     let summary = generate_memory_summary(&all_messages);
@@ -313,20 +339,22 @@ async fn demo_memory_retrieval() -> std::result::Result<(), Box<dyn std::error::
         0
     };
     println!("记忆已清理，当前消息数: {}", cleared_count);
-    
+
     Ok(())
 }
 
 /// 生成记忆总结
 fn generate_memory_summary(messages: &[Message]) -> String {
-    let user_messages: Vec<&Message> = messages.iter()
+    let user_messages: Vec<&Message> = messages
+        .iter()
         .filter(|m| matches!(m.role, Role::User))
         .collect();
-    
-    let assistant_messages: Vec<&Message> = messages.iter()
+
+    let assistant_messages: Vec<&Message> = messages
+        .iter()
         .filter(|m| matches!(m.role, Role::Assistant))
         .collect();
-    
+
     format!(
         "对话总结:\n\
         - 总消息数: {}\n\
@@ -349,7 +377,10 @@ fn create_test_message(role: Role, content: &str) -> Message {
 
 /// 辅助函数：打印记忆统计
 #[allow(dead_code)]
-async fn print_memory_stats(memory: &dyn lumosai_core::memory::working::WorkingMemory, label: &str) -> std::result::Result<(), Box<dyn std::error::Error>> {
+async fn print_memory_stats(
+    memory: &dyn lumosai_core::memory::working::WorkingMemory,
+    label: &str,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let content = memory.get().await?;
     let message_count = if let Some(msgs) = content.content.get("messages") {
         msgs.as_array().map(|arr| arr.len()).unwrap_or(0)

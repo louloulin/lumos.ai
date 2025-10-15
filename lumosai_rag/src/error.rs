@@ -53,4 +53,4 @@ pub enum RagError {
 }
 
 /// Result type for RAG operations
-pub type Result<T> = std::result::Result<T, RagError>; 
+pub type Result<T> = std::result::Result<T, RagError>;

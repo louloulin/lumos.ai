@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Vector index configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,10 +40,10 @@ pub struct Vector {
 pub trait EmbeddingService: Send + Sync {
     /// Generate embeddings for a list of texts
     async fn embed_texts(&self, texts: &[String]) -> crate::error::Result<Vec<Vec<f32>>>;
-    
+
     /// Get the dimension of the generated embeddings
     fn embedding_dimension(&self) -> usize;
-    
+
     /// Get the model name
     fn model_name(&self) -> &str;
 }
@@ -80,4 +80,4 @@ pub enum FilterCondition {
     Or(Vec<FilterCondition>),
     /// Not condition
     Not(Box<FilterCondition>),
-} 
+}

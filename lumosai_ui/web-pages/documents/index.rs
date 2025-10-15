@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
+use crate::types::{Dataset, Document, Rbac};
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, Dataset, Document};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(rbac: Rbac, team_id: i32, dataset: Dataset, documents: Vec<Document>) -> String {
     let page = rsx! {

@@ -1,13 +1,13 @@
 //! Language bindings for Lumos.ai
-//! 
+//!
 //! This module provides bindings for different programming languages,
 //! enabling developers to use Lumos.ai from their preferred language.
 
 pub mod typescript;
 
 pub use typescript::{
-    TypeScriptBindings, TSAgentConfig, TSAgentResponse, TSToolDefinition,
-    TSParameterSchema, TSPropertySchema, TSMemoryConfig, TSToolCall, TSUsageStats
+    TSAgentConfig, TSAgentResponse, TSMemoryConfig, TSParameterSchema, TSPropertySchema,
+    TSToolCall, TSToolDefinition, TSUsageStats, TypeScriptBindings,
 };
 
 /// Supported binding languages
@@ -48,7 +48,7 @@ pub fn generate_bindings(language: BindingLanguage) -> crate::Result<String> {
             Ok(typescript::TypeScriptBindings::generate_type_definitions())
         }
         _ => Err(crate::Error::Other(format!(
-            "Bindings for {:?} are not yet implemented", 
+            "Bindings for {:?} are not yet implemented",
             language
         ))),
     }
@@ -62,7 +62,7 @@ mod tests {
     fn test_binding_language_properties() {
         assert_eq!(BindingLanguage::TypeScript.extension(), "ts");
         assert_eq!(BindingLanguage::TypeScript.package_manager(), "npm");
-        
+
         assert_eq!(BindingLanguage::Python.extension(), "py");
         assert_eq!(BindingLanguage::Python.package_manager(), "pip");
     }
@@ -71,7 +71,7 @@ mod tests {
     fn test_generate_typescript_bindings() {
         let result = generate_bindings(BindingLanguage::TypeScript);
         assert!(result.is_ok());
-        
+
         let bindings = result.unwrap();
         assert!(bindings.contains("export interface AgentConfig"));
     }

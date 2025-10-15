@@ -5,10 +5,10 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::{Error, Result};
-use super::provider::{LlmProvider, FunctionCallingResponse};
+use super::function_calling::{FunctionCall, FunctionDefinition, ToolChoice};
+use super::provider::{FunctionCallingResponse, LlmProvider};
 use super::types::{LlmOptions, Message, Role};
-use super::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
+use crate::{Error, Result};
 
 /// 智谱AI API response structures
 #[derive(Debug, Deserialize)]
@@ -217,7 +217,7 @@ impl LlmProvider for ZhipuProvider {
 
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
-        
+
         // Build request body
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
@@ -239,7 +239,8 @@ impl LlmProvider for ZhipuProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
@@ -248,7 +249,9 @@ impl LlmProvider for ZhipuProvider {
             .map_err(|e| Error::Llm(format!("智谱AI API request failed: {}", e)))?;
 
         let status = res.status();
-        let text = res.text().await
+        let text = res
+            .text()
+            .await
             .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {}", e)))?;
 
         if !status.is_success() {
@@ -257,32 +260,36 @@ impl LlmProvider for ZhipuProvider {
                 status, text
             )));
         }
-        
+
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
             .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {}", e)))?;
-            
+
         // Extract generated text
         let content = response["choices"][0]["message"]["content"]
             .as_str()
             .ok_or_else(|| Error::Llm("Invalid response format from 智谱AI".to_string()))?;
-            
+
         Ok(content.to_string())
     }
-    
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
-        
+
         // Convert messages to 智谱AI format
         let api_messages = self.convert_messages(messages);
-        
+
         // Build request body
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": api_messages,
         });
-        
+
         // Add optional parameters
         if let Some(temperature) = options.temperature {
             body["temperature"] = serde_json::json!(temperature);
@@ -298,7 +305,8 @@ impl LlmProvider for ZhipuProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
@@ -307,7 +315,9 @@ impl LlmProvider for ZhipuProvider {
             .map_err(|e| Error::Llm(format!("智谱AI API request failed: {}", e)))?;
 
         let status = res.status();
-        let text = res.text().await
+        let text = res
+            .text()
+            .await
             .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {}", e)))?;
 
         if !status.is_success() {
@@ -316,23 +326,23 @@ impl LlmProvider for ZhipuProvider {
                 status, text
             )));
         }
-        
+
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
             .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {}", e)))?;
-            
+
         // Extract generated text
         let content = response["choices"][0]["message"]["content"]
             .as_str()
             .ok_or_else(|| Error::Llm("Invalid response format from 智谱AI".to_string()))?;
-            
+
         Ok(content.to_string())
     }
 
     async fn generate_stream<'a>(
         &'a self,
         prompt: &'a str,
-        options: &'a LlmOptions
+        options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // Convert prompt to messages format
         let messages = vec![serde_json::json!({
@@ -365,7 +375,8 @@ impl LlmProvider for ZhipuProvider {
         }
 
         // Send request
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
@@ -375,7 +386,9 @@ impl LlmProvider for ZhipuProvider {
 
         let status = response.status();
         if !status.is_success() {
-            let error_text = response.text().await
+            let error_text = response
+                .text()
+                .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(Error::Llm(format!(
                 "智谱AI streaming API returned error status {}: {}",
@@ -396,7 +409,8 @@ impl LlmProvider for ZhipuProvider {
             "input": text,
         });
 
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
@@ -405,7 +419,9 @@ impl LlmProvider for ZhipuProvider {
             .map_err(|e| Error::Llm(format!("智谱AI embedding request failed: {}", e)))?;
 
         let status = res.status();
-        let text = res.text().await
+        let text = res
+            .text()
+            .await
             .map_err(|e| Error::Llm(format!("Failed to read 智谱AI embedding response: {}", e)))?;
 
         if !status.is_success() {
@@ -419,7 +435,9 @@ impl LlmProvider for ZhipuProvider {
             .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI embedding response: {}", e)))?;
 
         if response.data.is_empty() {
-            return Err(Error::Llm("No embedding data in 智谱AI response".to_string()));
+            return Err(Error::Llm(
+                "No embedding data in 智谱AI response".to_string(),
+            ));
         }
 
         Ok(response.data[0].embedding.clone())
@@ -442,16 +460,19 @@ impl LlmProvider for ZhipuProvider {
         let api_messages = self.convert_messages(messages);
 
         // Convert function definitions to 智谱AI tools format
-        let tools: Vec<Value> = functions.iter().map(|func| {
-            serde_json::json!({
-                "type": "function",
-                "function": {
-                    "name": func.name,
-                    "description": func.description,
-                    "parameters": func.parameters
-                }
+        let tools: Vec<Value> = functions
+            .iter()
+            .map(|func| {
+                serde_json::json!({
+                    "type": "function",
+                    "function": {
+                        "name": func.name,
+                        "description": func.description,
+                        "parameters": func.parameters
+                    }
+                })
             })
-        }).collect();
+            .collect();
 
         // Convert tool choice
         let tool_choice_value = match tool_choice {
@@ -488,7 +509,8 @@ impl LlmProvider for ZhipuProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
@@ -497,7 +519,9 @@ impl LlmProvider for ZhipuProvider {
             .map_err(|e| Error::Llm(format!("智谱AI API request failed: {}", e)))?;
 
         let status = res.status();
-        let response_text = res.text().await
+        let response_text = res
+            .text()
+            .await
             .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {}", e)))?;
 
         if !status.is_success() {
@@ -519,7 +543,8 @@ impl LlmProvider for ZhipuProvider {
         let message = &choice.message;
 
         // Convert function calls
-        let function_calls: Vec<FunctionCall> = message.tool_calls
+        let function_calls: Vec<FunctionCall> = message
+            .tool_calls
             .iter()
             .filter(|tc| tc.call_type == "function")
             .map(|tc| FunctionCall {
@@ -532,7 +557,10 @@ impl LlmProvider for ZhipuProvider {
         Ok(FunctionCallingResponse {
             content: message.content.clone(),
             function_calls,
-            finish_reason: choice.finish_reason.clone().unwrap_or_else(|| "stop".to_string()),
+            finish_reason: choice
+                .finish_reason
+                .clone()
+                .unwrap_or_else(|| "stop".to_string()),
         })
     }
 }
@@ -581,7 +609,8 @@ impl ZhipuProvider {
                                 }
                                 Err(e) => {
                                     return Err(Error::Llm(format!(
-                                        "Failed to parse 智谱AI streaming response: {}", e
+                                        "Failed to parse 智谱AI streaming response: {}",
+                                        e
                                     )));
                                 }
                             }
@@ -624,7 +653,7 @@ mod tests {
         let provider = ZhipuProvider::with_base_url(
             "test-key".to_string(),
             "https://custom.api.example.com".to_string(),
-            None
+            None,
         );
         assert_eq!(provider.base_url, "https://custom.api.example.com");
     }

@@ -1,8 +1,8 @@
+use crate::error::{Error, Result};
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
-use crate::error::{Error, Result};
 
 /// 数据类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -81,14 +81,18 @@ pub struct ProcessingResult {
 #[async_trait]
 pub trait DataProcessor: Send + Sync {
     /// 处理数据
-    async fn process(&self, data: &serde_json::Value, rules: &[ProcessingRule]) -> Result<ProcessingResult>;
-    
+    async fn process(
+        &self,
+        data: &serde_json::Value,
+        rules: &[ProcessingRule],
+    ) -> Result<ProcessingResult>;
+
     /// 验证数据
     async fn validate(&self, data: &serde_json::Value, schema: &serde_json::Value) -> Result<bool>;
-    
+
     /// 获取处理器名称
     fn name(&self) -> &str;
-    
+
     /// 获取支持的操作
     fn supported_operations(&self) -> Vec<DataOperation>;
 }
@@ -141,7 +145,7 @@ impl AdvancedDataProcessor {
             cache: Arc::new(RwLock::new(HashMap::new())),
             metrics: Arc::new(RwLock::new(ProcessingMetrics::default())),
         };
-        
+
         // 注册默认处理器
         processor.register_processor(DataOperation::Clean, Box::new(TextProcessor::new()));
         processor.register_processor(DataOperation::Transform, Box::new(TextProcessor::new()));
@@ -149,24 +153,30 @@ impl AdvancedDataProcessor {
         processor.register_processor(DataOperation::Filter, Box::new(ArrayProcessor::new()));
         processor.register_processor(DataOperation::Sort, Box::new(ArrayProcessor::new()));
         processor.register_processor(DataOperation::Aggregate, Box::new(NumberProcessor::new()));
-        
+
         processor
     }
-    
+
     /// 注册数据处理器
-    pub fn register_processor(&mut self, operation: DataOperation, processor: Box<dyn DataProcessor>) {
+    pub fn register_processor(
+        &mut self,
+        operation: DataOperation,
+        processor: Box<dyn DataProcessor>,
+    ) {
         self.processors.insert(operation, processor);
     }
-    
+
     /// 注册处理管道
     pub fn register_pipeline(&self, pipeline: ProcessingPipeline) -> Result<()> {
-        let mut pipelines = self.pipelines.write()
+        let mut pipelines = self
+            .pipelines
+            .write()
             .map_err(|e| Error::Lock(format!("Failed to lock pipelines: {}", e)))?;
-        
+
         pipelines.insert(pipeline.id.clone(), pipeline);
         Ok(())
     }
-    
+
     /// 处理数据
     pub async fn process_data(
         &self,
@@ -174,17 +184,20 @@ impl AdvancedDataProcessor {
         data: serde_json::Value,
     ) -> Result<ProcessingResult> {
         let start_time = std::time::Instant::now();
-        
+
         // 获取管道
         let pipeline = {
-            let pipelines = self.pipelines.read()
+            let pipelines = self
+                .pipelines
+                .read()
                 .map_err(|e| Error::Lock(format!("Failed to lock pipelines: {}", e)))?;
-            
-            pipelines.get(pipeline_id)
+
+            pipelines
+                .get(pipeline_id)
                 .cloned()
                 .ok_or_else(|| Error::NotFound(format!("Pipeline not found: {}", pipeline_id)))?
         };
-        
+
         // 检查缓存
         let cache_key = self.generate_cache_key(pipeline_id, &data);
         if let Ok(cache) = self.cache.read() {
@@ -195,7 +208,7 @@ impl AdvancedDataProcessor {
                 return Ok(cached_result.clone());
             }
         }
-        
+
         // 验证输入数据
         if let Some(input_schema) = &pipeline.input_schema {
             if !self.validate_data(&data, input_schema).await? {
@@ -209,27 +222,30 @@ impl AdvancedDataProcessor {
                 });
             }
         }
-        
+
         // 执行处理规则
         let mut current_data = data;
         let mut errors = Vec::new();
         let mut warnings = Vec::new();
         let mut metadata = HashMap::new();
-        
+
         // 按优先级排序规则
         let mut sorted_rules = pipeline.rules.clone();
         sorted_rules.sort_by_key(|rule| rule.priority);
-        
+
         for rule in &sorted_rules {
             if !rule.enabled {
                 continue;
             }
-            
+
             // 检查条件
-            if !self.check_conditions(&rule.conditions, &current_data).await? {
+            if !self
+                .check_conditions(&rule.conditions, &current_data)
+                .await?
+            {
                 continue;
             }
-            
+
             // 执行处理
             if let Some(processor) = self.processors.get(&rule.operation) {
                 match processor.process(&current_data, &[rule.clone()]).await {
@@ -249,20 +265,23 @@ impl AdvancedDataProcessor {
                     }
                 }
             } else {
-                warnings.push(format!("No processor found for operation: {:?}", rule.operation));
+                warnings.push(format!(
+                    "No processor found for operation: {:?}",
+                    rule.operation
+                ));
             }
         }
-        
+
         // 验证输出数据
         if let Some(output_schema) = &pipeline.output_schema {
             if !self.validate_data(&current_data, output_schema).await? {
                 errors.push("Output data validation failed".to_string());
             }
         }
-        
+
         let processing_time = start_time.elapsed().as_millis() as u64;
         let success = errors.is_empty();
-        
+
         let result = ProcessingResult {
             success,
             processed_data: current_data,
@@ -271,7 +290,7 @@ impl AdvancedDataProcessor {
             metadata,
             processing_time_ms: processing_time,
         };
-        
+
         // 更新指标
         if let Ok(mut metrics) = self.metrics.write() {
             metrics.total_processed += 1;
@@ -280,19 +299,21 @@ impl AdvancedDataProcessor {
             } else {
                 metrics.failed_processed += 1;
             }
-            
+
             // 更新平均处理时间
-            let total_time = metrics.average_processing_time_ms * (metrics.total_processed - 1) as f64 + processing_time as f64;
+            let total_time = metrics.average_processing_time_ms
+                * (metrics.total_processed - 1) as f64
+                + processing_time as f64;
             metrics.average_processing_time_ms = total_time / metrics.total_processed as f64;
-            
+
             metrics.cache_misses += 1;
         }
-        
+
         // 缓存结果
         if success {
             if let Ok(mut cache) = self.cache.write() {
                 cache.insert(cache_key, result.clone());
-                
+
                 // 限制缓存大小
                 if cache.len() > 1000 {
                     let keys_to_remove: Vec<_> = cache.keys().take(100).cloned().collect();
@@ -302,10 +323,10 @@ impl AdvancedDataProcessor {
                 }
             }
         }
-        
+
         Ok(result)
     }
-    
+
     /// 批量处理数据
     pub async fn batch_process(
         &self,
@@ -322,81 +343,101 @@ impl AdvancedDataProcessor {
 
         Ok(results)
     }
-    
+
     /// 验证数据
-    async fn validate_data(&self, _data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
+    async fn validate_data(
+        &self,
+        _data: &serde_json::Value,
+        _schema: &serde_json::Value,
+    ) -> Result<bool> {
         // 简化的验证逻辑
         // 实际实现应该使用JSON Schema验证
         Ok(true)
     }
-    
+
     /// 检查条件
-    async fn check_conditions(&self, _conditions: &[String], _data: &serde_json::Value) -> Result<bool> {
+    async fn check_conditions(
+        &self,
+        _conditions: &[String],
+        _data: &serde_json::Value,
+    ) -> Result<bool> {
         // 简化的条件检查
         // 实际实现应该支持复杂的条件表达式
         Ok(true)
     }
-    
+
     /// 生成缓存键
     fn generate_cache_key(&self, pipeline_id: &str, data: &serde_json::Value) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         pipeline_id.hash(&mut hasher);
         data.to_string().hash(&mut hasher);
         format!("{:x}", hasher.finish())
     }
-    
+
     /// 克隆处理器用于并行处理
     fn clone_for_processing(&self) -> AdvancedDataProcessor {
         // 简化的克隆实现
         AdvancedDataProcessor::new()
     }
-    
+
     /// 获取处理指标
     pub fn get_metrics(&self) -> Result<ProcessingMetrics> {
-        let metrics = self.metrics.read()
+        let metrics = self
+            .metrics
+            .read()
             .map_err(|e| Error::Lock(format!("Failed to lock metrics: {}", e)))?;
-        
+
         Ok(metrics.clone())
     }
-    
+
     /// 清空缓存
     pub fn clear_cache(&self) -> Result<()> {
-        let mut cache = self.cache.write()
+        let mut cache = self
+            .cache
+            .write()
             .map_err(|e| Error::Lock(format!("Failed to lock cache: {}", e)))?;
-        
+
         cache.clear();
         Ok(())
     }
-    
+
     /// 列出所有管道
     pub fn list_pipelines(&self) -> Result<Vec<ProcessingPipeline>> {
-        let pipelines = self.pipelines.read()
+        let pipelines = self
+            .pipelines
+            .read()
             .map_err(|e| Error::Lock(format!("Failed to lock pipelines: {}", e)))?;
-        
+
         Ok(pipelines.values().cloned().collect())
     }
-    
+
     /// 获取管道
     pub fn get_pipeline(&self, pipeline_id: &str) -> Result<ProcessingPipeline> {
-        let pipelines = self.pipelines.read()
+        let pipelines = self
+            .pipelines
+            .read()
             .map_err(|e| Error::Lock(format!("Failed to lock pipelines: {}", e)))?;
-        
-        pipelines.get(pipeline_id)
+
+        pipelines
+            .get(pipeline_id)
             .cloned()
             .ok_or_else(|| Error::NotFound(format!("Pipeline not found: {}", pipeline_id)))
     }
-    
+
     /// 删除管道
     pub fn remove_pipeline(&self, pipeline_id: &str) -> Result<()> {
-        let mut pipelines = self.pipelines.write()
+        let mut pipelines = self
+            .pipelines
+            .write()
             .map_err(|e| Error::Lock(format!("Failed to lock pipelines: {}", e)))?;
-        
-        pipelines.remove(pipeline_id)
+
+        pipelines
+            .remove(pipeline_id)
             .ok_or_else(|| Error::NotFound(format!("Pipeline not found: {}", pipeline_id)))?;
-        
+
         Ok(())
     }
 }
@@ -412,10 +453,14 @@ impl TextProcessor {
 
 #[async_trait]
 impl DataProcessor for TextProcessor {
-    async fn process(&self, data: &serde_json::Value, rules: &[ProcessingRule]) -> Result<ProcessingResult> {
+    async fn process(
+        &self,
+        data: &serde_json::Value,
+        rules: &[ProcessingRule],
+    ) -> Result<ProcessingResult> {
         let mut processed_data = data.clone();
         let mut warnings = Vec::new();
-        
+
         for rule in rules {
             match rule.operation {
                 DataOperation::Clean => {
@@ -445,7 +490,7 @@ impl DataProcessor for TextProcessor {
                 }
             }
         }
-        
+
         Ok(ProcessingResult {
             success: true,
             processed_data,
@@ -455,17 +500,25 @@ impl DataProcessor for TextProcessor {
             processing_time_ms: 0,
         })
     }
-    
-    async fn validate(&self, data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
+
+    async fn validate(
+        &self,
+        data: &serde_json::Value,
+        _schema: &serde_json::Value,
+    ) -> Result<bool> {
         Ok(data.is_string())
     }
-    
+
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn supported_operations(&self) -> Vec<DataOperation> {
-        vec![DataOperation::Clean, DataOperation::Transform, DataOperation::Validate]
+        vec![
+            DataOperation::Clean,
+            DataOperation::Transform,
+            DataOperation::Validate,
+        ]
     }
 }
 
@@ -479,17 +532,19 @@ impl NumberProcessor {
 
 #[async_trait]
 impl DataProcessor for NumberProcessor {
-    async fn process(&self, data: &serde_json::Value, rules: &[ProcessingRule]) -> Result<ProcessingResult> {
+    async fn process(
+        &self,
+        data: &serde_json::Value,
+        rules: &[ProcessingRule],
+    ) -> Result<ProcessingResult> {
         let mut processed_data = data.clone();
-        
+
         for rule in rules {
             match rule.operation {
                 DataOperation::Aggregate => {
                     // 数字聚合逻辑
                     if let Some(array) = processed_data.as_array() {
-                        let sum: f64 = array.iter()
-                            .filter_map(|v| v.as_f64())
-                            .sum();
+                        let sum: f64 = array.iter().filter_map(|v| v.as_f64()).sum();
                         processed_data = serde_json::json!({"sum": sum, "count": array.len()});
                     }
                 }
@@ -497,13 +552,15 @@ impl DataProcessor for NumberProcessor {
                     // 数字标准化逻辑
                     if let Some(num) = processed_data.as_f64() {
                         let normalized = (num - 0.0) / 1.0; // 简化的标准化
-                        processed_data = serde_json::Value::Number(serde_json::Number::from_f64(normalized).unwrap());
+                        processed_data = serde_json::Value::Number(
+                            serde_json::Number::from_f64(normalized).unwrap(),
+                        );
                     }
                 }
                 _ => {}
             }
         }
-        
+
         Ok(ProcessingResult {
             success: true,
             processed_data,
@@ -513,15 +570,19 @@ impl DataProcessor for NumberProcessor {
             processing_time_ms: 0,
         })
     }
-    
-    async fn validate(&self, data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
+
+    async fn validate(
+        &self,
+        data: &serde_json::Value,
+        _schema: &serde_json::Value,
+    ) -> Result<bool> {
         Ok(data.is_number())
     }
-    
+
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn supported_operations(&self) -> Vec<DataOperation> {
         vec![DataOperation::Aggregate, DataOperation::Normalize]
     }
@@ -537,18 +598,20 @@ impl ArrayProcessor {
 
 #[async_trait]
 impl DataProcessor for ArrayProcessor {
-    async fn process(&self, data: &serde_json::Value, rules: &[ProcessingRule]) -> Result<ProcessingResult> {
+    async fn process(
+        &self,
+        data: &serde_json::Value,
+        rules: &[ProcessingRule],
+    ) -> Result<ProcessingResult> {
         let mut processed_data = data.clone();
-        
+
         for rule in rules {
             match rule.operation {
                 DataOperation::Filter => {
                     // 数组过滤逻辑
                     if let Some(array) = processed_data.as_array() {
-                        let filtered: Vec<_> = array.iter()
-                            .filter(|v| !v.is_null())
-                            .cloned()
-                            .collect();
+                        let filtered: Vec<_> =
+                            array.iter().filter(|v| !v.is_null()).cloned().collect();
                         processed_data = serde_json::Value::Array(filtered);
                     }
                 }
@@ -556,11 +619,9 @@ impl DataProcessor for ArrayProcessor {
                     // 数组排序逻辑
                     if let Some(array) = processed_data.as_array() {
                         let mut sorted = array.clone();
-                        sorted.sort_by(|a, b| {
-                            match (a.as_str(), b.as_str()) {
-                                (Some(a_str), Some(b_str)) => a_str.cmp(b_str),
-                                _ => std::cmp::Ordering::Equal,
-                            }
+                        sorted.sort_by(|a, b| match (a.as_str(), b.as_str()) {
+                            (Some(a_str), Some(b_str)) => a_str.cmp(b_str),
+                            _ => std::cmp::Ordering::Equal,
                         });
                         processed_data = serde_json::Value::Array(sorted);
                     }
@@ -580,7 +641,7 @@ impl DataProcessor for ArrayProcessor {
                 _ => {}
             }
         }
-        
+
         Ok(ProcessingResult {
             success: true,
             processed_data,
@@ -590,17 +651,25 @@ impl DataProcessor for ArrayProcessor {
             processing_time_ms: 0,
         })
     }
-    
-    async fn validate(&self, data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
+
+    async fn validate(
+        &self,
+        data: &serde_json::Value,
+        _schema: &serde_json::Value,
+    ) -> Result<bool> {
         Ok(data.is_array())
     }
-    
+
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn supported_operations(&self) -> Vec<DataOperation> {
-        vec![DataOperation::Filter, DataOperation::Sort, DataOperation::Deduplicate]
+        vec![
+            DataOperation::Filter,
+            DataOperation::Sort,
+            DataOperation::Deduplicate,
+        ]
     }
 }
 
@@ -614,9 +683,13 @@ impl ObjectProcessor {
 
 #[async_trait]
 impl DataProcessor for ObjectProcessor {
-    async fn process(&self, data: &serde_json::Value, rules: &[ProcessingRule]) -> Result<ProcessingResult> {
+    async fn process(
+        &self,
+        data: &serde_json::Value,
+        rules: &[ProcessingRule],
+    ) -> Result<ProcessingResult> {
         let mut processed_data = data.clone();
-        
+
         for rule in rules {
             match rule.operation {
                 DataOperation::Transform => {
@@ -632,7 +705,7 @@ impl DataProcessor for ObjectProcessor {
                 _ => {}
             }
         }
-        
+
         Ok(ProcessingResult {
             success: true,
             processed_data,
@@ -642,15 +715,19 @@ impl DataProcessor for ObjectProcessor {
             processing_time_ms: 0,
         })
     }
-    
-    async fn validate(&self, data: &serde_json::Value, _schema: &serde_json::Value) -> Result<bool> {
+
+    async fn validate(
+        &self,
+        data: &serde_json::Value,
+        _schema: &serde_json::Value,
+    ) -> Result<bool> {
         Ok(data.is_object())
     }
-    
+
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn supported_operations(&self) -> Vec<DataOperation> {
         vec![DataOperation::Transform]
     }

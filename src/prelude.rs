@@ -4,32 +4,29 @@
 //! 通过`use lumos::prelude::*;`可以一次性导入所有常用API。
 
 // 核心错误和结果类型
-pub use crate::{Error, Result, Message, Role};
+pub use crate::{Error, Message, Result, Role};
 
 // 向量存储相关
-pub use crate::vector::{VectorStorage, MemoryStorage};
 #[cfg(feature = "postgres")]
 pub use crate::vector::PostgresStorage;
+pub use crate::vector::{MemoryStorage, VectorStorage};
 
 // RAG系统相关
-pub use crate::rag::{RagSystem, SimpleRag, Document, SearchResult};
+pub use crate::rag::{Document, RagSystem, SearchResult, SimpleRag};
 
 // Agent相关
-pub use crate::agent::{SimpleAgent, AgentBuilder, AgentResponse};
+pub use crate::agent::{AgentBuilder, AgentResponse, SimpleAgent};
 pub use lumosai_core::agent::Agent;
 
 // 会话管理
 pub use crate::session::{Session, SessionManager, SessionState};
 
 // 事件系统
-pub use crate::events::{EventBus, AgentEvent, EventHandler};
+pub use crate::events::{AgentEvent, EventBus, EventHandler};
 
 // 编排系统
 pub use crate::orchestration::{
-    OrchestrationPattern as Pattern,
-    CollaborationTask,
-    AgentOrchestrator,
-    BasicOrchestrator,
+    AgentOrchestrator, BasicOrchestrator, CollaborationTask, OrchestrationPattern as Pattern,
 };
 
 // 核心trait重导出
@@ -41,10 +38,7 @@ pub use lumosai_core::tool::Tool;
 pub use lumosai_vector_core::prelude::IndexConfig;
 
 // RAG trait
-pub use lumosai_rag::{
-    types::ChunkingStrategy,
-    embedding::EmbeddingProvider,
-};
+pub use lumosai_rag::{embedding::EmbeddingProvider, types::ChunkingStrategy};
 
 // UI组件相关 (可选功能)
 #[cfg(feature = "ui")]
@@ -55,12 +49,12 @@ pub use crate::ui::prelude::*;
 pub use lumos_macro::*;
 
 // 异步运行时相关
-pub use tokio;
 pub use futures;
+pub use tokio;
 
 // 序列化相关
+pub use serde::{Deserialize, Serialize};
 pub use serde_json;
-pub use serde::{Serialize, Deserialize};
 
 // 时间相关
 pub use chrono::{DateTime, Utc};

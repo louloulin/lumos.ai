@@ -1,27 +1,27 @@
 //! 合规监控模块
-//! 
+//!
 //! 支持SOC2、GDPR、HIPAA等标准
 
 use async_trait::async_trait;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc, Duration};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
+use super::{audit::AuditEvent, ComplianceSeverity};
 use crate::error::{LumosError, Result};
-use super::{ComplianceSeverity, audit::AuditEvent};
 
 /// 合规配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceConfig {
     /// 启用的合规标准
     pub enabled_standards: Vec<ComplianceStandard>,
-    
+
     /// 检查间隔（小时）
     pub check_interval_hours: u64,
-    
+
     /// 自动修复配置
     pub auto_remediation: AutoRemediationConfig,
-    
+
     /// 报告配置
     pub reporting: ReportingConfig,
 }
@@ -29,10 +29,7 @@ pub struct ComplianceConfig {
 impl Default for ComplianceConfig {
     fn default() -> Self {
         Self {
-            enabled_standards: vec![
-                ComplianceStandard::SOC2,
-                ComplianceStandard::GDPR,
-            ],
+            enabled_standards: vec![ComplianceStandard::SOC2, ComplianceStandard::GDPR],
             check_interval_hours: 24,
             auto_remediation: AutoRemediationConfig::default(),
             reporting: ReportingConfig::default(),
@@ -100,7 +97,10 @@ pub struct ComplianceMonitor {
 /// 合规规则引擎trait
 #[async_trait]
 pub trait ComplianceRuleEngine: Send + Sync {
-    async fn check_compliance(&self, context: &ComplianceContext) -> Result<Vec<ComplianceViolation>>;
+    async fn check_compliance(
+        &self,
+        context: &ComplianceContext,
+    ) -> Result<Vec<ComplianceViolation>>;
     async fn get_requirements(&self) -> Result<Vec<ComplianceRequirement>>;
 }
 
@@ -213,25 +213,27 @@ pub struct StandardStatus {
 impl ComplianceMonitor {
     /// 创建新的合规监控器
     pub async fn new(config: &ComplianceConfig) -> Result<Self> {
-        let mut rule_engines: HashMap<ComplianceStandard, Box<dyn ComplianceRuleEngine>> = HashMap::new();
-        
+        let mut rule_engines: HashMap<ComplianceStandard, Box<dyn ComplianceRuleEngine>> =
+            HashMap::new();
+
         for standard in &config.enabled_standards {
             let engine: Box<dyn ComplianceRuleEngine> = match standard {
                 ComplianceStandard::SOC2 => Box::new(SOC2RuleEngine::new().await?),
                 ComplianceStandard::GDPR => Box::new(GDPRRuleEngine::new().await?),
                 ComplianceStandard::HIPAA => Box::new(HIPAARuleEngine::new().await?),
                 _ => {
-                    return Err(LumosError::SecurityError(
-                        format!("Unsupported compliance standard: {:?}", standard)
-                    ));
+                    return Err(LumosError::SecurityError(format!(
+                        "Unsupported compliance standard: {:?}",
+                        standard
+                    )));
                 }
             };
             rule_engines.insert(standard.clone(), engine);
         }
-        
+
         let violation_tracker = ViolationTracker::new();
         let remediation_engine = RemediationEngine::new(&config.auto_remediation).await?;
-        
+
         Ok(Self {
             config: config.clone(),
             rule_engines,
@@ -239,27 +241,29 @@ impl ComplianceMonitor {
             remediation_engine,
         })
     }
-    
+
     /// 检查合规性
-    pub async fn check_compliance(&mut self, standard: ComplianceStandard) -> Result<ComplianceReport> {
+    pub async fn check_compliance(
+        &mut self,
+        standard: ComplianceStandard,
+    ) -> Result<ComplianceReport> {
         let context = self.build_compliance_context().await?;
-        
-        let engine = self.rule_engines.get(&standard)
-            .ok_or_else(|| LumosError::SecurityError(
-                format!("No rule engine for standard: {:?}", standard)
-            ))?;
-        
+
+        let engine = self.rule_engines.get(&standard).ok_or_else(|| {
+            LumosError::SecurityError(format!("No rule engine for standard: {:?}", standard))
+        })?;
+
         let violations = engine.check_compliance(&context).await?;
         let requirements = engine.get_requirements().await?;
-        
+
         // 处理违规
         for violation in &violations {
             self.process_violation(violation).await?;
         }
-        
+
         // 计算合规分数
         let compliance_score = self.calculate_compliance_score(&requirements, &violations);
-        
+
         Ok(ComplianceReport {
             standard: standard.clone(),
             report_period: (Utc::now() - Duration::days(1), Utc::now()),
@@ -271,33 +275,36 @@ impl ComplianceMonitor {
             generated_at: Utc::now(),
         })
     }
-    
+
     /// 获取合规状态
     pub async fn get_status(&self) -> Result<ComplianceStatus> {
         let mut standards_status = HashMap::new();
         let mut total_score = 0.0;
         let mut total_violations = 0;
-        
+
         for standard in &self.config.enabled_standards {
             let violations = self.violation_tracker.get_violations_for_standard(standard);
             let score = 1.0 - (violations.len() as f64 / 100.0).min(1.0); // 简化计算
-            
-            standards_status.insert(standard.clone(), StandardStatus {
-                compliance_score: score,
-                violations: violations.len(),
-                last_check: Utc::now(),
-            });
-            
+
+            standards_status.insert(
+                standard.clone(),
+                StandardStatus {
+                    compliance_score: score,
+                    violations: violations.len(),
+                    last_check: Utc::now(),
+                },
+            );
+
             total_score += score;
             total_violations += violations.len();
         }
-        
+
         let overall_score = if !self.config.enabled_standards.is_empty() {
             total_score / self.config.enabled_standards.len() as f64
         } else {
             1.0
         };
-        
+
         Ok(ComplianceStatus {
             overall_compliance_score: overall_score,
             standards_status,
@@ -306,20 +313,22 @@ impl ComplianceMonitor {
             last_check: Utc::now(),
         })
     }
-    
+
     /// 处理违规
     async fn process_violation(&mut self, violation: &ComplianceViolation) -> Result<()> {
         // 记录违规
         self.violation_tracker.add_violation(violation.clone());
-        
+
         // 尝试自动修复
         if self.config.auto_remediation.enabled {
-            self.remediation_engine.attempt_remediation(violation).await?;
+            self.remediation_engine
+                .attempt_remediation(violation)
+                .await?;
         }
-        
+
         Ok(())
     }
-    
+
     /// 构建合规上下文
     async fn build_compliance_context(&self) -> Result<ComplianceContext> {
         Ok(ComplianceContext {
@@ -329,27 +338,39 @@ impl ComplianceMonitor {
             check_timestamp: Utc::now(),
         })
     }
-    
+
     /// 计算合规分数
-    fn calculate_compliance_score(&self, requirements: &[ComplianceRequirement], violations: &[ComplianceViolation]) -> f64 {
+    fn calculate_compliance_score(
+        &self,
+        requirements: &[ComplianceRequirement],
+        violations: &[ComplianceViolation],
+    ) -> f64 {
         if requirements.is_empty() {
             return 1.0;
         }
-        
+
         let mandatory_requirements = requirements.iter().filter(|r| r.mandatory).count();
-        let mandatory_violations = violations.iter()
-            .filter(|v| requirements.iter().any(|r| r.id == v.rule_id && r.mandatory))
+        let mandatory_violations = violations
+            .iter()
+            .filter(|v| {
+                requirements
+                    .iter()
+                    .any(|r| r.id == v.rule_id && r.mandatory)
+            })
             .count();
-        
+
         if mandatory_requirements == 0 {
             1.0
         } else {
             1.0 - (mandatory_violations as f64 / mandatory_requirements as f64)
         }
     }
-    
+
     /// 生成建议
-    async fn generate_recommendations(&self, _standard: &ComplianceStandard) -> Result<Vec<String>> {
+    async fn generate_recommendations(
+        &self,
+        _standard: &ComplianceStandard,
+    ) -> Result<Vec<String>> {
         Ok(vec![
             "Enable multi-factor authentication for all users".to_string(),
             "Implement regular security training programs".to_string(),
@@ -365,11 +386,14 @@ struct SOC2RuleEngine {
 
 #[async_trait]
 impl ComplianceRuleEngine for SOC2RuleEngine {
-    async fn check_compliance(&self, _context: &ComplianceContext) -> Result<Vec<ComplianceViolation>> {
+    async fn check_compliance(
+        &self,
+        _context: &ComplianceContext,
+    ) -> Result<Vec<ComplianceViolation>> {
         // 简化实现：返回示例违规
         Ok(vec![])
     }
-    
+
     async fn get_requirements(&self) -> Result<Vec<ComplianceRequirement>> {
         Ok(self.rules.clone())
     }
@@ -388,7 +412,7 @@ impl SOC2RuleEngine {
                 implementation_guidance: "Implement multi-factor authentication and network segmentation".to_string(),
             },
         ];
-        
+
         Ok(Self { rules })
     }
 }
@@ -400,10 +424,13 @@ struct GDPRRuleEngine {
 
 #[async_trait]
 impl ComplianceRuleEngine for GDPRRuleEngine {
-    async fn check_compliance(&self, _context: &ComplianceContext) -> Result<Vec<ComplianceViolation>> {
+    async fn check_compliance(
+        &self,
+        _context: &ComplianceContext,
+    ) -> Result<Vec<ComplianceViolation>> {
         Ok(vec![])
     }
-    
+
     async fn get_requirements(&self) -> Result<Vec<ComplianceRequirement>> {
         Ok(self.rules.clone())
     }
@@ -422,7 +449,7 @@ impl GDPRRuleEngine {
                 implementation_guidance: "Implement encryption, access controls, and regular security assessments".to_string(),
             },
         ];
-        
+
         Ok(Self { rules })
     }
 }
@@ -434,10 +461,13 @@ struct HIPAARuleEngine {
 
 #[async_trait]
 impl ComplianceRuleEngine for HIPAARuleEngine {
-    async fn check_compliance(&self, _context: &ComplianceContext) -> Result<Vec<ComplianceViolation>> {
+    async fn check_compliance(
+        &self,
+        _context: &ComplianceContext,
+    ) -> Result<Vec<ComplianceViolation>> {
         Ok(vec![])
     }
-    
+
     async fn get_requirements(&self) -> Result<Vec<ComplianceRequirement>> {
         Ok(self.rules.clone())
     }
@@ -456,7 +486,7 @@ impl HIPAARuleEngine {
                 implementation_guidance: "Implement access controls, audit controls, integrity controls, and transmission security".to_string(),
             },
         ];
-        
+
         Ok(Self { rules })
     }
 }
@@ -468,15 +498,24 @@ impl ViolationTracker {
             violation_history: HashMap::new(),
         }
     }
-    
+
     fn add_violation(&mut self, violation: ComplianceViolation) {
         let standard_key = format!("{:?}", violation.standard);
-        self.violation_history.entry(standard_key).or_insert_with(Vec::new).push(violation.clone());
+        self.violation_history
+            .entry(standard_key)
+            .or_insert_with(Vec::new)
+            .push(violation.clone());
         self.violations.push(violation);
     }
-    
-    fn get_violations_for_standard(&self, standard: &ComplianceStandard) -> Vec<&ComplianceViolation> {
-        self.violations.iter().filter(|v| &v.standard == standard).collect()
+
+    fn get_violations_for_standard(
+        &self,
+        standard: &ComplianceStandard,
+    ) -> Vec<&ComplianceViolation> {
+        self.violations
+            .iter()
+            .filter(|v| &v.standard == standard)
+            .collect()
     }
 }
 
@@ -487,8 +526,11 @@ impl RemediationEngine {
             remediation_actions: HashMap::new(),
         })
     }
-    
-    async fn attempt_remediation(&self, _violation: &ComplianceViolation) -> Result<RemediationResult> {
+
+    async fn attempt_remediation(
+        &self,
+        _violation: &ComplianceViolation,
+    ) -> Result<RemediationResult> {
         // 简化实现
         Ok(RemediationResult {
             success: false,
@@ -502,19 +544,19 @@ impl RemediationEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_compliance_monitor_creation() {
         let config = ComplianceConfig::default();
         let monitor = ComplianceMonitor::new(&config).await;
         assert!(monitor.is_ok());
     }
-    
+
     #[tokio::test]
     async fn test_soc2_compliance_check() {
         let config = ComplianceConfig::default();
         let mut monitor = ComplianceMonitor::new(&config).await.unwrap();
-        
+
         let report = monitor.check_compliance(ComplianceStandard::SOC2).await;
         assert!(report.is_ok());
     }

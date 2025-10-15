@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
-use daisy_rsx::*;
 use crate::types::Prompt;
+use daisy_rsx::*;
 use dioxus::prelude::*;
 
 #[component]

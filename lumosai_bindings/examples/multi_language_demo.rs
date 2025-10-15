@@ -1,5 +1,5 @@
 //! 多语言绑定演示
-//! 
+//!
 //! 展示Lumos.ai多语言绑定的完整功能
 
 use lumosai_bindings::core::*;
@@ -10,49 +10,49 @@ use std::collections::HashMap;
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("🌍 Lumos.ai 多语言绑定演示");
-    println!("=" .repeat(50));
-    
+    println!("=".repeat(50));
+
     // 演示核心绑定功能
     demo_core_bindings().await?;
-    
+
     // 演示工具系统
     demo_tool_system().await?;
-    
+
     // 演示错误处理
     demo_error_handling().await?;
-    
+
     // 演示类型转换
     demo_type_conversion().await?;
-    
+
     // 演示配置管理
     demo_configuration().await?;
-    
+
     println!("\n🎉 多语言绑定演示完成！");
     println!("\n📚 支持的语言:");
     println!("  🐍 Python: pip install lumosai");
     println!("  📦 Node.js: npm install @lumosai/core");
     println!("  🌐 WebAssembly: 浏览器直接使用");
     println!("  🔧 C/Go: 通过C绑定集成");
-    
+
     Ok(())
 }
 
 /// 演示核心绑定功能
 async fn demo_core_bindings() -> Result<()> {
     println!("\n🔧 演示：核心绑定功能");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     // 创建Agent构建器
     println!("📝 创建Agent构建器...");
     let builder = CrossLangAgentBuilder::new()
         .name("multi_lang_demo")
         .instructions("你是一个多语言绑定演示助手，可以帮助用户了解Lumos.ai的各种功能")
         .model("demo_model");
-    
+
     // 构建Agent
     println!("🏗️  构建Agent...");
     let agent = builder.build()?;
-    
+
     // 获取配置
     let config = agent.get_config();
     println!("⚙️  Agent配置:");
@@ -60,7 +60,7 @@ async fn demo_core_bindings() -> Result<()> {
     println!("   超时: {}秒", config.runtime.timeout_seconds);
     println!("   重试: {}次", config.runtime.max_retries);
     println!("   并发: {}", config.runtime.concurrency_limit);
-    
+
     // 生成响应
     println!("\n💬 生成响应...");
     let test_inputs = vec![
@@ -69,7 +69,7 @@ async fn demo_core_bindings() -> Result<()> {
         "Hola, mundo!",
         "Bonjour, le monde!",
     ];
-    
+
     for input in test_inputs {
         println!("   输入: {}", input);
         match agent.generate(input) {
@@ -86,45 +86,47 @@ async fn demo_core_bindings() -> Result<()> {
         }
         println!();
     }
-    
+
     // 异步生成
     println!("🔄 异步生成响应...");
     let async_response = agent.generate_async("这是一个异步请求").await?;
     println!("   异步响应: {}", async_response.content);
-    
+
     Ok(())
 }
 
 /// 演示工具系统
 async fn demo_tool_system() -> Result<()> {
     println!("\n🛠️  演示：工具系统");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     // 创建各种工具
     let tools = vec![
         ("计算器", create_calculator_tool()),
         ("文本处理", create_text_processor_tool()),
         ("数据转换", create_data_converter_tool()),
     ];
-    
+
     for (name, tool) in tools {
         println!("🔧 工具: {}", name);
-        
+
         // 获取工具元数据
         let metadata = tool.metadata();
         println!("   名称: {}", metadata.name);
         println!("   描述: {}", metadata.description);
         println!("   类型: {}", metadata.tool_type);
         println!("   异步: {}", metadata.is_async);
-        
+
         // 执行工具
         let test_params = match metadata.name.as_str() {
             "calculator" => serde_json::json!({"expression": "2 + 2 * 3"}),
-            "text_processor" => serde_json::json!({"text": "Hello World", "operation": "uppercase"}),
+            "text_processor" => {
+                serde_json::json!({"text": "Hello World", "operation": "uppercase"})
+            }
             "data_converter" => serde_json::json!({"data": "[1,2,3]", "format": "csv"}),
             _ => serde_json::json!({}),
         };
-        
+
         match tool.execute(test_params) {
             Ok(result) => {
                 println!("   执行结果:");
@@ -141,15 +143,15 @@ async fn demo_tool_system() -> Result<()> {
         }
         println!();
     }
-    
+
     Ok(())
 }
 
 /// 演示错误处理
 async fn demo_error_handling() -> Result<()> {
     println!("\n❌ 演示：错误处理");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     // 测试各种错误类型
     let errors = vec![
         BindingError::core("核心模块错误"),
@@ -159,90 +161,98 @@ async fn demo_error_handling() -> Result<()> {
         BindingError::tool("calculator", "除零错误"),
         BindingError::serialization("JSON解析失败"),
     ];
-    
+
     for error in errors {
         println!("🚨 错误类型: {}", error.error_code());
         println!("   消息: {}", error);
         println!("   可重试: {}", error.is_retryable());
-        
+
         let context = error.context();
         println!("   分类: {:?}", context.category);
         println!("   严重程度: {:?}", context.severity);
-        println!("   建议: {:?}", context.suggestions.get(0).unwrap_or(&"无".to_string()));
-        
+        println!(
+            "   建议: {:?}",
+            context.suggestions.get(0).unwrap_or(&"无".to_string())
+        );
+
         if let Some(doc_url) = &context.documentation_url {
             println!("   文档: {}", doc_url);
         }
         println!();
     }
-    
+
     Ok(())
 }
 
 /// 演示类型转换
 async fn demo_type_conversion() -> Result<()> {
     println!("\n🔄 演示：类型转换");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     use lumosai_bindings::types::conversion::*;
-    
+
     // 测试各种数据类型
     let test_values = vec![
         ("字符串", serde_json::json!("Hello, World!")),
         ("数字", serde_json::json!(42.5)),
         ("布尔值", serde_json::json!(true)),
         ("数组", serde_json::json!([1, 2, 3, 4, 5])),
-        ("对象", serde_json::json!({
-            "name": "Lumos.ai",
-            "version": "0.1.0",
-            "features": ["multi-language", "high-performance"]
-        })),
+        (
+            "对象",
+            serde_json::json!({
+                "name": "Lumos.ai",
+                "version": "0.1.0",
+                "features": ["multi-language", "high-performance"]
+            }),
+        ),
     ];
-    
+
     for (type_name, value) in test_values {
         println!("📊 类型: {}", type_name);
         println!("   原始值: {}", value);
-        
+
         // 转换为跨语言值
         let cross_lang_value = to_cross_lang_value(&value);
         println!("   跨语言值: {}", cross_lang_value);
-        
+
         // 转换回原始值
         let back_value = from_cross_lang_value(&cross_lang_value);
         println!("   转换回值: {}", back_value);
-        
+
         // 验证一致性
         let is_consistent = value == back_value;
         println!("   一致性: {}", if is_consistent { "✅" } else { "❌" });
         println!();
     }
-    
+
     Ok(())
 }
 
 /// 演示配置管理
 async fn demo_configuration() -> Result<()> {
     println!("\n⚙️  演示：配置管理");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     // 创建各种配置
     let configs = vec![
         ("性能配置", create_performance_config()),
         ("安全配置", create_security_config()),
         ("日志配置", create_logging_config()),
     ];
-    
+
     for (name, config) in configs {
         println!("📋 配置类型: {}", name);
-        
+
         match name {
             "性能配置" => {
                 if let ConfigOptions { performance, .. } = config {
                     println!("   超时时间: {}秒", performance.timeout_seconds);
                     println!("   启用缓存: {}", performance.enable_cache);
                     println!("   缓存大小: {:?}", performance.cache_size);
-                    println!("   内存限制: {:?}MB", 
-                            performance.memory_limit_bytes.map(|b| b / 1024 / 1024));
+                    println!(
+                        "   内存限制: {:?}MB",
+                        performance.memory_limit_bytes.map(|b| b / 1024 / 1024)
+                    );
                 }
             }
             "安全配置" => {
@@ -265,7 +275,7 @@ async fn demo_configuration() -> Result<()> {
         }
         println!();
     }
-    
+
     Ok(())
 }
 
@@ -288,7 +298,7 @@ fn create_calculator_tool() -> CrossLangTool {
         tool_type: "math".to_string(),
         is_async: false,
     };
-    
+
     CrossLangTool::new(tool, metadata)
 }
 
@@ -316,7 +326,7 @@ fn create_text_processor_tool() -> CrossLangTool {
         tool_type: "text".to_string(),
         is_async: false,
     };
-    
+
     CrossLangTool::new(tool, metadata)
 }
 
@@ -344,7 +354,7 @@ fn create_data_converter_tool() -> CrossLangTool {
         tool_type: "data".to_string(),
         is_async: false,
     };
-    
+
     CrossLangTool::new(tool, metadata)
 }
 
@@ -384,10 +394,7 @@ fn create_security_config() -> ConfigOptions {
                 "api.anthropic.com".to_string(),
                 "api.deepseek.com".to_string(),
             ],
-            forbidden_operations: vec![
-                "file_delete".to_string(),
-                "system_shutdown".to_string(),
-            ],
+            forbidden_operations: vec!["file_delete".to_string(), "system_shutdown".to_string()],
             require_api_key: true,
         },
         logging: LoggingConfig::default(),

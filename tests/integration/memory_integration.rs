@@ -7,7 +7,7 @@ use lumosai::prelude::*;
 #[ignore] // Temporarily disabled - memory system not yet fully implemented
 async fn test_memory_integration() {
     init_test_env();
-    
+
     // Test memory integration
     // TODO: Implement when memory system is ready
     assert!(true, "Memory integration tests placeholder");
@@ -17,7 +17,7 @@ async fn test_memory_integration() {
 #[ignore] // Temporarily disabled - memory system not yet fully implemented
 async fn test_memory_agent_integration() {
     init_test_env();
-    
+
     // Test memory agent integration
     // TODO: Implement when memory system is ready
     assert!(true, "Memory integration tests placeholder");

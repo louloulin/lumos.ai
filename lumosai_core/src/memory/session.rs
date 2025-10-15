@@ -1,19 +1,21 @@
 //! Session Management module for managing agent conversations and context
-//! 
+//!
 //! This module provides session-based conversation management, building on top of Memory Threads
 //! to provide higher-level abstractions for conversation flow and context management.
 
-use std::collections::HashMap;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 use uuid::Uuid;
 
+use super::thread::{
+    CreateThreadParams, MemoryThread, MemoryThreadManager, MemoryThreadStorage, UpdateThreadParams,
+};
+use super::MemoryConfig;
+use crate::error::Error;
 use crate::llm::Message;
 use crate::Result;
-use crate::error::Error;
-use super::thread::{MemoryThread, MemoryThreadManager, MemoryThreadStorage, CreateThreadParams, UpdateThreadParams};
-use super::MemoryConfig;
 
 /// Session state for tracking conversation progress
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -205,7 +207,7 @@ impl Default for SessionConfig {
     fn default() -> Self {
         Self {
             max_duration_seconds: Some(3600), // 1 hour
-            timeout_seconds: Some(1800),     // 30 minutes
+            timeout_seconds: Some(1800),      // 30 minutes
             max_messages: Some(100),
             auto_archive: false,
             extract_action_items: true,
@@ -269,22 +271,22 @@ impl Session {
     pub fn set_state(&mut self, new_state: SessionState) -> Result<()> {
         match (&self.state, &new_state) {
             // Valid transitions
-            (SessionState::Active, SessionState::Paused) => {},
+            (SessionState::Active, SessionState::Paused) => {}
             (SessionState::Active, SessionState::Ended) => {
                 self.ended_at = Some(Utc::now());
-            },
+            }
             (SessionState::Active, SessionState::Terminated) => {
                 self.ended_at = Some(Utc::now());
-            },
-            (SessionState::Paused, SessionState::Active) => {},
+            }
+            (SessionState::Paused, SessionState::Active) => {}
             (SessionState::Paused, SessionState::Ended) => {
                 self.ended_at = Some(Utc::now());
-            },
+            }
             (SessionState::Paused, SessionState::Terminated) => {
                 self.ended_at = Some(Utc::now());
-            },
-            (SessionState::Ended, SessionState::Archived) => {},
-            (SessionState::Terminated, SessionState::Archived) => {},
+            }
+            (SessionState::Ended, SessionState::Archived) => {}
+            (SessionState::Terminated, SessionState::Archived) => {}
             // Invalid transitions
             _ => {
                 return Err(Error::InvalidOperation(format!(
@@ -318,7 +320,12 @@ impl Session {
 
     /// Mark an action item as completed
     pub fn complete_action_item(&mut self, action_id: &str) -> Result<()> {
-        if let Some(action) = self.context.action_items.iter_mut().find(|a| a.id == action_id) {
+        if let Some(action) = self
+            .context
+            .action_items
+            .iter_mut()
+            .find(|a| a.id == action_id)
+        {
             action.completed = true;
             self.updated_at = Utc::now();
             Ok(())
@@ -364,7 +371,10 @@ impl Session {
 
     /// Check if session has ended
     pub fn is_ended(&self) -> bool {
-        matches!(self.state, SessionState::Ended | SessionState::Terminated | SessionState::Archived)
+        matches!(
+            self.state,
+            SessionState::Ended | SessionState::Terminated | SessionState::Archived
+        )
     }
 
     /// Mark session as started
@@ -413,8 +423,14 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
             resource_id: session.resource_id.clone(),
             metadata: Some({
                 let mut metadata = HashMap::new();
-                metadata.insert("session_id".to_string(), serde_json::Value::String(session.id.clone()));
-                metadata.insert("session_type".to_string(), serde_json::Value::String("conversation".to_string()));
+                metadata.insert(
+                    "session_id".to_string(),
+                    serde_json::Value::String(session.id.clone()),
+                );
+                metadata.insert(
+                    "session_type".to_string(),
+                    serde_json::Value::String("conversation".to_string()),
+                );
                 metadata
             }),
         };
@@ -440,7 +456,11 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
     }
 
     /// Update a session
-    pub async fn update_session(&mut self, session_id: &str, params: UpdateSessionParams) -> Result<Session> {
+    pub async fn update_session(
+        &mut self,
+        session_id: &str,
+        params: UpdateSessionParams,
+    ) -> Result<Session> {
         let mut session = self
             .get_session(session_id)
             .await?
@@ -449,7 +469,8 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         session.update(params)?;
 
         // Update cache
-        self.sessions.insert(session_id.to_string(), session.clone());
+        self.sessions
+            .insert(session_id.to_string(), session.clone());
 
         // TODO: Persist to storage
 
@@ -457,11 +478,17 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
     }
 
     /// Delete a session and its associated thread
-    pub async fn delete_session(&mut self, session_id: &str, resource_id: Option<&str>) -> Result<()> {
+    pub async fn delete_session(
+        &mut self,
+        session_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<()> {
         if let Some(session) = self.get_session(session_id).await? {
             // Delete the associated memory thread
-            self.thread_manager.delete_thread(&session.thread_id, resource_id).await?;
-            
+            self.thread_manager
+                .delete_thread(&session.thread_id, resource_id)
+                .await?;
+
             // Remove from cache
             self.sessions.remove(session_id);
         }
@@ -490,7 +517,8 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         // Mark session as started if this is the first message
         if !session.is_started() {
             session.mark_started();
-            self.sessions.insert(session_id.to_string(), session.clone());
+            self.sessions
+                .insert(session_id.to_string(), session.clone());
         }
 
         // Add message to the associated thread
@@ -528,35 +556,47 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
 
     /// Pause a session
     pub async fn pause_session(&mut self, session_id: &str) -> Result<Session> {
-        self.update_session(session_id, UpdateSessionParams {
-            title: None,
-            state: Some(SessionState::Paused),
-            context: None,
-            config: None,
-            metadata: None,
-        }).await
+        self.update_session(
+            session_id,
+            UpdateSessionParams {
+                title: None,
+                state: Some(SessionState::Paused),
+                context: None,
+                config: None,
+                metadata: None,
+            },
+        )
+        .await
     }
 
     /// Resume a paused session
     pub async fn resume_session(&mut self, session_id: &str) -> Result<Session> {
-        self.update_session(session_id, UpdateSessionParams {
-            title: None,
-            state: Some(SessionState::Active),
-            context: None,
-            config: None,
-            metadata: None,
-        }).await
+        self.update_session(
+            session_id,
+            UpdateSessionParams {
+                title: None,
+                state: Some(SessionState::Active),
+                context: None,
+                config: None,
+                metadata: None,
+            },
+        )
+        .await
     }
 
     /// End a session
     pub async fn end_session(&mut self, session_id: &str) -> Result<Session> {
-        self.update_session(session_id, UpdateSessionParams {
-            title: None,
-            state: Some(SessionState::Ended),
-            context: None,
-            config: None,
-            metadata: None,
-        }).await
+        self.update_session(
+            session_id,
+            UpdateSessionParams {
+                title: None,
+                state: Some(SessionState::Ended),
+                context: None,
+                config: None,
+                metadata: None,
+            },
+        )
+        .await
     }
 
     /// Get session statistics
@@ -582,7 +622,11 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
             user_message_count: thread_stats.user_message_count,
             assistant_message_count: thread_stats.assistant_message_count,
             action_item_count: session.context.action_items.len(),
-            topic_count: if session.context.current_topic.is_some() { 1 } else { 0 } + session.context.tags.len(),
+            topic_count: if session.context.current_topic.is_some() {
+                1
+            } else {
+                0
+            } + session.context.tags.len(),
             avg_response_time_ms: None, // TODO: Calculate from message timestamps
         })
     }
@@ -593,7 +637,10 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
             .sessions
             .values()
             .filter(|session| {
-                session.resource_id.as_ref().map_or(false, |rid| rid == resource_id)
+                session
+                    .resource_id
+                    .as_ref()
+                    .map_or(false, |rid| rid == resource_id)
                     && session.is_active()
             })
             .cloned()
@@ -661,14 +708,14 @@ mod tests {
 
         let mut session = Session::new(params);
 
-        let action_id = session.add_action_item(
-            "Complete task".to_string(),
-            Some(Priority::High),
-        );
+        let action_id = session.add_action_item("Complete task".to_string(), Some(Priority::High));
 
         assert_eq!(session.context.action_items.len(), 1);
         assert_eq!(session.context.action_items[0].description, "Complete task");
-        assert_eq!(session.context.action_items[0].priority, Some(Priority::High));
+        assert_eq!(
+            session.context.action_items[0].priority,
+            Some(Priority::High)
+        );
         assert!(!session.context.action_items[0].completed);
 
         assert!(session.complete_action_item(&action_id).is_ok());
@@ -695,7 +742,10 @@ mod tests {
         session.add_tag("follow-up".to_string());
 
         assert_eq!(session.context.facts.len(), 2);
-        assert_eq!(session.context.current_topic, Some("Project planning".to_string()));
+        assert_eq!(
+            session.context.current_topic,
+            Some("Project planning".to_string())
+        );
         assert_eq!(session.context.tags.len(), 2);
         assert!(session.context.tags.contains(&"important".to_string()));
     }

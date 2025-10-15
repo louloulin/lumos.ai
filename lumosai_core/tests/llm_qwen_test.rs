@@ -1,12 +1,12 @@
-use std::env;
-use lumosai_core::llm::{LlmOptions, QwenProvider, LlmProvider, QwenApiType};
-use lumosai_core::llm::types::{user_message, system_message, assistant_message};
+use lumosai_core::llm::types::{assistant_message, system_message, user_message};
+use lumosai_core::llm::{LlmOptions, LlmProvider, QwenApiType, QwenProvider};
 use serde_json::json;
+use std::env;
 
 /// Run Qwen LLM test with your own API key
-/// 
+///
 /// To run this test, you need to set the QWEN_API_KEY environment variable
-/// 
+///
 /// ```bash
 /// QWEN_API_KEY=your_api_key cargo test --test llm_qwen_test
 /// ```
@@ -23,14 +23,18 @@ async fn test_qwen_provider() {
 
     // Create Qwen provider with DashScope API
     let provider = QwenProvider::new_with_defaults(api_key, "qwen-turbo");
-    
+
     // Test basic prompt
     let options = LlmOptions::default()
         .with_temperature(0.7)
         .with_max_tokens(100);
-    
+
     let result = provider.generate("Hello, who are you?", &options).await;
-    assert!(result.is_ok(), "Failed to generate text: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Failed to generate text: {:?}",
+        result.err()
+    );
     println!("Qwen response: {}", result.unwrap());
 
     // Test with messages
@@ -42,13 +46,21 @@ async fn test_qwen_provider() {
     ];
 
     let result = provider.generate_with_messages(&messages, &options).await;
-    assert!(result.is_ok(), "Failed to generate text with messages: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Failed to generate text with messages: {:?}",
+        result.err()
+    );
     println!("Qwen response with messages: {}", result.unwrap());
 
     // Test embedding
     let embedding_result = provider.get_embedding("This is a test embedding").await;
-    assert!(embedding_result.is_ok(), "Failed to get embedding: {:?}", embedding_result.err());
-    
+    assert!(
+        embedding_result.is_ok(),
+        "Failed to get embedding: {:?}",
+        embedding_result.err()
+    );
+
     let embedding = embedding_result.unwrap();
     assert!(!embedding.is_empty(), "Embedding vector is empty");
     println!("Embedding vector length: {}", embedding.len());
@@ -70,13 +82,14 @@ async fn test_qwen_openai_compatible() {
     let api_key = env::var("QWEN_OPENAI_KEY").unwrap_or_else(|_| "EMPTY".to_string());
 
     // Create provider with OpenAI-compatible API
-    let provider = QwenProvider::new_openai_compatible(api_key, "qwen2.5-7b-instruct", Some(server_url));
-    
+    let provider =
+        QwenProvider::new_openai_compatible(api_key, "qwen2.5-7b-instruct", Some(server_url));
+
     // Test basic prompt
     let options = LlmOptions::default()
         .with_temperature(0.7)
         .with_max_tokens(100);
-    
+
     let result = provider.generate("Hello, who are you?", &options).await;
     if let Ok(response) = result {
         println!("Qwen OpenAI-compatible response: {}", response);
@@ -100,7 +113,7 @@ async fn test_qwen_function_calling_dashscope() {
 
     // Create Qwen 2.5 provider with DashScope API
     let provider = QwenProvider::new_qwen25(api_key, "qwen2.5-7b-instruct");
-    
+
     // Define a weather tool
     let tools = json!([
         {
@@ -112,12 +125,12 @@ async fn test_qwen_function_calling_dashscope() {
                     "type": "object",
                     "properties": {
                         "location": {
-                            "type": "string", 
+                            "type": "string",
                             "description": "The city and state, e.g. San Francisco, CA"
                         },
                         "unit": {
                             "type": "string",
-                            "enum": ["celsius", "fahrenheit"], 
+                            "enum": ["celsius", "fahrenheit"],
                             "description": "The temperature unit to use. Infer this from the user's location."
                         }
                     },
@@ -131,9 +144,11 @@ async fn test_qwen_function_calling_dashscope() {
     let mut options = LlmOptions::default()
         .with_temperature(0.7)
         .with_max_tokens(1024);
-    
+
     options.extra.insert("tools".to_string(), tools);
-    options.extra.insert("tool_choice".to_string(), json!("auto"));
+    options
+        .extra
+        .insert("tool_choice".to_string(), json!("auto"));
 
     // Test with a weather query that should trigger the tool
     let messages = vec![
@@ -143,15 +158,15 @@ async fn test_qwen_function_calling_dashscope() {
 
     let result = provider.generate_with_messages(&messages, &options).await;
     println!("Qwen function call result: {:?}", result);
-    
+
     if let Ok(response) = result {
         // We're just checking if the response contains a function call mention
         // In a real scenario, we would parse the result and execute the function
         println!("Qwen function call response: {}", response);
         assert!(
-            response.contains("get_current_weather") || 
-            response.contains("Function:") || 
-            response.contains("weather"), 
+            response.contains("get_current_weather")
+                || response.contains("Function:")
+                || response.contains("weather"),
             "Response should contain function call or weather information"
         );
     } else {
@@ -170,13 +185,14 @@ async fn test_qwen_function_calling_openai() {
             return;
         }
     };
-    
+
     // Use empty API key if none provided (some local servers don't require API keys)
     let api_key = env::var("QWEN_OPENAI_KEY").unwrap_or_else(|_| "EMPTY".to_string());
 
     // Create provider with OpenAI-compatible API
-    let provider = QwenProvider::new_openai_compatible(api_key, "qwen2.5-7b-instruct", Some(server_url));
-    
+    let provider =
+        QwenProvider::new_openai_compatible(api_key, "qwen2.5-7b-instruct", Some(server_url));
+
     // Define a weather tool (OpenAI-compatible format)
     let tools = json!([
         {
@@ -188,12 +204,12 @@ async fn test_qwen_function_calling_openai() {
                     "type": "object",
                     "properties": {
                         "location": {
-                            "type": "string", 
+                            "type": "string",
                             "description": "The city and state, e.g. San Francisco, CA"
                         },
                         "unit": {
                             "type": "string",
-                            "enum": ["celsius", "fahrenheit"], 
+                            "enum": ["celsius", "fahrenheit"],
                             "description": "The temperature unit to use. Infer this from the user's location."
                         }
                     },
@@ -207,9 +223,11 @@ async fn test_qwen_function_calling_openai() {
     let mut options = LlmOptions::default()
         .with_temperature(0.7)
         .with_max_tokens(1024);
-    
+
     options.extra.insert("tools".to_string(), tools);
-    options.extra.insert("tool_choice".to_string(), json!("auto"));
+    options
+        .extra
+        .insert("tool_choice".to_string(), json!("auto"));
 
     // Test with a weather query that should trigger the tool
     let messages = vec![
@@ -218,17 +236,23 @@ async fn test_qwen_function_calling_openai() {
     ];
 
     let result = provider.generate_with_messages(&messages, &options).await;
-    
+
     if let Ok(response) = result {
-        println!("Qwen OpenAI-compatible function call response: {}", response);
+        println!(
+            "Qwen OpenAI-compatible function call response: {}",
+            response
+        );
         assert!(
-            response.contains("get_current_weather") || 
-            response.contains("Function:") || 
-            response.contains("weather"), 
+            response.contains("get_current_weather")
+                || response.contains("Function:")
+                || response.contains("weather"),
             "Response should contain function call or weather information"
         );
     } else {
-        println!("Note: OpenAI-compatible function calling test failed: {:?}", result.err());
+        println!(
+            "Note: OpenAI-compatible function calling test failed: {:?}",
+            result.err()
+        );
         println!("This is expected if you don't have a compatible server running with function calling support.");
     }
-} 
+}

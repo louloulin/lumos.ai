@@ -1,27 +1,27 @@
 //! 企业级计费和订阅管理系统
-//! 
+//!
 //! 提供完整的计费、订阅管理、使用量跟踪和自动化扩缩容功能
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 #![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
 #![allow(unexpected_cfgs, unused_assignments)]
 
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use async_trait::async_trait;
 
-pub mod subscription;
-pub mod usage_tracking;
 pub mod billing_engine;
 pub mod payment_processor;
 pub mod resource_manager;
+pub mod subscription;
+pub mod usage_tracking;
 
-pub use subscription::*;
-pub use usage_tracking::*;
 pub use billing_engine::*;
 pub use payment_processor::*;
 pub use resource_manager::*;
+pub use subscription::*;
+pub use usage_tracking::*;
 
 #[cfg(test)]
 mod tests;
@@ -31,28 +31,28 @@ mod tests;
 pub enum BillingError {
     #[error("Subscription not found: {0}")]
     SubscriptionNotFound(String),
-    
+
     #[error("Payment failed: {0}")]
     PaymentFailed(String),
-    
+
     #[error("Usage limit exceeded: {0}")]
     UsageLimitExceeded(String),
-    
+
     #[error("Invalid billing configuration: {0}")]
     InvalidConfiguration(String),
-    
+
     #[error("Resource allocation failed: {0}")]
     ResourceAllocationFailed(String),
-    
+
     #[error("Billing calculation error: {0}")]
     CalculationError(String),
-    
+
     #[error("Database error: {0}")]
     DatabaseError(String),
-    
+
     #[error("External service error: {0}")]
     ExternalServiceError(String),
-    
+
     #[error("Other error: {0}")]
     Other(String),
 }
@@ -82,7 +82,7 @@ impl BillingCycle {
             BillingCycle::Custom { days } => *days,
         }
     }
-    
+
     /// 计算下一个计费日期
     pub fn next_billing_date(&self, from: SystemTime) -> SystemTime {
         let duration = Duration::from_secs(self.days() as u64 * 24 * 60 * 60);
@@ -94,10 +94,7 @@ impl BillingCycle {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PricingModel {
     /// 固定价格
-    Fixed {
-        amount: f64,
-        currency: String,
-    },
+    Fixed { amount: f64, currency: String },
     /// 分层定价
     Tiered {
         tiers: Vec<PricingTier>,
@@ -223,13 +220,13 @@ impl Invoice {
         let tax_rate = 0.1; // 10% 税率
         let tax_amount = subtotal * tax_rate;
         let total_amount = subtotal + tax_amount;
-        
+
         let invoice_number = format!(
             "INV-{}-{}",
             tenant_id.to_string().split('-').next().unwrap_or("unknown"),
             now.duration_since(UNIX_EPOCH).unwrap().as_secs()
         );
-        
+
         Self {
             id: Uuid::new_v4().to_string(),
             tenant_id,
@@ -248,19 +245,19 @@ impl Invoice {
             metadata: HashMap::new(),
         }
     }
-    
+
     /// 应用折扣
     pub fn apply_discount(&mut self, discount_amount: f64) {
         self.discount_amount = discount_amount;
         self.total_amount = (self.subtotal + self.tax_amount - discount_amount).max(0.0);
     }
-    
+
     /// 标记为已付款
     pub fn mark_as_paid(&mut self) {
         self.status = InvoiceStatus::Paid;
         self.paid_at = Some(SystemTime::now());
     }
-    
+
     /// 检查是否逾期
     pub fn is_overdue(&self) -> bool {
         self.status == InvoiceStatus::Pending && SystemTime::now() > self.due_date
@@ -342,31 +339,53 @@ pub enum PaymentStatus {
 pub trait BillingManager: Send + Sync {
     /// 创建订阅
     async fn create_subscription(&self, subscription: Subscription) -> BillingResult<()>;
-    
+
     /// 更新订阅
-    async fn update_subscription(&self, subscription_id: &str, subscription: Subscription) -> BillingResult<()>;
-    
+    async fn update_subscription(
+        &self,
+        subscription_id: &str,
+        subscription: Subscription,
+    ) -> BillingResult<()>;
+
     /// 取消订阅
     async fn cancel_subscription(&self, subscription_id: &str) -> BillingResult<()>;
-    
+
     /// 获取订阅
     async fn get_subscription(&self, subscription_id: &str) -> BillingResult<Option<Subscription>>;
-    
+
     /// 记录使用量
-    async fn record_usage(&self, tenant_id: &Uuid, resource_type: &str, quantity: u64) -> BillingResult<()>;
-    
+    async fn record_usage(
+        &self,
+        tenant_id: &Uuid,
+        resource_type: &str,
+        quantity: u64,
+    ) -> BillingResult<()>;
+
     /// 生成发票
-    async fn generate_invoice(&self, tenant_id: &Uuid, billing_period: (SystemTime, SystemTime)) -> BillingResult<Invoice>;
-    
+    async fn generate_invoice(
+        &self,
+        tenant_id: &Uuid,
+        billing_period: (SystemTime, SystemTime),
+    ) -> BillingResult<Invoice>;
+
     /// 处理支付
-    async fn process_payment(&self, invoice_id: &str, payment_method: PaymentMethod) -> BillingResult<PaymentRecord>;
-    
+    async fn process_payment(
+        &self,
+        invoice_id: &str,
+        payment_method: PaymentMethod,
+    ) -> BillingResult<PaymentRecord>;
+
     /// 获取使用量统计
-    async fn get_usage_stats(&self, tenant_id: &Uuid, period: (SystemTime, SystemTime)) -> BillingResult<UsageStats>;
-    
+    async fn get_usage_stats(
+        &self,
+        tenant_id: &Uuid,
+        period: (SystemTime, SystemTime),
+    ) -> BillingResult<UsageStats>;
+
     /// 检查使用量限制
-    async fn check_usage_limit(&self, tenant_id: &Uuid, resource_type: &str) -> BillingResult<bool>;
-    
+    async fn check_usage_limit(&self, tenant_id: &Uuid, resource_type: &str)
+        -> BillingResult<bool>;
+
     /// 获取计费历史
     async fn get_billing_history(&self, tenant_id: &Uuid) -> BillingResult<Vec<Invoice>>;
 }

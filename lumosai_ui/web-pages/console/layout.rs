@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
-use crate::types::{Rbac, Capability, SinglePrompt, BionicToolDefinition};
+use crate::types::{BionicToolDefinition, Capability, Rbac, SinglePrompt};
 use dioxus::prelude::*;
 
 use super::{ChatWithChunks, PendingChatState};

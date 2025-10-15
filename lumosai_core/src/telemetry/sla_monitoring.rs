@@ -1,5 +1,5 @@
 //! SLA监控模块
-//! 
+//!
 //! 提供企业级SLA监控功能，包括：
 //! - 服务级别协议定义和监控
 //! - SLA指标计算和追踪
@@ -7,10 +7,10 @@
 //! - SLA报告生成
 
 use async_trait::async_trait;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc, Duration};
-use uuid::Uuid;
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::error::LumosError;
 
@@ -18,16 +18,16 @@ use crate::error::LumosError;
 pub struct SLAMonitor {
     /// SLA定义
     sla_definitions: HashMap<String, ServiceLevelAgreement>,
-    
+
     /// SLA指标收集器
     metrics_collector: SLAMetricsCollector,
-    
+
     /// 违约检测器
     violation_detector: ViolationDetector,
-    
+
     /// 报告生成器
     report_generator: SLAReportGenerator,
-    
+
     /// 配置
     config: SLAMonitoringConfig,
 }
@@ -37,16 +37,16 @@ pub struct SLAMonitor {
 pub struct SLAMonitoringConfig {
     /// 监控间隔（秒）
     pub monitoring_interval_seconds: u32,
-    
+
     /// 数据保留期（天）
     pub data_retention_days: u32,
-    
+
     /// 是否启用实时监控
     pub real_time_monitoring: bool,
-    
+
     /// 违约告警阈值
     pub violation_alert_threshold: f64,
-    
+
     /// 报告生成间隔（小时）
     pub report_generation_interval_hours: u32,
 }
@@ -56,31 +56,31 @@ pub struct SLAMonitoringConfig {
 pub struct ServiceLevelAgreement {
     /// SLA ID
     pub id: String,
-    
+
     /// SLA名称
     pub name: String,
-    
+
     /// 服务名称
     pub service_name: String,
-    
+
     /// SLA目标
     pub objectives: Vec<SLAObjective>,
-    
+
     /// 测量窗口
     pub measurement_window: MeasurementWindow,
-    
+
     /// 生效时间
     pub effective_from: DateTime<Utc>,
-    
+
     /// 失效时间
     pub effective_until: Option<DateTime<Utc>>,
-    
+
     /// 客户信息
     pub customer_info: Option<CustomerInfo>,
-    
+
     /// 违约后果
     pub violation_consequences: Vec<ViolationConsequence>,
-    
+
     /// 是否启用
     pub enabled: bool,
 }
@@ -90,25 +90,25 @@ pub struct ServiceLevelAgreement {
 pub struct SLAObjective {
     /// 目标ID
     pub id: String,
-    
+
     /// 目标名称
     pub name: String,
-    
+
     /// 指标类型
     pub metric_type: SLAMetricType,
-    
+
     /// 目标值
     pub target_value: f64,
-    
+
     /// 比较操作符
     pub operator: ComparisonOperator,
-    
+
     /// 测量单位
     pub unit: String,
-    
+
     /// 优先级
     pub priority: SLAPriority,
-    
+
     /// 描述
     pub description: String,
 }
@@ -118,25 +118,25 @@ pub struct SLAObjective {
 pub enum SLAMetricType {
     /// 可用性 (%)
     Availability,
-    
+
     /// 响应时间 (ms)
     ResponseTime,
-    
+
     /// 吞吐量 (requests/second)
     Throughput,
-    
+
     /// 错误率 (%)
     ErrorRate,
-    
+
     /// 恢复时间 (minutes)
     RecoveryTime,
-    
+
     /// 数据持久性 (%)
     DataDurability,
-    
+
     /// 安全性指标
     SecurityMetric,
-    
+
     /// 自定义指标
     Custom(String),
 }
@@ -146,16 +146,16 @@ pub enum SLAMetricType {
 pub enum ComparisonOperator {
     /// 大于等于
     GreaterThanOrEqual,
-    
+
     /// 小于等于
     LessThanOrEqual,
-    
+
     /// 等于
     Equal,
-    
+
     /// 大于
     GreaterThan,
-    
+
     /// 小于
     LessThan,
 }
@@ -178,10 +178,10 @@ pub enum SLAPriority {
 pub struct MeasurementWindow {
     /// 窗口类型
     pub window_type: WindowType,
-    
+
     /// 窗口大小
     pub window_size: Duration,
-    
+
     /// 滑动间隔
     pub sliding_interval: Option<Duration>,
 }
@@ -191,13 +191,13 @@ pub struct MeasurementWindow {
 pub enum WindowType {
     /// 固定窗口
     Fixed,
-    
+
     /// 滑动窗口
     Sliding,
-    
+
     /// 会话窗口
     Session,
-    
+
     /// 日历窗口
     Calendar,
 }
@@ -207,13 +207,13 @@ pub enum WindowType {
 pub struct CustomerInfo {
     /// 客户ID
     pub customer_id: String,
-    
+
     /// 客户名称
     pub customer_name: String,
-    
+
     /// 联系信息
     pub contact_info: String,
-    
+
     /// 服务等级
     pub service_tier: ServiceTier,
 }
@@ -236,16 +236,16 @@ pub enum ServiceTier {
 pub struct ViolationConsequence {
     /// 后果类型
     pub consequence_type: ConsequenceType,
-    
+
     /// 触发条件
     pub trigger_condition: ViolationTrigger,
-    
+
     /// 后果描述
     pub description: String,
-    
+
     /// 补偿金额
     pub compensation_amount: Option<f64>,
-    
+
     /// 服务信用
     pub service_credit: Option<f64>,
 }
@@ -255,16 +255,16 @@ pub struct ViolationConsequence {
 pub enum ConsequenceType {
     /// 服务信用
     ServiceCredit,
-    
+
     /// 金钱补偿
     MonetaryCompensation,
-    
+
     /// 服务升级
     ServiceUpgrade,
-    
+
     /// 优先支持
     PrioritySupport,
-    
+
     /// 自定义后果
     Custom(String),
 }
@@ -274,10 +274,10 @@ pub enum ConsequenceType {
 pub struct ViolationTrigger {
     /// 违约次数阈值
     pub violation_count_threshold: u32,
-    
+
     /// 时间窗口
     pub time_window: Duration,
-    
+
     /// 严重程度阈值
     pub severity_threshold: ViolationSeverity,
 }
@@ -299,7 +299,7 @@ pub enum ViolationSeverity {
 pub struct SLAMetricsCollector {
     /// 指标数据
     metrics_data: HashMap<String, Vec<SLAMetricPoint>>,
-    
+
     /// 聚合器
     aggregators: HashMap<SLAMetricType, MetricAggregator>,
 }
@@ -309,19 +309,19 @@ pub struct SLAMetricsCollector {
 pub struct SLAMetricPoint {
     /// 时间戳
     pub timestamp: DateTime<Utc>,
-    
+
     /// 指标类型
     pub metric_type: SLAMetricType,
-    
+
     /// 指标值
     pub value: f64,
-    
+
     /// 服务名称
     pub service_name: String,
-    
+
     /// 标签
     pub labels: HashMap<String, String>,
-    
+
     /// 元数据
     pub metadata: HashMap<String, String>,
 }
@@ -331,10 +331,10 @@ pub struct SLAMetricPoint {
 pub struct MetricAggregator {
     /// 聚合函数
     pub aggregation_function: AggregationFunction,
-    
+
     /// 聚合窗口
     pub aggregation_window: Duration,
-    
+
     /// 聚合结果缓存
     pub cached_results: HashMap<String, AggregationResult>,
 }
@@ -344,22 +344,22 @@ pub struct MetricAggregator {
 pub enum AggregationFunction {
     /// 平均值
     Average,
-    
+
     /// 最大值
     Maximum,
-    
+
     /// 最小值
     Minimum,
-    
+
     /// 总和
     Sum,
-    
+
     /// 计数
     Count,
-    
+
     /// 百分位数
     Percentile(f64),
-    
+
     /// 可用性计算
     AvailabilityCalculation,
 }
@@ -369,13 +369,13 @@ pub enum AggregationFunction {
 pub struct AggregationResult {
     /// 聚合值
     pub aggregated_value: f64,
-    
+
     /// 样本数量
     pub sample_count: u64,
-    
+
     /// 聚合时间窗口
     pub time_window: (DateTime<Utc>, DateTime<Utc>),
-    
+
     /// 计算时间
     pub calculated_at: DateTime<Utc>,
 }
@@ -384,7 +384,7 @@ pub struct AggregationResult {
 pub struct ViolationDetector {
     /// 检测到的违约
     detected_violations: Vec<SLAViolation>,
-    
+
     /// 检测规则
     detection_rules: Vec<ViolationDetectionRule>,
 }
@@ -394,40 +394,40 @@ pub struct ViolationDetector {
 pub struct SLAViolation {
     /// 违约ID
     pub id: Uuid,
-    
+
     /// SLA ID
     pub sla_id: String,
-    
+
     /// 目标ID
     pub objective_id: String,
-    
+
     /// 违约类型
     pub violation_type: ViolationType,
-    
+
     /// 实际值
     pub actual_value: f64,
-    
+
     /// 目标值
     pub target_value: f64,
-    
+
     /// 偏差
     pub deviation: f64,
-    
+
     /// 严重程度
     pub severity: ViolationSeverity,
-    
+
     /// 检测时间
     pub detected_at: DateTime<Utc>,
-    
+
     /// 持续时间
     pub duration: Option<Duration>,
-    
+
     /// 影响范围
     pub impact_scope: ImpactScope,
-    
+
     /// 根本原因
     pub root_cause: Option<String>,
-    
+
     /// 状态
     pub status: ViolationStatus,
 }
@@ -437,16 +437,16 @@ pub struct SLAViolation {
 pub enum ViolationType {
     /// 阈值违约
     ThresholdViolation,
-    
+
     /// 趋势违约
     TrendViolation,
-    
+
     /// 可用性违约
     AvailabilityViolation,
-    
+
     /// 性能违约
     PerformanceViolation,
-    
+
     /// 数据质量违约
     DataQualityViolation,
 }
@@ -456,13 +456,13 @@ pub enum ViolationType {
 pub struct ImpactScope {
     /// 受影响的服务
     pub affected_services: Vec<String>,
-    
+
     /// 受影响的用户数
     pub affected_users: Option<u64>,
-    
+
     /// 受影响的地理区域
     pub affected_regions: Vec<String>,
-    
+
     /// 业务影响
     pub business_impact: BusinessImpact,
 }
@@ -500,16 +500,16 @@ pub enum ViolationStatus {
 pub struct ViolationDetectionRule {
     /// 规则ID
     pub rule_id: String,
-    
+
     /// 规则名称
     pub rule_name: String,
-    
+
     /// 检测条件
     pub conditions: Vec<DetectionCondition>,
-    
+
     /// 检测算法
     pub detection_algorithm: DetectionAlgorithm,
-    
+
     /// 是否启用
     pub enabled: bool,
 }
@@ -519,13 +519,13 @@ pub struct ViolationDetectionRule {
 pub struct DetectionCondition {
     /// 指标类型
     pub metric_type: SLAMetricType,
-    
+
     /// 阈值
     pub threshold: f64,
-    
+
     /// 比较操作符
     pub operator: ComparisonOperator,
-    
+
     /// 持续时间
     pub duration: Duration,
 }
@@ -535,13 +535,13 @@ pub struct DetectionCondition {
 pub enum DetectionAlgorithm {
     /// 简单阈值检测
     SimpleThreshold,
-    
+
     /// 统计异常检测
     StatisticalAnomaly,
-    
+
     /// 趋势分析
     TrendAnalysis,
-    
+
     /// 机器学习检测
     MachineLearning,
 }
@@ -550,7 +550,7 @@ pub enum DetectionAlgorithm {
 pub struct SLAReportGenerator {
     /// 报告模板
     report_templates: HashMap<String, ReportTemplate>,
-    
+
     /// 生成的报告
     generated_reports: Vec<SLAReport>,
 }
@@ -560,16 +560,16 @@ pub struct SLAReportGenerator {
 pub struct ReportTemplate {
     /// 模板ID
     pub template_id: String,
-    
+
     /// 模板名称
     pub template_name: String,
-    
+
     /// 报告类型
     pub report_type: ReportType,
-    
+
     /// 包含的指标
     pub included_metrics: Vec<SLAMetricType>,
-    
+
     /// 报告格式
     pub format: ReportFormat,
 }
@@ -611,28 +611,28 @@ pub enum ReportFormat {
 pub struct SLAReport {
     /// 报告ID
     pub id: Uuid,
-    
+
     /// 报告类型
     pub report_type: ReportType,
-    
+
     /// 生成时间
     pub generated_at: DateTime<Utc>,
-    
+
     /// 报告期间
     pub report_period: (DateTime<Utc>, DateTime<Utc>),
-    
+
     /// SLA摘要
     pub sla_summary: SLASummary,
-    
+
     /// 详细指标
     pub detailed_metrics: HashMap<String, SLAMetricSummary>,
-    
+
     /// 违约摘要
     pub violation_summary: ViolationSummary,
-    
+
     /// 趋势分析
     pub trend_analysis: TrendAnalysis,
-    
+
     /// 建议
     pub recommendations: Vec<String>,
 }
@@ -642,19 +642,19 @@ pub struct SLAReport {
 pub struct SLASummary {
     /// 总SLA数量
     pub total_slas: u32,
-    
+
     /// 达标SLA数量
     pub compliant_slas: u32,
-    
+
     /// 违约SLA数量
     pub violated_slas: u32,
-    
+
     /// 整体合规率
     pub overall_compliance_rate: f64,
-    
+
     /// 平均可用性
     pub average_availability: f64,
-    
+
     /// 平均响应时间
     pub average_response_time: f64,
 }
@@ -664,19 +664,19 @@ pub struct SLASummary {
 pub struct SLAMetricSummary {
     /// 指标类型
     pub metric_type: SLAMetricType,
-    
+
     /// 目标值
     pub target_value: f64,
-    
+
     /// 实际值
     pub actual_value: f64,
-    
+
     /// 达标状态
     pub compliance_status: ComplianceStatus,
-    
+
     /// 达标率
     pub compliance_rate: f64,
-    
+
     /// 趋势
     pub trend: MetricTrend,
 }
@@ -712,16 +712,16 @@ pub enum MetricTrend {
 pub struct ViolationSummary {
     /// 总违约数
     pub total_violations: u32,
-    
+
     /// 按严重程度分组
     pub violations_by_severity: HashMap<ViolationSeverity, u32>,
-    
+
     /// 按类型分组
     pub violations_by_type: HashMap<ViolationType, u32>,
-    
+
     /// 平均解决时间
     pub average_resolution_time: f64,
-    
+
     /// 重复违约数
     pub repeat_violations: u32,
 }
@@ -731,13 +731,13 @@ pub struct ViolationSummary {
 pub struct TrendAnalysis {
     /// 可用性趋势
     pub availability_trend: Vec<TrendPoint>,
-    
+
     /// 性能趋势
     pub performance_trend: Vec<TrendPoint>,
-    
+
     /// 违约趋势
     pub violation_trend: Vec<TrendPoint>,
-    
+
     /// 预测
     pub predictions: Vec<TrendPrediction>,
 }
@@ -747,10 +747,10 @@ pub struct TrendAnalysis {
 pub struct TrendPoint {
     /// 时间戳
     pub timestamp: DateTime<Utc>,
-    
+
     /// 值
     pub value: f64,
-    
+
     /// 移动平均
     pub moving_average: Option<f64>,
 }
@@ -760,13 +760,13 @@ pub struct TrendPoint {
 pub struct TrendPrediction {
     /// 预测时间
     pub predicted_for: DateTime<Utc>,
-    
+
     /// 预测值
     pub predicted_value: f64,
-    
+
     /// 置信区间
     pub confidence_interval: (f64, f64),
-    
+
     /// 预测类型
     pub prediction_type: String,
 }
@@ -794,30 +794,33 @@ impl SLAMonitor {
             config,
         }
     }
-    
+
     /// 添加SLA定义
     pub async fn add_sla(&mut self, sla: ServiceLevelAgreement) -> Result<(), LumosError> {
         self.sla_definitions.insert(sla.id.clone(), sla);
         Ok(())
     }
-    
+
     /// 记录SLA指标
     pub async fn record_metric(&mut self, metric_point: SLAMetricPoint) -> Result<(), LumosError> {
         self.metrics_collector.record_metric(metric_point).await?;
-        
+
         // 实时检测违约
         if self.config.real_time_monitoring {
             self.check_violations().await?;
         }
-        
+
         Ok(())
     }
-    
+
     /// 检查违约
     async fn check_violations(&mut self) -> Result<(), LumosError> {
         for (sla_id, sla) in &self.sla_definitions {
             if sla.enabled {
-                let violations = self.violation_detector.detect_violations(sla, &self.metrics_collector).await?;
+                let violations = self
+                    .violation_detector
+                    .detect_violations(sla, &self.metrics_collector)
+                    .await?;
                 for violation in violations {
                     tracing::warn!("检测到SLA违约: {:?}", violation);
                     // 这里可以触发告警
@@ -826,20 +829,29 @@ impl SLAMonitor {
         }
         Ok(())
     }
-    
+
     /// 生成SLA报告
-    pub async fn generate_report(&self, report_type: ReportType, period: (DateTime<Utc>, DateTime<Utc>)) -> Result<SLAReport, LumosError> {
-        self.report_generator.generate_report(
-            report_type,
-            period,
-            &self.sla_definitions,
-            &self.metrics_collector,
-            &self.violation_detector,
-        ).await
+    pub async fn generate_report(
+        &self,
+        report_type: ReportType,
+        period: (DateTime<Utc>, DateTime<Utc>),
+    ) -> Result<SLAReport, LumosError> {
+        self.report_generator
+            .generate_report(
+                report_type,
+                period,
+                &self.sla_definitions,
+                &self.metrics_collector,
+                &self.violation_detector,
+            )
+            .await
     }
-    
+
     /// 获取SLA合规状态
-    pub async fn get_compliance_status(&self, sla_id: &str) -> Result<ComplianceStatus, LumosError> {
+    pub async fn get_compliance_status(
+        &self,
+        sla_id: &str,
+    ) -> Result<ComplianceStatus, LumosError> {
         if let Some(sla) = self.sla_definitions.get(sla_id) {
             // 简化实现
             Ok(ComplianceStatus::Compliant)
@@ -857,17 +869,20 @@ impl SLAMetricsCollector {
             aggregators: HashMap::new(),
         }
     }
-    
+
     async fn record_metric(&mut self, metric_point: SLAMetricPoint) -> Result<(), LumosError> {
-        let key = format!("{}_{:?}", metric_point.service_name, metric_point.metric_type);
+        let key = format!(
+            "{}_{:?}",
+            metric_point.service_name, metric_point.metric_type
+        );
         let metrics = self.metrics_data.entry(key).or_insert_with(Vec::new);
         metrics.push(metric_point);
-        
+
         // 限制数据大小
         if metrics.len() > 10000 {
             metrics.remove(0);
         }
-        
+
         Ok(())
     }
 }
@@ -879,8 +894,12 @@ impl ViolationDetector {
             detection_rules: Vec::new(),
         }
     }
-    
-    async fn detect_violations(&mut self, _sla: &ServiceLevelAgreement, _metrics_collector: &SLAMetricsCollector) -> Result<Vec<SLAViolation>, LumosError> {
+
+    async fn detect_violations(
+        &mut self,
+        _sla: &ServiceLevelAgreement,
+        _metrics_collector: &SLAMetricsCollector,
+    ) -> Result<Vec<SLAViolation>, LumosError> {
         // 简化实现
         Ok(Vec::new())
     }
@@ -893,7 +912,7 @@ impl SLAReportGenerator {
             generated_reports: Vec::new(),
         }
     }
-    
+
     async fn generate_report(
         &self,
         report_type: ReportType,

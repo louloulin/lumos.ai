@@ -1,14 +1,14 @@
 //! C绑定模块
-//! 
+//!
 //! 为Go、C++等语言提供C ABI兼容的绑定支持
 
+use crate::core::{CrossLangAgent, CrossLangAgentBuilder, CrossLangResponse, CrossLangTool};
+use crate::error::BindingError;
+use libc;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_uint, c_void};
 use std::ptr;
 use std::sync::Arc;
-use libc;
-use crate::core::{CrossLangAgent, CrossLangAgentBuilder, CrossLangTool, CrossLangResponse};
-use crate::error::BindingError;
 
 /// C Agent句柄
 pub type CAgent = *mut c_void;
@@ -71,14 +71,14 @@ pub extern "C" fn lumos_agent_builder_name(
     if builder.is_null() || name.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     unsafe {
         let builder_ref = &mut *(builder as *mut CrossLangAgentBuilder);
         let name_str = match CStr::from_ptr(name).to_str() {
             Ok(s) => s,
             Err(_) => return CErrorCode::InvalidParameter,
         };
-        
+
         *builder_ref = std::mem::take(builder_ref).name(name_str);
         CErrorCode::Success
     }
@@ -93,14 +93,14 @@ pub extern "C" fn lumos_agent_builder_instructions(
     if builder.is_null() || instructions.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     unsafe {
         let builder_ref = &mut *(builder as *mut CrossLangAgentBuilder);
         let instructions_str = match CStr::from_ptr(instructions).to_str() {
             Ok(s) => s,
             Err(_) => return CErrorCode::InvalidParameter,
         };
-        
+
         *builder_ref = std::mem::take(builder_ref).instructions(instructions_str);
         CErrorCode::Success
     }
@@ -115,14 +115,14 @@ pub extern "C" fn lumos_agent_builder_model(
     if builder.is_null() || model.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     unsafe {
         let builder_ref = &mut *(builder as *mut CrossLangAgentBuilder);
         let model_str = match CStr::from_ptr(model).to_str() {
             Ok(s) => s,
             Err(_) => return CErrorCode::InvalidParameter,
         };
-        
+
         *builder_ref = std::mem::take(builder_ref).model(model_str);
         CErrorCode::Success
     }
@@ -130,18 +130,15 @@ pub extern "C" fn lumos_agent_builder_model(
 
 /// 添加工具
 #[no_mangle]
-pub extern "C" fn lumos_agent_builder_tool(
-    builder: CAgentBuilder,
-    tool: CTool,
-) -> CErrorCode {
+pub extern "C" fn lumos_agent_builder_tool(builder: CAgentBuilder, tool: CTool) -> CErrorCode {
     if builder.is_null() || tool.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     unsafe {
         let builder_ref = &mut *(builder as *mut CrossLangAgentBuilder);
         let tool_ref = &*(tool as *const CrossLangTool);
-        
+
         *builder_ref = std::mem::take(builder_ref).tool(tool_ref.clone());
         CErrorCode::Success
     }
@@ -156,10 +153,10 @@ pub extern "C" fn lumos_agent_builder_build(
     if builder.is_null() || agent_out.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     unsafe {
         let builder = Box::from_raw(builder as *mut CrossLangAgentBuilder);
-        
+
         match builder.build() {
             Ok(agent) => {
                 let agent_box = Box::new(agent);
@@ -181,14 +178,14 @@ pub extern "C" fn lumos_agent_generate(
     if agent.is_null() || input.is_null() || response_out.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     unsafe {
         let agent_ref = &*(agent as *const CrossLangAgent);
         let input_str = match CStr::from_ptr(input).to_str() {
             Ok(s) => s,
             Err(_) => return CErrorCode::InvalidParameter,
         };
-        
+
         match agent_ref.generate(input_str) {
             Ok(response) => {
                 let response_box = Box::new(response);
@@ -200,7 +197,7 @@ pub extern "C" fn lumos_agent_generate(
                 BindingError::Timeout { .. } => CErrorCode::TimeoutError,
                 BindingError::Serialization { .. } => CErrorCode::SerializationError,
                 _ => CErrorCode::RuntimeError,
-            }
+            },
         }
     }
 }
@@ -214,21 +211,21 @@ pub extern "C" fn lumos_response_get_data(
     if response.is_null() || data_out.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     unsafe {
         let response_ref = &*(response as *const CrossLangResponse);
-        
+
         // 分配C字符串
         let content_cstr = match CString::new(response_ref.content.clone()) {
             Ok(s) => s,
             Err(_) => return CErrorCode::SerializationError,
         };
-        
+
         let response_type_cstr = match CString::new(format!("{:?}", response_ref.response_type)) {
             Ok(s) => s,
             Err(_) => return CErrorCode::SerializationError,
         };
-        
+
         let error_cstr = if let Some(error) = &response_ref.error {
             match CString::new(error.clone()) {
                 Ok(s) => Some(s),
@@ -237,13 +234,13 @@ pub extern "C" fn lumos_response_get_data(
         } else {
             None
         };
-        
+
         (*data_out).content = content_cstr.into_raw();
         (*data_out).response_type = response_type_cstr.into_raw();
         (*data_out).error = error_cstr.map_or(ptr::null(), |s| s.into_raw());
         (*data_out).execution_time_ms = 0; // TODO: 添加执行时间跟踪
         (*data_out).success = if response_ref.error.is_none() { 1 } else { 0 };
-        
+
         CErrorCode::Success
     }
 }
@@ -298,20 +295,20 @@ pub extern "C" fn lumos_quick_agent(
     if name.is_null() || instructions.is_null() || agent_out.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     unsafe {
         let name_str = match CStr::from_ptr(name).to_str() {
             Ok(s) => s,
             Err(_) => return CErrorCode::InvalidParameter,
         };
-        
+
         let instructions_str = match CStr::from_ptr(instructions).to_str() {
             Ok(s) => s,
             Err(_) => return CErrorCode::InvalidParameter,
         };
-        
+
         let builder = crate::core::quick_agent(name_str, instructions_str);
-        
+
         match builder.build() {
             Ok(agent) => {
                 let agent_box = Box::new(agent);
@@ -331,7 +328,7 @@ pub extern "C" fn lumos_tool_web_search(tool_out: *mut CTool) -> CErrorCode {
     if tool_out.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     let tool = lumosai_core::tools::web::web_search();
     let metadata = crate::core::ToolMetadata {
         name: "web_search".to_string(),
@@ -349,14 +346,14 @@ pub extern "C" fn lumos_tool_web_search(tool_out: *mut CTool) -> CErrorCode {
         tool_type: "web".to_string(),
         is_async: true,
     };
-    
+
     let cross_lang_tool = CrossLangTool::new(tool, metadata);
     let tool_box = Box::new(cross_lang_tool);
-    
+
     unsafe {
         *tool_out = Box::into_raw(tool_box) as CTool;
     }
-    
+
     CErrorCode::Success
 }
 
@@ -366,7 +363,7 @@ pub extern "C" fn lumos_tool_calculator(tool_out: *mut CTool) -> CErrorCode {
     if tool_out.is_null() {
         return CErrorCode::InvalidParameter;
     }
-    
+
     let tool = lumosai_core::tools::math::calculator();
     let metadata = crate::core::ToolMetadata {
         name: "calculator".to_string(),
@@ -384,14 +381,14 @@ pub extern "C" fn lumos_tool_calculator(tool_out: *mut CTool) -> CErrorCode {
         tool_type: "math".to_string(),
         is_async: false,
     };
-    
+
     let cross_lang_tool = CrossLangTool::new(tool, metadata);
     let tool_box = Box::new(cross_lang_tool);
-    
+
     unsafe {
         *tool_out = Box::into_raw(tool_box) as CTool;
     }
-    
+
     CErrorCode::Success
 }
 

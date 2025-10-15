@@ -1,15 +1,15 @@
 //! Storage module for persisting data in Lumosai
-//! 
+//!
 //! This module provides interfaces and implementations for storing
 //! various types of data including workflows, threads, messages, and evaluation results.
 
 mod constants;
-mod types;
 mod providers;
+mod types;
 
 pub use constants::*;
-pub use types::*;
 pub use providers::*;
+pub use types::*;
 
 use crate::error::Result;
 use std::sync::Arc;
@@ -23,4 +23,4 @@ pub fn create_memory_storage(name: String) -> Result<Arc<dyn Storage>> {
 #[cfg(feature = "sqlite")]
 pub fn create_sqlite_storage(name: String, path: String) -> Result<Arc<dyn Storage>> {
     Ok(Arc::new(providers::sqlite::SqliteStorage::new(name, path)?))
-} 
+}

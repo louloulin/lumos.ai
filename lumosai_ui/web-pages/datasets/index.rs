@@ -1,11 +1,11 @@
 #![allow(non_snake_case)]
 use crate::app_layout::Layout;
 use crate::app_layout::SideBar;
+use crate::types::{Dataset, Model, Rbac};
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, Dataset, Model};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(
     rbac: Rbac,

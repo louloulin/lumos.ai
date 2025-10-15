@@ -3,11 +3,11 @@
 use super::{ChatWithChunks, PendingChatState};
 use crate::app_layout::SideBar;
 use crate::console::model_popup::ModelPopup;
+use crate::types::{BionicToolDefinition, Capability, Prompt, Rbac, SinglePrompt};
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, Capability, Prompt, SinglePrompt, BionicToolDefinition};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(
     team_id: i32,

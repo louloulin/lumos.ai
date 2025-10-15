@@ -16,7 +16,6 @@ use dioxus::prelude::*;
 /// 消息时间线组件
 #[component]
 pub fn MessageTimeline() -> Element {
-    
     rsx! {
         div {
             class: "flex flex-col h-full bg-base-100",
@@ -70,15 +69,13 @@ pub fn MessageTimeline() -> Element {
     }
 }
 
-
-
 /// 空时间线状态组件
 #[component]
 fn EmptyTimelineState(has_search: bool) -> Element {
     rsx! {
         div {
             class: "flex flex-col items-center justify-center h-full p-8 text-center",
-            
+
             div {
                 class: "w-16 h-16 bg-base-300 rounded-full flex items-center justify-center mb-4",
                 span {
@@ -86,7 +83,7 @@ fn EmptyTimelineState(has_search: bool) -> Element {
                     if has_search { "🔍" } else { "💬" }
                 }
             }
-            
+
             h3 {
                 class: "text-lg font-semibold mb-2",
                 if has_search {
@@ -95,7 +92,7 @@ fn EmptyTimelineState(has_search: bool) -> Element {
                     "暂无对话历史"
                 }
             }
-            
+
             p {
                 class: "text-base-content/60 text-sm",
                 if has_search {
@@ -107,5 +104,3 @@ fn EmptyTimelineState(has_search: bool) -> Element {
         }
     }
 }
-
-

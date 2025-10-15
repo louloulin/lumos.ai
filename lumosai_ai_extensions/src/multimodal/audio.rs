@@ -22,7 +22,7 @@ impl AudioProcessor {
     pub async fn new(config: AudioConfig) -> Result<Self> {
         Ok(Self { config })
     }
-    
+
     pub async fn process_audio(
         &self,
         data: Vec<u8>,

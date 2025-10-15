@@ -1,11 +1,11 @@
-use clap::{Parser, Subcommand, Args};
+use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 pub mod commands;
 pub mod error;
-pub mod util;
 pub mod server;
 pub mod template;
+pub mod util;
 
 /// Lumosai CLI工具主要版本号
 pub const LUMOSAI_CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -120,11 +120,7 @@ pub struct ApiArgs {
 
 /// 获取完整的版本信息
 pub fn version_info() -> String {
-    format!(
-        "{} v{}",
-        LUMOSAI_CLI_NAME,
-        LUMOSAI_CLI_VERSION
-    )
+    format!("{} v{}", LUMOSAI_CLI_NAME, LUMOSAI_CLI_VERSION)
 }
 
 /// 获取完整的版本字符串，包括额外信息
@@ -135,4 +131,4 @@ pub fn full_version_string() -> String {
         LUMOSAI_CLI_DESCRIPTION,
         LUMOSAI_CLI_AUTHORS
     )
-} 
+}

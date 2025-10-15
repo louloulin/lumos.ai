@@ -5,10 +5,7 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use std::cmp::Ordering;
 
-use crate::{
-    types::ScoredDocument,
-    error::Result,
-};
+use crate::{error::Result, types::ScoredDocument};
 
 /// Trait for document ranking strategies
 #[async_trait]
@@ -28,11 +25,12 @@ impl RelevanceRanker {
 
 #[async_trait]
 impl DocumentRanker for RelevanceRanker {
-    async fn rank_documents(&self, mut documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn rank_documents(
+        &self,
+        mut documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         // Sort by relevance score (highest first)
-        documents.sort_by(|a, b| {
-            b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal)
-        });
+        documents.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal));
         Ok(documents)
     }
 }
@@ -66,17 +64,20 @@ impl RecencyRanker {
 
 #[async_trait]
 impl DocumentRanker for RecencyRanker {
-    async fn rank_documents(&self, mut documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn rank_documents(
+        &self,
+        mut documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         // Sort by recency (most recent first)
         documents.sort_by(|a, b| {
             let timestamp_a = self.extract_timestamp(a);
             let timestamp_b = self.extract_timestamp(b);
-            
+
             match (timestamp_a, timestamp_b) {
                 (Some(ts_a), Some(ts_b)) => ts_b.cmp(&ts_a), // Most recent first
                 (Some(_), None) => Ordering::Less,           // Documents with timestamps first
                 (None, Some(_)) => Ordering::Greater,
-                (None, None) => Ordering::Equal,             // Maintain original order
+                (None, None) => Ordering::Equal, // Maintain original order
             }
         });
         Ok(documents)
@@ -94,11 +95,12 @@ impl LengthRanker {
 
 #[async_trait]
 impl DocumentRanker for LengthRanker {
-    async fn rank_documents(&self, mut documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn rank_documents(
+        &self,
+        mut documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         // Sort by length (shorter first for better context utilization)
-        documents.sort_by(|a, b| {
-            a.document.content.len().cmp(&b.document.content.len())
-        });
+        documents.sort_by(|a, b| a.document.content.len().cmp(&b.document.content.len()));
         Ok(documents)
     }
 }
@@ -179,7 +181,10 @@ impl HybridRanker {
 
 #[async_trait]
 impl DocumentRanker for HybridRanker {
-    async fn rank_documents(&self, mut documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn rank_documents(
+        &self,
+        mut documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         // Calculate hybrid scores and sort
         documents.sort_by(|a, b| {
             let score_a = self.calculate_hybrid_score(a);
@@ -195,7 +200,6 @@ mod tests {
     use super::*;
     use crate::types::{Document, Metadata};
 
-
     fn create_test_document(id: &str, content: &str, score: f32) -> ScoredDocument {
         ScoredDocument {
             document: Document {
@@ -209,14 +213,14 @@ mod tests {
     }
 
     fn create_test_document_with_timestamp(
-        id: &str, 
-        content: &str, 
-        score: f32, 
-        timestamp: DateTime<Utc>
+        id: &str,
+        content: &str,
+        score: f32,
+        timestamp: DateTime<Utc>,
     ) -> ScoredDocument {
         let mut metadata = Metadata::new();
         metadata.created_at = Some(timestamp);
-        
+
         ScoredDocument {
             document: Document {
                 id: id.to_string(),
@@ -266,7 +270,11 @@ mod tests {
     async fn test_length_ranker() {
         let ranker = LengthRanker::new();
         let documents = vec![
-            create_test_document("1", "This is a very long document with lots of content", 0.8),
+            create_test_document(
+                "1",
+                "This is a very long document with lots of content",
+                0.8,
+            ),
             create_test_document("2", "Short", 0.7),
             create_test_document("3", "Medium length document", 0.9),
         ];
@@ -283,7 +291,12 @@ mod tests {
         let hour_ago = now - chrono::Duration::hours(1);
 
         let documents = vec![
-            create_test_document_with_timestamp("1", "Long old content with lower relevance", 0.6, hour_ago),
+            create_test_document_with_timestamp(
+                "1",
+                "Long old content with lower relevance",
+                0.6,
+                hour_ago,
+            ),
             create_test_document_with_timestamp("2", "Short recent content", 0.8, now),
         ];
 

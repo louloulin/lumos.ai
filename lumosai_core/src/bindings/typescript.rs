@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use crate::agent::config::AgentConfig;
+use crate::tool::registry::{ToolCategory, ToolMetadata, ToolRegistry};
+use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
+use crate::{Error, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::{Result, Error};
-use crate::agent::config::AgentConfig;
-use crate::tool::{FunctionTool, ToolSchema, ParameterSchema};
-use crate::tool::registry::{ToolRegistry, ToolMetadata, ToolCategory};
+use std::collections::HashMap;
 
 /// TypeScript-compatible agent configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -117,7 +117,7 @@ impl TypeScriptBindings {
     pub async fn execute_agent(
         agent_id: &str,
         message: &str,
-        context: Option<HashMap<String, Value>>
+        context: Option<HashMap<String, Value>>,
     ) -> Result<TSAgentResponse> {
         // In a real implementation, we would maintain a registry of agents
         // For now, return a mock response
@@ -154,7 +154,7 @@ impl TypeScriptBindings {
             move |_params| {
                 // In a real implementation, we would execute the JavaScript handler
                 Ok(serde_json::json!({"result": "Tool executed successfully"}))
-            }
+            },
         );
 
         // Create tool metadata
@@ -295,13 +295,14 @@ export interface LumosError {
 export class LumosClient {
   static async createAgent(config: AgentConfig): Promise<string>;
   static async executeAgent(
-    agentId: string, 
-    message: string, 
+    agentId: string,
+    message: string,
     context?: Record<string, any>
   ): Promise<AgentResponse>;
   static async registerTool(tool: ToolDefinition): Promise<void>;
   static async listTools(): Promise<ToolDefinition[]>;
 }
-"#.to_string()
+"#
+        .to_string()
     }
 }

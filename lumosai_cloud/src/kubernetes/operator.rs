@@ -11,7 +11,7 @@ impl LumosOperator {
     pub async fn new(client: Client) -> Result<Self> {
         Ok(Self { client })
     }
-    
+
     pub async fn start(&mut self) -> Result<()> {
         // Operator启动逻辑
         Ok(())

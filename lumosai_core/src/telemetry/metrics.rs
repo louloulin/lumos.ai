@@ -1,8 +1,8 @@
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
-use async_trait::async_trait;
 
 /// 代理执行指标数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,19 +109,36 @@ pub struct MemoryMetrics {
 #[async_trait]
 pub trait MetricsCollector: Send + Sync {
     /// 记录代理执行指标
-    async fn record_agent_execution(&self, metrics: AgentMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn record_agent_execution(
+        &self,
+        metrics: AgentMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 记录工具执行指标
-    async fn record_tool_execution(&self, metrics: ToolMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn record_tool_execution(
+        &self,
+        metrics: ToolMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 记录内存操作指标
-    async fn record_memory_operation(&self, metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn record_memory_operation(
+        &self,
+        metrics: MemoryMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 获取指标统计
-    async fn get_metrics_summary(&self, agent_name: Option<&str>, from_time: Option<u64>, to_time: Option<u64>) -> Result<MetricsSummary, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn get_metrics_summary(
+        &self,
+        agent_name: Option<&str>,
+        from_time: Option<u64>,
+        to_time: Option<u64>,
+    ) -> Result<MetricsSummary, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 获取代理性能统计
-    async fn get_agent_performance(&self, agent_name: &str) -> Result<AgentPerformance, Box<dyn std::error::Error + Send + Sync>>;
+    async fn get_agent_performance(
+        &self,
+        agent_name: &str,
+    ) -> Result<AgentPerformance, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// 指标统计摘要
@@ -195,7 +212,7 @@ impl AgentMetrics {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
-            
+
         Self {
             execution_id: Uuid::new_v4().to_string(),
             agent_name,
@@ -211,7 +228,7 @@ impl AgentMetrics {
             context,
         }
     }
-    
+
     /// 开始计时
     pub fn start_timing(&mut self) {
         self.start_time = SystemTime::now()
@@ -219,7 +236,7 @@ impl AgentMetrics {
             .unwrap()
             .as_millis() as u64;
     }
-    
+
     /// 结束计时
     pub fn end_timing(&mut self) {
         self.end_time = SystemTime::now()
@@ -228,33 +245,33 @@ impl AgentMetrics {
             .as_millis() as u64;
         self.execution_time_ms = self.end_time - self.start_time;
     }
-    
+
     /// 记录工具调用
     pub fn record_tool_call(&mut self) {
         self.tool_calls_count += 1;
     }
-    
+
     /// 记录内存操作
     pub fn record_memory_operation(&mut self) {
         self.memory_operations += 1;
     }
-    
+
     /// 记录错误
     pub fn record_error(&mut self) {
         self.error_count += 1;
         self.success = false;
     }
-    
+
     /// 设置成功状态
     pub fn set_success(&mut self, success: bool) {
         self.success = success;
     }
-    
+
     /// 设置Token使用量
     pub fn set_token_usage(&mut self, token_usage: TokenUsage) {
         self.token_usage = token_usage;
     }
-    
+
     /// 添加自定义指标
     pub fn add_custom_metric(&mut self, key: String, value: MetricValue) {
         self.custom_metrics.insert(key, value);
@@ -277,17 +294,17 @@ impl ToolMetrics {
                 .as_millis() as u64,
         }
     }
-    
+
     /// 设置执行时长
     pub fn set_execution_time(&mut self, duration: Duration) {
         self.execution_time_ms = duration.as_millis() as u64;
     }
-    
+
     /// 设置成功状态
     pub fn set_success(&mut self, success: bool) {
         self.success = success;
     }
-    
+
     /// 设置错误信息
     pub fn set_error(&mut self, error: String) {
         self.error = Some(error);
@@ -310,12 +327,12 @@ impl MemoryMetrics {
                 .as_millis() as u64,
         }
     }
-    
+
     /// 设置执行时长
     pub fn set_execution_time(&mut self, duration: Duration) {
         self.execution_time_ms = duration.as_millis() as u64;
     }
-    
+
     /// 设置成功状态
     pub fn set_success(&mut self, success: bool) {
         self.success = success;

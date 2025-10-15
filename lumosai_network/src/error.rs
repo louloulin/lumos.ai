@@ -54,4 +54,4 @@ impl From<serde_json::Error> for Error {
 }
 
 /// 结果类型
-pub type Result<T> = result::Result<T, Error>; 
+pub type Result<T> = result::Result<T, Error>;

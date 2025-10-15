@@ -1,5 +1,5 @@
 //! 企业级告警系统
-//! 
+//!
 //! 提供智能告警、异常检测、自动化诊断等高级监控功能
 
 use crate::telemetry::metrics::*;
@@ -210,34 +210,63 @@ pub enum AlertChannelType {
 #[async_trait]
 pub trait AlertManager: Send + Sync {
     /// 添加告警规则
-    async fn add_rule(&self, rule: AlertRule) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn add_rule(
+        &self,
+        rule: AlertRule,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 删除告警规则
-    async fn remove_rule(&self, rule_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn remove_rule(
+        &self,
+        rule_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 更新告警规则
-    async fn update_rule(&self, rule: AlertRule) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn update_rule(
+        &self,
+        rule: AlertRule,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 获取所有告警规则
     async fn get_rules(&self) -> Result<Vec<AlertRule>, Box<dyn std::error::Error + Send + Sync>>;
-    
+
     /// 评估告警条件
-    async fn evaluate_conditions(&self, metrics: &MetricsSummary) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn evaluate_conditions(
+        &self,
+        metrics: &MetricsSummary,
+    ) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 发送告警通知
-    async fn send_alert(&self, alert: &AlertEvent) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn send_alert(
+        &self,
+        alert: &AlertEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 确认告警
-    async fn acknowledge_alert(&self, alert_id: &str, user: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn acknowledge_alert(
+        &self,
+        alert_id: &str,
+        user: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 解决告警
-    async fn resolve_alert(&self, alert_id: &str, user: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn resolve_alert(
+        &self,
+        alert_id: &str,
+        user: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 获取活跃告警
-    async fn get_active_alerts(&self) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn get_active_alerts(
+        &self,
+    ) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 获取告警历史
-    async fn get_alert_history(&self, from: Option<u64>, to: Option<u64>) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn get_alert_history(
+        &self,
+        from: Option<u64>,
+        to: Option<u64>,
+    ) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// 内存告警管理器实现
@@ -266,99 +295,110 @@ impl InMemoryAlertManager {
             max_history_size: 10000,
         }
     }
-    
+
     /// 添加告警通道
-    pub async fn add_channel(&self, channel: AlertChannel) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn add_channel(
+        &self,
+        channel: AlertChannel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut channels = self.channels.write().await;
         channels.insert(channel.id.clone(), channel);
         Ok(())
     }
-    
+
     /// 生成诊断信息
-    async fn generate_diagnosis(&self, condition: &AlertCondition, _metrics: &HashMap<String, f64>) -> DiagnosisInfo {
+    async fn generate_diagnosis(
+        &self,
+        condition: &AlertCondition,
+        _metrics: &HashMap<String, f64>,
+    ) -> DiagnosisInfo {
         match condition {
-            AlertCondition::ResponseTime { threshold_ms, .. } => {
-                DiagnosisInfo {
-                    possible_causes: vec![
-                        "数据库查询缓慢".to_string(),
-                        "网络延迟增加".to_string(),
-                        "CPU资源不足".to_string(),
-                        "内存不足导致GC频繁".to_string(),
-                    ],
-                    recommended_actions: vec![
-                        "检查数据库性能".to_string(),
-                        "优化查询语句".to_string(),
-                        "增加服务器资源".to_string(),
-                        "检查网络连接".to_string(),
-                    ],
-                    related_logs: vec![],
-                    impact_assessment: format!("响应时间超过{}ms，可能影响用户体验", threshold_ms),
-                    auto_fix_suggestions: vec![
-                        AutoFixSuggestion {
-                            fix_type: "缓存优化".to_string(),
-                            description: "启用查询缓存以减少数据库负载".to_string(),
-                            command: Some("redis-cli config set maxmemory-policy allkeys-lru".to_string()),
-                            risk_level: "低".to_string(),
-                            expected_outcome: "响应时间减少20-30%".to_string(),
-                        },
-                    ],
-                }
+            AlertCondition::ResponseTime { threshold_ms, .. } => DiagnosisInfo {
+                possible_causes: vec![
+                    "数据库查询缓慢".to_string(),
+                    "网络延迟增加".to_string(),
+                    "CPU资源不足".to_string(),
+                    "内存不足导致GC频繁".to_string(),
+                ],
+                recommended_actions: vec![
+                    "检查数据库性能".to_string(),
+                    "优化查询语句".to_string(),
+                    "增加服务器资源".to_string(),
+                    "检查网络连接".to_string(),
+                ],
+                related_logs: vec![],
+                impact_assessment: format!("响应时间超过{}ms，可能影响用户体验", threshold_ms),
+                auto_fix_suggestions: vec![AutoFixSuggestion {
+                    fix_type: "缓存优化".to_string(),
+                    description: "启用查询缓存以减少数据库负载".to_string(),
+                    command: Some("redis-cli config set maxmemory-policy allkeys-lru".to_string()),
+                    risk_level: "低".to_string(),
+                    expected_outcome: "响应时间减少20-30%".to_string(),
+                }],
             },
-            AlertCondition::ErrorRate { threshold_percent, .. } => {
-                DiagnosisInfo {
-                    possible_causes: vec![
-                        "代码错误或异常".to_string(),
-                        "外部服务不可用".to_string(),
-                        "配置错误".to_string(),
-                        "资源耗尽".to_string(),
-                    ],
-                    recommended_actions: vec![
-                        "检查错误日志".to_string(),
-                        "验证外部服务状态".to_string(),
-                        "检查配置文件".to_string(),
-                        "监控资源使用情况".to_string(),
-                    ],
-                    related_logs: vec![],
-                    impact_assessment: format!("错误率达到{:.1}%，严重影响服务可用性", threshold_percent),
-                    auto_fix_suggestions: vec![
-                        AutoFixSuggestion {
-                            fix_type: "服务重启".to_string(),
-                            description: "重启相关服务以清除临时错误状态".to_string(),
-                            command: Some("systemctl restart lumos-agent".to_string()),
-                            risk_level: "中".to_string(),
-                            expected_outcome: "清除临时错误状态，恢复正常服务".to_string(),
-                        },
-                    ],
-                }
+            AlertCondition::ErrorRate {
+                threshold_percent, ..
+            } => DiagnosisInfo {
+                possible_causes: vec![
+                    "代码错误或异常".to_string(),
+                    "外部服务不可用".to_string(),
+                    "配置错误".to_string(),
+                    "资源耗尽".to_string(),
+                ],
+                recommended_actions: vec![
+                    "检查错误日志".to_string(),
+                    "验证外部服务状态".to_string(),
+                    "检查配置文件".to_string(),
+                    "监控资源使用情况".to_string(),
+                ],
+                related_logs: vec![],
+                impact_assessment: format!(
+                    "错误率达到{:.1}%，严重影响服务可用性",
+                    threshold_percent
+                ),
+                auto_fix_suggestions: vec![AutoFixSuggestion {
+                    fix_type: "服务重启".to_string(),
+                    description: "重启相关服务以清除临时错误状态".to_string(),
+                    command: Some("systemctl restart lumos-agent".to_string()),
+                    risk_level: "中".to_string(),
+                    expected_outcome: "清除临时错误状态，恢复正常服务".to_string(),
+                }],
             },
-            _ => {
-                DiagnosisInfo {
-                    possible_causes: vec!["需要进一步分析".to_string()],
-                    recommended_actions: vec!["联系技术支持".to_string()],
-                    related_logs: vec![],
-                    impact_assessment: "影响程度待评估".to_string(),
-                    auto_fix_suggestions: vec![],
-                }
-            }
+            _ => DiagnosisInfo {
+                possible_causes: vec!["需要进一步分析".to_string()],
+                recommended_actions: vec!["联系技术支持".to_string()],
+                related_logs: vec![],
+                impact_assessment: "影响程度待评估".to_string(),
+                auto_fix_suggestions: vec![],
+            },
         }
     }
 }
 
 #[async_trait]
 impl AlertManager for InMemoryAlertManager {
-    async fn add_rule(&self, rule: AlertRule) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn add_rule(
+        &self,
+        rule: AlertRule,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut rules = self.rules.write().await;
         rules.insert(rule.id.clone(), rule);
         Ok(())
     }
 
-    async fn remove_rule(&self, rule_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn remove_rule(
+        &self,
+        rule_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut rules = self.rules.write().await;
         rules.remove(rule_id);
         Ok(())
     }
 
-    async fn update_rule(&self, rule: AlertRule) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn update_rule(
+        &self,
+        rule: AlertRule,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut rules = self.rules.write().await;
         rules.insert(rule.id.clone(), rule);
         Ok(())
@@ -369,7 +409,10 @@ impl AlertManager for InMemoryAlertManager {
         Ok(rules.values().cloned().collect())
     }
 
-    async fn evaluate_conditions(&self, metrics: &MetricsSummary) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn evaluate_conditions(
+        &self,
+        metrics: &MetricsSummary,
+    ) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>> {
         let rules = self.rules.read().await;
         let mut triggered_alerts = Vec::new();
 
@@ -381,31 +424,41 @@ impl AlertManager for InMemoryAlertManager {
             let should_trigger = match &rule.condition {
                 AlertCondition::ResponseTime { threshold_ms, .. } => {
                     metrics.avg_execution_time_ms > *threshold_ms as f64
-                },
-                AlertCondition::ErrorRate { threshold_percent, .. } => {
+                }
+                AlertCondition::ErrorRate {
+                    threshold_percent, ..
+                } => {
                     let error_rate = if metrics.total_executions > 0 {
                         (metrics.failed_executions as f64 / metrics.total_executions as f64) * 100.0
                     } else {
                         0.0
                     };
                     error_rate > *threshold_percent
-                },
+                }
                 AlertCondition::MemoryUsage { threshold_mb, .. } => {
                     // 暂时使用平均执行时间作为内存使用的代理指标
                     metrics.avg_execution_time_ms > (*threshold_mb as f64 * 10.0)
-                },
-                AlertCondition::CpuUsage { threshold_percent, .. } => {
+                }
+                AlertCondition::CpuUsage {
+                    threshold_percent, ..
+                } => {
                     // 暂时使用平均执行时间作为CPU使用的代理指标
                     metrics.avg_execution_time_ms > (*threshold_percent as f64 * 20.0)
-                },
+                }
                 _ => false, // 其他条件暂时不实现
             };
 
             if should_trigger {
-                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64;
 
                 let mut alert_metrics = HashMap::new();
-                alert_metrics.insert("avg_execution_time_ms".to_string(), metrics.avg_execution_time_ms);
+                alert_metrics.insert(
+                    "avg_execution_time_ms".to_string(),
+                    metrics.avg_execution_time_ms,
+                );
 
                 let success_rate = if metrics.total_executions > 0 {
                     metrics.successful_executions as f64 / metrics.total_executions as f64
@@ -421,7 +474,9 @@ impl AlertManager for InMemoryAlertManager {
                 alert_metrics.insert("success_rate".to_string(), success_rate);
                 alert_metrics.insert("error_rate".to_string(), error_rate);
 
-                let diagnosis = self.generate_diagnosis(&rule.condition, &alert_metrics).await;
+                let diagnosis = self
+                    .generate_diagnosis(&rule.condition, &alert_metrics)
+                    .await;
 
                 let alert = AlertEvent {
                     id: Uuid::new_v4().to_string(),
@@ -451,25 +506,35 @@ impl AlertManager for InMemoryAlertManager {
         Ok(triggered_alerts)
     }
 
-    async fn send_alert(&self, alert: &AlertEvent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn send_alert(
+        &self,
+        alert: &AlertEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 这里实现告警发送逻辑
         println!("🚨 发送告警: {} - {}", alert.title, alert.description);
 
         // 模拟发送到不同通道
         let channels = self.channels.read().await;
-        for channel_id in &self.rules.read().await.get(&alert.rule_id).unwrap().channels {
+        for channel_id in &self
+            .rules
+            .read()
+            .await
+            .get(&alert.rule_id)
+            .unwrap()
+            .channels
+        {
             if let Some(channel) = channels.get(channel_id) {
                 if channel.enabled {
                     match channel.channel_type {
                         AlertChannelType::Email => {
                             println!("📧 发送邮件告警到: {}", channel.name);
-                        },
+                        }
                         AlertChannelType::Slack => {
                             println!("💬 发送Slack告警到: {}", channel.name);
-                        },
+                        }
                         AlertChannelType::Webhook => {
                             println!("🔗 发送Webhook告警到: {}", channel.name);
-                        },
+                        }
                         _ => {
                             println!("📱 发送告警到 {:?}: {}", channel.channel_type, channel.name);
                         }
@@ -481,21 +546,39 @@ impl AlertManager for InMemoryAlertManager {
         Ok(())
     }
 
-    async fn acknowledge_alert(&self, alert_id: &str, user: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn acknowledge_alert(
+        &self,
+        alert_id: &str,
+        user: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut active_alerts = self.active_alerts.write().await;
         if let Some(alert) = active_alerts.get_mut(alert_id) {
             alert.status = AlertStatus::Acknowledged;
-            alert.acknowledged_at = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64);
+            alert.acknowledged_at = Some(
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64,
+            );
             println!("✅ 告警 {} 已被用户 {} 确认", alert_id, user);
         }
         Ok(())
     }
 
-    async fn resolve_alert(&self, alert_id: &str, user: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn resolve_alert(
+        &self,
+        alert_id: &str,
+        user: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut active_alerts = self.active_alerts.write().await;
         if let Some(mut alert) = active_alerts.remove(alert_id) {
             alert.status = AlertStatus::Resolved;
-            alert.resolved_at = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64);
+            alert.resolved_at = Some(
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64,
+            );
 
             // 添加到历史记录
             let mut history = self.alert_history.write().await;
@@ -511,14 +594,21 @@ impl AlertManager for InMemoryAlertManager {
         Ok(())
     }
 
-    async fn get_active_alerts(&self) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_active_alerts(
+        &self,
+    ) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>> {
         let active_alerts = self.active_alerts.read().await;
         Ok(active_alerts.values().cloned().collect())
     }
 
-    async fn get_alert_history(&self, from: Option<u64>, to: Option<u64>) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_alert_history(
+        &self,
+        from: Option<u64>,
+        to: Option<u64>,
+    ) -> Result<Vec<AlertEvent>, Box<dyn std::error::Error + Send + Sync>> {
         let history = self.alert_history.read().await;
-        let mut filtered_history: Vec<AlertEvent> = history.iter()
+        let mut filtered_history: Vec<AlertEvent> = history
+            .iter()
             .filter(|alert| {
                 if let Some(from_time) = from {
                     if alert.triggered_at < from_time {

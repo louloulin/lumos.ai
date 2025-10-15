@@ -1,10 +1,10 @@
 //! 工作内存模块，提供工作内存的实现和操作
 
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
@@ -54,13 +54,13 @@ impl Default for WorkingMemoryContent {
 pub trait WorkingMemory: Base + Send + Sync {
     /// 获取工作内存内容
     async fn get(&self) -> Result<WorkingMemoryContent>;
-    
+
     /// 更新工作内存内容
     async fn update(&self, content: WorkingMemoryContent) -> Result<()>;
-    
+
     /// 清空工作内存
     async fn clear(&self) -> Result<()>;
-    
+
     /// 获取特定键的值
     async fn get_value(&self, key: &str) -> Result<Option<Value>> {
         let content = self.get().await?;
@@ -70,7 +70,7 @@ pub trait WorkingMemory: Base + Send + Sync {
             Ok(None)
         }
     }
-    
+
     /// 设置特定键的值
     async fn set_value(&self, key: &str, value: Value) -> Result<()> {
         let mut content = self.get().await?;
@@ -79,10 +79,13 @@ pub trait WorkingMemory: Base + Send + Sync {
             content.updated_at = chrono::Utc::now();
             self.update(content).await
         } else {
-            Err(Error::Parsing(format!("工作内存内容不是对象: {:?}", content.content)))
+            Err(Error::Parsing(format!(
+                "工作内存内容不是对象: {:?}",
+                content.content
+            )))
         }
     }
-    
+
     /// 删除特定键
     async fn delete_value(&self, key: &str) -> Result<()> {
         let mut content = self.get().await?;
@@ -91,7 +94,10 @@ pub trait WorkingMemory: Base + Send + Sync {
             content.updated_at = chrono::Utc::now();
             self.update(content).await
         } else {
-            Err(Error::Parsing(format!("工作内存内容不是对象: {:?}", content.content)))
+            Err(Error::Parsing(format!(
+                "工作内存内容不是对象: {:?}",
+                content.content
+            )))
         }
     }
 }
@@ -116,12 +122,12 @@ impl BasicWorkingMemory {
             component: Component::Memory,
             log_level: None,
         };
-        
+
         let mut content = WorkingMemoryContent::default();
         if let Some(content_type) = &config.content_type {
             content.content_type = content_type.clone();
         }
-        
+
         Self {
             base: BaseComponent::new(component_config),
             config,
@@ -129,20 +135,23 @@ impl BasicWorkingMemory {
             metrics_collector: None,
         }
     }
-    
+
     /// 创建带有指标收集器的工作内存
-    pub fn with_metrics_collector(config: WorkingMemoryConfig, metrics_collector: Arc<dyn MetricsCollector>) -> Self {
+    pub fn with_metrics_collector(
+        config: WorkingMemoryConfig,
+        metrics_collector: Arc<dyn MetricsCollector>,
+    ) -> Self {
         let component_config = ComponentConfig {
             name: Some("BasicWorkingMemory".to_string()),
             component: Component::Memory,
             log_level: None,
         };
-        
+
         let mut content = WorkingMemoryContent::default();
         if let Some(content_type) = &config.content_type {
             content.content_type = content_type.clone();
         }
-        
+
         Self {
             base: BaseComponent::new(component_config),
             config,
@@ -150,11 +159,11 @@ impl BasicWorkingMemory {
             metrics_collector: Some(metrics_collector),
         }
     }
-    
+
     /// 从模板创建工作内存
     pub fn from_template(config: WorkingMemoryConfig, template: &str) -> Result<Self> {
         let memory = Self::new(config);
-        
+
         // 尝试解析模板
         match serde_json::from_str::<Value>(template) {
             Ok(template_value) => {
@@ -165,18 +174,25 @@ impl BasicWorkingMemory {
                         content.content = template_value;
                         content.updated_at = chrono::Utc::now();
                     } // 锁在这里被释放
-                    
+
                     Ok(memory)
                 } else {
                     Err(Error::Parsing("模板必须是有效的JSON对象".to_string()))
                 }
-            },
+            }
             Err(e) => Err(Error::Parsing(format!("无法解析模板: {}", e))),
         }
     }
-    
+
     /// 记录内存操作指标的辅助方法
-    async fn record_memory_metrics(&self, operation_type: &str, execution_time_ms: u64, success: bool, key: Option<String>, data_size_bytes: Option<usize>) {
+    async fn record_memory_metrics(
+        &self,
+        operation_type: &str,
+        execution_time_ms: u64,
+        success: bool,
+        key: Option<String>,
+        data_size_bytes: Option<usize>,
+    ) {
         if let Some(collector) = &self.metrics_collector {
             let metrics = MemoryMetrics {
                 operation_type: operation_type.to_string(),
@@ -189,7 +205,7 @@ impl BasicWorkingMemory {
                     .unwrap_or_default()
                     .as_millis() as u64,
             };
-            
+
             if let Err(e) = collector.record_memory_operation(metrics).await {
                 // 记录日志但不影响主要操作
                 let logger = self.logger();
@@ -203,57 +219,66 @@ impl BasicWorkingMemory {
 impl WorkingMemory for BasicWorkingMemory {
     async fn get(&self) -> Result<WorkingMemoryContent> {
         let start_time = SystemTime::now();
-        
+
         let result = async {
             let content = self.content.read().unwrap();
             Ok(content.clone())
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
         let data_size = if let Ok(ref content) = result {
-            serde_json::to_string(&content.content).ok().map(|s| s.len())
+            serde_json::to_string(&content.content)
+                .ok()
+                .map(|s| s.len())
         } else {
             None
         };
-        
-        self.record_memory_metrics("get", execution_time, success, None, data_size).await;
+
+        self.record_memory_metrics("get", execution_time, success, None, data_size)
+            .await;
         result
     }
-    
+
     async fn update(&self, content: WorkingMemoryContent) -> Result<()> {
         let start_time = SystemTime::now();
-        let data_size = serde_json::to_string(&content.content).ok().map(|s| s.len());
-        
+        let data_size = serde_json::to_string(&content.content)
+            .ok()
+            .map(|s| s.len());
+
         let result = async {
             // 检查容量限制
             if let Some(max_capacity) = self.config.max_capacity {
                 let size = serde_json::to_string(&content.content)
                     .map_err(Error::Json)?
                     .len();
-                
+
                 if size > max_capacity {
                     return Err(Error::Constraint(format!(
-                        "工作内存内容超过最大容量限制: {} > {}", size, max_capacity
+                        "工作内存内容超过最大容量限制: {} > {}",
+                        size, max_capacity
                     )));
                 }
             }
-            
+
             let mut current = self.content.write().unwrap();
             *current = content;
             Ok(())
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
-        
-        self.record_memory_metrics("update", execution_time, success, None, data_size).await;
+
+        self.record_memory_metrics("update", execution_time, success, None, data_size)
+            .await;
         result
     }
-    
+
     async fn clear(&self) -> Result<()> {
         let start_time = SystemTime::now();
-        
+
         let result = async {
             let mut content = self.content.write().unwrap();
             *content = WorkingMemoryContent::default();
@@ -261,18 +286,20 @@ impl WorkingMemory for BasicWorkingMemory {
                 content.content_type = content_type.clone();
             }
             Ok(())
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
-        
-        self.record_memory_metrics("clear", execution_time, success, None, None).await;
+
+        self.record_memory_metrics("clear", execution_time, success, None, None)
+            .await;
         result
     }
-    
+
     async fn get_value(&self, key: &str) -> Result<Option<Value>> {
         let start_time = SystemTime::now();
-        
+
         let result = async {
             let content = self.get().await?;
             if let Value::Object(map) = &content.content {
@@ -280,8 +307,9 @@ impl WorkingMemory for BasicWorkingMemory {
             } else {
                 Ok(None)
             }
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
         let data_size = if let Ok(Some(ref value)) = result {
@@ -289,15 +317,22 @@ impl WorkingMemory for BasicWorkingMemory {
         } else {
             None
         };
-        
-        self.record_memory_metrics("get_value", execution_time, success, Some(key.to_string()), data_size).await;
+
+        self.record_memory_metrics(
+            "get_value",
+            execution_time,
+            success,
+            Some(key.to_string()),
+            data_size,
+        )
+        .await;
         result
     }
-    
+
     async fn set_value(&self, key: &str, value: Value) -> Result<()> {
         let start_time = SystemTime::now();
         let data_size = serde_json::to_string(&value).ok().map(|s| s.len());
-        
+
         let result = async {
             let mut content = self.get().await?;
             if let Value::Object(map) = &mut content.content {
@@ -305,20 +340,31 @@ impl WorkingMemory for BasicWorkingMemory {
                 content.updated_at = chrono::Utc::now();
                 self.update(content).await
             } else {
-                Err(Error::Parsing(format!("工作内存内容不是对象: {:?}", content.content)))
+                Err(Error::Parsing(format!(
+                    "工作内存内容不是对象: {:?}",
+                    content.content
+                )))
             }
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
-        
-        self.record_memory_metrics("set_value", execution_time, success, Some(key.to_string()), data_size).await;
+
+        self.record_memory_metrics(
+            "set_value",
+            execution_time,
+            success,
+            Some(key.to_string()),
+            data_size,
+        )
+        .await;
         result
     }
-    
+
     async fn delete_value(&self, key: &str) -> Result<()> {
         let start_time = SystemTime::now();
-        
+
         let result = async {
             let mut content = self.get().await?;
             if let Value::Object(map) = &mut content.content {
@@ -326,14 +372,25 @@ impl WorkingMemory for BasicWorkingMemory {
                 content.updated_at = chrono::Utc::now();
                 self.update(content).await
             } else {
-                Err(Error::Parsing(format!("工作内存内容不是对象: {:?}", content.content)))
+                Err(Error::Parsing(format!(
+                    "工作内存内容不是对象: {:?}",
+                    content.content
+                )))
             }
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
-        
-        self.record_memory_metrics("delete_value", execution_time, success, Some(key.to_string()), None).await;
+
+        self.record_memory_metrics(
+            "delete_value",
+            execution_time,
+            success,
+            Some(key.to_string()),
+            None,
+        )
+        .await;
         result
     }
 }
@@ -342,23 +399,23 @@ impl Base for BasicWorkingMemory {
     fn name(&self) -> Option<&str> {
         self.base.name()
     }
-    
+
     fn component(&self) -> Component {
         self.base.component()
     }
-    
+
     fn logger(&self) -> Arc<dyn crate::logger::Logger> {
         self.base.logger()
     }
-    
+
     fn set_logger(&mut self, logger: Arc<dyn crate::logger::Logger>) {
         self.base.set_logger(logger);
     }
-    
+
     fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
         self.base.telemetry()
     }
-    
+
     fn set_telemetry(&mut self, telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
@@ -369,7 +426,7 @@ pub fn create_working_memory(config: &WorkingMemoryConfig) -> Result<Box<dyn Wor
     if !config.enabled {
         return Err(Error::Configuration("工作内存未启用".to_string()));
     }
-    
+
     if let Some(template) = &config.template {
         BasicWorkingMemory::from_template(config.clone(), template)
             .map(|mem| Box::new(mem) as Box<dyn WorkingMemory>)
@@ -381,7 +438,7 @@ pub fn create_working_memory(config: &WorkingMemoryConfig) -> Result<Box<dyn Wor
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_basic_working_memory() {
         // 创建配置
@@ -391,43 +448,52 @@ mod tests {
             content_type: Some("application/json".to_string()),
             max_capacity: Some(1024),
         };
-        
+
         // 创建工作内存
         let memory = BasicWorkingMemory::new(config);
-        
+
         // 测试初始状态
         let content = memory.get().await.unwrap();
         assert_eq!(content.content_type, "application/json");
-        
+
         // 测试设置值
-        memory.set_value("test_key", Value::String("test_value".to_string())).await.unwrap();
-        
+        memory
+            .set_value("test_key", Value::String("test_value".to_string()))
+            .await
+            .unwrap();
+
         // 测试获取值
         let value = memory.get_value("test_key").await.unwrap();
         assert_eq!(value, Some(Value::String("test_value".to_string())));
-        
+
         // 测试更新值
-        memory.set_value("test_key", Value::Number(serde_json::Number::from(42))).await.unwrap();
+        memory
+            .set_value("test_key", Value::Number(serde_json::Number::from(42)))
+            .await
+            .unwrap();
         let value = memory.get_value("test_key").await.unwrap();
         assert_eq!(value, Some(Value::Number(serde_json::Number::from(42))));
-        
+
         // 测试删除值
         memory.delete_value("test_key").await.unwrap();
         let value = memory.get_value("test_key").await.unwrap();
         assert_eq!(value, None);
-        
+
         // 测试清空
-        memory.set_value("test_key", Value::String("test_value".to_string())).await.unwrap();
+        memory
+            .set_value("test_key", Value::String("test_value".to_string()))
+            .await
+            .unwrap();
         memory.clear().await.unwrap();
         let value = memory.get_value("test_key").await.unwrap();
         assert_eq!(value, None);
     }
-    
+
     #[tokio::test]
     async fn test_working_memory_from_template() {
         // 创建模板
         let template = r#"{"initial_key": "initial_value", "nested": {"key": "value"}}"#;
-        
+
         // 创建配置
         let config = WorkingMemoryConfig {
             enabled: true,
@@ -435,14 +501,14 @@ mod tests {
             content_type: Some("application/json".to_string()),
             max_capacity: Some(1024),
         };
-        
+
         // 创建工作内存
         let memory = create_working_memory(&config).unwrap();
-        
+
         // 测试初始值
         let value = memory.get_value("initial_key").await.unwrap();
         assert_eq!(value, Some(Value::String("initial_value".to_string())));
-        
+
         // 测试嵌套值
         let content = memory.get().await.unwrap();
         if let Value::Object(map) = &content.content {
@@ -459,7 +525,7 @@ mod tests {
             panic!("内容不是对象");
         }
     }
-    
+
     #[tokio::test]
     async fn test_working_memory_capacity_limit() {
         // 创建小容量配置
@@ -469,14 +535,14 @@ mod tests {
             content_type: Some("application/json".to_string()),
             max_capacity: Some(10), // 非常小的容量限制
         };
-        
+
         // 创建工作内存
         let memory = BasicWorkingMemory::new(config);
-        
+
         // 尝试设置超过容量限制的值
         let large_value = "a".repeat(100);
         let result = memory.set_value("key", Value::String(large_value)).await;
-        
+
         // 应该返回错误
         assert!(result.is_err());
         if let Err(Error::Constraint(msg)) = result {
@@ -485,4 +551,4 @@ mod tests {
             panic!("期望容量限制错误，但得到: {:?}", result);
         }
     }
-} 
+}

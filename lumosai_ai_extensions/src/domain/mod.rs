@@ -27,7 +27,7 @@ impl DomainAdapter {
     pub async fn new(config: DomainConfig) -> Result<Self> {
         Ok(Self { config })
     }
-    
+
     pub async fn adapt(&self, domain: &str, input: DomainInput) -> Result<DomainOutput> {
         // 简化的领域适配实现
         Ok(DomainOutput {

@@ -2,7 +2,7 @@
 //!
 //! 提供一行代码创建向量存储的便利函数，支持智能默认配置。
 
-use crate::{Result, Error};
+use crate::{Error, Result};
 use std::sync::Arc;
 
 /// 向量存储抽象 - 使用enum来支持多种存储类型
@@ -33,11 +33,11 @@ pub type WeaviateStorage = lumosai_vector::weaviate::WeaviateVectorStorage;
 pub type PostgresStorage = lumosai_vector::postgres::PostgresVectorStorage;
 
 /// 一行代码创建内存向量存储
-/// 
+///
 /// # 示例
 /// ```rust,no_run
 /// use lumosai::prelude::*;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     let storage = lumosai::vector::memory().await?;
@@ -45,7 +45,8 @@ pub type PostgresStorage = lumosai_vector::postgres::PostgresVectorStorage;
 /// }
 /// ```
 pub async fn memory() -> Result<VectorStorage> {
-    let storage = MemoryStorage::new().await
+    let storage = MemoryStorage::new()
+        .await
         .map_err(|e| Error::VectorStore(format!("Failed to create memory storage: {}", e)))?;
     Ok(VectorStorage::Memory(Arc::new(storage)))
 }
@@ -64,14 +65,17 @@ pub async fn memory() -> Result<VectorStorage> {
 /// ```
 #[cfg(feature = "vector-qdrant")]
 pub async fn qdrant(url: &str) -> Result<VectorStorage> {
-    let storage = QdrantStorage::new(url).await
+    let storage = QdrantStorage::new(url)
+        .await
         .map_err(|e| Error::VectorStore(format!("Failed to create Qdrant storage: {}", e)))?;
     Ok(VectorStorage::Qdrant(Arc::new(storage)))
 }
 
 #[cfg(not(feature = "vector-qdrant"))]
 pub async fn qdrant(_url: &str) -> Result<VectorStorage> {
-    Err(Error::VectorStore("Qdrant support not enabled. Enable 'vector-qdrant' feature".to_string()))
+    Err(Error::VectorStore(
+        "Qdrant support not enabled. Enable 'vector-qdrant' feature".to_string(),
+    ))
 }
 
 /// 一行代码创建Weaviate向量存储
@@ -88,20 +92,23 @@ pub async fn qdrant(_url: &str) -> Result<VectorStorage> {
 /// ```
 #[cfg(feature = "vector-weaviate")]
 pub async fn weaviate(url: &str) -> Result<VectorStorage> {
-    let storage = WeaviateStorage::new(url).await
+    let storage = WeaviateStorage::new(url)
+        .await
         .map_err(|e| Error::VectorStore(format!("Failed to create Weaviate storage: {}", e)))?;
     Ok(VectorStorage::Weaviate(Arc::new(storage)))
 }
 
 #[cfg(not(feature = "vector-weaviate"))]
 pub async fn weaviate(_url: &str) -> Result<VectorStorage> {
-    Err(Error::VectorStore("Weaviate support not enabled. Enable 'vector-weaviate' feature".to_string()))
+    Err(Error::VectorStore(
+        "Weaviate support not enabled. Enable 'vector-weaviate' feature".to_string(),
+    ))
 }
 
 /// 一行代码创建PostgreSQL向量存储
-/// 
+///
 /// 自动从环境变量读取数据库URL，或使用默认配置
-/// 
+///
 /// # 环境变量
 /// - `DATABASE_URL`: PostgreSQL连接字符串
 /// - `POSTGRES_HOST`: 主机地址 (默认: localhost)
@@ -109,19 +116,19 @@ pub async fn weaviate(_url: &str) -> Result<VectorStorage> {
 /// - `POSTGRES_DB`: 数据库名 (默认: lumos)
 /// - `POSTGRES_USER`: 用户名 (默认: postgres)
 /// - `POSTGRES_PASSWORD`: 密码
-/// 
+///
 /// # 示例
 /// ```rust,no_run
 /// use lumosai::prelude::*;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     // 使用环境变量或默认配置
 ///     let storage = lumosai::vector::postgres().await?;
-///     
+///
 ///     // 或者指定连接字符串
 ///     let storage = lumosai::vector::postgres_with_url("postgresql://user:pass@localhost/db").await?;
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -134,14 +141,17 @@ pub async fn postgres() -> Result<VectorStorage> {
 #[cfg(feature = "postgres")]
 pub async fn postgres_with_url(database_url: &str) -> Result<VectorStorage> {
     let config = lumosai_vector::postgres::PostgresConfig::new(database_url.to_string());
-    let storage = PostgresStorage::with_config(config).await
+    let storage = PostgresStorage::with_config(config)
+        .await
         .map_err(|e| Error::VectorStore(format!("Failed to create PostgreSQL storage: {}", e)))?;
     Ok(VectorStorage::Postgres(Arc::new(storage)))
 }
 
 #[cfg(not(feature = "postgres"))]
 pub async fn postgres_with_url(_database_url: &str) -> Result<VectorStorage> {
-    Err(Error::VectorStore("PostgreSQL support not enabled".to_string()))
+    Err(Error::VectorStore(
+        "PostgreSQL support not enabled".to_string(),
+    ))
 }
 
 /// 智能向量存储创建器
@@ -206,13 +216,13 @@ pub async fn auto() -> Result<VectorStorage> {
 }
 
 /// 向量存储构建器
-/// 
+///
 /// 提供更细粒度的配置选项
-/// 
+///
 /// # 示例
 /// ```rust,no_run
 /// use lumosai::prelude::*;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     let storage = lumosai::vector::builder()
@@ -245,43 +255,47 @@ impl VectorStorageBuilder {
             batch_size: None,
         }
     }
-    
+
     /// 设置存储后端 ("memory", "qdrant", "weaviate", "postgres")
     pub fn backend(mut self, backend: &str) -> Self {
         self.backend = Some(backend.to_string());
         self
     }
-    
+
     /// 设置数据库URL
     pub fn url(mut self, url: &str) -> Self {
         self.url = Some(url.to_string());
         self
     }
-    
+
     /// 设置连接池大小
     pub fn pool_size(mut self, size: u32) -> Self {
         self.pool_size = Some(size);
         self
     }
-    
+
     /// 设置批处理大小
     pub fn batch_size(mut self, size: usize) -> Self {
         self.batch_size = Some(size);
         self
     }
-    
+
     /// 构建向量存储
     pub async fn build(self) -> Result<VectorStorage> {
         let backend = self.backend.unwrap_or_else(|| "auto".to_string());
-        
+
         match backend.as_str() {
             "memory" => memory().await,
             "qdrant" => {
-                let url = self.url.ok_or_else(|| Error::VectorStore("Qdrant URL is required".to_string()))?;
+                let url = self
+                    .url
+                    .ok_or_else(|| Error::VectorStore("Qdrant URL is required".to_string()))?;
                 qdrant(&url).await
             }
             "weaviate" => {
-                let url = self.url.ok_or_else(|| Error::VectorStore("Weaviate URL is required".to_string()))?;
+                let url = self
+                    .url
+                    .ok_or_else(|| Error::VectorStore("Weaviate URL is required".to_string()))?;
                 weaviate(&url).await
             }
             "postgres" => {
@@ -292,7 +306,10 @@ impl VectorStorageBuilder {
                 }
             }
             "auto" => auto().await,
-            _ => Err(Error::VectorStore(format!("Unsupported backend: {}", backend))),
+            _ => Err(Error::VectorStore(format!(
+                "Unsupported backend: {}",
+                backend
+            ))),
         }
     }
 }
@@ -309,16 +326,20 @@ fn get_postgres_url_from_env() -> Result<String> {
     if let Ok(url) = std::env::var("DATABASE_URL") {
         return Ok(url);
     }
-    
+
     // 否则从各个组件构建
     let host = std::env::var("POSTGRES_HOST").unwrap_or_else(|_| "localhost".to_string());
     let port = std::env::var("POSTGRES_PORT").unwrap_or_else(|_| "5432".to_string());
     let db = std::env::var("POSTGRES_DB").unwrap_or_else(|_| "lumos".to_string());
     let user = std::env::var("POSTGRES_USER").unwrap_or_else(|_| "postgres".to_string());
-    let password = std::env::var("POSTGRES_PASSWORD")
-        .map_err(|_| Error::Config("POSTGRES_PASSWORD environment variable is required".to_string()))?;
-    
-    Ok(format!("postgresql://{}:{}@{}:{}/{}", user, password, host, port, db))
+    let password = std::env::var("POSTGRES_PASSWORD").map_err(|_| {
+        Error::Config("POSTGRES_PASSWORD environment variable is required".to_string())
+    })?;
+
+    Ok(format!(
+        "postgresql://{}:{}@{}:{}/{}",
+        user, password, host, port, db
+    ))
 }
 
 // 为VectorStorage enum实现VectorStorage trait
@@ -326,7 +347,10 @@ fn get_postgres_url_from_env() -> Result<String> {
 impl lumosai_vector_core::VectorStorage for VectorStorage {
     type Config = ();
 
-    async fn create_index(&self, config: lumosai_vector_core::IndexConfig) -> lumosai_vector_core::Result<()> {
+    async fn create_index(
+        &self,
+        config: lumosai_vector_core::IndexConfig,
+    ) -> lumosai_vector_core::Result<()> {
         match self {
             VectorStorage::Memory(storage) => storage.create_index(config).await,
             #[cfg(feature = "vector-postgres")]
@@ -362,7 +386,10 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         }
     }
 
-    async fn describe_index(&self, index_name: &str) -> lumosai_vector_core::Result<lumosai_vector_core::IndexInfo> {
+    async fn describe_index(
+        &self,
+        index_name: &str,
+    ) -> lumosai_vector_core::Result<lumosai_vector_core::IndexInfo> {
         match self {
             VectorStorage::Memory(storage) => storage.describe_index(index_name).await,
             #[cfg(feature = "vector-postgres")]
@@ -374,19 +401,30 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         }
     }
 
-    async fn upsert_documents(&self, index_name: &str, documents: Vec<lumosai_vector_core::Document>) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::DocumentId>> {
+    async fn upsert_documents(
+        &self,
+        index_name: &str,
+        documents: Vec<lumosai_vector_core::Document>,
+    ) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::DocumentId>> {
         match self {
             VectorStorage::Memory(storage) => storage.upsert_documents(index_name, documents).await,
             #[cfg(feature = "vector-postgres")]
-            VectorStorage::Postgres(storage) => storage.upsert_documents(index_name, documents).await,
+            VectorStorage::Postgres(storage) => {
+                storage.upsert_documents(index_name, documents).await
+            }
             #[cfg(feature = "vector-qdrant")]
             VectorStorage::Qdrant(storage) => storage.upsert_documents(index_name, documents).await,
             #[cfg(feature = "vector-weaviate")]
-            VectorStorage::Weaviate(storage) => storage.upsert_documents(index_name, documents).await,
+            VectorStorage::Weaviate(storage) => {
+                storage.upsert_documents(index_name, documents).await
+            }
         }
     }
 
-    async fn search(&self, request: lumosai_vector_core::SearchRequest) -> lumosai_vector_core::Result<lumosai_vector_core::SearchResponse> {
+    async fn search(
+        &self,
+        request: lumosai_vector_core::SearchRequest,
+    ) -> lumosai_vector_core::Result<lumosai_vector_core::SearchResponse> {
         match self {
             VectorStorage::Memory(storage) => storage.search(request).await,
             #[cfg(feature = "vector-postgres")]
@@ -398,7 +436,11 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         }
     }
 
-    async fn update_document(&self, index_name: &str, document: lumosai_vector_core::Document) -> lumosai_vector_core::Result<()> {
+    async fn update_document(
+        &self,
+        index_name: &str,
+        document: lumosai_vector_core::Document,
+    ) -> lumosai_vector_core::Result<()> {
         match self {
             VectorStorage::Memory(storage) => storage.update_document(index_name, document).await,
             #[cfg(feature = "vector-postgres")]
@@ -410,7 +452,11 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         }
     }
 
-    async fn delete_documents(&self, index_name: &str, ids: Vec<lumosai_vector_core::DocumentId>) -> lumosai_vector_core::Result<()> {
+    async fn delete_documents(
+        &self,
+        index_name: &str,
+        ids: Vec<lumosai_vector_core::DocumentId>,
+    ) -> lumosai_vector_core::Result<()> {
         match self {
             VectorStorage::Memory(storage) => storage.delete_documents(index_name, ids).await,
             #[cfg(feature = "vector-postgres")]
@@ -422,15 +468,36 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         }
     }
 
-    async fn get_documents(&self, index_name: &str, ids: Vec<lumosai_vector_core::DocumentId>, include_vectors: bool) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::Document>> {
+    async fn get_documents(
+        &self,
+        index_name: &str,
+        ids: Vec<lumosai_vector_core::DocumentId>,
+        include_vectors: bool,
+    ) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::Document>> {
         match self {
-            VectorStorage::Memory(storage) => storage.get_documents(index_name, ids, include_vectors).await,
+            VectorStorage::Memory(storage) => {
+                storage
+                    .get_documents(index_name, ids, include_vectors)
+                    .await
+            }
             #[cfg(feature = "vector-postgres")]
-            VectorStorage::Postgres(storage) => storage.get_documents(index_name, ids, include_vectors).await,
+            VectorStorage::Postgres(storage) => {
+                storage
+                    .get_documents(index_name, ids, include_vectors)
+                    .await
+            }
             #[cfg(feature = "vector-qdrant")]
-            VectorStorage::Qdrant(storage) => storage.get_documents(index_name, ids, include_vectors).await,
+            VectorStorage::Qdrant(storage) => {
+                storage
+                    .get_documents(index_name, ids, include_vectors)
+                    .await
+            }
             #[cfg(feature = "vector-weaviate")]
-            VectorStorage::Weaviate(storage) => storage.get_documents(index_name, ids, include_vectors).await,
+            VectorStorage::Weaviate(storage) => {
+                storage
+                    .get_documents(index_name, ids, include_vectors)
+                    .await
+            }
         }
     }
 
@@ -462,24 +529,22 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_memory_storage_creation() {
         let _storage = memory().await.expect("Failed to create memory storage");
         // 简单测试存储是否创建成功
         assert!(true); // 如果能到这里说明创建成功
     }
-    
+
     #[test]
     fn test_builder_pattern() {
-        let _builder = builder()
-            .backend("memory")
-            .batch_size(1000);
-        
+        let _builder = builder().backend("memory").batch_size(1000);
+
         // 测试构建器模式
         assert!(true); // 简单的编译测试
     }
-    
+
     #[test]
     fn test_postgres_url_construction() {
         std::env::set_var("POSTGRES_HOST", "testhost");
@@ -487,10 +552,10 @@ mod tests {
         std::env::set_var("POSTGRES_DB", "testdb");
         std::env::set_var("POSTGRES_USER", "testuser");
         std::env::set_var("POSTGRES_PASSWORD", "testpass");
-        
+
         let url = get_postgres_url_from_env().expect("Failed to build URL");
         assert_eq!(url, "postgresql://testuser:testpass@testhost:5433/testdb");
-        
+
         // 清理环境变量
         std::env::remove_var("POSTGRES_HOST");
         std::env::remove_var("POSTGRES_PORT");

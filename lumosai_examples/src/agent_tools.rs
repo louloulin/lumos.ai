@@ -1,12 +1,14 @@
-use lumosai_core::{Result, Base, BaseComponent, LogComponent};
-use lumosai_core::llm::{Message, Role, MockLlmProvider};
-use lumosai_core::agent::{Agent, create_basic_agent};
+use async_trait::async_trait;
 use lumosai_core::agent::types::AgentGenerateOptions;
-use lumosai_core::tool::{Tool, ToolExecutionOptions, ToolExecutionContext, ToolSchema, ParameterSchema, SchemaFormat};
+use lumosai_core::agent::{create_basic_agent, Agent};
+use lumosai_core::llm::{Message, MockLlmProvider, Role};
 use lumosai_core::logger::Logger;
 use lumosai_core::telemetry::TelemetrySink;
+use lumosai_core::tool::{
+    ParameterSchema, SchemaFormat, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
+};
+use lumosai_core::{Base, BaseComponent, LogComponent, Result};
 use serde_json::{json, Value};
-use async_trait::async_trait;
 use std::sync::Arc;
 
 // 简单的计算器工具实现
@@ -104,7 +106,12 @@ impl Tool for CalculatorTool {
         }
     }
 
-    async fn execute(&self, params: Value, _context: ToolExecutionContext, _options: &ToolExecutionOptions) -> Result<Value> {
+    async fn execute(
+        &self,
+        params: Value,
+        _context: ToolExecutionContext,
+        _options: &ToolExecutionOptions,
+    ) -> Result<Value> {
         let operation = params["operation"].as_str().unwrap_or("");
         let a = params["a"].as_f64().unwrap_or(0.0);
         let b = params["b"].as_f64().unwrap_or(0.0);
@@ -115,11 +122,17 @@ impl Tool for CalculatorTool {
             "multiply" => a * b,
             "divide" => {
                 if b == 0.0 {
-                    return Err(lumosai_core::Error::InvalidInput("Cannot divide by zero".into()));
+                    return Err(lumosai_core::Error::InvalidInput(
+                        "Cannot divide by zero".into(),
+                    ));
                 }
                 a / b
-            },
-            _ => return Err(lumosai_core::Error::InvalidInput("Unknown operation".into()))
+            }
+            _ => {
+                return Err(lumosai_core::Error::InvalidInput(
+                    "Unknown operation".into(),
+                ))
+            }
         };
 
         Ok(json!({ "result": result }))
@@ -149,9 +162,7 @@ impl WeatherTool {
 
 impl std::fmt::Debug for WeatherTool {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WeatherTool")
-            .field("id", &self.id)
-            .finish()
+        f.debug_struct("WeatherTool").field("id", &self.id).finish()
     }
 }
 
@@ -193,23 +204,26 @@ impl Tool for WeatherTool {
 
     fn schema(&self) -> ToolSchema {
         ToolSchema {
-            parameters: vec![
-                ParameterSchema {
-                    name: "city".to_string(),
-                    description: "要查询天气的城市名称".to_string(),
-                    r#type: "string".to_string(),
-                    required: true,
-                    properties: None,
-                    default: None,
-                },
-            ],
+            parameters: vec![ParameterSchema {
+                name: "city".to_string(),
+                description: "要查询天气的城市名称".to_string(),
+                r#type: "string".to_string(),
+                required: true,
+                properties: None,
+                default: None,
+            }],
             json_schema: None,
             format: SchemaFormat::Parameters,
             output_schema: None,
         }
     }
 
-    async fn execute(&self, params: Value, _context: ToolExecutionContext, _options: &ToolExecutionOptions) -> Result<Value> {
+    async fn execute(
+        &self,
+        params: Value,
+        _context: ToolExecutionContext,
+        _options: &ToolExecutionOptions,
+    ) -> Result<Value> {
         let city = params["city"].as_str().unwrap_or("未知");
 
         // 简化的天气数据模拟
@@ -230,7 +244,7 @@ impl Tool for WeatherTool {
                 "city": city,
                 "condition": "未知",
                 "error": "没有该城市的天气数据"
-            })
+            }),
         };
 
         Ok(weather_data)
@@ -256,7 +270,7 @@ async fn main() -> Result<()> {
     let mut agent = create_basic_agent(
         "assistant".to_string(),
         "你是一个通用助手，可以进行数学计算和查询天气信息。".to_string(),
-        llm_provider
+        llm_provider,
     );
 
     // 添加工具到代理
@@ -273,7 +287,9 @@ async fn main() -> Result<()> {
     });
 
     let context = ToolExecutionContext::default();
-    let tool_result = calc_tool.execute(calc_params, context, &ToolExecutionOptions::default()).await?;
+    let tool_result = calc_tool
+        .execute(calc_params, context, &ToolExecutionOptions::default())
+        .await?;
     println!("计算结果: {}", tool_result["result"]);
 
     // 测试天气工具直接调用
@@ -284,7 +300,9 @@ async fn main() -> Result<()> {
     });
 
     let context = ToolExecutionContext::default();
-    let weather_result = weather_tool.execute(weather_params, context, &ToolExecutionOptions::default()).await?;
+    let weather_result = weather_tool
+        .execute(weather_params, context, &ToolExecutionOptions::default())
+        .await?;
     println!("天气结果: {}", weather_result);
 
     // 使用代理处理查询（这里Agent需要实现工具调用功能）
@@ -296,7 +314,9 @@ async fn main() -> Result<()> {
         name: None,
     };
 
-    let calc_result = agent.generate(&[user_message], &AgentGenerateOptions::default()).await?;
+    let calc_result = agent
+        .generate(&[user_message], &AgentGenerateOptions::default())
+        .await?;
     println!("代理回答: {}", calc_result.response);
 
     println!("\n处理天气查询:");
@@ -307,7 +327,9 @@ async fn main() -> Result<()> {
         name: None,
     };
 
-    let weather_result = agent.generate(&[user_message], &AgentGenerateOptions::default()).await?;
+    let weather_result = agent
+        .generate(&[user_message], &AgentGenerateOptions::default())
+        .await?;
     println!("代理回答: {}", weather_result.response);
 
     Ok(())

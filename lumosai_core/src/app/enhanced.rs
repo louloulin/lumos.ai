@@ -1,22 +1,22 @@
 //! Enhanced application class
-//! 
+//!
 //! Provides Mastra-like unified application management functionality
 
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use serde::{Serialize, Deserialize};
-use serde_json::Value;
 
-use crate::error::Result;
-use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::agent::{trait_def::Agent, AgentConfig};
-use crate::tool::{Tool, ToolRegistry, ToolMetadata, EnhancedToolCategory as ToolCategory};
-use crate::memory::{Memory, MemoryConfig};
+use crate::base::{Base, BaseComponent, ComponentConfig};
+use crate::error::Result;
 use crate::llm::{LlmProvider, Message};
-use crate::workflow::Workflow;
-use crate::vector::VectorStorage;
-use crate::rag::RagPipeline;
 use crate::logger::{Component, Logger};
+use crate::memory::{Memory, MemoryConfig};
+use crate::rag::RagPipeline;
+use crate::tool::{EnhancedToolCategory as ToolCategory, Tool, ToolMetadata, ToolRegistry};
+use crate::vector::VectorStorage;
+use crate::workflow::Workflow;
 
 /// Application configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,42 +127,51 @@ impl EnhancedApp {
 
     /// Add LLM provider
     pub fn add_llm_provider(&self, name: String, provider: Arc<dyn LlmProvider>) -> Result<()> {
-        let mut providers = self.llm_providers.write()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+        let mut providers = self.llm_providers.write().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire write lock".to_string())
+        })?;
         providers.insert(name.clone(), provider);
-        
-        self.base.logger().info(&format!("LLM provider '{}' added", name), None);
+
+        self.base
+            .logger()
+            .info(&format!("LLM provider '{}' added", name), None);
         Ok(())
     }
 
     /// Get LLM provider
     pub fn get_llm_provider(&self, name: &str) -> Result<Option<Arc<dyn LlmProvider>>> {
-        let providers = self.llm_providers.read()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let providers = self.llm_providers.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(providers.get(name).cloned())
     }
 
     /// Add agent
     pub fn add_agent(&self, name: String, agent: Arc<dyn Agent>) -> Result<()> {
-        let mut agents = self.agents.write()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+        let mut agents = self.agents.write().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire write lock".to_string())
+        })?;
         agents.insert(name.clone(), agent);
-        
-        self.base.logger().info(&format!("Agent '{}' added", name), None);
+
+        self.base
+            .logger()
+            .info(&format!("Agent '{}' added", name), None);
         Ok(())
     }
 
     /// Get agent
     pub fn get_agent(&self, name: &str) -> Result<Option<Arc<dyn Agent>>> {
-        let agents = self.agents.read()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let agents = self.agents.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(agents.get(name).cloned())
     }
 
     /// List all agents
     pub fn list_agents(&self) -> Result<Vec<String>> {
-        let agents = self.agents.read()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let agents = self.agents.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(agents.keys().cloned().collect())
     }
 
@@ -212,40 +221,47 @@ impl EnhancedApp {
 
     /// Set context variable
     pub fn set_context(&self, key: String, value: Value) -> Result<()> {
-        let mut context = self.context.write()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+        let mut context = self.context.write().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire write lock".to_string())
+        })?;
         context.insert(key, value);
         Ok(())
     }
 
     /// Get context variable
     pub fn get_context(&self, key: &str) -> Result<Option<Value>> {
-        let context = self.context.read()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let context = self.context.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(context.get(key).cloned())
     }
 
     /// Run agent
     pub async fn run_agent(&self, agent_name: &str, messages: &[Message]) -> Result<String> {
-        let agent = self.get_agent(agent_name)?
-            .ok_or_else(|| crate::error::Error::Internal(format!("Agent '{}' not found", agent_name)))?;
+        let agent = self.get_agent(agent_name)?.ok_or_else(|| {
+            crate::error::Error::Internal(format!("Agent '{}' not found", agent_name))
+        })?;
 
         let options = crate::agent::types::AgentGenerateOptions::default();
         let result = agent.generate(messages, &options).await?;
-        
+
         Ok(result.response)
     }
 
     /// Get application statistics
     pub fn get_stats(&self) -> Result<AppStats> {
-        let agents = self.agents.read()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
-        let workflows = self.workflows.read()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
-        let rag_pipelines = self.rag_pipelines.read()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
-        let llm_providers = self.llm_providers.read()
-            .map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let agents = self.agents.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
+        let workflows = self.workflows.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
+        let rag_pipelines = self.rag_pipelines.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
+        let llm_providers = self.llm_providers.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
 
         let tool_stats = self.tool_registry.get_stats()?;
 
@@ -261,20 +277,25 @@ impl EnhancedApp {
 
     /// Start application
     pub async fn start(&self) -> Result<()> {
-        self.base.logger().info(&format!("Starting application '{}'", self.config.name), None);
-        
+        self.base.logger().info(
+            &format!("Starting application '{}'", self.config.name),
+            None,
+        );
+
         // Here you can add startup logic, such as initializing connections, warming up models, etc.
-        
-        self.base.logger().info("Application started successfully", None);
+
+        self.base
+            .logger()
+            .info("Application started successfully", None);
         Ok(())
     }
 
     /// Stop application
     pub async fn stop(&self) -> Result<()> {
         self.base.logger().info("Stopping application", None);
-        
+
         // Here you can add cleanup logic
-        
+
         self.base.logger().info("Application stopped", None);
         Ok(())
     }

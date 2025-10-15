@@ -1,12 +1,11 @@
 //! Logger module for structured logging
 
-use std::sync::Arc;
-use serde::{Serialize, Deserialize};
 use crate::types::Metadata;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// Log level enumeration
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 pub enum LogLevel {
     /// Trace level - detailed information for debugging
     Trace = 0,
@@ -21,10 +20,8 @@ pub enum LogLevel {
     Error = 4,
 }
 
-
 /// Component identifiers for logging
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Component {
     /// LLM component
     #[default]
@@ -49,7 +46,6 @@ pub enum Component {
     Voice,
 }
 
-
 impl std::fmt::Display for Component {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -71,16 +67,16 @@ impl std::fmt::Display for Component {
 pub trait Logger: Send + Sync {
     /// Log a debug message
     fn debug(&self, message: &str, metadata: Option<Metadata>);
-    
+
     /// Log an info message
     fn info(&self, message: &str, metadata: Option<Metadata>);
-    
+
     /// Log a warning message
     fn warn(&self, message: &str, metadata: Option<Metadata>);
-    
+
     /// Log an error message
     fn error(&self, message: &str, metadata: Option<Metadata>);
-    
+
     /// Get logs by run ID
     fn get_logs_by_run_id(&self, run_id: &str) -> Vec<LogEntry>;
 }
@@ -130,7 +126,7 @@ impl Logger for ConsoleLogger {
             }
         }
     }
-    
+
     fn info(&self, message: &str, metadata: Option<Metadata>) {
         if self.level <= LogLevel::Info {
             println!("[INFO][{}][{}] {}", self.component, self.name, message);
@@ -139,7 +135,7 @@ impl Logger for ConsoleLogger {
             }
         }
     }
-    
+
     fn warn(&self, message: &str, metadata: Option<Metadata>) {
         if self.level <= LogLevel::Warn {
             println!("[WARN][{}][{}] {}", self.component, self.name, message);
@@ -148,7 +144,7 @@ impl Logger for ConsoleLogger {
             }
         }
     }
-    
+
     fn error(&self, message: &str, metadata: Option<Metadata>) {
         if self.level <= LogLevel::Error {
             println!("[ERROR][{}][{}] {}", self.component, self.name, message);
@@ -157,7 +153,7 @@ impl Logger for ConsoleLogger {
             }
         }
     }
-    
+
     fn get_logs_by_run_id(&self, _run_id: &str) -> Vec<LogEntry> {
         // ConsoleLogger doesn't store logs, so we return an empty vector
         Vec::new()
@@ -165,7 +161,11 @@ impl Logger for ConsoleLogger {
 }
 
 /// Create a default console logger
-pub fn create_logger(name: impl Into<String>, component: Component, level: LogLevel) -> Arc<dyn Logger> {
+pub fn create_logger(
+    name: impl Into<String>,
+    component: Component,
+    level: LogLevel,
+) -> Arc<dyn Logger> {
     Arc::new(ConsoleLogger::new(name, component, level))
 }
 
@@ -178,10 +178,12 @@ impl Logger for NoopLogger {
     fn info(&self, _message: &str, _metadata: Option<Metadata>) {}
     fn warn(&self, _message: &str, _metadata: Option<Metadata>) {}
     fn error(&self, _message: &str, _metadata: Option<Metadata>) {}
-    fn get_logs_by_run_id(&self, _run_id: &str) -> Vec<LogEntry> { Vec::new() }
+    fn get_logs_by_run_id(&self, _run_id: &str) -> Vec<LogEntry> {
+        Vec::new()
+    }
 }
 
 /// Create a no-op logger
 pub fn create_noop_logger() -> Arc<dyn Logger> {
     Arc::new(NoopLogger)
-} 
+}

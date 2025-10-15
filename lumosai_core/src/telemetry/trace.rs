@@ -1,8 +1,8 @@
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
-use async_trait::async_trait;
 
 /// 执行追踪数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,22 +84,45 @@ pub enum StepType {
 #[async_trait]
 pub trait TraceCollector: Send + Sync {
     /// 开始新的追踪
-    async fn start_trace(&self, agent_id: String, metadata: HashMap<String, serde_json::Value>) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn start_trace(
+        &self,
+        agent_id: String,
+        metadata: HashMap<String, serde_json::Value>,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 结束追踪
-    async fn end_trace(&self, trace_id: &str, success: bool) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn end_trace(
+        &self,
+        trace_id: &str,
+        success: bool,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 添加追踪步骤
-    async fn add_trace_step(&self, trace_id: &str, step: TraceStep) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn add_trace_step(
+        &self,
+        trace_id: &str,
+        step: TraceStep,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
     /// 获取追踪信息
-    async fn get_trace(&self, trace_id: &str) -> Result<Option<ExecutionTrace>, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn get_trace(
+        &self,
+        trace_id: &str,
+    ) -> Result<Option<ExecutionTrace>, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 搜索追踪
-    async fn search_traces(&self, query: TraceQuery) -> Result<Vec<ExecutionTrace>, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn search_traces(
+        &self,
+        query: TraceQuery,
+    ) -> Result<Vec<ExecutionTrace>, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 获取追踪统计
-    async fn get_trace_stats(&self, agent_id: Option<&str>, from_time: Option<u64>, to_time: Option<u64>) -> Result<TraceStats, Box<dyn std::error::Error + Send + Sync>>;
+    async fn get_trace_stats(
+        &self,
+        agent_id: Option<&str>,
+        from_time: Option<u64>,
+        to_time: Option<u64>,
+    ) -> Result<TraceStats, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// 追踪查询参数
@@ -162,7 +185,7 @@ impl TraceBuilder {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
-            
+
         Self {
             trace: ExecutionTrace {
                 trace_id: trace_id.clone(),
@@ -180,26 +203,26 @@ impl TraceBuilder {
             current_step: None,
         }
     }
-    
+
     /// 设置父追踪ID
     pub fn with_parent_trace(mut self, parent_trace_id: String) -> Self {
         self.trace.parent_trace_id = Some(parent_trace_id.clone());
         self.trace.root_trace_id = parent_trace_id;
         self
     }
-    
+
     /// 添加标签
     pub fn with_tag(mut self, key: String, value: String) -> Self {
         self.trace.tags.insert(key, value);
         self
     }
-    
+
     /// 添加元数据
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.trace.metadata.insert(key, value);
         self
     }
-    
+
     /// 开始新步骤
     pub fn start_step(&mut self, name: String, step_type: StepType) -> &mut Self {
         let step_id = Uuid::new_v4().to_string();
@@ -207,7 +230,7 @@ impl TraceBuilder {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
-            
+
         self.current_step = Some(TraceStep {
             step_id,
             name,
@@ -222,10 +245,10 @@ impl TraceBuilder {
             metadata: HashMap::new(),
             children: Vec::new(),
         });
-        
+
         self
     }
-    
+
     /// 设置步骤输入
     pub fn set_step_input(&mut self, input: serde_json::Value) -> &mut Self {
         if let Some(ref mut step) = self.current_step {
@@ -233,7 +256,7 @@ impl TraceBuilder {
         }
         self
     }
-    
+
     /// 设置步骤输出
     pub fn set_step_output(&mut self, output: serde_json::Value) -> &mut Self {
         if let Some(ref mut step) = self.current_step {
@@ -241,7 +264,7 @@ impl TraceBuilder {
         }
         self
     }
-    
+
     /// 设置步骤错误
     pub fn set_step_error(&mut self, error: String) -> &mut Self {
         if let Some(ref mut step) = self.current_step {
@@ -250,7 +273,7 @@ impl TraceBuilder {
         }
         self
     }
-    
+
     /// 完成当前步骤
     pub fn end_step(&mut self, success: bool) -> &mut Self {
         if let Some(mut step) = self.current_step.take() {
@@ -260,12 +283,12 @@ impl TraceBuilder {
                 .as_millis() as u64;
             step.duration_ms = step.end_time - step.start_time;
             step.success = success;
-            
+
             self.trace.steps.push(step);
         }
         self
     }
-    
+
     /// 完成追踪
     pub fn finish(mut self, success: bool) -> ExecutionTrace {
         self.trace.end_time = SystemTime::now()
@@ -274,29 +297,29 @@ impl TraceBuilder {
             .as_millis() as u64;
         self.trace.total_duration_ms = self.trace.end_time - self.trace.start_time;
         self.trace.success = success;
-        
+
         self.trace
     }
-    
+
     /// 获取追踪ID
     pub fn trace_id(&self) -> &str {
         &self.trace.trace_id
     }
-    
+
     /// Build the current trace without finishing it
     pub fn build(&self) -> ExecutionTrace {
         let mut trace = self.trace.clone();
-        
+
         // Calculate success based on steps
         if !trace.steps.is_empty() {
             trace.success = trace.steps.iter().all(|step| step.success);
         }
-        
+
         // Update total duration if we have steps
         if let (Some(first), Some(last)) = (trace.steps.first(), trace.steps.last()) {
             trace.total_duration_ms = last.end_time - first.start_time;
         }
-        
+
         trace
     }
 }
@@ -309,7 +332,7 @@ impl ExecutionTrace {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
-            
+
         Self {
             trace_id: trace_id.clone(),
             agent_id,
@@ -324,27 +347,29 @@ impl ExecutionTrace {
             root_trace_id: trace_id,
         }
     }
-    
+
     /// 获取所有失败的步骤
     pub fn get_failed_steps(&self) -> Vec<&TraceStep> {
         self.steps.iter().filter(|step| !step.success).collect()
     }
-    
+
     /// 获取最慢的步骤
     pub fn get_slowest_step(&self) -> Option<&TraceStep> {
         self.steps.iter().max_by_key(|step| step.duration_ms)
     }
-    
+
     /// 计算总的工具调用次数
     pub fn count_tool_calls(&self) -> usize {
-        self.steps.iter()
+        self.steps
+            .iter()
             .filter(|step| matches!(step.step_type, StepType::ToolCall))
             .count()
     }
-    
+
     /// 获取错误摘要
     pub fn get_error_summary(&self) -> Vec<String> {
-        self.steps.iter()
+        self.steps
+            .iter()
             .filter_map(|step| step.error.as_ref())
             .cloned()
             .collect()
@@ -359,7 +384,7 @@ impl TraceStep {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
-            
+
         Self {
             step_id,
             name,
@@ -375,12 +400,12 @@ impl TraceStep {
             children: Vec::new(),
         }
     }
-    
+
     /// 添加子步骤
     pub fn add_child(&mut self, child: TraceStep) {
         self.children.push(child);
     }
-    
+
     /// 设置持续时间
     pub fn set_duration(&mut self, duration: Duration) {
         self.duration_ms = duration.as_millis() as u64;

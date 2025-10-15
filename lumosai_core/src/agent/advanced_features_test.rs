@@ -5,14 +5,14 @@
 #[cfg(test)]
 mod tests {
     use super::super::*;
-    use crate::llm::{LlmOptions, LlmProvider, Message, Role};
     use crate::error::Result;
-    use std::sync::Arc;
+    use crate::llm::{LlmOptions, LlmProvider, Message, Role};
     use async_trait::async_trait;
-    use tokio::time::{sleep, Duration};
     use chrono::Utc;
     use serde_json::json;
     use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::time::{sleep, Duration};
 
     // Mock LLM Provider for testing
     struct MockLlmProvider {
@@ -36,13 +36,29 @@ mod tests {
         }
 
         async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
-            let index = self.current_index.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            Ok(self.responses.get(index % self.responses.len()).unwrap_or(&"Default response".to_string()).clone())
+            let index = self
+                .current_index
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok(self
+                .responses
+                .get(index % self.responses.len())
+                .unwrap_or(&"Default response".to_string())
+                .clone())
         }
 
-        async fn generate_with_messages(&self, _messages: &[Message], _options: &LlmOptions) -> Result<String> {
-            let index = self.current_index.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            Ok(self.responses.get(index % self.responses.len()).unwrap_or(&"Default response".to_string()).clone())
+        async fn generate_with_messages(
+            &self,
+            _messages: &[Message],
+            _options: &LlmOptions,
+        ) -> Result<String> {
+            let index = self
+                .current_index
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok(self
+                .responses
+                .get(index % self.responses.len())
+                .unwrap_or(&"Default response".to_string())
+                .clone())
         }
 
         async fn generate_stream<'a>(
@@ -195,8 +211,7 @@ mod tests {
         assert_eq!(history.len(), 3);
 
         // 测试事件过滤
-        let filter = EventFilter::new()
-            .with_event_types(vec!["AgentStarted".to_string()]);
+        let filter = EventFilter::new().with_event_types(vec!["AgentStarted".to_string()]);
         let filtered_history = event_bus.get_history(Some(filter)).await;
         assert_eq!(filtered_history.len(), 1);
     }
@@ -205,17 +220,13 @@ mod tests {
     async fn test_agent_orchestration() {
         // 创建事件总线
         let event_bus = Arc::new(EventBus::new(100));
-        
+
         // 创建编排器
         let orchestrator = BasicOrchestrator::new(event_bus.clone());
 
         // 创建Mock Agent
-        let mock_llm1 = Arc::new(MockLlmProvider::new(vec![
-            "Agent 1 response".to_string(),
-        ]));
-        let mock_llm2 = Arc::new(MockLlmProvider::new(vec![
-            "Agent 2 response".to_string(),
-        ]));
+        let mock_llm1 = Arc::new(MockLlmProvider::new(vec!["Agent 1 response".to_string()]));
+        let mock_llm2 = Arc::new(MockLlmProvider::new(vec!["Agent 2 response".to_string()]));
 
         let agent1 = Arc::new(create_basic_agent(
             "agent_001",
@@ -256,7 +267,7 @@ mod tests {
         // 获取会话并执行
         if let Some(session_arc) = orchestrator.get_session(&session_id).await {
             let mut session = session_arc.lock().await;
-            
+
             // 执行协作
             let result = orchestrator
                 .execute_collaboration(&mut session)
@@ -272,7 +283,7 @@ mod tests {
             // 检查Agent状态
             let states = session.get_results().await;
             assert_eq!(states.len(), 2);
-            
+
             for (agent_id, state) in states {
                 match state {
                     AgentExecutionState::Completed(_) => {
@@ -290,16 +301,16 @@ mod tests {
     async fn test_parallel_orchestration() {
         // 创建事件总线
         let event_bus = Arc::new(EventBus::new(100));
-        
+
         // 创建编排器
         let orchestrator = BasicOrchestrator::new(event_bus.clone());
 
         // 创建Mock Agent
         let mock_llm1 = Arc::new(MockLlmProvider::new(vec![
-            "Parallel Agent 1 response".to_string(),
+            "Parallel Agent 1 response".to_string()
         ]));
         let mock_llm2 = Arc::new(MockLlmProvider::new(vec![
-            "Parallel Agent 2 response".to_string(),
+            "Parallel Agent 2 response".to_string()
         ]));
 
         let agent1 = Arc::new(create_basic_agent(
@@ -319,7 +330,10 @@ mod tests {
             id: "parallel_task_001".to_string(),
             name: "Test Parallel Collaboration".to_string(),
             description: "Test parallel multi-agent collaboration".to_string(),
-            participants: vec!["parallel_agent_001".to_string(), "parallel_agent_002".to_string()],
+            participants: vec![
+                "parallel_agent_001".to_string(),
+                "parallel_agent_002".to_string(),
+            ],
             pattern: OrchestrationPattern::Parallel,
             input: json!({"message": "Hello from parallel orchestrator"}),
             expected_output: None,
@@ -341,10 +355,10 @@ mod tests {
         // 获取会话并执行
         if let Some(session_arc) = orchestrator.get_session(&session_id).await {
             let mut session = session_arc.lock().await;
-            
+
             // 记录开始时间
             let start_time = std::time::Instant::now();
-            
+
             // 执行并行协作
             let result = orchestrator
                 .execute_collaboration(&mut session)
@@ -363,14 +377,17 @@ mod tests {
             // 检查Agent状态
             let states = session.get_results().await;
             assert_eq!(states.len(), 2);
-            
+
             for (agent_id, state) in states {
                 match state {
                     AgentExecutionState::Completed(_) => {
                         println!("Parallel Agent {} completed successfully", agent_id);
                     }
                     other => {
-                        panic!("Parallel Agent {} in unexpected state: {:?}", agent_id, other);
+                        panic!(
+                            "Parallel Agent {} in unexpected state: {:?}",
+                            agent_id, other
+                        );
                     }
                 }
             }

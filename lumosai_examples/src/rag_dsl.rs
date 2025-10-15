@@ -1,16 +1,18 @@
-use lumosai_core::Result;
-use lumosai_core::rag::{DocumentSource, RagPipelineBuilder, RagPipeline};
 use lumos_macro::rag_pipeline;
+use lumosai_core::rag::{DocumentSource, RagPipeline, RagPipelineBuilder};
+use lumosai_core::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("RAG Pipeline DSL示例");
-    
+
     // 演示手动创建RAG管道
     println!("🔧 手动创建RAG管道示例");
 
     let manual_pipeline = RagPipelineBuilder::new("manual_pipeline")
-        .add_source(DocumentSource::from_text("这是一个API文档示例。它包含了关于Lumos宏的使用说明和示例代码。"))
+        .add_source(DocumentSource::from_text(
+            "这是一个API文档示例。它包含了关于Lumos宏的使用说明和示例代码。",
+        ))
         .build()
         .await?;
 
@@ -28,7 +30,10 @@ async fn main() -> Result<()> {
     println!("- 上下文: {}", result.context);
     for (i, doc) in result.documents.iter().enumerate() {
         println!("文档 #{}: {}", i + 1, doc.id);
-        println!("内容: {}", doc.content.chars().take(150).collect::<String>());
+        println!(
+            "内容: {}",
+            doc.content.chars().take(150).collect::<String>()
+        );
         if let Some(scores) = &result.scores {
             if i < scores.len() {
                 println!("相关度: {:.3}", scores[i]);
@@ -41,7 +46,9 @@ async fn main() -> Result<()> {
     println!("\n📚 第二个RAG管道示例");
 
     let second_pipeline = RagPipelineBuilder::new("second_pipeline")
-        .add_source(DocumentSource::from_text("另一个测试文档，用于演示手动创建的RAG管道。这个文档包含了更多的技术细节。"))
+        .add_source(DocumentSource::from_text(
+            "另一个测试文档，用于演示手动创建的RAG管道。这个文档包含了更多的技术细节。",
+        ))
         .build()
         .await?;
 
@@ -55,7 +62,8 @@ async fn main() -> Result<()> {
     // 演示使用宏创建RAG管道（暂时注释掉，因为宏解析有问题）
     println!("\n🚀 宏功能开发中...");
     println!("宏语法示例:");
-    println!(r#"
+    println!(
+        r#"
     rag_pipeline! {{
         name: "macro_pipeline",
         source: DocumentSource::from_text("文档内容"),
@@ -65,7 +73,8 @@ async fn main() -> Result<()> {
             store: {{ db: "memory", collection: "docs" }}
         }}
     }}
-    "#);
+    "#
+    );
 
     println!("\n✅ RAG DSL 示例完成！");
 

@@ -15,14 +15,14 @@ pub use types::*;
 // Core layout components
 pub mod app_layout;
 pub mod base_layout;
-pub mod menu;
+pub mod charts;
 pub mod confirm_modal;
-pub mod snackbar;
 pub mod hero;
+pub mod logout_form;
+pub mod menu;
 pub mod profile;
 pub mod profile_popup;
-pub mod logout_form;
-pub mod charts;
+pub mod snackbar;
 
 // Feature modules (UI only)
 pub mod analytics;

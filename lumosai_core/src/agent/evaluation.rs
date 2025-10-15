@@ -1,9 +1,9 @@
 //! Evaluation metrics system for agents
 
-use std::collections::HashMap;
-use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::agent::types::RuntimeContext;
 use crate::base::Base;
@@ -36,15 +36,15 @@ pub trait EvaluationMetric: Base + Send + Sync {
         output: &str,
         context: &RuntimeContext,
     ) -> Result<EvaluationResult>;
-    
+
     /// Get the name of this metric
     fn metric_name(&self) -> &str;
-    
+
     /// Get the description of this metric
     fn description(&self) -> &str {
         "No description provided"
     }
-    
+
     /// Get the expected score range
     fn score_range(&self) -> (f64, f64) {
         (0.0, 1.0)
@@ -104,29 +104,26 @@ impl EvaluationMetric for RelevanceMetric {
         let input_lower = input.to_lowercase();
         let output_lower = output.to_lowercase();
 
-        let input_words: std::collections::HashSet<&str> = input_lower
-            .split_whitespace()
-            .collect();
+        let input_words: std::collections::HashSet<&str> = input_lower.split_whitespace().collect();
 
-        let output_words: std::collections::HashSet<&str> = output_lower
-            .split_whitespace()
-            .collect();
-        
+        let output_words: std::collections::HashSet<&str> =
+            output_lower.split_whitespace().collect();
+
         let intersection_count = input_words.intersection(&output_words).count();
         let union_count = input_words.union(&output_words).count();
-        
+
         let score = if union_count > 0 {
             intersection_count as f64 / union_count as f64
         } else {
             0.0
         };
-        
+
         let explanation = if score >= self.threshold {
             Some(format!("Output is relevant (score: {:.3})", score))
         } else {
             Some(format!("Output may not be relevant (score: {:.3})", score))
         };
-        
+
         Ok(EvaluationResult {
             metric_name: self.metric_name().to_string(),
             score,
@@ -135,11 +132,11 @@ impl EvaluationMetric for RelevanceMetric {
             timestamp: std::time::SystemTime::now(),
         })
     }
-    
+
     fn metric_name(&self) -> &str {
         "relevance"
     }
-    
+
     fn description(&self) -> &str {
         "Measures the relevance of the output to the input based on keyword overlap"
     }
@@ -201,7 +198,7 @@ impl EvaluationMetric for LengthMetric {
         _context: &RuntimeContext,
     ) -> Result<EvaluationResult> {
         let length = output.len();
-        
+
         let score = if length < self.min_length {
             // Too short
             length as f64 / self.min_length as f64
@@ -212,17 +209,26 @@ impl EvaluationMetric for LengthMetric {
             // Just right
             1.0
         };
-        
+
         let explanation = Some(format!(
             "Output length: {} characters (expected: {}-{})",
             length, self.min_length, self.max_length
         ));
-        
+
         let mut metadata = HashMap::new();
-        metadata.insert("length".to_string(), serde_json::Value::Number(length.into()));
-        metadata.insert("min_length".to_string(), serde_json::Value::Number(self.min_length.into()));
-        metadata.insert("max_length".to_string(), serde_json::Value::Number(self.max_length.into()));
-        
+        metadata.insert(
+            "length".to_string(),
+            serde_json::Value::Number(length.into()),
+        );
+        metadata.insert(
+            "min_length".to_string(),
+            serde_json::Value::Number(self.min_length.into()),
+        );
+        metadata.insert(
+            "max_length".to_string(),
+            serde_json::Value::Number(self.max_length.into()),
+        );
+
         Ok(EvaluationResult {
             metric_name: self.metric_name().to_string(),
             score,
@@ -231,11 +237,11 @@ impl EvaluationMetric for LengthMetric {
             timestamp: std::time::SystemTime::now(),
         })
     }
-    
+
     fn metric_name(&self) -> &str {
         "length"
     }
-    
+
     fn description(&self) -> &str {
         "Evaluates whether the output length is within expected bounds"
     }
@@ -260,7 +266,7 @@ impl CompositeMetric {
             name,
         }
     }
-    
+
     /// Add a metric with a weight
     pub fn add_metric(&mut self, metric: Box<dyn EvaluationMetric>, weight: f64) {
         self.metrics.push((metric, weight));
@@ -304,42 +310,51 @@ impl EvaluationMetric for CompositeMetric {
         let mut total_score = 0.0;
         let mut total_weight = 0.0;
         let mut metadata = HashMap::new();
-        
+
         for (metric, weight) in &self.metrics {
             let result = metric.evaluate(input, output, context).await?;
             total_score += result.score * weight;
             total_weight += weight;
-            
+
             // Add individual metric results to metadata
             metadata.insert(
                 format!("{}_score", result.metric_name),
-                serde_json::Value::Number(serde_json::Number::from_f64(result.score).unwrap_or_else(|| serde_json::Number::from(0))),
+                serde_json::Value::Number(
+                    serde_json::Number::from_f64(result.score)
+                        .unwrap_or_else(|| serde_json::Number::from(0)),
+                ),
             );
             metadata.insert(
                 format!("{}_weight", result.metric_name),
-                serde_json::Value::Number(serde_json::Number::from_f64(*weight).unwrap_or_else(|| serde_json::Number::from(0))),
+                serde_json::Value::Number(
+                    serde_json::Number::from_f64(*weight)
+                        .unwrap_or_else(|| serde_json::Number::from(0)),
+                ),
             );
         }
-        
+
         let final_score = if total_weight > 0.0 {
             total_score / total_weight
         } else {
             0.0
         };
-        
+
         Ok(EvaluationResult {
             metric_name: self.metric_name().to_string(),
             score: final_score,
-            explanation: Some(format!("Composite score from {} metrics", self.metrics.len())),
+            explanation: Some(format!(
+                "Composite score from {} metrics",
+                self.metrics.len()
+            )),
             metadata,
             timestamp: std::time::SystemTime::now(),
         })
     }
-    
+
     fn metric_name(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         "Composite metric that combines multiple evaluation metrics"
     }

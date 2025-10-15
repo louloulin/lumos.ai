@@ -1,10 +1,10 @@
 //! 通信工具集
-//! 
+//!
 //! 提供邮件发送、Slack消息、Webhook调用、短信发送等通信功能
 
-use crate::tool::{ToolSchema, ParameterSchema, FunctionTool};
 use crate::error::Result;
-use serde_json::{Value, json};
+use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
+use serde_json::{json, Value};
 
 /// 邮件发送工具
 pub fn email_sender() -> FunctionTool {
@@ -56,22 +56,31 @@ pub fn email_sender() -> FunctionTool {
         "发送邮件，支持HTML格式、附件和批量发送",
         schema,
         |params| {
-            let smtp_config = params.get("smtp_config")
-                .ok_or_else(|| crate::error::Error::Tool("Missing smtp_config parameter".to_string()))?;
-            
-            let to = params.get("to")
+            let smtp_config = params.get("smtp_config").ok_or_else(|| {
+                crate::error::Error::Tool("Missing smtp_config parameter".to_string())
+            })?;
+
+            let to = params
+                .get("to")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| crate::error::Error::Tool("Missing to parameter".to_string()))?;
-            
-            let subject = params.get("subject")
+
+            let subject = params
+                .get("subject")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| crate::error::Error::Tool("Missing subject parameter".to_string()))?;
-            
-            let body = params.get("body")
+                .ok_or_else(|| {
+                    crate::error::Error::Tool("Missing subject parameter".to_string())
+                })?;
+
+            let body = params
+                .get("body")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| crate::error::Error::Tool("Missing body parameter".to_string()))?;
-            
-            let is_html = params.get("is_html").and_then(|v| v.as_bool()).unwrap_or(false);
+
+            let is_html = params
+                .get("is_html")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
 
             // 模拟邮件发送
             Ok(json!({
@@ -131,19 +140,29 @@ pub fn slack_messenger() -> FunctionTool {
         "发送Slack消息，支持频道、私信和富文本格式",
         schema,
         |params| {
-            let webhook_url = params.get("webhook_url")
+            let webhook_url = params
+                .get("webhook_url")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| crate::error::Error::Tool("Missing webhook_url parameter".to_string()))?;
-            
-            let channel = params.get("channel")
+                .ok_or_else(|| {
+                    crate::error::Error::Tool("Missing webhook_url parameter".to_string())
+                })?;
+
+            let channel = params
+                .get("channel")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| crate::error::Error::Tool("Missing channel parameter".to_string()))?;
-            
-            let text = params.get("text")
+                .ok_or_else(|| {
+                    crate::error::Error::Tool("Missing channel parameter".to_string())
+                })?;
+
+            let text = params
+                .get("text")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| crate::error::Error::Tool("Missing text parameter".to_string()))?;
-            
-            let username = params.get("username").and_then(|v| v.as_str()).unwrap_or("Lumos Bot");
+
+            let username = params
+                .get("username")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Lumos Bot");
 
             // 模拟Slack消息发送
             Ok(json!({
@@ -202,16 +221,19 @@ pub fn webhook_caller() -> FunctionTool {
         "调用HTTP Webhook，支持各种HTTP方法和认证方式",
         schema,
         |params| {
-            let url = params.get("url")
+            let url = params
+                .get("url")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| crate::error::Error::Tool("Missing url parameter".to_string()))?;
-            
-            let method = params.get("method")
+
+            let method = params
+                .get("method")
                 .and_then(|v| v.as_str())
                 .unwrap_or("POST");
-            
+
             let body = params.get("body");
-            let timeout_seconds = params.get("timeout_seconds")
+            let timeout_seconds = params
+                .get("timeout_seconds")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(30);
 
@@ -248,9 +270,5 @@ pub fn webhook_caller() -> FunctionTool {
 
 /// 获取所有通信工具
 pub fn all_communication_tools() -> Vec<FunctionTool> {
-    vec![
-        email_sender(),
-        slack_messenger(),
-        webhook_caller(),
-    ]
+    vec![email_sender(), slack_messenger(), webhook_caller()]
 }

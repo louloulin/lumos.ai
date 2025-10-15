@@ -1,5 +1,5 @@
 //! AI能力扩展演示
-//! 
+//!
 //! 展示Lumos.ai AI能力扩展的完整功能
 
 use lumosai_ai_extensions::*;
@@ -9,25 +9,25 @@ use std::collections::HashMap;
 async fn main() -> Result<()> {
     println!("🧠 Lumos.ai AI能力扩展演示");
     println!("=" .repeat(50));
-    
+
     // 演示多模态处理
     demo_multimodal_processing().await?;
-    
+
     // 演示推理能力
     demo_reasoning_capabilities().await?;
-    
+
     // 演示领域适配
     demo_domain_adaptation().await?;
-    
+
     // 演示知识图谱
     demo_knowledge_graph().await?;
-    
+
     // 演示模型推理
     demo_model_inference().await?;
-    
+
     // 演示综合AI能力
     demo_integrated_ai_capabilities().await?;
-    
+
     println!("\n🎉 AI能力扩展演示完成！");
     println!("\n🚀 支持的AI能力:");
     println!("  👁️  多模态处理: 图像、音频、视频、文档");
@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
     println!("  🏢 领域适配: 金融、医疗、教育、法律等专业领域");
     println!("  🕸️  知识图谱: 实体识别、关系抽取、知识推理");
     println!("  ⚡ 模型推理: ONNX、PyTorch、TensorFlow模型支持");
-    
+
     Ok(())
 }
 
@@ -43,11 +43,11 @@ async fn main() -> Result<()> {
 async fn demo_multimodal_processing() -> Result<()> {
     println!("\n👁️  演示：多模态处理");
     println!("-" .repeat(30));
-    
+
     // 创建多模态处理器
     let config = AiCapabilityConfig::default();
     let processor = MultimodalProcessor::new(config.multimodal).await?;
-    
+
     // 演示图像处理
     println!("🖼️  图像处理:");
     let image_input = MultimodalInput::Image {
@@ -59,20 +59,20 @@ async fn demo_multimodal_processing() -> Result<()> {
             meta
         },
     };
-    
+
     match processor.process(image_input).await {
         Ok(result) => {
             println!("   ✅ 处理成功");
             println!("   📊 结果数量: {}", result.results.len());
             println!("   🎯 置信度: {:.2}", result.confidence);
             println!("   ⏱️  处理时间: {}ms", result.processing_time_ms);
-            
+
             for (i, modal_result) in result.results.iter().enumerate() {
                 match modal_result {
                     ModalityResult::Vision(vision_result) => {
                         println!("   🔍 视觉分析 {}:", i + 1);
-                        println!("      图像尺寸: {}x{}", 
-                                vision_result.image_info.width, 
+                        println!("      图像尺寸: {}x{}",
+                                vision_result.image_info.width,
                                 vision_result.image_info.height);
                         if let Some(ocr) = &vision_result.ocr_result {
                             println!("      OCR文本: {}", ocr.text);
@@ -88,7 +88,7 @@ async fn demo_multimodal_processing() -> Result<()> {
         }
         Err(e) => println!("   ❌ 处理失败: {}", e),
     }
-    
+
     // 演示音频处理
     println!("\n🎵 音频处理:");
     let audio_input = MultimodalInput::Audio {
@@ -98,12 +98,12 @@ async fn demo_multimodal_processing() -> Result<()> {
         channels: 1,
         metadata: HashMap::new(),
     };
-    
+
     match processor.process(audio_input).await {
         Ok(result) => {
             println!("   ✅ 处理成功");
             println!("   🎯 置信度: {:.2}", result.confidence);
-            
+
             for modal_result in &result.results {
                 if let ModalityResult::Audio(audio_result) = modal_result {
                     println!("   🎤 音频分析:");
@@ -119,7 +119,7 @@ async fn demo_multimodal_processing() -> Result<()> {
         }
         Err(e) => println!("   ❌ 处理失败: {}", e),
     }
-    
+
     // 演示文本处理
     println!("\n📝 文本处理:");
     let text_input = MultimodalInput::Text {
@@ -127,11 +127,11 @@ async fn demo_multimodal_processing() -> Result<()> {
         language: Some("zh".to_string()),
         metadata: HashMap::new(),
     };
-    
+
     match processor.process(text_input).await {
         Ok(result) => {
             println!("   ✅ 处理成功");
-            
+
             for modal_result in &result.results {
                 if let ModalityResult::Text(text_result) = modal_result {
                     println!("   📄 文本分析:");
@@ -143,7 +143,7 @@ async fn demo_multimodal_processing() -> Result<()> {
                     }
                     println!("      实体数量: {}", text_result.entities.len());
                     println!("      关键词数量: {}", text_result.keywords.len());
-                    
+
                     if !text_result.keywords.is_empty() {
                         println!("      关键词:");
                         for keyword in text_result.keywords.iter().take(3) {
@@ -155,7 +155,7 @@ async fn demo_multimodal_processing() -> Result<()> {
         }
         Err(e) => println!("   ❌ 处理失败: {}", e),
     }
-    
+
     Ok(())
 }
 
@@ -163,11 +163,11 @@ async fn demo_multimodal_processing() -> Result<()> {
 async fn demo_reasoning_capabilities() -> Result<()> {
     println!("\n🧠 演示：推理能力");
     println!("-" .repeat(30));
-    
+
     // 创建推理引擎
     let config = AiCapabilityConfig::default();
     let reasoning_engine = ReasoningEngine::new(config.reasoning).await?;
-    
+
     // 演示逻辑推理
     println!("🔍 逻辑推理:");
     let logical_query = ReasoningQuery {
@@ -180,7 +180,7 @@ async fn demo_reasoning_capabilities() -> Result<()> {
         context: HashMap::new(),
         parameters: ReasoningParameters::default(),
     };
-    
+
     match reasoning_engine.reason(logical_query).await {
         Ok(result) => {
             println!("   ✅ 推理成功");
@@ -188,20 +188,20 @@ async fn demo_reasoning_capabilities() -> Result<()> {
             println!("   🎯 置信度: {:.2}", result.confidence);
             println!("   🔗 推理步数: {}", result.reasoning_chain.len());
             println!("   ⏱️  推理时间: {}ms", result.statistics.reasoning_time_ms);
-            
+
             if !result.reasoning_chain.is_empty() {
                 println!("   🧩 推理链:");
                 for step in &result.reasoning_chain {
-                    println!("      步骤{}: {} -> {}", 
-                            step.step_number, 
-                            step.rule, 
+                    println!("      步骤{}: {} -> {}",
+                            step.step_number,
+                            step.rule,
                             step.output_conclusion);
                 }
             }
         }
         Err(e) => println!("   ❌ 推理失败: {}", e),
     }
-    
+
     // 演示因果推理
     println!("\n🔄 因果推理:");
     let causal_query = ReasoningQuery {
@@ -214,7 +214,7 @@ async fn demo_reasoning_capabilities() -> Result<()> {
         context: HashMap::new(),
         parameters: ReasoningParameters::default(),
     };
-    
+
     match reasoning_engine.reason(causal_query).await {
         Ok(result) => {
             println!("   ✅ 推理成功");
@@ -224,7 +224,7 @@ async fn demo_reasoning_capabilities() -> Result<()> {
         }
         Err(e) => println!("   ❌ 推理失败: {}", e),
     }
-    
+
     // 演示类比推理
     println!("\n🔗 类比推理:");
     let analogical_query = ReasoningQuery {
@@ -237,7 +237,7 @@ async fn demo_reasoning_capabilities() -> Result<()> {
         context: HashMap::new(),
         parameters: ReasoningParameters::default(),
     };
-    
+
     match reasoning_engine.reason(analogical_query).await {
         Ok(result) => {
             println!("   ✅ 推理成功");
@@ -246,7 +246,7 @@ async fn demo_reasoning_capabilities() -> Result<()> {
         }
         Err(e) => println!("   ❌ 推理失败: {}", e),
     }
-    
+
     Ok(())
 }
 
@@ -254,27 +254,27 @@ async fn demo_reasoning_capabilities() -> Result<()> {
 async fn demo_domain_adaptation() -> Result<()> {
     println!("\n🏢 演示：领域适配");
     println!("-" .repeat(30));
-    
+
     // 创建领域适配器
     let config = AiCapabilityConfig::default();
     let domain_adapter = DomainAdapter::new(config.domain).await?;
-    
+
     let domains = vec![
         ("finance", "分析这家公司的财务状况和投资价值"),
         ("healthcare", "患者出现发热、咳嗽症状，请提供诊断建议"),
         ("education", "如何提高学生的数学学习效果"),
         ("legal", "分析这份合同的法律风险和注意事项"),
     ];
-    
+
     for (domain, content) in domains {
         println!("🎯 {} 领域适配:", domain);
-        
+
         let input = DomainInput {
             content: content.to_string(),
             domain: domain.to_string(),
             context: HashMap::new(),
         };
-        
+
         match domain_adapter.adapt(domain, input).await {
             Ok(result) => {
                 println!("   ✅ 适配成功");
@@ -286,7 +286,7 @@ async fn demo_domain_adaptation() -> Result<()> {
         }
         println!();
     }
-    
+
     Ok(())
 }
 
@@ -294,11 +294,11 @@ async fn demo_domain_adaptation() -> Result<()> {
 async fn demo_knowledge_graph() -> Result<()> {
     println!("\n🕸️  演示：知识图谱");
     println!("-" .repeat(30));
-    
+
     // 创建知识图谱
     let config = AiCapabilityConfig::default();
     let knowledge_graph = KnowledgeGraph::new(config.knowledge).await?;
-    
+
     println!("🔍 知识查询:");
     let query = KnowledgeQuery {
         query_type: "entity_search".to_string(),
@@ -306,34 +306,34 @@ async fn demo_knowledge_graph() -> Result<()> {
         relations: vec!["包含".to_string(), "应用于".to_string()],
         constraints: HashMap::new(),
     };
-    
+
     match knowledge_graph.query(query).await {
         Ok(result) => {
             println!("   ✅ 查询成功");
             println!("   📊 实体数量: {}", result.entities.len());
             println!("   🔗 关系数量: {}", result.relations.len());
             println!("   🎯 置信度: {:.2}", result.confidence);
-            
+
             if !result.entities.is_empty() {
                 println!("   🏷️  实体列表:");
                 for entity in &result.entities {
                     println!("      - {} (类型: {})", entity.name, entity.entity_type);
                 }
             }
-            
+
             if !result.relations.is_empty() {
                 println!("   🔗 关系列表:");
                 for relation in &result.relations {
-                    println!("      - {} -> {} ({})", 
-                            relation.source_entity, 
-                            relation.target_entity, 
+                    println!("      - {} -> {} ({})",
+                            relation.source_entity,
+                            relation.target_entity,
                             relation.relation_type);
                 }
             }
         }
         Err(e) => println!("   ❌ 查询失败: {}", e),
     }
-    
+
     Ok(())
 }
 
@@ -341,11 +341,11 @@ async fn demo_knowledge_graph() -> Result<()> {
 async fn demo_model_inference() -> Result<()> {
     println!("\n⚡ 演示：模型推理");
     println!("-" .repeat(30));
-    
+
     // 创建推理引擎
     let config = AiCapabilityConfig::default();
     let inference_engine = InferenceEngine::new(config.inference).await?;
-    
+
     println!("🤖 模型推理:");
     let input = InferenceInput {
         data: serde_json::json!({
@@ -359,7 +359,7 @@ async fn demo_model_inference() -> Result<()> {
         input_format: "tensor".to_string(),
         preprocessing: None,
     };
-    
+
     match inference_engine.infer("image_classifier", input).await {
         Ok(result) => {
             println!("   ✅ 推理成功");
@@ -375,7 +375,7 @@ async fn demo_model_inference() -> Result<()> {
         }
         Err(e) => println!("   ❌ 推理失败: {}", e),
     }
-    
+
     Ok(())
 }
 
@@ -383,13 +383,13 @@ async fn demo_model_inference() -> Result<()> {
 async fn demo_integrated_ai_capabilities() -> Result<()> {
     println!("\n🚀 演示：综合AI能力");
     println!("-" .repeat(30));
-    
+
     // 创建AI扩展管理器
     let config = AiCapabilityConfig::default();
     let ai_manager = AiExtensionManager::new(config).await?;
-    
+
     println!("🎯 综合场景：智能文档分析");
-    
+
     // 1. 多模态处理 - 文档
     println!("   1️⃣ 文档处理...");
     let document_input = MultimodalInput::Document {
@@ -398,10 +398,10 @@ async fn demo_integrated_ai_capabilities() -> Result<()> {
         filename: "financial_report.pdf".to_string(),
         metadata: HashMap::new(),
     };
-    
+
     let multimodal_result = ai_manager.process_multimodal(document_input).await?;
     println!("      ✅ 文档处理完成，置信度: {:.2}", multimodal_result.confidence);
-    
+
     // 2. 领域适配 - 金融领域
     println!("   2️⃣ 金融领域适配...");
     let domain_input = DomainInput {
@@ -409,10 +409,10 @@ async fn demo_integrated_ai_capabilities() -> Result<()> {
         domain: "finance".to_string(),
         context: HashMap::new(),
     };
-    
+
     let domain_result = ai_manager.adapt_domain("finance", domain_input).await?;
     println!("      ✅ 领域适配完成，置信度: {:.2}", domain_result.confidence);
-    
+
     // 3. 推理分析
     println!("   3️⃣ 推理分析...");
     let reasoning_query = ReasoningQuery {
@@ -426,18 +426,18 @@ async fn demo_integrated_ai_capabilities() -> Result<()> {
         context: HashMap::new(),
         parameters: ReasoningParameters::default(),
     };
-    
+
     let reasoning_result = ai_manager.reason(reasoning_query).await?;
     println!("      ✅ 推理分析完成，置信度: {:.2}", reasoning_result.confidence);
-    
+
     // 4. 综合结论
     println!("   4️⃣ 综合结论:");
     println!("      📊 文档分析: 成功提取关键财务数据");
     println!("      🏢 领域适配: 应用金融分析框架");
     println!("      🧠 推理结论: {}", reasoning_result.conclusion);
-    println!("      🎯 整体置信度: {:.2}", 
+    println!("      🎯 整体置信度: {:.2}",
             (multimodal_result.confidence + domain_result.confidence + reasoning_result.confidence) / 3.0);
-    
+
     println!("\n💡 AI能力特性总结:");
     println!("   ✅ 多模态融合: 文本、图像、音频、视频统一处理");
     println!("   ✅ 智能推理: 6种推理类型，支持复杂逻辑分析");
@@ -445,6 +445,6 @@ async fn demo_integrated_ai_capabilities() -> Result<()> {
     println!("   ✅ 知识增强: 实体识别、关系抽取、知识推理");
     println!("   ✅ 高效推理: 多后端支持，优化的推理性能");
     println!("   ✅ 可扩展性: 模块化设计，支持自定义扩展");
-    
+
     Ok(())
 }

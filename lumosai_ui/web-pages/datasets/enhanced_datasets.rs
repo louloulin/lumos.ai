@@ -13,9 +13,9 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
 use crate::types::Rbac;
+use dioxus::prelude::*;
 
 // 临时类型定义
 #[derive(Clone, Debug, PartialEq)]
@@ -54,10 +54,7 @@ pub struct ProcessingStats {
 
 /// 增强数据集管理页面
 #[component]
-pub fn EnhancedDatasetsPage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn EnhancedDatasetsPage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟数据
     let datasets = vec![
         Dataset {
@@ -294,11 +291,7 @@ fn ProcessingOverview(stats: ProcessingStats) -> Element {
 
 /// 数据集列表组件
 #[component]
-fn DatasetsList(
-    datasets: Vec<Dataset>,
-    rbac: Rbac,
-    team_id: i32,
-) -> Element {
+fn DatasetsList(datasets: Vec<Dataset>, rbac: Rbac, team_id: i32) -> Element {
     rsx! {
         div {
             class: "card bg-base-100 shadow-lg",
@@ -353,13 +346,9 @@ fn DatasetsList(
 
 /// 数据集行组件
 #[component]
-fn DatasetRow(
-    dataset: Dataset,
-    rbac: Rbac,
-    team_id: i32,
-) -> Element {
+fn DatasetRow(dataset: Dataset, rbac: Rbac, team_id: i32) -> Element {
     let size_display = format_file_size(dataset.total_size);
-    
+
     rsx! {
         tr {
             td {
@@ -498,7 +487,7 @@ fn QuickActionsGuide() -> Element {
                 }
                 div {
                     class: "grid grid-cols-1 md:grid-cols-3 gap-6",
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -511,7 +500,7 @@ fn QuickActionsGuide() -> Element {
                             li { "• Supported: PDF, DOCX, TXT" }
                         }
                     }
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -524,7 +513,7 @@ fn QuickActionsGuide() -> Element {
                             li { "• Vector embeddings" }
                         }
                     }
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -548,12 +537,12 @@ fn format_file_size(bytes: i64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;
     let mut unit_index = 0;
-    
+
     while size >= 1024.0 && unit_index < UNITS.len() - 1 {
         size /= 1024.0;
         unit_index += 1;
     }
-    
+
     if unit_index == 0 {
         format!("{} {}", bytes, UNITS[unit_index])
     } else {

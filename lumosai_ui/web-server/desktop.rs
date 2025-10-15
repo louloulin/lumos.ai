@@ -138,5 +138,3 @@ mod desktop_app {
 
 #[cfg(feature = "desktop")]
 use desktop_app::DesktopApp;
-
-

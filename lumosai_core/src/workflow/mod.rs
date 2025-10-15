@@ -5,18 +5,18 @@
 #![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
 #![allow(unexpected_cfgs, unused_assignments)]
 
+pub mod basic;
+pub mod enhanced;
+pub mod execution_engine;
 mod step;
 mod tests;
 mod types;
 mod workflow;
-pub mod basic;
-pub mod enhanced;
-pub mod execution_engine;
 
+use crate::agent::types::RuntimeContext;
+use crate::{Error, Result};
 use async_trait::async_trait;
 use serde_json::Value;
-use crate::{Result, Error};
-use crate::agent::types::RuntimeContext;
 
 /// 工作流trait，定义工作流的核心接口
 #[async_trait]
@@ -31,7 +31,11 @@ pub trait Workflow: Send + Sync {
     async fn execute(&self, input: Value, context: &RuntimeContext) -> Result<Value>;
 
     /// 流式执行工作流
-    async fn execute_stream(&self, input: Value, context: &RuntimeContext) -> Result<Box<dyn futures::Stream<Item = Result<Value>> + Send + Unpin>>;
+    async fn execute_stream(
+        &self,
+        input: Value,
+        context: &RuntimeContext,
+    ) -> Result<Box<dyn futures::Stream<Item = Result<Value>> + Send + Unpin>>;
 
     /// 暂停工作流执行
     async fn suspend(&self, run_id: &str) -> Result<()>;
@@ -59,8 +63,8 @@ pub enum WorkflowStatus {
 }
 
 // 重新导出公共项
+pub use enhanced::{EnhancedWorkflow, StepExecutor, StepFlowEntry, StepType, WorkflowStep};
+pub use execution_engine::{DefaultExecutionEngine, ExecutionEngine, ExecutionMetrics};
 pub use step::{BasicStep, StepBuilder, StepConfig};
-pub use workflow::{Workflow as WorkflowImpl, WorkflowInstance, resume_workflow};
-pub use types::{Step, StepContext, StepStatus, RetryConfig, WorkflowRunResult, WorkflowState};
-pub use enhanced::{EnhancedWorkflow, WorkflowStep, StepFlowEntry, StepExecutor, StepType};
-pub use execution_engine::{ExecutionEngine, DefaultExecutionEngine, ExecutionMetrics};
+pub use types::{RetryConfig, Step, StepContext, StepStatus, WorkflowRunResult, WorkflowState};
+pub use workflow::{resume_workflow, Workflow as WorkflowImpl, WorkflowInstance};

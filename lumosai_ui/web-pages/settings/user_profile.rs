@@ -12,9 +12,9 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
 use crate::types::Rbac;
+use dioxus::prelude::*;
 
 // 临时类型定义
 #[derive(Clone, Debug, PartialEq)]
@@ -49,10 +49,7 @@ pub struct NotificationSettings {
 
 /// 用户设置页面
 #[component]
-pub fn UserProfilePage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn UserProfilePage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟数据
     let user_profile = UserProfile {
         id: 1,
@@ -135,11 +132,12 @@ pub fn UserProfilePage(
 /// 个人信息卡片
 #[component]
 fn ProfileInfoCard(user_profile: UserProfile) -> Element {
-    let _display_name = if let (Some(first), Some(last)) = (&user_profile.first_name, &user_profile.last_name) {
-        format!("{} {}", first, last)
-    } else {
-        "未设置姓名".to_string()
-    };
+    let _display_name =
+        if let (Some(first), Some(last)) = (&user_profile.first_name, &user_profile.last_name) {
+            format!("{} {}", first, last)
+        } else {
+            "未设置姓名".to_string()
+        };
 
     rsx! {
         div {
@@ -150,10 +148,10 @@ fn ProfileInfoCard(user_profile: UserProfile) -> Element {
                     class: "text-xl font-bold mb-6",
                     "📝 Personal Information"
                 }
-                
+
                 div {
                     class: "flex items-start space-x-6",
-                    
+
                     // 头像区域
                     div {
                         class: "flex flex-col items-center space-y-4",
@@ -176,14 +174,14 @@ fn ProfileInfoCard(user_profile: UserProfile) -> Element {
                             "Change Avatar"
                         }
                     }
-                    
+
                     // 信息表单
                     div {
                         class: "flex-1 space-y-4",
-                        
+
                         div {
                             class: "grid grid-cols-1 md:grid-cols-2 gap-4",
-                            
+
                             div {
                                 label {
                                     class: "label",
@@ -199,7 +197,7 @@ fn ProfileInfoCard(user_profile: UserProfile) -> Element {
                                     placeholder: "Enter first name"
                                 }
                             }
-                            
+
                             div {
                                 label {
                                     class: "label",
@@ -216,7 +214,7 @@ fn ProfileInfoCard(user_profile: UserProfile) -> Element {
                                 }
                             }
                         }
-                        
+
                         div {
                             label {
                                 class: "label",
@@ -239,7 +237,7 @@ fn ProfileInfoCard(user_profile: UserProfile) -> Element {
                                 }
                             }
                         }
-                        
+
                         div {
                             class: "flex justify-end",
                             button {
@@ -249,7 +247,7 @@ fn ProfileInfoCard(user_profile: UserProfile) -> Element {
                         }
                     }
                 }
-                
+
                 // 账户信息
                 div {
                     class: "mt-6 pt-6 border-t border-base-300",
@@ -286,10 +284,10 @@ fn UserStatsCard(user_stats: UserStats) -> Element {
                     class: "text-xl font-bold mb-6",
                     "📊 Usage Statistics"
                 }
-                
+
                 div {
                     class: "grid grid-cols-1 md:grid-cols-3 gap-6",
-                    
+
                     div {
                         class: "stat",
                         div {
@@ -305,7 +303,7 @@ fn UserStatsCard(user_stats: UserStats) -> Element {
                             "{user_stats.total_conversations}"
                         }
                     }
-                    
+
                     div {
                         class: "stat",
                         div {
@@ -321,7 +319,7 @@ fn UserStatsCard(user_stats: UserStats) -> Element {
                             "{user_stats.total_messages}"
                         }
                     }
-                    
+
                     div {
                         class: "stat",
                         div {
@@ -338,7 +336,7 @@ fn UserStatsCard(user_stats: UserStats) -> Element {
                         }
                     }
                 }
-                
+
                 // 常用助手
                 div {
                     class: "mt-6 pt-6 border-t border-base-300",
@@ -373,13 +371,13 @@ fn PreferencesCard(user_profile: UserProfile) -> Element {
                     class: "text-xl font-bold mb-6",
                     "⚙️ Preferences"
                 }
-                
+
                 div {
                     class: "space-y-6",
-                    
+
                     div {
                         class: "grid grid-cols-1 md:grid-cols-2 gap-6",
-                        
+
                         div {
                             label {
                                 class: "label",
@@ -391,7 +389,7 @@ fn PreferencesCard(user_profile: UserProfile) -> Element {
                             select {
                                 class: "select select-bordered w-full",
                                 value: user_profile.language,
-                                
+
                                 option { value: "zh-CN", "中文 (简体)" }
                                 option { value: "zh-TW", "中文 (繁体)" }
                                 option { value: "en-US", "English (US)" }
@@ -399,7 +397,7 @@ fn PreferencesCard(user_profile: UserProfile) -> Element {
                                 option { value: "ko-KR", "한국어" }
                             }
                         }
-                        
+
                         div {
                             label {
                                 class: "label",
@@ -411,14 +409,14 @@ fn PreferencesCard(user_profile: UserProfile) -> Element {
                             select {
                                 class: "select select-bordered w-full",
                                 value: user_profile.theme,
-                                
+
                                 option { value: "auto", "🌓 Auto (System)" }
                                 option { value: "light", "☀️ Light" }
                                 option { value: "dark", "🌙 Dark" }
                             }
                         }
                     }
-                    
+
                     div {
                         label {
                             class: "label",
@@ -430,14 +428,14 @@ fn PreferencesCard(user_profile: UserProfile) -> Element {
                         select {
                             class: "select select-bordered w-full",
                             value: user_profile.timezone,
-                            
+
                             option { value: "Asia/Shanghai", "Asia/Shanghai (UTC+8)" }
                             option { value: "Asia/Tokyo", "Asia/Tokyo (UTC+9)" }
                             option { value: "America/New_York", "America/New_York (UTC-5)" }
                             option { value: "Europe/London", "Europe/London (UTC+0)" }
                         }
                     }
-                    
+
                     div {
                         class: "flex justify-end",
                         button {
@@ -463,10 +461,10 @@ fn NotificationCard(notification_settings: NotificationSettings) -> Element {
                     class: "text-xl font-bold mb-6",
                     "🔔 Notification Settings"
                 }
-                
+
                 div {
                     class: "space-y-4",
-                    
+
                     div {
                         class: "form-control",
                         label {
@@ -489,7 +487,7 @@ fn NotificationCard(notification_settings: NotificationSettings) -> Element {
                             }
                         }
                     }
-                    
+
                     div {
                         class: "form-control",
                         label {
@@ -512,7 +510,7 @@ fn NotificationCard(notification_settings: NotificationSettings) -> Element {
                             }
                         }
                     }
-                    
+
                     div {
                         class: "form-control",
                         label {
@@ -535,7 +533,7 @@ fn NotificationCard(notification_settings: NotificationSettings) -> Element {
                             }
                         }
                     }
-                    
+
                     div {
                         class: "form-control",
                         label {
@@ -576,10 +574,10 @@ fn SecurityCard() -> Element {
                     class: "text-xl font-bold mb-6",
                     "🔒 Security Settings"
                 }
-                
+
                 div {
                     class: "space-y-6",
-                    
+
                     div {
                         class: "flex items-center justify-between p-4 bg-base-200 rounded-lg",
                         div {
@@ -597,7 +595,7 @@ fn SecurityCard() -> Element {
                             "Change"
                         }
                     }
-                    
+
                     div {
                         class: "flex items-center justify-between p-4 bg-base-200 rounded-lg",
                         div {
@@ -615,7 +613,7 @@ fn SecurityCard() -> Element {
                             "Enable"
                         }
                     }
-                    
+
                     div {
                         class: "flex items-center justify-between p-4 bg-base-200 rounded-lg",
                         div {

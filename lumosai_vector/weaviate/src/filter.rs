@@ -1,6 +1,6 @@
 //! Weaviate filter conversion utilities
 
-use lumosai_vector_core::prelude::{FilterCondition, MetadataValue, VectorError, Result};
+use lumosai_vector_core::prelude::{FilterCondition, MetadataValue, Result, VectorError};
 use serde_json::{json, Value};
 
 /// Convert a filter condition to Weaviate GraphQL where clause
@@ -19,7 +19,7 @@ fn convert_condition_to_object(condition: FilterCondition) -> Result<Value> {
                 "operator": "Equal",
                 "valueText": weaviate_value
             }))
-        },
+        }
         FilterCondition::And(conditions) => {
             let mut operands = Vec::new();
             for cond in conditions {
@@ -29,7 +29,7 @@ fn convert_condition_to_object(condition: FilterCondition) -> Result<Value> {
                 "operator": "And",
                 "operands": operands
             }))
-        },
+        }
         FilterCondition::Or(conditions) => {
             let mut operands = Vec::new();
             for cond in conditions {
@@ -39,14 +39,14 @@ fn convert_condition_to_object(condition: FilterCondition) -> Result<Value> {
                 "operator": "Or",
                 "operands": operands
             }))
-        },
+        }
         FilterCondition::Not(condition) => {
             let operand = convert_condition_to_object(*condition)?;
             Ok(json!({
                 "operator": "Not",
                 "operands": [operand]
             }))
-        },
+        }
         FilterCondition::Gt(field, value) => {
             let weaviate_value = convert_metadata_value(value)?;
             Ok(json!({
@@ -54,7 +54,7 @@ fn convert_condition_to_object(condition: FilterCondition) -> Result<Value> {
                 "operator": "GreaterThan",
                 "valueNumber": weaviate_value
             }))
-        },
+        }
         FilterCondition::Lt(field, value) => {
             let weaviate_value = convert_metadata_value(value)?;
             Ok(json!({
@@ -62,7 +62,7 @@ fn convert_condition_to_object(condition: FilterCondition) -> Result<Value> {
                 "operator": "LessThan",
                 "valueNumber": weaviate_value
             }))
-        },
+        }
         FilterCondition::In(field, values) => {
             // Weaviate doesn't have a direct "In" operator, so we use Or with multiple Equal conditions
             let mut operands = Vec::new();
@@ -78,10 +78,10 @@ fn convert_condition_to_object(condition: FilterCondition) -> Result<Value> {
                 "operator": "Or",
                 "operands": operands
             }))
-        },
-        _ => {
-            Err(VectorError::InvalidFilter("Unsupported filter condition for Weaviate".to_string()))
         }
+        _ => Err(VectorError::InvalidFilter(
+            "Unsupported filter condition for Weaviate".to_string(),
+        )),
     }
 }
 
@@ -93,7 +93,7 @@ fn convert_metadata_value(value: MetadataValue) -> Result<Value> {
         MetadataValue::Float(f) => Ok(json!(f)),
         MetadataValue::Boolean(b) => Ok(json!(b)),
         _ => Err(VectorError::Serialization(
-            "Unsupported metadata value type for Weaviate".to_string()
+            "Unsupported metadata value type for Weaviate".to_string(),
         )),
     }
 }
@@ -101,19 +101,25 @@ fn convert_metadata_value(value: MetadataValue) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_simple_eq_filter() {
-        let condition = FilterCondition::Eq("category".to_string(), MetadataValue::String("test".to_string()));
+        let condition = FilterCondition::Eq(
+            "category".to_string(),
+            MetadataValue::String("test".to_string()),
+        );
         let result = convert_filter_to_where(condition).unwrap();
         assert!(result.contains("Equal"));
         assert!(result.contains("category"));
     }
-    
+
     #[test]
     fn test_and_filter() {
         let conditions = vec![
-            FilterCondition::Eq("category".to_string(), MetadataValue::String("test".to_string())),
+            FilterCondition::Eq(
+                "category".to_string(),
+                MetadataValue::String("test".to_string()),
+            ),
             FilterCondition::Gt("score".to_string(), MetadataValue::Float(0.5)),
         ];
         let condition = FilterCondition::And(conditions);

@@ -20,12 +20,13 @@ path = "src/lib.rs"
 # path = "src/bin/lumos.rs"
 
 [features]
-default = ["macros"]
+default = ["macros", "memory"]
 macros = ["lumos_macro"]
+memory = ["lumosai_vector"]
 demos = []
 # Vector storage features
 qdrant = ["lumosai_vector/qdrant"]
-postgres = ["lumosai_vector/postgres"]
+postgres = ["lumosai_vector"]
 weaviate = ["lumosai_vector/weaviate"]
 # SQLite features
 sqlite = ["rusqlite"]
@@ -45,8 +46,9 @@ tracing = { workspace = true }
 reqwest = { workspace = true }
 uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-rusqlite = { version = "0.29", optional = true }
+rusqlite = { version = "0.37", optional = true }
 float-cmp = "0.9"
+sys-info = "0.9"
 regex = "1.10.2"
 schemars = "0.8"
 jsonschema = "0.17"
@@ -58,7 +60,7 @@ url = "2.4"
 # lumosai_stores = { path = "../lumosai_stores", optional = true }
 
 # New unified vector storage
-lumosai_vector = { path = "../lumosai_vector", features = ["memory"] }
+lumosai_vector = { path = "../lumosai_vector", features = ["memory"], optional = true }
 
 # CLI dependencies
 clap = { version = "4.0", features = ["derive"] }
@@ -127,6 +129,3 @@ path = "tests/chain_call_dsl_tests.rs"
 name = "security_demo"
 path = "examples/security_demo.rs"
 
-[[example]]
-name = "demo_chain_call_dsl"
-path = "../examples/demo_chain_call_dsl.rs"

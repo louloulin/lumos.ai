@@ -1,10 +1,10 @@
 //! AI工具集
-//! 
+//!
 //! 提供图像分析、文本摘要、情感分析、翻译、OCR等AI功能
 
-use crate::tool::{ToolSchema, ParameterSchema, FunctionTool};
 use crate::error::Result;
-use serde_json::{Value, json};
+use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
+use serde_json::{json, Value};
 
 /// 图像分析工具
 pub fn image_analyzer() -> FunctionTool {
@@ -40,15 +40,20 @@ pub fn image_analyzer() -> FunctionTool {
         "分析图像内容，支持物体检测、场景识别、文字提取等功能",
         schema,
         |params| {
-            let _image_data = params.get("image_data")
+            let _image_data = params
+                .get("image_data")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| crate::error::Error::Tool("Missing image_data parameter".to_string()))?;
-            
-            let analysis_type = params.get("analysis_type")
+                .ok_or_else(|| {
+                    crate::error::Error::Tool("Missing image_data parameter".to_string())
+                })?;
+
+            let analysis_type = params
+                .get("analysis_type")
                 .and_then(|v| v.as_str())
                 .unwrap_or("all");
-            
-            let confidence_threshold = params.get("confidence_threshold")
+
+            let confidence_threshold = params
+                .get("confidence_threshold")
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.5);
 
@@ -77,21 +82,21 @@ pub fn image_analyzer() -> FunctionTool {
                             "bbox": [400, 200, 600, 350]
                         }
                     ]);
-                },
+                }
                 "scene_recognition" => {
                     results["scene"] = json!({
                         "primary_scene": "street",
                         "confidence": 0.92,
                         "secondary_scenes": ["urban", "outdoor"]
                     });
-                },
+                }
                 "ocr" => {
                     results["text"] = json!({
                         "detected_text": "Sample text from image",
                         "language": "en",
                         "confidence": 0.89
                     });
-                },
+                }
                 _ => {}
             }
 
@@ -146,19 +151,23 @@ pub fn text_summarizer() -> FunctionTool {
         "生成文本摘要，支持多种摘要策略和长度控制",
         schema,
         |params| {
-            let text = params.get("text")
+            let text = params
+                .get("text")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| crate::error::Error::Tool("Missing text parameter".to_string()))?;
-            
-            let max_length = params.get("max_length")
+
+            let max_length = params
+                .get("max_length")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(200) as usize;
-            
-            let strategy = params.get("strategy")
+
+            let strategy = params
+                .get("strategy")
                 .and_then(|v| v.as_str())
                 .unwrap_or("abstractive");
-            
-            let language = params.get("language")
+
+            let language = params
+                .get("language")
                 .and_then(|v| v.as_str())
                 .unwrap_or("auto");
 
@@ -168,7 +177,7 @@ pub fn text_summarizer() -> FunctionTool {
             } else {
                 let sentences: Vec<&str> = text.split('.').collect();
                 let mut summary = String::new();
-                
+
                 for sentence in sentences {
                     if summary.len() + sentence.len() <= max_length {
                         summary.push_str(sentence);
@@ -177,7 +186,7 @@ pub fn text_summarizer() -> FunctionTool {
                         break;
                     }
                 }
-                
+
                 if summary.is_empty() {
                     text.chars().take(max_length).collect::<String>() + "..."
                 } else {
@@ -232,32 +241,53 @@ pub fn sentiment_analyzer() -> FunctionTool {
         "分析文本情感倾向，支持多维度情感分析",
         schema,
         |params| {
-            let text = params.get("text")
+            let text = params
+                .get("text")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| crate::error::Error::Tool("Missing text parameter".to_string()))?;
-            
-            let analysis_depth = params.get("analysis_depth")
+
+            let analysis_depth = params
+                .get("analysis_depth")
                 .and_then(|v| v.as_str())
                 .unwrap_or("basic");
-            
-            let language = params.get("language")
+
+            let language = params
+                .get("language")
                 .and_then(|v| v.as_str())
                 .unwrap_or("auto");
 
             // 简化的情感分析逻辑
-            let positive_words = ["good", "great", "excellent", "amazing", "wonderful", "好", "棒", "优秀"];
-            let negative_words = ["bad", "terrible", "awful", "horrible", "worst", "坏", "糟糕", "差"];
-            
+            let positive_words = [
+                "good",
+                "great",
+                "excellent",
+                "amazing",
+                "wonderful",
+                "好",
+                "棒",
+                "优秀",
+            ];
+            let negative_words = [
+                "bad", "terrible", "awful", "horrible", "worst", "坏", "糟糕", "差",
+            ];
+
             let text_lower = text.to_lowercase();
-            let positive_count = positive_words.iter().filter(|&&word| text_lower.contains(word)).count();
-            let negative_count = negative_words.iter().filter(|&&word| text_lower.contains(word)).count();
-            
+            let positive_count = positive_words
+                .iter()
+                .filter(|&&word| text_lower.contains(word))
+                .count();
+            let negative_count = negative_words
+                .iter()
+                .filter(|&&word| text_lower.contains(word))
+                .count();
+
             let sentiment_score = if positive_count + negative_count == 0 {
                 0.0
             } else {
-                (positive_count as f64 - negative_count as f64) / (positive_count + negative_count) as f64
+                (positive_count as f64 - negative_count as f64)
+                    / (positive_count + negative_count) as f64
             };
-            
+
             let sentiment_label = if sentiment_score > 0.2 {
                 "positive"
             } else if sentiment_score < -0.2 {
@@ -304,9 +334,5 @@ pub fn sentiment_analyzer() -> FunctionTool {
 
 /// 获取所有AI工具
 pub fn all_ai_tools() -> Vec<FunctionTool> {
-    vec![
-        image_analyzer(),
-        text_summarizer(),
-        sentiment_analyzer(),
-    ]
+    vec![image_analyzer(), text_summarizer(), sentiment_analyzer()]
 }

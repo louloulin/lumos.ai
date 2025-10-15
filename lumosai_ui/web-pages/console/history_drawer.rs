@@ -12,31 +12,30 @@
 */
 
 #![allow(non_snake_case)]
-use daisy_rsx::*;
 use crate::types::History;
+use daisy_rsx::*;
 use dioxus::prelude::*;
 
 /// 增强的对话历史抽屉组件
 #[component]
-pub fn HistoryDrawer(
-    trigger_id: String,
-    team_id: i32,
-    history: Vec<History>
-) -> Element {
+pub fn HistoryDrawer(trigger_id: String, team_id: i32, history: Vec<History>) -> Element {
     // 简化实现，移除use_signal依赖
     let search_query = String::new();
     let selected_filter = "all".to_string();
 
     // 过滤历史记录
-    let filtered_history = history.iter()
+    let filtered_history = history
+        .iter()
         .filter(|h| {
-            let matches_search = search_query.is_empty() ||
-                h.summary.to_lowercase().contains(&search_query.to_lowercase());
+            let matches_search = search_query.is_empty()
+                || h.summary
+                    .to_lowercase()
+                    .contains(&search_query.to_lowercase());
 
             let matches_filter = match selected_filter.as_str() {
-                "recent" => true, // TODO: 实现时间过滤
+                "recent" => true,     // TODO: 实现时间过滤
                 "favorites" => false, // TODO: 实现收藏过滤
-                _ => true
+                _ => true,
             };
 
             matches_search && matches_filter

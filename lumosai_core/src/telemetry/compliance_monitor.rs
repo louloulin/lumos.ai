@@ -1,5 +1,5 @@
 //! 合规监控模块
-//! 
+//!
 //! 提供企业级合规监控功能，包括：
 //! - 审计日志记录和分析
 //! - 合规规则检查
@@ -7,28 +7,28 @@
 //! - 数据治理和隐私保护
 
 use async_trait::async_trait;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc, Duration};
-use uuid::Uuid;
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
-use crate::error::LumosError;
 use super::enterprise::{AuditEvent, AuditEventType, AuditResult, ComplianceSeverity};
+use crate::error::LumosError;
 
 /// 合规监控器
 pub struct ComplianceMonitor {
     /// 审计事件存储
     audit_events: Vec<AuditEvent>,
-    
+
     /// 合规规则引擎
     rules_engine: ComplianceRulesEngine,
-    
+
     /// 数据治理管理器
     data_governance: DataGovernanceManager,
-    
+
     /// 隐私保护管理器
     privacy_manager: PrivacyManager,
-    
+
     /// 配置
     config: ComplianceConfig,
 }
@@ -38,19 +38,19 @@ pub struct ComplianceMonitor {
 pub struct ComplianceConfig {
     /// 启用的合规标准
     pub enabled_standards: Vec<ComplianceStandard>,
-    
+
     /// 审计日志保留天数
     pub audit_log_retention_days: u32,
-    
+
     /// 是否启用实时监控
     pub real_time_monitoring: bool,
-    
+
     /// 是否启用数据分类
     pub data_classification_enabled: bool,
-    
+
     /// 是否启用数据脱敏
     pub data_masking_enabled: bool,
-    
+
     /// 违规检测敏感度
     pub violation_detection_sensitivity: f64,
 }
@@ -78,10 +78,10 @@ pub enum ComplianceStandard {
 pub struct ComplianceRulesEngine {
     /// 规则集合
     rules: HashMap<String, ComplianceRule>,
-    
+
     /// 规则评估器
     evaluator: RuleEvaluator,
-    
+
     /// 违规检测器
     violation_detector: ViolationDetector,
 }
@@ -91,25 +91,25 @@ pub struct ComplianceRulesEngine {
 pub struct ComplianceRule {
     /// 规则ID
     pub id: String,
-    
+
     /// 规则名称
     pub name: String,
-    
+
     /// 适用标准
     pub standards: Vec<ComplianceStandard>,
-    
+
     /// 规则描述
     pub description: String,
-    
+
     /// 规则类型
     pub rule_type: RuleType,
-    
+
     /// 检查条件
     pub conditions: Vec<RuleCondition>,
-    
+
     /// 严重程度
     pub severity: ComplianceSeverity,
-    
+
     /// 是否启用
     pub enabled: bool,
 }
@@ -140,13 +140,13 @@ pub enum RuleType {
 pub struct RuleCondition {
     /// 字段名
     pub field: String,
-    
+
     /// 操作符
     pub operator: ConditionOperator,
-    
+
     /// 期望值
     pub value: String,
-    
+
     /// 是否必须满足
     pub required: bool,
 }
@@ -178,7 +178,7 @@ pub enum ConditionOperator {
 pub struct RuleEvaluator {
     /// 评估缓存
     evaluation_cache: HashMap<String, RuleEvaluationResult>,
-    
+
     /// 缓存过期时间
     cache_ttl: Duration,
 }
@@ -188,16 +188,16 @@ pub struct RuleEvaluator {
 pub struct RuleEvaluationResult {
     /// 规则ID
     pub rule_id: String,
-    
+
     /// 是否通过
     pub passed: bool,
-    
+
     /// 评估时间
     pub evaluated_at: DateTime<Utc>,
-    
+
     /// 评估详情
     pub details: String,
-    
+
     /// 相关事件
     pub related_events: Vec<Uuid>,
 }
@@ -206,7 +206,7 @@ pub struct RuleEvaluationResult {
 pub struct ViolationDetector {
     /// 检测到的违规
     violations: Vec<ComplianceViolation>,
-    
+
     /// 检测算法
     detection_algorithms: Vec<DetectionAlgorithm>,
 }
@@ -216,28 +216,28 @@ pub struct ViolationDetector {
 pub struct ComplianceViolation {
     /// 违规ID
     pub id: Uuid,
-    
+
     /// 规则ID
     pub rule_id: String,
-    
+
     /// 违规类型
     pub violation_type: ViolationType,
-    
+
     /// 相关事件
     pub related_events: Vec<AuditEvent>,
-    
+
     /// 检测时间
     pub detected_at: DateTime<Utc>,
-    
+
     /// 严重程度
     pub severity: ComplianceSeverity,
-    
+
     /// 描述
     pub description: String,
-    
+
     /// 影响评估
     pub impact_assessment: ImpactAssessment,
-    
+
     /// 修复建议
     pub remediation_suggestions: Vec<RemediationSuggestion>,
 }
@@ -279,16 +279,16 @@ pub enum DetectionAlgorithm {
 pub struct ImpactAssessment {
     /// 影响范围
     pub scope: ImpactScope,
-    
+
     /// 影响程度
     pub magnitude: ImpactMagnitude,
-    
+
     /// 受影响的数据类型
     pub affected_data_types: Vec<DataType>,
-    
+
     /// 受影响的用户数量
     pub affected_users_count: Option<u64>,
-    
+
     /// 潜在损失
     pub potential_loss: Option<f64>,
 }
@@ -345,19 +345,19 @@ pub enum DataType {
 pub struct RemediationSuggestion {
     /// 建议ID
     pub id: Uuid,
-    
+
     /// 建议类型
     pub suggestion_type: RemediationType,
-    
+
     /// 描述
     pub description: String,
-    
+
     /// 优先级
     pub priority: RemediationPriority,
-    
+
     /// 预估工作量
     pub estimated_effort: Option<String>,
-    
+
     /// 预估成本
     pub estimated_cost: Option<f64>,
 }
@@ -396,10 +396,10 @@ pub enum RemediationPriority {
 pub struct DataGovernanceManager {
     /// 数据分类器
     data_classifier: DataClassifier,
-    
+
     /// 数据血缘追踪器
     lineage_tracker: DataLineageTracker,
-    
+
     /// 数据质量监控器
     quality_monitor: DataQualityMonitor,
 }
@@ -408,7 +408,7 @@ pub struct DataGovernanceManager {
 pub struct DataClassifier {
     /// 分类规则
     classification_rules: Vec<ClassificationRule>,
-    
+
     /// 数据目录
     data_catalog: HashMap<String, DataClassification>,
 }
@@ -418,13 +418,13 @@ pub struct DataClassifier {
 pub struct ClassificationRule {
     /// 规则ID
     pub id: String,
-    
+
     /// 数据模式
     pub pattern: String,
-    
+
     /// 分类结果
     pub classification: DataClassification,
-    
+
     /// 置信度
     pub confidence: f64,
 }
@@ -455,16 +455,16 @@ pub struct DataLineageTracker {
 pub struct DataLineage {
     /// 源数据ID
     pub source_id: String,
-    
+
     /// 目标数据ID
     pub target_id: String,
-    
+
     /// 转换类型
     pub transformation_type: TransformationType,
-    
+
     /// 转换时间
     pub transformed_at: DateTime<Utc>,
-    
+
     /// 转换描述
     pub description: String,
 }
@@ -492,7 +492,7 @@ pub enum TransformationType {
 pub struct DataQualityMonitor {
     /// 质量规则
     quality_rules: Vec<QualityRule>,
-    
+
     /// 质量指标
     quality_metrics: HashMap<String, QualityMetric>,
 }
@@ -502,16 +502,16 @@ pub struct DataQualityMonitor {
 pub struct QualityRule {
     /// 规则ID
     pub id: String,
-    
+
     /// 规则名称
     pub name: String,
-    
+
     /// 质量维度
     pub dimension: QualityDimension,
-    
+
     /// 检查条件
     pub condition: String,
-    
+
     /// 阈值
     pub threshold: f64,
 }
@@ -538,16 +538,16 @@ pub enum QualityDimension {
 pub struct QualityMetric {
     /// 指标名称
     pub name: String,
-    
+
     /// 当前值
     pub current_value: f64,
-    
+
     /// 目标值
     pub target_value: f64,
-    
+
     /// 趋势
     pub trend: QualityTrend,
-    
+
     /// 最后更新时间
     pub last_updated: DateTime<Utc>,
 }
@@ -567,10 +567,10 @@ pub enum QualityTrend {
 pub struct PrivacyManager {
     /// 隐私策略
     privacy_policies: Vec<PrivacyPolicy>,
-    
+
     /// 数据脱敏器
     data_masker: DataMasker,
-    
+
     /// 同意管理器
     consent_manager: ConsentManager,
 }
@@ -580,19 +580,19 @@ pub struct PrivacyManager {
 pub struct PrivacyPolicy {
     /// 策略ID
     pub id: String,
-    
+
     /// 策略名称
     pub name: String,
-    
+
     /// 适用的数据类型
     pub applicable_data_types: Vec<DataType>,
-    
+
     /// 保护措施
     pub protection_measures: Vec<ProtectionMeasure>,
-    
+
     /// 生效时间
     pub effective_from: DateTime<Utc>,
-    
+
     /// 失效时间
     pub effective_until: Option<DateTime<Utc>>,
 }
@@ -625,13 +625,13 @@ pub struct DataMasker {
 pub struct MaskingRule {
     /// 规则ID
     pub id: String,
-    
+
     /// 数据模式
     pub data_pattern: String,
-    
+
     /// 脱敏方法
     pub masking_method: MaskingMethod,
-    
+
     /// 保留字符数
     pub preserve_chars: Option<usize>,
 }
@@ -664,19 +664,19 @@ pub struct ConsentManager {
 pub struct ConsentRecord {
     /// 用户ID
     pub user_id: String,
-    
+
     /// 同意类型
     pub consent_type: ConsentType,
-    
+
     /// 是否同意
     pub granted: bool,
-    
+
     /// 同意时间
     pub granted_at: DateTime<Utc>,
-    
+
     /// 撤销时间
     pub revoked_at: Option<DateTime<Utc>>,
-    
+
     /// 同意范围
     pub scope: Vec<String>,
 }
@@ -722,45 +722,45 @@ impl ComplianceMonitor {
             config,
         }
     }
-    
+
     /// 记录审计事件
     pub async fn record_audit_event(&mut self, event: AuditEvent) -> Result<(), LumosError> {
         // 记录事件
         self.audit_events.push(event.clone());
-        
+
         // 实时检查合规性
         if self.config.real_time_monitoring {
             self.check_compliance_for_event(&event).await?;
         }
-        
+
         Ok(())
     }
-    
+
     /// 检查事件的合规性
     async fn check_compliance_for_event(&mut self, event: &AuditEvent) -> Result<(), LumosError> {
         let violations = self.rules_engine.evaluate_event(event).await?;
-        
+
         for violation in violations {
             tracing::warn!("检测到合规违规: {:?}", violation);
             // 这里可以触发告警或其他响应措施
         }
-        
+
         Ok(())
     }
-    
+
     /// 生成合规报告
     pub async fn generate_compliance_report(&self) -> Result<ComplianceReport, LumosError> {
         let total_events = self.audit_events.len() as u64;
         let violations = self.rules_engine.get_violations();
         let violation_count = violations.len() as u64;
-        
+
         // 计算合规分数
         let compliance_score = if total_events > 0 {
             ((total_events - violation_count) as f64 / total_events as f64) * 100.0
         } else {
             100.0
         };
-        
+
         Ok(ComplianceReport {
             generated_at: Utc::now(),
             total_audit_events: total_events,
@@ -771,38 +771,44 @@ impl ComplianceMonitor {
             compliance_trends: self.calculate_compliance_trends(),
         })
     }
-    
+
     /// 按严重程度分组违规
-    fn group_violations_by_severity(&self, violations: &[ComplianceViolation]) -> HashMap<ComplianceSeverity, u64> {
+    fn group_violations_by_severity(
+        &self,
+        violations: &[ComplianceViolation],
+    ) -> HashMap<ComplianceSeverity, u64> {
         let mut grouped = HashMap::new();
         for violation in violations {
             *grouped.entry(violation.severity.clone()).or_insert(0) += 1;
         }
         grouped
     }
-    
+
     /// 获取主要违规类型
-    fn get_top_violation_types(&self, violations: &[ComplianceViolation]) -> Vec<(ViolationType, u64)> {
+    fn get_top_violation_types(
+        &self,
+        violations: &[ComplianceViolation],
+    ) -> Vec<(ViolationType, u64)> {
         let mut type_counts = HashMap::new();
         for violation in violations {
-            *type_counts.entry(violation.violation_type.clone()).or_insert(0) += 1;
+            *type_counts
+                .entry(violation.violation_type.clone())
+                .or_insert(0) += 1;
         }
-        
+
         let mut sorted: Vec<_> = type_counts.into_iter().collect();
         sorted.sort_by(|a, b| b.1.cmp(&a.1));
         sorted.into_iter().take(5).collect()
     }
-    
+
     /// 计算合规趋势
     fn calculate_compliance_trends(&self) -> Vec<ComplianceTrend> {
         // 简化实现，实际应该基于历史数据计算趋势
-        vec![
-            ComplianceTrend {
-                date: Utc::now().date_naive(),
-                compliance_score: 95.0,
-                violation_count: 2,
-            }
-        ]
+        vec![ComplianceTrend {
+            date: Utc::now().date_naive(),
+            compliance_score: 95.0,
+            violation_count: 2,
+        }]
     }
 }
 
@@ -811,22 +817,22 @@ impl ComplianceMonitor {
 pub struct ComplianceReport {
     /// 生成时间
     pub generated_at: DateTime<Utc>,
-    
+
     /// 总审计事件数
     pub total_audit_events: u64,
-    
+
     /// 总违规数
     pub total_violations: u64,
-    
+
     /// 合规分数
     pub compliance_score: f64,
-    
+
     /// 按严重程度分组的违规
     pub violations_by_severity: HashMap<ComplianceSeverity, u64>,
-    
+
     /// 主要违规类型
     pub top_violation_types: Vec<(ViolationType, u64)>,
-    
+
     /// 合规趋势
     pub compliance_trends: Vec<ComplianceTrend>,
 }
@@ -836,10 +842,10 @@ pub struct ComplianceReport {
 pub struct ComplianceTrend {
     /// 日期
     pub date: chrono::NaiveDate,
-    
+
     /// 合规分数
     pub compliance_score: f64,
-    
+
     /// 违规数量
     pub violation_count: u64,
 }
@@ -853,12 +859,15 @@ impl ComplianceRulesEngine {
             violation_detector: ViolationDetector::new(),
         }
     }
-    
-    async fn evaluate_event(&mut self, _event: &AuditEvent) -> Result<Vec<ComplianceViolation>, LumosError> {
+
+    async fn evaluate_event(
+        &mut self,
+        _event: &AuditEvent,
+    ) -> Result<Vec<ComplianceViolation>, LumosError> {
         // 简化实现
         Ok(Vec::new())
     }
-    
+
     fn get_violations(&self) -> &[ComplianceViolation] {
         &self.violation_detector.violations
     }

@@ -25,9 +25,9 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::ai_client::{AIClient, AIClientConfig, AIProvider};
 use crate::database::Database;
+use crate::file_handler::{FileConfig, FileHandler};
 use crate::streaming::{self, AppState};
 use crate::tools::ToolRegistry;
-use crate::file_handler::{FileHandler, FileConfig};
 
 /// 启动API服务器
 pub async fn start_api_server() -> Result<(), Box<dyn std::error::Error>> {
@@ -42,7 +42,7 @@ pub async fn start_api_server() -> Result<(), Box<dyn std::error::Error>> {
         ai_client,
         database,
         tool_registry,
-        file_handler: file_handler.clone()
+        file_handler: file_handler.clone(),
     };
 
     // 配置CORS
@@ -55,37 +55,32 @@ pub async fn start_api_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         // 健康检查
         .route("/health", get(streaming::health_check))
-        
         // 聊天API
         .route("/api/chat/stream", post(streaming::stream_chat))
         .route("/api/chat/simple", post(streaming::simple_chat))
-        
         // 对话管理
         .route("/api/conversations", get(streaming::list_conversations))
         .route("/api/conversations/:id", get(streaming::get_conversation))
-        .route("/api/conversations/:id", delete(streaming::delete_conversation))
-        
+        .route(
+            "/api/conversations/:id",
+            delete(streaming::delete_conversation),
+        )
         // AI模型管理
         .route("/api/models", get(list_models))
         .route("/api/models/:id", get(get_model))
-        
         // 配置管理
         .route("/api/config", get(get_config))
         .route("/api/config", post(update_config))
-
         // 工具管理
         .route("/api/tools", get(streaming::list_tools))
         .route("/api/tools/execute", post(streaming::execute_tool))
-
         // 文件管理
         .route("/api/files/upload", post(upload_files_handler))
         .route("/api/files", get(list_files_handler))
         .route("/api/files/:id", delete(delete_file_handler))
-
         // 静态文件和文档
         .route("/", get(api_info))
         .route("/docs", get(api_docs))
-        
         .layer(ServiceBuilder::new().layer(cors))
         .with_state(app_state);
 
@@ -93,7 +88,7 @@ pub async fn start_api_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
     println!("📡 API Server listening on http://{}", addr);
     println!("📚 API Documentation: http://{}/docs", addr);
-    
+
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
 
@@ -124,8 +119,8 @@ fn create_ai_client() -> AIClient {
 /// 创建数据库连接
 async fn create_database() -> Result<Database, Box<dyn std::error::Error>> {
     // 从环境变量读取数据库URL，默认使用本地SQLite文件
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite:./lumosai.db".to_string());
+    let database_url =
+        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:./lumosai.db".to_string());
 
     println!("🗄️ Connecting to database: {}", database_url);
 
@@ -136,7 +131,9 @@ async fn create_database() -> Result<Database, Box<dyn std::error::Error>> {
 }
 
 /// 创建文件处理器
-async fn create_file_handler(database: Database) -> Result<FileHandler, Box<dyn std::error::Error>> {
+async fn create_file_handler(
+    database: Database,
+) -> Result<FileHandler, Box<dyn std::error::Error>> {
     let config = FileConfig::default();
     let file_handler = FileHandler::new(config, database);
 
@@ -249,14 +246,8 @@ Content-Type: application/json
 ```
 "#;
 
-    (
-        StatusCode::OK,
-        [("content-type", "text/markdown")],
-        docs
-    )
+    (StatusCode::OK, [("content-type", "text/markdown")], docs)
 }
-
-
 
 /// 获取可用模型列表
 async fn list_models() -> impl IntoResponse {
@@ -335,9 +326,7 @@ async fn upload_files_handler(
 }
 
 /// 文件列表处理器包装
-async fn list_files_handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+async fn list_files_handler(State(state): State<AppState>) -> impl IntoResponse {
     crate::file_handler::list_files(State(state.file_handler)).await
 }
 

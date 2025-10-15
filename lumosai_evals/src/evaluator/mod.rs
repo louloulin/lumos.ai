@@ -3,12 +3,12 @@
 //! 该模块提供了用于执行评估的接口和实现。
 
 use crate::error::Result;
-use crate::types::{EvalOptions, EvalResult};
 use crate::metrics::Metric;
+use crate::types::{EvalOptions, EvalResult};
 
+use chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::Utc;
 
 pub mod llm_eval;
 pub mod rule_eval;
@@ -22,16 +22,21 @@ pub use rule_eval::RuleEvaluator;
 pub trait Evaluator: Send + Sync {
     /// 获取评估器名称
     fn name(&self) -> &str;
-    
+
     /// 执行评估
-    async fn evaluate(&self, input: &str, output: &str, options: &EvalOptions) -> Result<EvalResult>;
+    async fn evaluate(
+        &self,
+        input: &str,
+        output: &str,
+        options: &EvalOptions,
+    ) -> Result<EvalResult>;
 }
 
 /// 基于指标的评估器
 pub struct MetricBasedEvaluator {
     /// 评估器名称
     name: String,
-    
+
     /// 用于评估的指标
     metric: Arc<dyn Metric>,
 }
@@ -51,18 +56,27 @@ impl Evaluator for MetricBasedEvaluator {
     fn name(&self) -> &str {
         &self.name
     }
-    
-    async fn evaluate(&self, input: &str, output: &str, options: &EvalOptions) -> Result<EvalResult> {
+
+    async fn evaluate(
+        &self,
+        input: &str,
+        output: &str,
+        options: &EvalOptions,
+    ) -> Result<EvalResult> {
         // 使用指标测量输入和输出
         let metric_result = self.metric.measure(input, output).await?;
-        
+
         // 创建评估结果
-        let global_run_id = options.global_run_id.clone()
+        let global_run_id = options
+            .global_run_id
+            .clone()
             .unwrap_or_else(|| Uuid::new_v4().to_string());
-            
-        let run_id = options.run_id.clone()
+
+        let run_id = options
+            .run_id
+            .clone()
             .unwrap_or_else(|| Uuid::new_v4().to_string());
-            
+
         let result = EvalResult {
             id: Uuid::new_v4().to_string(),
             global_run_id,
@@ -78,7 +92,7 @@ impl Evaluator for MetricBasedEvaluator {
             test_info: options.test_info.clone(),
             instructions: options.instructions.clone(),
         };
-        
+
         Ok(result)
     }
 }
@@ -93,10 +107,10 @@ mod tests {
     use mockall::predicate::always;
     use mockall::mock;
     use async_trait::async_trait;
-    
+
     mock! {
         MockMetric {}
-        
+
         #[async_trait]
         impl Metric for MockMetric {
             fn name(&self) -> &str;
@@ -104,15 +118,15 @@ mod tests {
             async fn measure(&self, input: &str, output: &str) -> Result<MetricResult>;
         }
     }
-    
+
     #[test]
     fn test_metric_based_evaluator() {
         let mut mock_metric = MockMetric::new();
-        
+
         // 设置mock的行为
         mock_metric.expect_name()
             .return_const("mock_metric");
-            
+
         mock_metric.expect_measure()
             .with(always(), always())
             .returning(|_, _| {
@@ -121,17 +135,17 @@ mod tests {
                     info: HashMap::new(),
                 })
             });
-            
+
         // 创建评估器
         let evaluator = MetricBasedEvaluator::new(
             "test_evaluator",
             Arc::new(mock_metric)
         );
-        
+
         // 执行评估
         let options = EvalOptions::default();
         let result = evaluator.evaluate("test input", "test output", &options);
-        
+
         assert!(result.is_ok());
         let eval_result = result.unwrap();
         assert_eq!(eval_result.score, 0.75);
@@ -139,4 +153,4 @@ mod tests {
         assert_eq!(eval_result.metric_name, "mock_metric");
     }
     */
-} 
+}

@@ -2,8 +2,8 @@
 //!
 //! 提供常用的内置工具，包括文件操作、网络请求、数据处理等
 
-use std::path::PathBuf;
 use crate::tool::Tool;
+use std::path::PathBuf;
 
 /// 内置工具配置
 #[derive(Debug, Clone)]
@@ -90,24 +90,24 @@ impl Default for DataProcessingConfig {
 }
 
 // Import the new tool modules
-pub mod web;
-pub mod file;
-pub mod data;
-pub mod system;
-pub mod math;
 pub mod ai;
-pub mod database;
 pub mod communication;
+pub mod data;
+pub mod database;
+pub mod file;
+pub mod math;
+pub mod system;
+pub mod web;
 
 // Re-export tool creation functions
-pub use web::*;
-pub use file::*;
-pub use data::*;
-pub use system::*;
-pub use math::*;
 pub use ai::*;
-pub use database::*;
 pub use communication::*;
+pub use data::*;
+pub use database::*;
+pub use file::*;
+pub use math::*;
+pub use system::*;
+pub use web::*;
 
 /// 创建所有内置工具
 ///
@@ -120,14 +120,12 @@ pub fn create_all_builtin_tools(_config: &BuiltinToolsConfig) -> Vec<Box<dyn Too
         Box::new(create_json_api_tool()),
         Box::new(create_url_validator_tool()),
         Box::new(WebSearchTool::new()),
-
         // File tools
         Box::new(create_file_reader_tool()),
         Box::new(create_file_writer_tool()),
         Box::new(create_directory_lister_tool()),
         Box::new(create_file_info_tool()),
         Box::new(FileManagerTool::new()),
-
         // Data tools
         Box::new(create_json_parser_tool()),
         Box::new(create_csv_parser_tool()),
@@ -138,13 +136,11 @@ pub fn create_all_builtin_tools(_config: &BuiltinToolsConfig) -> Vec<Box<dyn Too
         Box::new(create_data_cleaner_tool()),
         Box::new(create_enhanced_data_transformer_tool()),
         Box::new(create_schema_generator_tool()),
-
         // System tools
         Box::new(create_datetime_tool()),
         Box::new(create_uuid_generator_tool()),
         Box::new(create_hash_generator_tool()),
         Box::new(CodeExecutorTool::new()),
-
         // Math tools
         Box::new(create_calculator_tool()),
         Box::new(create_statistics_tool()),
@@ -184,18 +180,66 @@ pub fn create_dev_builtin_tools() -> Vec<Box<dyn Tool>> {
 /// 获取工具的分类信息
 pub fn get_tool_categories() -> Vec<(&'static str, Vec<&'static str>)> {
     vec![
-        ("文件操作", vec!["file_reader", "file_writer", "directory_lister", "file_info"]),
-        ("网络请求", vec!["http_request", "web_scraper", "json_api", "url_validator"]),
-        ("数据处理", vec![
-            "json_parser", "csv_parser", "data_transformer", "excel_reader",
-            "pdf_parser", "data_validator", "data_cleaner", "enhanced_data_transformer",
-            "schema_generator"
-        ]),
-        ("系统工具", vec!["datetime", "uuid_generator", "hash_generator"]),
+        (
+            "文件操作",
+            vec![
+                "file_reader",
+                "file_writer",
+                "directory_lister",
+                "file_info",
+            ],
+        ),
+        (
+            "网络请求",
+            vec!["http_request", "web_scraper", "json_api", "url_validator"],
+        ),
+        (
+            "数据处理",
+            vec![
+                "json_parser",
+                "csv_parser",
+                "data_transformer",
+                "excel_reader",
+                "pdf_parser",
+                "data_validator",
+                "data_cleaner",
+                "enhanced_data_transformer",
+                "schema_generator",
+            ],
+        ),
+        (
+            "系统工具",
+            vec!["datetime", "uuid_generator", "hash_generator"],
+        ),
         ("数学计算", vec!["calculator", "statistics"]),
-        ("AI工具", vec!["image_analyzer", "text_summarizer", "sentiment_analyzer", "translation_tool", "ocr_tool"]),
-        ("数据库工具", vec!["sql_executor", "mongodb_client", "redis_client", "elasticsearch_client"]),
-        ("通信工具", vec!["email_sender", "slack_messenger", "webhook_caller", "sms_sender"]),
+        (
+            "AI工具",
+            vec![
+                "image_analyzer",
+                "text_summarizer",
+                "sentiment_analyzer",
+                "translation_tool",
+                "ocr_tool",
+            ],
+        ),
+        (
+            "数据库工具",
+            vec![
+                "sql_executor",
+                "mongodb_client",
+                "redis_client",
+                "elasticsearch_client",
+            ],
+        ),
+        (
+            "通信工具",
+            vec![
+                "email_sender",
+                "slack_messenger",
+                "webhook_caller",
+                "sms_sender",
+            ],
+        ),
     ]
 }
 

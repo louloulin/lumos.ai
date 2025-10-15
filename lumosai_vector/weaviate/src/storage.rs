@@ -1,18 +1,18 @@
 //! Weaviate vector storage implementation
 
-use std::collections::HashMap;
-use std::time::Duration;
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::{json, Value};
+use std::collections::HashMap;
+use std::time::Duration;
 use tracing::{debug, instrument, warn};
 use uuid::Uuid;
 
-use lumosai_vector_core::prelude::*;
-use crate::{WeaviateConfig, WeaviateError};
 use crate::error::WeaviateResult;
-use crate::schema::{WeaviateClass, WeaviateProperty};
 use crate::filter::convert_filter_to_where;
+use crate::schema::{WeaviateClass, WeaviateProperty};
+use crate::{WeaviateConfig, WeaviateError};
+use lumosai_vector_core::prelude::*;
 
 /// Weaviate vector storage implementation
 pub struct WeaviateVectorStorage {
@@ -31,50 +31,55 @@ impl WeaviateVectorStorage {
     /// Create a new Weaviate vector storage instance with configuration
     pub async fn with_config(config: WeaviateConfig) -> Result<Self> {
         config.validate().map_err(VectorError::from)?;
-        
-        let mut client_builder = Client::builder()
-            .timeout(Duration::from_secs(config.timeout_seconds));
-        
+
+        let mut client_builder =
+            Client::builder().timeout(Duration::from_secs(config.timeout_seconds));
+
         // Add authentication headers if provided
         let mut default_headers = reqwest::header::HeaderMap::new();
-        
+
         if let Some(api_key) = &config.api_key {
             default_headers.insert(
                 "Authorization",
-                format!("Bearer {}", api_key).parse()
-                    .map_err(|e| VectorError::InvalidConfig(format!("Invalid API key: {}", e)))?
+                format!("Bearer {}", api_key)
+                    .parse()
+                    .map_err(|e| VectorError::InvalidConfig(format!("Invalid API key: {}", e)))?,
             );
         }
-        
+
         if let Some(token) = &config.oidc_token {
             default_headers.insert(
                 "Authorization",
-                format!("Bearer {}", token).parse()
-                    .map_err(|e| VectorError::InvalidConfig(format!("Invalid OIDC token: {}", e)))?
+                format!("Bearer {}", token).parse().map_err(|e| {
+                    VectorError::InvalidConfig(format!("Invalid OIDC token: {}", e))
+                })?,
             );
         }
-        
+
         default_headers.insert("Content-Type", "application/json".parse().unwrap());
-        
+
         let client = client_builder
             .default_headers(default_headers)
             .build()
-            .map_err(|e| VectorError::ConnectionFailed(format!("Failed to create HTTP client: {}", e)))?;
-        
+            .map_err(|e| {
+                VectorError::ConnectionFailed(format!("Failed to create HTTP client: {}", e))
+            })?;
+
         let base_url = config.api_url();
-        
+
         // Test connection
         let health_url = format!("{}/meta", base_url);
-        client.get(&health_url).send().await
-            .map_err(|e| VectorError::ConnectionFailed(format!("Failed to connect to Weaviate: {}", e)))?;
-        
+        client.get(&health_url).send().await.map_err(|e| {
+            VectorError::ConnectionFailed(format!("Failed to connect to Weaviate: {}", e))
+        })?;
+
         Ok(Self {
             client,
             config,
             base_url,
         })
     }
-    
+
     /// Convert similarity metric to Weaviate distance
     fn convert_metric(metric: SimilarityMetric) -> &'static str {
         match metric {
@@ -84,7 +89,7 @@ impl WeaviateVectorStorage {
             _ => "cosine", // Default fallback
         }
     }
-    
+
     /// Convert Weaviate distance to similarity metric
     fn convert_distance(distance: &str) -> SimilarityMetric {
         match distance {
@@ -94,24 +99,24 @@ impl WeaviateVectorStorage {
             _ => SimilarityMetric::Cosine,
         }
     }
-    
+
     /// Get class name with prefix
     fn class_name(&self, name: &str) -> String {
         self.config.class_name(name)
     }
-    
+
     /// Check if a class exists
     async fn class_exists(&self, class_name: &str) -> WeaviateResult<bool> {
         let url = format!("{}/schema/{}", self.base_url, class_name);
         let response = self.client.get(&url).send().await?;
-        
+
         Ok(response.status().is_success())
     }
-    
+
     /// Create a Weaviate class (index)
     async fn create_class(&self, config: &IndexConfig) -> WeaviateResult<()> {
         let class_name = self.class_name(&config.name);
-        
+
         let class_def = WeaviateClass {
             class: class_name.clone(),
             description: Some(format!("Vector index for {}", config.name)),
@@ -121,7 +126,11 @@ impl WeaviateVectorStorage {
                 "efConstruction": 128,
                 "maxConnections": 64
             }),
-            vectorizer: self.config.vectorizer.clone().unwrap_or_else(|| "none".to_string()),
+            vectorizer: self
+                .config
+                .vectorizer
+                .clone()
+                .unwrap_or_else(|| "none".to_string()),
             properties: vec![
                 WeaviateProperty {
                     name: "content".to_string(),
@@ -137,64 +146,79 @@ impl WeaviateVectorStorage {
                 },
             ],
         };
-        
+
         let url = format!("{}/schema", self.base_url);
-        let response = self.client
-            .post(&url)
-            .json(&class_def)
-            .send()
-            .await?;
-        
+        let response = self.client.post(&url).json(&class_def).send().await?;
+
         if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(WeaviateError::Api(format!("Failed to create class: {}", error_text)));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(WeaviateError::Api(format!(
+                "Failed to create class: {}",
+                error_text
+            )));
         }
-        
+
         debug!("Created Weaviate class: {}", class_name);
         Ok(())
     }
-    
+
     /// Delete a Weaviate class
     async fn delete_class(&self, class_name: &str) -> WeaviateResult<()> {
         let url = format!("{}/schema/{}", self.base_url, class_name);
         let response = self.client.delete(&url).send().await?;
-        
+
         if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(WeaviateError::Api(format!("Failed to delete class: {}", error_text)));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(WeaviateError::Api(format!(
+                "Failed to delete class: {}",
+                error_text
+            )));
         }
-        
+
         debug!("Deleted Weaviate class: {}", class_name);
         Ok(())
     }
-    
+
     /// Get class information
     async fn get_class_info(&self, class_name: &str) -> WeaviateResult<Value> {
         let url = format!("{}/schema/{}", self.base_url, class_name);
         let response = self.client.get(&url).send().await?;
-        
+
         if !response.status().is_success() {
             return Err(WeaviateError::ClassNotFound(class_name.to_string()));
         }
-        
+
         let class_info: Value = response.json().await?;
         Ok(class_info)
     }
-    
+
     /// List all classes
     async fn list_classes(&self) -> WeaviateResult<Vec<String>> {
         let url = format!("{}/schema", self.base_url);
         let response = self.client.get(&url).send().await?;
-        
+
         if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(WeaviateError::Api(format!("Failed to list classes: {}", error_text)));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(WeaviateError::Api(format!(
+                "Failed to list classes: {}",
+                error_text
+            )));
         }
-        
+
         let schema: Value = response.json().await?;
-        let classes = schema["classes"].as_array()
+        let classes = schema["classes"]
+            .as_array()
             .ok_or_else(|| WeaviateError::Api("Invalid schema response".to_string()))?;
-        
+
         let mut class_names = Vec::new();
         for class in classes {
             if let Some(name) = class["class"].as_str() {
@@ -210,7 +234,7 @@ impl WeaviateVectorStorage {
                 }
             }
         }
-        
+
         Ok(class_names)
     }
 }
@@ -224,12 +248,18 @@ impl VectorStorage for WeaviateVectorStorage {
         let class_name = self.class_name(&config.name);
 
         // Check if class already exists
-        if self.class_exists(&class_name).await.map_err(VectorError::from)? {
+        if self
+            .class_exists(&class_name)
+            .await
+            .map_err(VectorError::from)?
+        {
             return Err(VectorError::IndexAlreadyExists(config.name));
         }
 
         // Create the class
-        self.create_class(&config).await.map_err(VectorError::from)?;
+        self.create_class(&config)
+            .await
+            .map_err(VectorError::from)?;
 
         Ok(())
     }
@@ -242,7 +272,10 @@ impl VectorStorage for WeaviateVectorStorage {
     #[instrument(skip(self))]
     async fn describe_index(&self, index_name: &str) -> Result<IndexInfo> {
         let class_name = self.class_name(index_name);
-        let class_info = self.get_class_info(&class_name).await.map_err(VectorError::from)?;
+        let class_info = self
+            .get_class_info(&class_name)
+            .await
+            .map_err(VectorError::from)?;
 
         // Extract information from class definition
         let vector_config = &class_info["vectorIndexConfig"];
@@ -258,15 +291,17 @@ impl VectorStorage for WeaviateVectorStorage {
             )
         });
 
-        let count_response = self.client
+        let count_response = self
+            .client
             .post(&count_url)
             .json(&count_query)
             .send()
             .await
             .map_err(|e| VectorError::OperationFailed(format!("Failed to get count: {}", e)))?;
 
-        let count_data: Value = count_response.json().await
-            .map_err(|e| VectorError::OperationFailed(format!("Failed to parse count response: {}", e)))?;
+        let count_data: Value = count_response.json().await.map_err(|e| {
+            VectorError::OperationFailed(format!("Failed to parse count response: {}", e))
+        })?;
 
         let vector_count = count_data["data"]["Aggregate"][class_name][0]["meta"]["count"]
             .as_u64()
@@ -289,10 +324,16 @@ impl VectorStorage for WeaviateVectorStorage {
     #[instrument(skip(self))]
     async fn delete_index(&self, index_name: &str) -> Result<()> {
         let class_name = self.class_name(index_name);
-        self.delete_class(&class_name).await.map_err(VectorError::from)
+        self.delete_class(&class_name)
+            .await
+            .map_err(VectorError::from)
     }
 
-    async fn upsert_documents(&self, index_name: &str, documents: Vec<Document>) -> Result<Vec<DocumentId>> {
+    async fn upsert_documents(
+        &self,
+        index_name: &str,
+        documents: Vec<Document>,
+    ) -> Result<Vec<DocumentId>> {
         let class_name = self.class_name(index_name);
         let mut ids = Vec::new();
 
@@ -325,7 +366,8 @@ impl VectorStorage for WeaviateVectorStorage {
                 "objects": objects
             });
 
-            let response = self.client
+            let response = self
+                .client
                 .post(&batch_url)
                 .json(&batch_request)
                 .send()
@@ -333,8 +375,14 @@ impl VectorStorage for WeaviateVectorStorage {
                 .map_err(|e| VectorError::OperationFailed(format!("Batch upsert failed: {}", e)))?;
 
             if !response.status().is_success() {
-                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-                return Err(VectorError::OperationFailed(format!("Batch upsert failed: {}", error_text)));
+                let error_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+                return Err(VectorError::OperationFailed(format!(
+                    "Batch upsert failed: {}",
+                    error_text
+                )));
             }
         }
 
@@ -349,15 +397,13 @@ impl VectorStorage for WeaviateVectorStorage {
             SearchQuery::Vector(vector) => vector,
             SearchQuery::Text(_) => {
                 return Err(VectorError::NotSupported(
-                    "Text queries not supported by Weaviate storage".to_string()
+                    "Text queries not supported by Weaviate storage".to_string(),
                 ));
             }
         };
 
         // Build GraphQL query
-        let mut query_parts = vec![
-            format!("nearVector: {{ vector: {:?} }}", query_vector),
-        ];
+        let mut query_parts = vec![format!("nearVector: {{ vector: {:?} }}", query_vector)];
 
         if let Some(filter) = request.filter {
             let where_clause = convert_filter_to_where(filter)?;
@@ -383,7 +429,8 @@ impl VectorStorage for WeaviateVectorStorage {
         });
 
         let url = format!("{}/graphql", self.base_url);
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&query_request)
             .send()
@@ -391,12 +438,19 @@ impl VectorStorage for WeaviateVectorStorage {
             .map_err(|e| VectorError::OperationFailed(format!("Search failed: {}", e)))?;
 
         if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(VectorError::OperationFailed(format!("Search failed: {}", error_text)));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(VectorError::OperationFailed(format!(
+                "Search failed: {}",
+                error_text
+            )));
         }
 
-        let response_data: Value = response.json().await
-            .map_err(|e| VectorError::OperationFailed(format!("Failed to parse search response: {}", e)))?;
+        let response_data: Value = response.json().await.map_err(|e| {
+            VectorError::OperationFailed(format!("Failed to parse search response: {}", e))
+        })?;
 
         // Parse results
         let mut results = Vec::new();
@@ -407,8 +461,13 @@ impl VectorStorage for WeaviateVectorStorage {
                 let score = additional["score"].as_f64().unwrap_or(0.0) as f32;
 
                 let vector = if request.include_vectors {
-                    additional["vector"].as_array()
-                        .map(|v| v.iter().filter_map(|x| x.as_f64().map(|f| f as f32)).collect())
+                    additional["vector"]
+                        .as_array()
+                        .map(|v| {
+                            v.iter()
+                                .filter_map(|x| x.as_f64().map(|f| f as f32))
+                                .collect()
+                        })
                         .unwrap_or_default()
                 } else {
                     Vec::new()
@@ -419,7 +478,8 @@ impl VectorStorage for WeaviateVectorStorage {
                 if let Some(meta_obj) = obj["metadata"].as_object() {
                     for (key, value) in meta_obj {
                         if let Some(str_val) = value.as_str() {
-                            metadata.insert(key.clone(), MetadataValue::String(str_val.to_string()));
+                            metadata
+                                .insert(key.clone(), MetadataValue::String(str_val.to_string()));
                         } else if let Some(num_val) = value.as_i64() {
                             metadata.insert(key.clone(), MetadataValue::Integer(num_val));
                         } else if let Some(float_val) = value.as_f64() {
@@ -452,11 +512,17 @@ impl VectorStorage for WeaviateVectorStorage {
 
         for id in ids {
             let url = format!("{}/objects/{}/{}", self.base_url, class_name, id);
-            let response = self.client.delete(&url).send().await
-                .map_err(|e| VectorError::OperationFailed(format!("Failed to delete document: {}", e)))?;
+            let response = self.client.delete(&url).send().await.map_err(|e| {
+                VectorError::OperationFailed(format!("Failed to delete document: {}", e))
+            })?;
 
-            if !response.status().is_success() && response.status() != reqwest::StatusCode::NOT_FOUND {
-                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            if !response.status().is_success()
+                && response.status() != reqwest::StatusCode::NOT_FOUND
+            {
+                let error_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unknown error".to_string());
                 warn!("Failed to delete document {}: {}", id, error_text);
             }
         }
@@ -464,7 +530,12 @@ impl VectorStorage for WeaviateVectorStorage {
         Ok(())
     }
 
-    async fn get_documents(&self, index_name: &str, ids: Vec<DocumentId>, include_vectors: bool) -> Result<Vec<Document>> {
+    async fn get_documents(
+        &self,
+        index_name: &str,
+        ids: Vec<DocumentId>,
+        include_vectors: bool,
+    ) -> Result<Vec<Document>> {
         let class_name = self.class_name(index_name);
         let mut documents = Vec::new();
 
@@ -475,26 +546,40 @@ impl VectorStorage for WeaviateVectorStorage {
                 "content metadata"
             };
 
-            let url = format!("{}/objects/{}/{}?include={}", self.base_url, class_name, id, fields);
-            let response = self.client.get(&url).send().await
-                .map_err(|e| VectorError::OperationFailed(format!("Failed to get document: {}", e)))?;
+            let url = format!(
+                "{}/objects/{}/{}?include={}",
+                self.base_url, class_name, id, fields
+            );
+            let response = self.client.get(&url).send().await.map_err(|e| {
+                VectorError::OperationFailed(format!("Failed to get document: {}", e))
+            })?;
 
             if response.status() == reqwest::StatusCode::NOT_FOUND {
                 continue; // Skip missing documents
             }
 
             if !response.status().is_success() {
-                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-                return Err(VectorError::OperationFailed(format!("Failed to get document: {}", error_text)));
+                let error_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+                return Err(VectorError::OperationFailed(format!(
+                    "Failed to get document: {}",
+                    error_text
+                )));
             }
 
-            let obj: Value = response.json().await
-                .map_err(|e| VectorError::OperationFailed(format!("Failed to parse document: {}", e)))?;
+            let obj: Value = response.json().await.map_err(|e| {
+                VectorError::OperationFailed(format!("Failed to parse document: {}", e))
+            })?;
 
             let content = obj["properties"]["content"].as_str().map(|s| s.to_string());
             let embedding = if include_vectors {
-                obj["_additional"]["vector"].as_array()
-                    .map(|v| v.iter().filter_map(|x| x.as_f64().map(|f| f as f32)).collect())
+                obj["_additional"]["vector"].as_array().map(|v| {
+                    v.iter()
+                        .filter_map(|x| x.as_f64().map(|f| f as f32))
+                        .collect()
+                })
             } else {
                 None
             };
@@ -534,7 +619,10 @@ impl VectorStorage for WeaviateVectorStorage {
 
     async fn health_check(&self) -> Result<()> {
         let url = format!("{}/meta", self.base_url);
-        self.client.get(&url).send().await
+        self.client
+            .get(&url)
+            .send()
+            .await
             .map_err(|e| VectorError::ConnectionFailed(format!("Health check failed: {}", e)))?;
         Ok(())
     }

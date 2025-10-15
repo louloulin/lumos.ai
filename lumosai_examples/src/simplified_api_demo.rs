@@ -1,12 +1,12 @@
-use lumosai_core::{Agent, Error, Tool};
-use lumosai_core::llm::{DeepSeekProvider, LlmOptions, LlmProvider, Message, Role};
-use lumosai_core::agent::{AgentBuilder};
+use async_trait::async_trait;
 use lumosai_core::agent::types::AgentGenerateOptions;
-use lumosai_core::tool::{ToolBuilder, create_tool};
+use lumosai_core::agent::AgentBuilder;
+use lumosai_core::llm::{DeepSeekProvider, LlmOptions, LlmProvider, Message, Role};
+use lumosai_core::tool::{create_tool, ToolBuilder};
+use lumosai_core::{Agent, Error, Tool};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 // 创建DeepSeek适配器，包装DeepSeekProvider以符合宏要求
 struct DeepSeekLlmAdapter {
@@ -30,15 +30,24 @@ impl LlmProvider for DeepSeekLlmAdapter {
         self.provider.generate(prompt, options).await
     }
 
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String, Error> {
-        self.provider.generate_with_messages(messages, options).await
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String, Error> {
+        self.provider
+            .generate_with_messages(messages, options)
+            .await
     }
 
     async fn generate_stream<'a>(
         &'a self,
         prompt: &'a str,
         options: &'a LlmOptions,
-    ) -> Result<std::pin::Pin<Box<dyn futures::Stream<Item = Result<String, Error>> + Send + 'a>>, Error> {
+    ) -> Result<
+        std::pin::Pin<Box<dyn futures::Stream<Item = Result<String, Error>> + Send + 'a>>,
+        Error,
+    > {
         self.provider.generate_stream(prompt, options).await
     }
 
@@ -128,12 +137,13 @@ fn create_stock_news_tool() -> Result<Box<dyn lumosai_core::tool::Tool>, Error> 
             ("limit", "number", "返回新闻条数（默认3条）", false),
         ],
         |params| {
-            let symbol = params.get("symbol")
+            let symbol = params
+                .get("symbol")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| Error::Configuration("Missing or invalid symbol parameter".to_string()))?;
-            let limit = params.get("limit")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(3);
+                .ok_or_else(|| {
+                    Error::Configuration("Missing or invalid symbol parameter".to_string())
+                })?;
+            let limit = params.get("limit").and_then(|v| v.as_i64()).unwrap_or(3);
 
             // 模拟真实的新闻数据
             let news = match symbol.to_uppercase().as_str() {
@@ -172,17 +182,18 @@ fn create_stock_news_tool() -> Result<Box<dyn lumosai_core::tool::Tool>, Error> 
                         "sentiment": "neutral",
                         "impact": "none"
                     }
-                ])
+                ]),
             };
 
             // 根据limit参数限制返回的新闻数量
             if let Some(news_array) = news.as_array() {
-                let limited_news: Vec<_> = news_array.iter().take(limit as usize).cloned().collect();
+                let limited_news: Vec<_> =
+                    news_array.iter().take(limit as usize).cloned().collect();
                 Ok(json!(limited_news))
             } else {
                 Ok(news)
             }
-        }
+        },
     )?;
 
     Ok(Box::new(tool))
@@ -197,7 +208,7 @@ fn create_deepseek_provider() -> Arc<DeepSeekLlmAdapter> {
 // 使用新的简化API创建Agent
 fn create_stock_agent() -> Result<impl lumosai_core::Agent, Error> {
     let llm = create_deepseek_provider();
-    
+
     // 创建工具
     let stock_price_tool = create_stock_price_tool()?;
     let stock_news_tool = create_stock_news_tool()?;
@@ -254,7 +265,7 @@ async fn main() -> Result<(), Error> {
 
     // 演示查询
     let demo_query = "请查询苹果公司(AAPL)的当前股票价格和基本信息";
-    
+
     println!("\n{}", "=".repeat(60));
     println!("📊 简化API演示");
     println!("{}", "=".repeat(60));
@@ -269,10 +280,13 @@ async fn main() -> Result<(), Error> {
         name: None,
     };
 
-    match app.generate(&[user_message], &AgentGenerateOptions::default()).await {
+    match app
+        .generate(&[user_message], &AgentGenerateOptions::default())
+        .await
+    {
         Ok(result) => {
             println!("\n💬 Lumos股票助手: {}", result.response);
-        },
+        }
         Err(e) => {
             println!("❌ 错误: {}", e);
         }

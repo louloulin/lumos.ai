@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
+use crate::types::{ApiKeyConnection, BionicOpenAPI, Oauth2Connection, Rbac};
 use daisy_rsx::*;
-use crate::types::{Rbac, ApiKeyConnection, Oauth2Connection, BionicOpenAPI};
 use dioxus::prelude::*;
 
 use super::api_key_cards::ApiKeyCards;

@@ -152,7 +152,10 @@ impl Database {
 
     /// 创建用户
     pub async fn create_user(&self, email: &str, name: &str) -> Result<User, DatabaseError> {
-        let mut store = self.store.lock().map_err(|e| DatabaseError::Internal(e.to_string()))?;
+        let mut store = self
+            .store
+            .lock()
+            .map_err(|e| DatabaseError::Internal(e.to_string()))?;
 
         let user_id = store.next_user_id;
         let user = User {
@@ -170,7 +173,10 @@ impl Database {
 
     /// 根据邮箱获取用户
     pub async fn get_user_by_email(&self, email: &str) -> Result<User, DatabaseError> {
-        let store = self.store.lock().map_err(|e| DatabaseError::Internal(e.to_string()))?;
+        let store = self
+            .store
+            .lock()
+            .map_err(|e| DatabaseError::Internal(e.to_string()))?;
 
         for user in store.users.values() {
             if user.email == email {
@@ -187,7 +193,10 @@ impl Database {
         user_id: i64,
         title: &str,
     ) -> Result<Conversation, DatabaseError> {
-        let mut store = self.store.lock().map_err(|e| DatabaseError::Internal(e.to_string()))?;
+        let mut store = self
+            .store
+            .lock()
+            .map_err(|e| DatabaseError::Internal(e.to_string()))?;
 
         let conversation_id = store.next_conversation_id;
         let conversation = Conversation {
@@ -198,7 +207,9 @@ impl Database {
             updated_at: chrono::Utc::now(),
         };
 
-        store.conversations.insert(conversation_id, conversation.clone());
+        store
+            .conversations
+            .insert(conversation_id, conversation.clone());
         store.messages.insert(conversation_id, Vec::new());
         store.next_conversation_id += 1;
 
@@ -206,8 +217,14 @@ impl Database {
     }
 
     /// 获取用户的对话列表
-    pub async fn get_conversations(&self, user_id: i64) -> Result<Vec<Conversation>, DatabaseError> {
-        let store = self.store.lock().map_err(|e| DatabaseError::Internal(e.to_string()))?;
+    pub async fn get_conversations(
+        &self,
+        user_id: i64,
+    ) -> Result<Vec<Conversation>, DatabaseError> {
+        let store = self
+            .store
+            .lock()
+            .map_err(|e| DatabaseError::Internal(e.to_string()))?;
 
         let mut conversations: Vec<Conversation> = store
             .conversations
@@ -228,7 +245,10 @@ impl Database {
         conversation_id: i64,
         user_id: i64,
     ) -> Result<Conversation, DatabaseError> {
-        let store = self.store.lock().map_err(|e| DatabaseError::Internal(e.to_string()))?;
+        let store = self
+            .store
+            .lock()
+            .map_err(|e| DatabaseError::Internal(e.to_string()))?;
 
         match store.conversations.get(&conversation_id) {
             Some(conversation) if conversation.user_id == user_id => Ok(conversation.clone()),
@@ -243,7 +263,10 @@ impl Database {
         conversation_id: i64,
         user_id: i64,
     ) -> Result<(), DatabaseError> {
-        let mut store = self.store.lock().map_err(|e| DatabaseError::Internal(e.to_string()))?;
+        let mut store = self
+            .store
+            .lock()
+            .map_err(|e| DatabaseError::Internal(e.to_string()))?;
 
         match store.conversations.get(&conversation_id) {
             Some(conversation) if conversation.user_id == user_id => {
@@ -265,7 +288,10 @@ impl Database {
         tool_calls: Option<String>,
         tool_call_id: Option<String>,
     ) -> Result<Message, DatabaseError> {
-        let mut store = self.store.lock().map_err(|e| DatabaseError::Internal(e.to_string()))?;
+        let mut store = self
+            .store
+            .lock()
+            .map_err(|e| DatabaseError::Internal(e.to_string()))?;
 
         // 检查对话是否存在
         if !store.conversations.contains_key(&conversation_id) {
@@ -285,7 +311,11 @@ impl Database {
         store.next_message_id += 1;
 
         // 添加消息到对话
-        store.messages.entry(conversation_id).or_insert_with(Vec::new).push(message.clone());
+        store
+            .messages
+            .entry(conversation_id)
+            .or_insert_with(Vec::new)
+            .push(message.clone());
 
         // 更新对话的更新时间
         if let Some(conversation) = store.conversations.get_mut(&conversation_id) {
@@ -297,7 +327,10 @@ impl Database {
 
     /// 获取对话的消息列表
     pub async fn get_messages(&self, conversation_id: i64) -> Result<Vec<Message>, DatabaseError> {
-        let store = self.store.lock().map_err(|e| DatabaseError::Internal(e.to_string()))?;
+        let store = self
+            .store
+            .lock()
+            .map_err(|e| DatabaseError::Internal(e.to_string()))?;
 
         match store.messages.get(&conversation_id) {
             Some(messages) => Ok(messages.clone()),
@@ -307,7 +340,10 @@ impl Database {
 
     /// 更新对话的更新时间
     pub async fn touch_conversation(&self, conversation_id: i64) -> Result<(), DatabaseError> {
-        let mut store = self.store.lock().map_err(|e| DatabaseError::Internal(e.to_string()))?;
+        let mut store = self
+            .store
+            .lock()
+            .map_err(|e| DatabaseError::Internal(e.to_string()))?;
 
         if let Some(conversation) = store.conversations.get_mut(&conversation_id) {
             conversation.updated_at = chrono::Utc::now();

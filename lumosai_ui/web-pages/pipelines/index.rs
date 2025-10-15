@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
+use crate::types::{Dataset, DocumentPipeline, Rbac};
 use crate::ConfirmModal;
-use web_assets::files::empty_api_keys_svg;
 use daisy_rsx::*;
-use crate::types::{Rbac, Dataset, DocumentPipeline};
 use dioxus::prelude::*;
+use web_assets::files::empty_api_keys_svg;
 
 pub fn page(
     team_id: i32,

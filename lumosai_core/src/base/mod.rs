@@ -1,14 +1,13 @@
 //! Base module for common functionality shared by components
 
-use std::sync::Arc;
-use serde::{Serialize, Deserialize};
-use crate::logger::{Logger, Component, LogLevel, create_logger};
+use crate::logger::{create_logger, Component, LogLevel, Logger};
 use crate::telemetry::{Event, TelemetrySink};
 use crate::types::Metadata;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// Component configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ComponentConfig {
     /// Component name
     pub name: Option<String>,
@@ -18,27 +17,26 @@ pub struct ComponentConfig {
     pub log_level: Option<LogLevel>,
 }
 
-
 /// Base trait for all components
 pub trait Base: Send + Sync {
     /// Get the component name
     fn name(&self) -> Option<&str>;
-    
+
     /// Get the component type
     fn component(&self) -> Component;
-    
+
     /// Get the logger
     fn logger(&self) -> Arc<dyn Logger>;
-    
+
     /// Set the logger
     fn set_logger(&mut self, logger: Arc<dyn Logger>);
-    
+
     /// Get the telemetry sink
     fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>>;
-    
+
     /// Set the telemetry sink
     fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>);
-    
+
     /// Record a telemetry event
     fn record_event(&self, event_name: &str, data: Metadata) {
         if let Some(telemetry) = self.telemetry() {
@@ -70,7 +68,7 @@ impl BaseComponent {
         let name = config.name.unwrap_or_else(|| "unnamed".to_string());
         let component = config.component;
         let log_level = config.log_level.unwrap_or_default();
-        
+
         Self {
             name: Some(name.clone()),
             component,
@@ -78,7 +76,7 @@ impl BaseComponent {
             telemetry: None,
         }
     }
-    
+
     /// 从名称和组件类型创建BaseComponent的便捷方法
     pub fn new_with_name(name: impl Into<String>, component: Component) -> Self {
         let name = name.into();
@@ -95,30 +93,42 @@ impl Base for BaseComponent {
     fn name(&self) -> Option<&str> {
         self.name.as_deref()
     }
-    
+
     fn component(&self) -> Component {
         self.component
     }
-    
+
     fn logger(&self) -> Arc<dyn Logger> {
         self.logger.clone()
     }
-    
+
     fn set_logger(&mut self, logger: Arc<dyn Logger>) {
         self.logger = logger;
         if let Some(name) = &self.name {
-            self.logger.debug(&format!("Logger updated [component={}] [name={}]", self.component, name), None);
+            self.logger.debug(
+                &format!(
+                    "Logger updated [component={}] [name={}]",
+                    self.component, name
+                ),
+                None,
+            );
         }
     }
-    
+
     fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
         self.telemetry.clone()
     }
-    
+
     fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
         self.telemetry = Some(telemetry);
         if let Some(name) = &self.name {
-            self.logger.debug(&format!("Telemetry updated [component={}] [name={}]", self.component, name), None);
+            self.logger.debug(
+                &format!(
+                    "Telemetry updated [component={}] [name={}]",
+                    self.component, name
+                ),
+                None,
+            );
         }
     }
-} 
+}

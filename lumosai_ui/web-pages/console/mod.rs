@@ -13,10 +13,10 @@ pub mod tools_modal;
 pub mod message_timeline;
 
 // Enhanced AI Agent UI components
+pub mod chat_input;
 pub mod enhanced_console;
 pub mod file_upload;
 pub mod voice_input;
-pub mod chat_input;
 
 use crate::types::{Chat, ToolCall};
 use serde::{Deserialize, Serialize};
@@ -112,8 +112,6 @@ pub fn send_message(content: String) {
     // 简化实现 - 仅打印消息
     println!("发送消息: {}", content);
 }
-
-
 
 /// 生成消息ID
 pub fn generate_message_id() -> u64 {

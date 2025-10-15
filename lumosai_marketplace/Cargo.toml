@@ -11,16 +11,16 @@ categories = ["development-tools", "web-programming"]
 [dependencies]
 # Core dependencies
 lumosai_core = { path = "../lumosai_core" }
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-uuid = { version = "1.0", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
 semver = { version = "1.0", features = ["serde"] }
 
 # Database and storage
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
-redis = { version = "0.24", features = ["tokio-comp"] }
+sqlx = { workspace = true, features = ["sqlite", "chrono", "uuid"] }
+redis = { workspace = true }
 
 # Web framework
 axum = { version = "0.7", features = ["macros", "multipart"] }

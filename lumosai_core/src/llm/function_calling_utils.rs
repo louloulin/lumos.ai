@@ -1,72 +1,81 @@
 //! Function calling utilities for Lumosai
-//! 
+//!
 //! This module provides advanced utilities for working with OpenAI's function calling feature,
 //! improving tool schema generation, validation, and schema inference.
 
-use serde_json::{Value, Map, json};
+use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 
 use crate::error::{Error, Result};
+use crate::llm::function_calling::{FunctionCall, FunctionDefinition};
 use crate::tool::Tool;
-use crate::llm::function_calling::{FunctionDefinition, FunctionCall};
 
 /// Convert a Rust struct to JSON Schema
 /// This can be used with the #[derive(FunctionSchema)] macro
-pub fn struct_to_json_schema<T>() -> Value where T: schemars::JsonSchema {
+pub fn struct_to_json_schema<T>() -> Value
+where
+    T: schemars::JsonSchema,
+{
     let schema = schemars::schema_for!(T);
     serde_json::to_value(&schema.schema).unwrap_or_else(|_| json!({}))
 }
 
 /// Convert a collection of tools to function definitions
-pub fn tools_to_function_definitions(tools: &HashMap<String, Box<dyn Tool>>) -> Vec<FunctionDefinition> {
-    tools.values()
+pub fn tools_to_function_definitions(
+    tools: &HashMap<String, Box<dyn Tool>>,
+) -> Vec<FunctionDefinition> {
+    tools
+        .values()
         .map(|tool| FunctionDefinition::from_tool(tool.as_ref()))
         .collect()
 }
 
 /// Convert tool definitions to OpenAI tool format with enhanced features
 pub fn function_definitions_to_openai_tools(functions: &[FunctionDefinition]) -> Value {
-    let tools: Vec<Value> = functions.iter().map(|func| {
-        let mut function_def = Map::new();
-        function_def.insert("name".to_string(), json!(func.name));
-        
-        if let Some(desc) = &func.description {
-            function_def.insert("description".to_string(), json!(desc));
-        }
-        
-        // Ensure parameters has type:object for compatibility
-        let mut parameters = if let Some(obj) = func.parameters.as_object() {
-            obj.clone()
-        } else {
-            let mut map = Map::new();
-            map.insert("type".to_string(), json!("object"));
-            map.insert("properties".to_string(), func.parameters.clone());
-            map
-        };
+    let tools: Vec<Value> = functions
+        .iter()
+        .map(|func| {
+            let mut function_def = Map::new();
+            function_def.insert("name".to_string(), json!(func.name));
 
-        // Add default properties if not present
-        if !parameters.contains_key("type") {
-            parameters.insert("type".to_string(), json!("object"));
-        }
-        if !parameters.contains_key("required") {
-            parameters.insert("required".to_string(), json!([]));
-        }
+            if let Some(desc) = &func.description {
+                function_def.insert("description".to_string(), json!(desc));
+            }
 
-        function_def.insert("parameters".to_string(), Value::Object(parameters));
+            // Ensure parameters has type:object for compatibility
+            let mut parameters = if let Some(obj) = func.parameters.as_object() {
+                obj.clone()
+            } else {
+                let mut map = Map::new();
+                map.insert("type".to_string(), json!("object"));
+                map.insert("properties".to_string(), func.parameters.clone());
+                map
+            };
 
-        json!({
-            "type": "function",
-            "function": function_def
+            // Add default properties if not present
+            if !parameters.contains_key("type") {
+                parameters.insert("type".to_string(), json!("object"));
+            }
+            if !parameters.contains_key("required") {
+                parameters.insert("required".to_string(), json!([]));
+            }
+
+            function_def.insert("parameters".to_string(), Value::Object(parameters));
+
+            json!({
+                "type": "function",
+                "function": function_def
+            })
         })
-    }).collect();
-    
+        .collect();
+
     Value::Array(tools)
 }
 
 /// Parse OpenAI function calls from response
 pub fn parse_openai_function_calls(response: &Value) -> Result<Vec<FunctionCall>> {
     let mut function_calls = Vec::new();
-    
+
     // Handle different OpenAI response formats
     if let Some(choices) = response.get("choices").and_then(|c| c.as_array()) {
         if let Some(choice) = choices.first() {
@@ -75,18 +84,24 @@ pub fn parse_openai_function_calls(response: &Value) -> Result<Vec<FunctionCall>
                 if let Some(tool_calls) = message.get("tool_calls").and_then(|tc| tc.as_array()) {
                     for tool_call in tool_calls {
                         if let Some(function) = tool_call.get("function") {
-                            let name = function.get("name")
-                                .and_then(|n| n.as_str())
-                                .ok_or_else(|| Error::InvalidInput("Missing function name".to_string()))?;
-                            
-                            let arguments = function.get("arguments")
+                            let name =
+                                function
+                                    .get("name")
+                                    .and_then(|n| n.as_str())
+                                    .ok_or_else(|| {
+                                        Error::InvalidInput("Missing function name".to_string())
+                                    })?;
+
+                            let arguments = function
+                                .get("arguments")
                                 .and_then(|a| a.as_str())
                                 .unwrap_or("{}");
-                            
-                            let id = tool_call.get("id")
+
+                            let id = tool_call
+                                .get("id")
                                 .and_then(|i| i.as_str())
                                 .map(|s| s.to_string());
-                            
+
                             function_calls.push(FunctionCall {
                                 id,
                                 name: name.to_string(),
@@ -95,18 +110,22 @@ pub fn parse_openai_function_calls(response: &Value) -> Result<Vec<FunctionCall>
                         }
                     }
                 }
-                
+
                 // Handle message.function_call format (legacy API)
                 if function_calls.is_empty() {
                     if let Some(function_call) = message.get("function_call") {
-                        let name = function_call.get("name")
+                        let name = function_call
+                            .get("name")
                             .and_then(|n| n.as_str())
-                            .ok_or_else(|| Error::InvalidInput("Missing function name".to_string()))?;
-                        
-                        let arguments = function_call.get("arguments")
+                            .ok_or_else(|| {
+                                Error::InvalidInput("Missing function name".to_string())
+                            })?;
+
+                        let arguments = function_call
+                            .get("arguments")
                             .and_then(|a| a.as_str())
                             .unwrap_or("{}");
-                        
+
                         function_calls.push(FunctionCall {
                             id: None,
                             name: name.to_string(),
@@ -117,7 +136,7 @@ pub fn parse_openai_function_calls(response: &Value) -> Result<Vec<FunctionCall>
             }
         }
     }
-    
+
     Ok(function_calls)
 }
 
@@ -136,10 +155,14 @@ pub fn validate_against_schema(value: &Value, schema: &Value) -> Result<()> {
 
     // Validate with detailed error reporting
     if let Err(errors) = compiled_schema.validate(value) {
-        let error_details = errors.map(|e| {
-            format!("{} at path: {}", e.to_string(), e.instance_path)
-        }).collect::<Vec<_>>().join(", ");
-        return Err(Error::InvalidInput(format!("Schema validation failed: {}", error_details)));
+        let error_details = errors
+            .map(|e| format!("{} at path: {}", e.to_string(), e.instance_path))
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(Error::InvalidInput(format!(
+            "Schema validation failed: {}",
+            error_details
+        )));
     }
 
     Ok(())
@@ -149,7 +172,7 @@ pub fn validate_against_schema(value: &Value, schema: &Value) -> Result<()> {
 pub fn should_use_function_calling(
     function_calling_enabled: bool,
     llm_supports_function_calling: bool,
-    tools_available: bool
+    tools_available: bool,
 ) -> bool {
     function_calling_enabled && llm_supports_function_calling && tools_available
 }
@@ -158,11 +181,14 @@ pub fn should_use_function_calling(
 pub fn generate_system_prompt(
     base_instructions: &str,
     use_function_calling: bool,
-    tools_description: Option<&str>
+    tools_description: Option<&str>,
 ) -> String {
     if use_function_calling {
         // For function calling mode, we don't need to explain tool format in system prompt
-        format!("{}\n\nYou have access to specialized tools. Use them when needed.", base_instructions)
+        format!(
+            "{}\n\nYou have access to specialized tools. Use them when needed.",
+            base_instructions
+        )
     } else if let Some(tools_desc) = tools_description {
         // For non-function-calling mode, explain the expected tool format
         format!(
@@ -199,12 +225,12 @@ impl Default for ToolDescriptionFormat {
 /// Create a human-readable description of available tools with formatting options
 pub fn create_tools_description(
     tools: &HashMap<String, Box<dyn Tool>>,
-    format: Option<&ToolDescriptionFormat>
+    format: Option<&ToolDescriptionFormat>,
 ) -> String {
     let default_format = ToolDescriptionFormat::default();
     let format = format.unwrap_or(&default_format);
     let mut descriptions = Vec::new();
-    
+
     // Group tools by category if needed
     if format.group_by_category {
         let mut categories: HashMap<String, Vec<&Box<dyn Tool>>> = HashMap::new();
@@ -212,14 +238,14 @@ pub fn create_tools_description(
             let category = tool.category().unwrap_or_else(|| "Other".to_string());
             categories.entry(category).or_default().push(tool);
         }
-        
+
         for (category, cat_tools) in categories.iter() {
             if format.markdown_formatting {
                 descriptions.push(format!("### {}", category));
             } else {
                 descriptions.push(format!("Category: {}", category));
             }
-            
+
             for tool in cat_tools {
                 descriptions.push(format_tool_description(tool, format));
             }
@@ -230,7 +256,7 @@ pub fn create_tools_description(
             descriptions.push(format_tool_description(tool, format));
         }
     }
-    
+
     descriptions.join("\n")
 }
 
@@ -240,7 +266,7 @@ fn format_tool_description(tool: &Box<dyn Tool>, format: &ToolDescriptionFormat)
     } else {
         format!("- {}: {}", tool.id(), tool.description())
     };
-    
+
     // Add parameters info if requested
     if format.include_parameters {
         let schema = tool.schema();
@@ -268,7 +294,7 @@ fn format_tool_description(tool: &Box<dyn Tool>, format: &ToolDescriptionFormat)
             }
         }
     }
-    
+
     // Add examples if available and requested
     if format.include_examples {
         if let Some(examples) = tool.examples() {
@@ -282,7 +308,7 @@ fn format_tool_description(tool: &Box<dyn Tool>, format: &ToolDescriptionFormat)
             }
         }
     }
-    
+
     desc
 }
 #[cfg(test)]
@@ -290,19 +316,19 @@ mod tests {
     use super::*;
     // use crate::llm::function_calling::FunctionDefinition; // 暂时未使用
     use serde_json::json;
-    
+
     #[test]
     fn test_validate_schema_basic_types() {
         // String validation
         let schema = json!({"type": "string"});
         assert!(validate_against_schema(&json!("test"), &schema).is_ok());
         assert!(validate_against_schema(&json!(42), &schema).is_err());
-        
+
         // Integer validation
         let schema = json!({"type": "integer"});
         assert!(validate_against_schema(&json!(42), &schema).is_ok());
         assert!(validate_against_schema(&json!("test"), &schema).is_err());
-        
+
         // Object with required fields
         let schema = json!({
             "type": "object",
@@ -312,12 +338,12 @@ mod tests {
             },
             "required": ["name"]
         });
-        
+
         assert!(validate_against_schema(&json!({"name": "John", "age": 30}), &schema).is_ok());
         assert!(validate_against_schema(&json!({"name": "John"}), &schema).is_ok());
         assert!(validate_against_schema(&json!({"age": 30}), &schema).is_err());
     }
-    
+
     #[test]
     fn test_should_use_function_calling() {
         assert!(should_use_function_calling(true, true, true));
@@ -325,17 +351,17 @@ mod tests {
         assert!(!should_use_function_calling(true, false, true));
         assert!(!should_use_function_calling(true, true, false));
     }
-    
+
     #[test]
     fn test_generate_system_prompt() {
         let base = "You are a helpful assistant";
         let tools_desc = "Tool1: Does something\nTool2: Does something else";
-        
+
         // Function calling enabled
         let prompt_fc = generate_system_prompt(base, true, Some(tools_desc));
         assert!(prompt_fc.contains("You have access to specialized tools"));
         assert!(!prompt_fc.contains("To use a tool, use exactly the following format"));
-        
+
         // Function calling disabled
         let prompt_no_fc = generate_system_prompt(base, false, Some(tools_desc));
         assert!(prompt_no_fc.contains("To use a tool, use exactly the following format"));

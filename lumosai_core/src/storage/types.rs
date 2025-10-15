@@ -1,12 +1,12 @@
 //! Type definitions for the storage module
 
-use std::collections::HashMap;
-use std::fmt;
-use async_trait::async_trait;
-use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
 use crate::error::Result;
 use crate::workflow::WorkflowState;
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fmt;
 
 /// Column type for schema definition
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,68 +165,88 @@ pub struct MessageInclude {
 pub trait Storage: Send + Sync {
     /// Get the name of this storage provider
     fn name(&self) -> &str;
-    
+
     /// Initialize the storage
     async fn init(&self) -> Result<()>;
-    
+
     /// Create a table with the given schema
-    async fn create_table(&self, table_name: &str, schema: HashMap<String, ColumnDefinition>) -> Result<()>;
-    
+    async fn create_table(
+        &self,
+        table_name: &str,
+        schema: HashMap<String, ColumnDefinition>,
+    ) -> Result<()>;
+
     /// Clear all data from a table
     async fn clear_table(&self, table_name: &str) -> Result<()>;
-    
+
     /// Insert a record into a table
     async fn insert(&self, table_name: &str, record: serde_json::Value) -> Result<()>;
-    
+
     /// Batch insert multiple records into a table
     async fn batch_insert(&self, table_name: &str, records: Vec<serde_json::Value>) -> Result<()>;
-    
+
     /// Load a record from a table by keys
-    async fn load(&self, table_name: &str, keys: HashMap<String, String>) -> Result<Option<serde_json::Value>>;
-    
+    async fn load(
+        &self,
+        table_name: &str,
+        keys: HashMap<String, String>,
+    ) -> Result<Option<serde_json::Value>>;
+
     /// Get a thread by ID
     async fn get_thread_by_id(&self, thread_id: &str) -> Result<Option<Thread>>;
-    
+
     /// Get threads by resource ID
     async fn get_threads_by_resource_id(&self, resource_id: &str) -> Result<Vec<Thread>>;
-    
+
     /// Save a thread
     async fn save_thread(&self, thread: Thread) -> Result<Thread>;
-    
+
     /// Update a thread
-    async fn update_thread(&self, id: &str, title: &str, metadata: serde_json::Value) -> Result<Thread>;
-    
+    async fn update_thread(
+        &self,
+        id: &str,
+        title: &str,
+        metadata: serde_json::Value,
+    ) -> Result<Thread>;
+
     /// Delete a thread
     async fn delete_thread(&self, thread_id: &str) -> Result<()>;
-    
+
     /// Get messages
     async fn get_messages(&self, args: GetMessagesArgs) -> Result<Vec<Message>>;
-    
+
     /// Save messages
     async fn save_messages(&self, messages: Vec<Message>) -> Result<Vec<Message>>;
-    
+
     /// Get evaluation results by agent name
-    async fn get_evals_by_agent_name(&self, agent_name: &str, eval_type: Option<&str>) -> Result<Vec<EvalRow>>;
-    
+    async fn get_evals_by_agent_name(
+        &self,
+        agent_name: &str,
+        eval_type: Option<&str>,
+    ) -> Result<Vec<EvalRow>>;
+
     /// Get traces
-    async fn get_traces(&self, 
+    async fn get_traces(
+        &self,
         name: Option<&str>,
         scope: Option<&str>,
         page: usize,
         per_page: usize,
-        attributes: Option<HashMap<String, String>>
+        attributes: Option<HashMap<String, String>>,
     ) -> Result<Vec<serde_json::Value>>;
-    
+
     /// Persist a workflow snapshot
-    async fn persist_workflow_snapshot(&self, 
-        workflow_name: &str, 
-        run_id: &str, 
-        snapshot: &WorkflowState
-    ) -> Result<()>;
-    
-    /// Load a workflow snapshot
-    async fn load_workflow_snapshot(&self, 
+    async fn persist_workflow_snapshot(
+        &self,
         workflow_name: &str,
-        run_id: &str
+        run_id: &str,
+        snapshot: &WorkflowState,
+    ) -> Result<()>;
+
+    /// Load a workflow snapshot
+    async fn load_workflow_snapshot(
+        &self,
+        workflow_name: &str,
+        run_id: &str,
     ) -> Result<Option<WorkflowState>>;
-} 
+}

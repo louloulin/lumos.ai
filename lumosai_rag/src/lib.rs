@@ -9,13 +9,13 @@
 //! - Embedding generation: converting text to vector representations
 //! - Retrieval: storing and retrieving relevant documents based on queries
 
+pub mod context;
 pub mod document;
 pub mod embedding;
-pub mod retriever;
-pub mod context;
-pub mod pipeline;
-pub mod types;
 pub mod error;
+pub mod pipeline;
+pub mod retriever;
+pub mod types;
 
 // Add missing modules for compatibility
 pub mod chunking {
@@ -27,5 +27,5 @@ pub mod retrieval {
 }
 
 pub use error::RagError;
-pub use types::*;
 pub use pipeline::{RagPipeline, RagPipelineBuilder};
+pub use types::*;

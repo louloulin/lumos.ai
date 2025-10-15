@@ -1,5 +1,5 @@
 //! Azure云服务适配器
-//! 
+//!
 //! 提供对Microsoft Azure的集成支持，包括：
 //! - Container Instances (容器实例)
 //! - Functions (函数计算)
@@ -52,33 +52,30 @@ impl AzureAdapter {
 
     /// 从环境变量创建Azure适配器
     pub fn from_env() -> Result<Self> {
-        let subscription_id = std::env::var("AZURE_SUBSCRIPTION_ID")
-            .map_err(|_| LumosError::ConfigError {
+        let subscription_id =
+            std::env::var("AZURE_SUBSCRIPTION_ID").map_err(|_| LumosError::ConfigError {
                 message: "AZURE_SUBSCRIPTION_ID environment variable not found".to_string(),
             })?;
 
-        let resource_group = std::env::var("AZURE_RESOURCE_GROUP")
-            .map_err(|_| LumosError::ConfigError {
+        let resource_group =
+            std::env::var("AZURE_RESOURCE_GROUP").map_err(|_| LumosError::ConfigError {
                 message: "AZURE_RESOURCE_GROUP environment variable not found".to_string(),
             })?;
 
-        let tenant_id = std::env::var("AZURE_TENANT_ID")
-            .map_err(|_| LumosError::ConfigError {
-                message: "AZURE_TENANT_ID environment variable not found".to_string(),
-            })?;
+        let tenant_id = std::env::var("AZURE_TENANT_ID").map_err(|_| LumosError::ConfigError {
+            message: "AZURE_TENANT_ID environment variable not found".to_string(),
+        })?;
 
-        let client_id = std::env::var("AZURE_CLIENT_ID")
-            .map_err(|_| LumosError::ConfigError {
-                message: "AZURE_CLIENT_ID environment variable not found".to_string(),
-            })?;
+        let client_id = std::env::var("AZURE_CLIENT_ID").map_err(|_| LumosError::ConfigError {
+            message: "AZURE_CLIENT_ID environment variable not found".to_string(),
+        })?;
 
-        let client_secret = std::env::var("AZURE_CLIENT_SECRET")
-            .map_err(|_| LumosError::ConfigError {
+        let client_secret =
+            std::env::var("AZURE_CLIENT_SECRET").map_err(|_| LumosError::ConfigError {
                 message: "AZURE_CLIENT_SECRET environment variable not found".to_string(),
             })?;
 
-        let location = std::env::var("AZURE_LOCATION")
-            .unwrap_or_else(|_| "East US".to_string());
+        let location = std::env::var("AZURE_LOCATION").unwrap_or_else(|_| "East US".to_string());
 
         Ok(Self {
             subscription_id,
@@ -93,8 +90,12 @@ impl AzureAdapter {
     /// 创建容器实例
     async fn create_container_instance(&self, config: &DeploymentConfig) -> Result<String> {
         // 这里应该调用Azure Container Instances API
-        let instance_name = format!("{}-{}", config.name, uuid::Uuid::new_v4().to_string()[..8].to_string());
-        
+        let instance_name = format!(
+            "{}-{}",
+            config.name,
+            uuid::Uuid::new_v4().to_string()[..8].to_string()
+        );
+
         // 实际实现中，这里会调用Azure SDK
         // let container_client = azure_mgmt_containerinstance::Client::new(...);
         // let container_group = container_client
@@ -112,8 +113,12 @@ impl AzureAdapter {
     /// 创建Azure函数
     async fn create_function_app(&self, config: &DeploymentConfig) -> Result<String> {
         // 这里应该调用Azure Functions API
-        let function_name = format!("{}-func-{}", config.name, uuid::Uuid::new_v4().to_string()[..8].to_string());
-        
+        let function_name = format!(
+            "{}-func-{}",
+            config.name,
+            uuid::Uuid::new_v4().to_string()[..8].to_string()
+        );
+
         // 实际实现中，这里会调用Azure SDK
         // let web_client = azure_mgmt_web::Client::new(...);
         // let site = web_client
@@ -129,7 +134,11 @@ impl AzureAdapter {
     }
 
     /// 获取Azure Monitor日志
-    async fn get_monitor_logs(&self, resource_name: &str, options: &LogOptions) -> Result<Vec<LogEntry>> {
+    async fn get_monitor_logs(
+        &self,
+        resource_name: &str,
+        options: &LogOptions,
+    ) -> Result<Vec<LogEntry>> {
         // 这里应该调用Azure Monitor API
         let mut logs = Vec::new();
 
@@ -155,7 +164,11 @@ impl AzureAdapter {
     }
 
     /// 获取Azure Monitor指标
-    async fn get_monitor_metrics(&self, resource_name: &str, options: &MetricsOptions) -> Result<MetricsData> {
+    async fn get_monitor_metrics(
+        &self,
+        resource_name: &str,
+        options: &MetricsOptions,
+    ) -> Result<MetricsData> {
         // 这里应该调用Azure Monitor API
         let mut data_points = Vec::new();
 
@@ -232,7 +245,11 @@ impl CloudAdapter for AzureAdapter {
         Ok(DeploymentStatus::Running)
     }
 
-    async fn update_deployment(&self, deployment_id: &str, config: &DeploymentConfig) -> Result<DeploymentResult> {
+    async fn update_deployment(
+        &self,
+        deployment_id: &str,
+        config: &DeploymentConfig,
+    ) -> Result<DeploymentResult> {
         // 这里应该更新Azure资源
         let mut metadata = HashMap::new();
         metadata.insert("updated_at".to_string(), chrono::Utc::now().to_rfc3339());
@@ -255,16 +272,28 @@ impl CloudAdapter for AzureAdapter {
         self.get_monitor_logs(deployment_id, options).await
     }
 
-    async fn get_metrics(&self, deployment_id: &str, options: &MetricsOptions) -> Result<MetricsData> {
+    async fn get_metrics(
+        &self,
+        deployment_id: &str,
+        options: &MetricsOptions,
+    ) -> Result<MetricsData> {
         self.get_monitor_metrics(deployment_id, options).await
     }
 
-    async fn configure_autoscaling(&self, deployment_id: &str, config: &AutoscalingConfig) -> Result<()> {
+    async fn configure_autoscaling(
+        &self,
+        deployment_id: &str,
+        config: &AutoscalingConfig,
+    ) -> Result<()> {
         // 这里应该配置Azure Auto Scale
         Ok(())
     }
 
-    async fn configure_load_balancer(&self, deployment_id: &str, config: &LoadBalancerConfig) -> Result<()> {
+    async fn configure_load_balancer(
+        &self,
+        deployment_id: &str,
+        config: &LoadBalancerConfig,
+    ) -> Result<()> {
         // 这里应该配置Azure Load Balancer
         Ok(())
     }
@@ -287,14 +316,16 @@ mod tests {
 
         assert_eq!(adapter.name(), "azure");
         assert_eq!(adapter.location, "East US");
-        assert!(adapter.supported_services().contains(&CloudService::Container));
+        assert!(adapter
+            .supported_services()
+            .contains(&CloudService::Container));
     }
 
     #[test]
     fn test_azure_adapter_from_env_error() {
         // 清除环境变量
         std::env::remove_var("AZURE_SUBSCRIPTION_ID");
-        
+
         let result = AzureAdapter::from_env();
         assert!(result.is_err());
     }

@@ -1,49 +1,44 @@
 //! LLM模块提供了与大型语言模型交互的接口和实现
 
-pub mod types;
-pub mod provider;
-pub mod mock;
-pub mod function_calling;
-pub mod openai;
 mod anthropic;
-mod qwen;
-mod deepseek;
-pub mod cohere;
-pub mod gemini;
-pub mod ollama;
-pub mod together;
-pub mod claude;
-pub mod zhipu;
 pub mod baidu;
+pub mod claude;
+pub mod cohere;
+mod deepseek;
+pub mod function_calling;
+pub mod gemini;
+pub mod mock;
+pub mod ollama;
+pub mod openai;
+pub mod provider;
 pub mod providers;
+mod qwen;
 #[cfg(test)]
 mod tests;
+pub mod together;
+pub mod types;
+pub mod zhipu;
 
 #[cfg(test)]
 mod new_providers_test;
 // Temporarily disabled due to missing imports
 // mod third_party_integration_test;
 
-
-pub use types::{Message, LlmOptions, Role};
-pub use provider::LlmProvider;
-pub use mock::MockLlmProvider;
-pub use openai::OpenAiProvider;
 pub use anthropic::AnthropicProvider;
-pub use qwen::{QwenProvider, QwenApiType};
-pub use deepseek::DeepSeekProvider;
-pub use cohere::CohereProvider;
-pub use gemini::GeminiProvider;
-pub use ollama::OllamaProvider;
-pub use together::TogetherProvider;
-pub use claude::ClaudeProvider;
-pub use zhipu::ZhipuProvider;
 pub use baidu::BaiduProvider;
+pub use claude::ClaudeProvider;
+pub use cohere::CohereProvider;
+pub use deepseek::DeepSeekProvider;
 pub use function_calling::{
-    FunctionDefinition, 
-    FunctionCall, 
-    FunctionCallResult, 
-    ToolChoice,
-    utils
+    utils, FunctionCall, FunctionCallResult, FunctionDefinition, ToolChoice,
 };
+pub use gemini::GeminiProvider;
+pub use mock::MockLlmProvider;
+pub use ollama::OllamaProvider;
+pub use openai::OpenAiProvider;
+pub use provider::LlmProvider;
+pub use qwen::{QwenApiType, QwenProvider};
+pub use together::TogetherProvider;
+pub use types::{LlmOptions, Message, Role};
+pub use zhipu::ZhipuProvider;
 pub mod function_calling_utils;

@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 
-use crate::Result;
+use super::function_calling::{FunctionCall, FunctionDefinition, ToolChoice};
 use super::types::{LlmOptions, Message};
-use super::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
+use crate::Result;
 
 /// Trait representing an LLM provider
 #[async_trait]
@@ -13,25 +13,29 @@ pub trait LlmProvider: Send + Sync {
 
     /// Generate text from a prompt
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String>;
-    
+
     /// Generate text from a sequence of messages
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String>;
-    
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String>;
+
     /// Generate a stream of text from a prompt
     async fn generate_stream<'a>(
-        &'a self, 
-        prompt: &'a str, 
-        options: &'a LlmOptions
+        &'a self,
+        prompt: &'a str,
+        options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>>;
-    
+
     /// Get embeddings for a text
     async fn get_embedding(&self, text: &str) -> Result<Vec<f32>>;
-    
+
     /// Check if the provider supports OpenAI function calling
     fn supports_function_calling(&self) -> bool {
         false
     }
-    
+
     /// Generate text with function calling support
     async fn generate_with_functions(
         &self,
@@ -60,4 +64,4 @@ pub struct FunctionCallingResponse {
     pub function_calls: Vec<FunctionCall>,
     /// Reason the generation finished
     pub finish_reason: String,
-} 
+}

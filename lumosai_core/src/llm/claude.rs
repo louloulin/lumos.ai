@@ -1,5 +1,5 @@
 //! Claude LLM提供商实现
-//! 
+//!
 //! 这个模块实现了对Anthropic Claude模型的支持，包括：
 //! - Claude 3.5 Sonnet
 //! - Claude 3 Opus
@@ -12,12 +12,12 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    LlmProvider, LlmOptions, Message, Role,
     function_calling::{FunctionDefinition, ToolChoice},
-    provider::FunctionCallingResponse
+    provider::FunctionCallingResponse,
+    LlmOptions, LlmProvider, Message, Role,
 };
-use futures::stream::BoxStream;
 use crate::error::{LumosError, Result};
+use futures::stream::BoxStream;
 
 /// Claude API配置
 #[derive(Debug, Clone)]
@@ -62,7 +62,8 @@ impl ClaudeProvider {
         let api_key = std::env::var("CLAUDE_API_KEY")
             .or_else(|_| std::env::var("ANTHROPIC_API_KEY"))
             .map_err(|_| LumosError::ConfigError {
-                message: "CLAUDE_API_KEY or ANTHROPIC_API_KEY environment variable not found".to_string(),
+                message: "CLAUDE_API_KEY or ANTHROPIC_API_KEY environment variable not found"
+                    .to_string(),
             })?;
 
         let model = std::env::var("CLAUDE_MODEL")
@@ -131,10 +132,13 @@ impl ClaudeProvider {
                     first_msg.content = format!("{}\n\n{}", system_content, first_msg.content);
                 }
             } else {
-                claude_messages.insert(0, ClaudeMessage {
-                    role: "user".to_string(),
-                    content: system_content,
-                });
+                claude_messages.insert(
+                    0,
+                    ClaudeMessage {
+                        role: "user".to_string(),
+                        content: system_content,
+                    },
+                );
             }
         }
 
@@ -147,7 +151,11 @@ impl ClaudeProvider {
             max_tokens: options.max_tokens.unwrap_or(4096),
             temperature: options.temperature,
             top_p: options.extra.get("top_p").and_then(|v| v.as_f64()),
-            top_k: options.extra.get("top_k").and_then(|v| v.as_i64()).map(|k| k as i32),
+            top_k: options
+                .extra
+                .get("top_k")
+                .and_then(|v| v.as_i64())
+                .map(|k| k as i32),
             stop_sequences: options.stop.clone(),
         }
     }
@@ -174,7 +182,11 @@ impl LlmProvider for ClaudeProvider {
         self.generate_with_messages(&messages, options).await
     }
 
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         let claude_messages = self.convert_messages(messages);
         let claude_options = self.convert_options(options);
 
@@ -213,12 +225,11 @@ impl LlmProvider for ClaudeProvider {
             });
         }
 
-        let claude_response: ClaudeResponse = response.json().await.map_err(|e| {
-            LumosError::ParseError {
+        let claude_response: ClaudeResponse =
+            response.json().await.map_err(|e| LumosError::ParseError {
                 message: format!("Failed to parse Claude response: {}", e),
                 source: Some(Box::new(e)),
-            }
-        })?;
+            })?;
 
         if let Some(content) = claude_response.content.first() {
             Ok(content.text.clone())
@@ -247,7 +258,9 @@ impl LlmProvider for ClaudeProvider {
 
     async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
         // Claude不直接支持嵌入，返回错误
-        Err(LumosError::Unsupported("Claude does not support embeddings".to_string()))
+        Err(LumosError::Unsupported(
+            "Claude does not support embeddings".to_string(),
+        ))
     }
 
     async fn generate_with_functions(
@@ -257,7 +270,8 @@ impl LlmProvider for ClaudeProvider {
         tool_choice: &ToolChoice,
         options: &LlmOptions,
     ) -> Result<FunctionCallingResponse> {
-        self.call_function(messages, functions, tool_choice, options).await
+        self.call_function(messages, functions, tool_choice, options)
+            .await
     }
 }
 
@@ -311,10 +325,12 @@ impl ClaudeProvider {
 
         let stream = response.bytes_stream().map(|chunk_result| {
             match chunk_result {
-                Ok(chunk) => {
+                Ok(bytes) => {
                     // 解析SSE格式的响应
-                    let chunk_str = String::from_utf8_lossy(&chunk);
-                    if let Some(data_line) = chunk_str.lines().find(|line| line.starts_with("data: ")) {
+                    let chunk_str = String::from_utf8_lossy(&bytes);
+                    if let Some(data_line) =
+                        chunk_str.lines().find(|line| line.starts_with("data: "))
+                    {
                         let json_str = &data_line[6..]; // 移除"data: "前缀
                         if json_str == "[DONE]" {
                             return Ok("".to_string());
@@ -349,29 +365,46 @@ impl ClaudeProvider {
     ) -> Result<FunctionCallingResponse> {
         // Claude的函数调用实现
         // 注意：这是一个简化的实现，实际的Claude API可能有不同的格式
-        
+
         let mut claude_messages = self.convert_messages(messages);
-        
+
         // 添加函数定义到系统消息中
-        let functions_desc = functions.iter()
-            .map(|f| format!("Function: {}\nDescription: {}\nParameters: {}",
-                f.name, f.description.as_ref().unwrap_or(&"No description".to_string()), serde_json::to_string(&f.parameters).unwrap_or_default()))
+        let functions_desc = functions
+            .iter()
+            .map(|f| {
+                format!(
+                    "Function: {}\nDescription: {}\nParameters: {}",
+                    f.name,
+                    f.description
+                        .as_ref()
+                        .unwrap_or(&"No description".to_string()),
+                    serde_json::to_string(&f.parameters).unwrap_or_default()
+                )
+            })
             .collect::<Vec<_>>()
             .join("\n\n");
-        
+
         if let Some(first_msg) = claude_messages.first_mut() {
-            first_msg.content = format!("Available functions:\n{}\n\n{}", functions_desc, first_msg.content);
+            first_msg.content = format!(
+                "Available functions:\n{}\n\n{}",
+                functions_desc, first_msg.content
+            );
         }
 
-        let response = self.generate_with_messages(
-            &messages.iter().map(|m| Message {
-                role: m.role.clone(),
-                content: m.content.clone(),
-                metadata: m.metadata.clone(),
-                name: m.name.clone(),
-            }).collect::<Vec<_>>(),
-            options
-        ).await?;
+        let response = self
+            .generate_with_messages(
+                &messages
+                    .iter()
+                    .map(|m| Message {
+                        role: m.role.clone(),
+                        content: m.content.clone(),
+                        metadata: m.metadata.clone(),
+                        name: m.name.clone(),
+                    })
+                    .collect::<Vec<_>>(),
+                options,
+            )
+            .await?;
 
         // 简化的函数调用解析
         // 实际实现需要根据Claude的具体API格式来解析
@@ -450,7 +483,7 @@ mod tests {
             "test-key".to_string(),
             "claude-3-5-sonnet-20241022".to_string(),
         );
-        
+
         assert_eq!(provider.name(), "claude");
         assert!(provider.supports_function_calling());
         assert!(provider.supports_function_calling());
@@ -473,7 +506,7 @@ mod tests {
         // 清除环境变量
         std::env::remove_var("CLAUDE_API_KEY");
         std::env::remove_var("ANTHROPIC_API_KEY");
-        
+
         let result = ClaudeProvider::from_env();
         assert!(result.is_err());
     }
@@ -484,7 +517,7 @@ mod tests {
             "test-key".to_string(),
             "claude-3-5-sonnet-20241022".to_string(),
         );
-        
+
         let messages = vec![
             Message {
                 role: Role::System,
@@ -499,11 +532,13 @@ mod tests {
                 name: None,
             },
         ];
-        
+
         let claude_messages = provider.convert_messages(&messages);
         assert_eq!(claude_messages.len(), 1);
         assert_eq!(claude_messages[0].role, "user");
-        assert!(claude_messages[0].content.contains("You are a helpful assistant."));
+        assert!(claude_messages[0]
+            .content
+            .contains("You are a helpful assistant."));
         assert!(claude_messages[0].content.contains("Hello!"));
     }
 }

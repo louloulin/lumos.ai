@@ -77,13 +77,13 @@ pub use lumosai_vector as vector_core;
 pub use lumosai_ui as ui;
 
 // 简化API模块
-pub mod prelude;
-pub mod vector;
-pub mod rag;
 pub mod agent;
-pub mod orchestration;
-pub mod session;
 pub mod events;
+pub mod orchestration;
+pub mod prelude;
+pub mod rag;
+pub mod session;
+pub mod vector;
 
 // 便利类型重导出
 pub use lumosai_core::{

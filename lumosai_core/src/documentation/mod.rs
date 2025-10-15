@@ -1,9 +1,9 @@
+use crate::agent::trait_def::Agent;
+use crate::error::{Error, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use serde::{Serialize, Deserialize};
-use crate::error::{Error, Result};
-use crate::agent::trait_def::Agent;
 
 /// API文档生成器
 pub struct ApiDocumentationGenerator {
@@ -130,21 +130,24 @@ impl ApiDocumentationGenerator {
             include_schemas: true,
         }
     }
-    
+
     /// 设置是否包含示例
     pub fn with_examples(mut self, include: bool) -> Self {
         self.include_examples = include;
         self
     }
-    
+
     /// 设置是否包含模式
     pub fn with_schemas(mut self, include: bool) -> Self {
         self.include_schemas = include;
         self
     }
-    
+
     /// 生成Agent API文档
-    pub async fn generate_agent_documentation<T: Agent>(&self, agent: &T) -> Result<ApiDocumentation> {
+    pub async fn generate_agent_documentation<T: Agent>(
+        &self,
+        agent: &T,
+    ) -> Result<ApiDocumentation> {
         let mut doc = ApiDocumentation {
             title: format!("{} API Documentation", agent.get_name()),
             version: "1.0.0".to_string(),
@@ -154,31 +157,35 @@ impl ApiDocumentationGenerator {
             schemas: HashMap::new(),
             examples: Vec::new(),
         };
-        
+
         // 生成核心端点
         self.generate_core_endpoints(&mut doc, agent).await?;
-        
+
         // 生成工具端点
         self.generate_tool_endpoints(&mut doc, agent)?;
-        
+
         // 生成监控端点
         self.generate_monitoring_endpoints(&mut doc, agent).await?;
-        
+
         // 生成模式定义
         if self.include_schemas {
             self.generate_schemas(&mut doc)?;
         }
-        
+
         // 生成示例
         if self.include_examples {
             self.generate_examples(&mut doc, agent).await?;
         }
-        
+
         Ok(doc)
     }
-    
+
     /// 生成核心端点文档
-    async fn generate_core_endpoints<T: Agent>(&self, doc: &mut ApiDocumentation, agent: &T) -> Result<()> {
+    async fn generate_core_endpoints<T: Agent>(
+        &self,
+        doc: &mut ApiDocumentation,
+        agent: &T,
+    ) -> Result<()> {
         // Generate endpoint
         doc.endpoints.push(ApiEndpoint {
             path: "/api/v1/generate".to_string(),
@@ -189,8 +196,9 @@ impl ApiDocumentationGenerator {
             request_body: Some(ApiRequestBody {
                 description: "Generation request".to_string(),
                 required: true,
-                content: HashMap::from([
-                    ("application/json".to_string(), ApiMediaType {
+                content: HashMap::from([(
+                    "application/json".to_string(),
+                    ApiMediaType {
                         schema: self.create_generate_request_schema(),
                         example: Some(serde_json::json!({
                             "messages": [
@@ -205,15 +213,17 @@ impl ApiDocumentationGenerator {
                             }
                         })),
                         examples: HashMap::new(),
-                    })
-                ]),
+                    },
+                )]),
             }),
-            responses: HashMap::from([
-                ("200".to_string(), ApiResponse {
+            responses: HashMap::from([(
+                "200".to_string(),
+                ApiResponse {
                     description: "Successful response".to_string(),
                     headers: HashMap::new(),
-                    content: HashMap::from([
-                        ("application/json".to_string(), ApiMediaType {
+                    content: HashMap::from([(
+                        "application/json".to_string(),
+                        ApiMediaType {
                             schema: self.create_generate_response_schema(),
                             example: Some(serde_json::json!({
                                 "response": "Hello! I'm doing well, thank you for asking.",
@@ -224,13 +234,13 @@ impl ApiDocumentationGenerator {
                                 }
                             })),
                             examples: HashMap::new(),
-                        })
-                    ]),
-                })
-            ]),
+                        },
+                    )]),
+                },
+            )]),
             examples: vec![],
         });
-        
+
         // Stream endpoint
         doc.endpoints.push(ApiEndpoint {
             path: "/api/v1/stream".to_string(),
@@ -241,8 +251,9 @@ impl ApiDocumentationGenerator {
             request_body: Some(ApiRequestBody {
                 description: "Streaming request".to_string(),
                 required: true,
-                content: HashMap::from([
-                    ("application/json".to_string(), ApiMediaType {
+                content: HashMap::from([(
+                    "application/json".to_string(),
+                    ApiMediaType {
                         schema: self.create_stream_request_schema(),
                         example: Some(serde_json::json!({
                             "messages": [
@@ -256,32 +267,40 @@ impl ApiDocumentationGenerator {
                             }
                         })),
                         examples: HashMap::new(),
-                    })
-                ]),
+                    },
+                )]),
             }),
-            responses: HashMap::from([
-                ("200".to_string(), ApiResponse {
+            responses: HashMap::from([(
+                "200".to_string(),
+                ApiResponse {
                     description: "Streaming response".to_string(),
                     headers: HashMap::new(),
-                    content: HashMap::from([
-                        ("text/event-stream".to_string(), ApiMediaType {
+                    content: HashMap::from([(
+                        "text/event-stream".to_string(),
+                        ApiMediaType {
                             schema: self.create_stream_response_schema(),
-                            example: Some(serde_json::json!("data: {\"chunk\": \"Once upon a time...\"}\n\n")),
+                            example: Some(serde_json::json!(
+                                "data: {\"chunk\": \"Once upon a time...\"}\n\n"
+                            )),
                             examples: HashMap::new(),
-                        })
-                    ]),
-                })
-            ]),
+                        },
+                    )]),
+                },
+            )]),
             examples: vec![],
         });
-        
+
         Ok(())
     }
-    
+
     /// 生成工具端点文档
-    fn generate_tool_endpoints<T: Agent>(&self, doc: &mut ApiDocumentation, agent: &T) -> Result<()> {
+    fn generate_tool_endpoints<T: Agent>(
+        &self,
+        doc: &mut ApiDocumentation,
+        agent: &T,
+    ) -> Result<()> {
         let tools = agent.get_tools();
-        
+
         for (tool_name, tool) in tools {
             doc.endpoints.push(ApiEndpoint {
                 path: format!("/api/v1/tools/{}", tool_name),
@@ -292,41 +311,48 @@ impl ApiDocumentationGenerator {
                 request_body: Some(ApiRequestBody {
                     description: "Tool execution request".to_string(),
                     required: true,
-                    content: HashMap::from([
-                        ("application/json".to_string(), ApiMediaType {
+                    content: HashMap::from([(
+                        "application/json".to_string(),
+                        ApiMediaType {
                             schema: self.create_tool_request_schema(),
                             example: Some(serde_json::json!({
                                 "parameters": {}
                             })),
                             examples: HashMap::new(),
-                        })
-                    ]),
+                        },
+                    )]),
                 }),
-                responses: HashMap::from([
-                    ("200".to_string(), ApiResponse {
+                responses: HashMap::from([(
+                    "200".to_string(),
+                    ApiResponse {
                         description: "Tool execution result".to_string(),
                         headers: HashMap::new(),
-                        content: HashMap::from([
-                            ("application/json".to_string(), ApiMediaType {
+                        content: HashMap::from([(
+                            "application/json".to_string(),
+                            ApiMediaType {
                                 schema: self.create_tool_response_schema(),
                                 example: Some(serde_json::json!({
                                     "result": {},
                                     "success": true
                                 })),
                                 examples: HashMap::new(),
-                            })
-                        ]),
-                    })
-                ]),
+                            },
+                        )]),
+                    },
+                )]),
                 examples: vec![],
             });
         }
-        
+
         Ok(())
     }
-    
+
     /// 生成监控端点文档
-    async fn generate_monitoring_endpoints<T: Agent>(&self, doc: &mut ApiDocumentation, agent: &T) -> Result<()> {
+    async fn generate_monitoring_endpoints<T: Agent>(
+        &self,
+        doc: &mut ApiDocumentation,
+        agent: &T,
+    ) -> Result<()> {
         // Health check endpoint
         doc.endpoints.push(ApiEndpoint {
             path: "/api/v1/health".to_string(),
@@ -335,12 +361,14 @@ impl ApiDocumentationGenerator {
             description: "Check the health status of the agent".to_string(),
             parameters: vec![],
             request_body: None,
-            responses: HashMap::from([
-                ("200".to_string(), ApiResponse {
+            responses: HashMap::from([(
+                "200".to_string(),
+                ApiResponse {
                     description: "Health status".to_string(),
                     headers: HashMap::new(),
-                    content: HashMap::from([
-                        ("application/json".to_string(), ApiMediaType {
+                    content: HashMap::from([(
+                        "application/json".to_string(),
+                        ApiMediaType {
                             schema: self.create_health_response_schema(),
                             example: Some(serde_json::json!({
                                 "status": "healthy",
@@ -349,13 +377,13 @@ impl ApiDocumentationGenerator {
                                 "tools_count": agent.get_tools().len()
                             })),
                             examples: HashMap::new(),
-                        })
-                    ]),
-                })
-            ]),
+                        },
+                    )]),
+                },
+            )]),
             examples: vec![],
         });
-        
+
         // Metrics endpoint
         doc.endpoints.push(ApiEndpoint {
             path: "/api/v1/metrics".to_string(),
@@ -364,42 +392,71 @@ impl ApiDocumentationGenerator {
             description: "Get performance metrics for the agent".to_string(),
             parameters: vec![],
             request_body: None,
-            responses: HashMap::from([
-                ("200".to_string(), ApiResponse {
+            responses: HashMap::from([(
+                "200".to_string(),
+                ApiResponse {
                     description: "Performance metrics".to_string(),
                     headers: HashMap::new(),
-                    content: HashMap::from([
-                        ("application/json".to_string(), ApiMediaType {
+                    content: HashMap::from([(
+                        "application/json".to_string(),
+                        ApiMediaType {
                             schema: self.create_metrics_response_schema(),
                             example: Some(serde_json::json!({})),
                             examples: HashMap::new(),
-                        })
-                    ]),
-                })
-            ]),
+                        },
+                    )]),
+                },
+            )]),
             examples: vec![],
         });
-        
+
         Ok(())
     }
-    
+
     /// 生成模式定义
     fn generate_schemas(&self, doc: &mut ApiDocumentation) -> Result<()> {
-        doc.schemas.insert("Message".to_string(), self.create_message_schema());
-        doc.schemas.insert("GenerateRequest".to_string(), self.create_generate_request_schema());
-        doc.schemas.insert("GenerateResponse".to_string(), self.create_generate_response_schema());
-        doc.schemas.insert("StreamRequest".to_string(), self.create_stream_request_schema());
-        doc.schemas.insert("StreamResponse".to_string(), self.create_stream_response_schema());
-        doc.schemas.insert("ToolRequest".to_string(), self.create_tool_request_schema());
-        doc.schemas.insert("ToolResponse".to_string(), self.create_tool_response_schema());
-        doc.schemas.insert("HealthResponse".to_string(), self.create_health_response_schema());
-        doc.schemas.insert("MetricsResponse".to_string(), self.create_metrics_response_schema());
-        
+        doc.schemas
+            .insert("Message".to_string(), self.create_message_schema());
+        doc.schemas.insert(
+            "GenerateRequest".to_string(),
+            self.create_generate_request_schema(),
+        );
+        doc.schemas.insert(
+            "GenerateResponse".to_string(),
+            self.create_generate_response_schema(),
+        );
+        doc.schemas.insert(
+            "StreamRequest".to_string(),
+            self.create_stream_request_schema(),
+        );
+        doc.schemas.insert(
+            "StreamResponse".to_string(),
+            self.create_stream_response_schema(),
+        );
+        doc.schemas
+            .insert("ToolRequest".to_string(), self.create_tool_request_schema());
+        doc.schemas.insert(
+            "ToolResponse".to_string(),
+            self.create_tool_response_schema(),
+        );
+        doc.schemas.insert(
+            "HealthResponse".to_string(),
+            self.create_health_response_schema(),
+        );
+        doc.schemas.insert(
+            "MetricsResponse".to_string(),
+            self.create_metrics_response_schema(),
+        );
+
         Ok(())
     }
-    
+
     /// 生成示例
-    async fn generate_examples<T: Agent>(&self, doc: &mut ApiDocumentation, agent: &T) -> Result<()> {
+    async fn generate_examples<T: Agent>(
+        &self,
+        doc: &mut ApiDocumentation,
+        agent: &T,
+    ) -> Result<()> {
         doc.examples.push(ApiExample {
             name: "basic_generation".to_string(),
             summary: "Basic text generation".to_string(),
@@ -418,10 +475,10 @@ impl ApiDocumentationGenerator {
                 }
             }),
         });
-        
+
         Ok(())
     }
-    
+
     // Schema creation helper methods
     fn create_message_schema(&self) -> ApiSchema {
         ApiSchema {
@@ -429,38 +486,45 @@ impl ApiDocumentationGenerator {
             format: None,
             description: Some("A message in the conversation".to_string()),
             properties: HashMap::from([
-                ("role".to_string(), ApiSchema {
-                    schema_type: "string".to_string(),
-                    format: None,
-                    description: Some("The role of the message sender".to_string()),
-                    properties: HashMap::new(),
-                    required: vec![],
-                    items: None,
-                    example: Some(serde_json::json!("user")),
-                }),
-                ("content".to_string(), ApiSchema {
-                    schema_type: "string".to_string(),
-                    format: None,
-                    description: Some("The content of the message".to_string()),
-                    properties: HashMap::new(),
-                    required: vec![],
-                    items: None,
-                    example: Some(serde_json::json!("Hello, how are you?")),
-                }),
+                (
+                    "role".to_string(),
+                    ApiSchema {
+                        schema_type: "string".to_string(),
+                        format: None,
+                        description: Some("The role of the message sender".to_string()),
+                        properties: HashMap::new(),
+                        required: vec![],
+                        items: None,
+                        example: Some(serde_json::json!("user")),
+                    },
+                ),
+                (
+                    "content".to_string(),
+                    ApiSchema {
+                        schema_type: "string".to_string(),
+                        format: None,
+                        description: Some("The content of the message".to_string()),
+                        properties: HashMap::new(),
+                        required: vec![],
+                        items: None,
+                        example: Some(serde_json::json!("Hello, how are you?")),
+                    },
+                ),
             ]),
             required: vec!["role".to_string(), "content".to_string()],
             items: None,
             example: None,
         }
     }
-    
+
     fn create_generate_request_schema(&self) -> ApiSchema {
         ApiSchema {
             schema_type: "object".to_string(),
             format: None,
             description: Some("Request for text generation".to_string()),
-            properties: HashMap::from([
-                ("messages".to_string(), ApiSchema {
+            properties: HashMap::from([(
+                "messages".to_string(),
+                ApiSchema {
                     schema_type: "array".to_string(),
                     format: None,
                     description: Some("Array of messages".to_string()),
@@ -468,21 +532,22 @@ impl ApiDocumentationGenerator {
                     required: vec![],
                     items: Some(Box::new(self.create_message_schema())),
                     example: None,
-                }),
-            ]),
+                },
+            )]),
             required: vec!["messages".to_string()],
             items: None,
             example: None,
         }
     }
-    
+
     fn create_generate_response_schema(&self) -> ApiSchema {
         ApiSchema {
             schema_type: "object".to_string(),
             format: None,
             description: Some("Response from text generation".to_string()),
-            properties: HashMap::from([
-                ("response".to_string(), ApiSchema {
+            properties: HashMap::from([(
+                "response".to_string(),
+                ApiSchema {
                     schema_type: "string".to_string(),
                     format: None,
                     description: Some("Generated response text".to_string()),
@@ -490,18 +555,18 @@ impl ApiDocumentationGenerator {
                     required: vec![],
                     items: None,
                     example: Some(serde_json::json!("Hello! I'm doing well, thank you.")),
-                }),
-            ]),
+                },
+            )]),
             required: vec!["response".to_string()],
             items: None,
             example: None,
         }
     }
-    
+
     fn create_stream_request_schema(&self) -> ApiSchema {
         self.create_generate_request_schema()
     }
-    
+
     fn create_stream_response_schema(&self) -> ApiSchema {
         ApiSchema {
             schema_type: "string".to_string(),
@@ -513,14 +578,15 @@ impl ApiDocumentationGenerator {
             example: None,
         }
     }
-    
+
     fn create_tool_request_schema(&self) -> ApiSchema {
         ApiSchema {
             schema_type: "object".to_string(),
             format: None,
             description: Some("Tool execution request".to_string()),
-            properties: HashMap::from([
-                ("parameters".to_string(), ApiSchema {
+            properties: HashMap::from([(
+                "parameters".to_string(),
+                ApiSchema {
                     schema_type: "object".to_string(),
                     format: None,
                     description: Some("Tool parameters".to_string()),
@@ -528,52 +594,59 @@ impl ApiDocumentationGenerator {
                     required: vec![],
                     items: None,
                     example: None,
-                }),
-            ]),
+                },
+            )]),
             required: vec!["parameters".to_string()],
             items: None,
             example: None,
         }
     }
-    
+
     fn create_tool_response_schema(&self) -> ApiSchema {
         ApiSchema {
             schema_type: "object".to_string(),
             format: None,
             description: Some("Tool execution response".to_string()),
             properties: HashMap::from([
-                ("result".to_string(), ApiSchema {
-                    schema_type: "object".to_string(),
-                    format: None,
-                    description: Some("Tool execution result".to_string()),
-                    properties: HashMap::new(),
-                    required: vec![],
-                    items: None,
-                    example: None,
-                }),
-                ("success".to_string(), ApiSchema {
-                    schema_type: "boolean".to_string(),
-                    format: None,
-                    description: Some("Whether the tool execution was successful".to_string()),
-                    properties: HashMap::new(),
-                    required: vec![],
-                    items: None,
-                    example: Some(serde_json::json!(true)),
-                }),
+                (
+                    "result".to_string(),
+                    ApiSchema {
+                        schema_type: "object".to_string(),
+                        format: None,
+                        description: Some("Tool execution result".to_string()),
+                        properties: HashMap::new(),
+                        required: vec![],
+                        items: None,
+                        example: None,
+                    },
+                ),
+                (
+                    "success".to_string(),
+                    ApiSchema {
+                        schema_type: "boolean".to_string(),
+                        format: None,
+                        description: Some("Whether the tool execution was successful".to_string()),
+                        properties: HashMap::new(),
+                        required: vec![],
+                        items: None,
+                        example: Some(serde_json::json!(true)),
+                    },
+                ),
             ]),
             required: vec!["result".to_string(), "success".to_string()],
             items: None,
             example: None,
         }
     }
-    
+
     fn create_health_response_schema(&self) -> ApiSchema {
         ApiSchema {
             schema_type: "object".to_string(),
             format: None,
             description: Some("Health check response".to_string()),
-            properties: HashMap::from([
-                ("status".to_string(), ApiSchema {
+            properties: HashMap::from([(
+                "status".to_string(),
+                ApiSchema {
                     schema_type: "string".to_string(),
                     format: None,
                     description: Some("Health status".to_string()),
@@ -581,14 +654,14 @@ impl ApiDocumentationGenerator {
                     required: vec![],
                     items: None,
                     example: Some(serde_json::json!("healthy")),
-                }),
-            ]),
+                },
+            )]),
             required: vec!["status".to_string()],
             items: None,
             example: None,
         }
     }
-    
+
     fn create_metrics_response_schema(&self) -> ApiSchema {
         ApiSchema {
             schema_type: "object".to_string(),
@@ -600,13 +673,12 @@ impl ApiDocumentationGenerator {
             example: None,
         }
     }
-    
+
     /// 保存文档到文件
     pub async fn save_documentation(&self, doc: &ApiDocumentation) -> Result<()> {
         // 确保输出目录存在
-        fs::create_dir_all(&self.output_dir)
-            .map_err(|e| Error::Io(e))?;
-        
+        fs::create_dir_all(&self.output_dir).map_err(|e| Error::Io(e))?;
+
         match self.format {
             DocumentationFormat::Markdown => self.save_as_markdown(doc).await,
             DocumentationFormat::Html => self.save_as_html(doc).await,
@@ -614,49 +686,48 @@ impl ApiDocumentationGenerator {
             DocumentationFormat::OpenApi => self.save_as_openapi(doc).await,
         }
     }
-    
+
     /// 保存为Markdown格式
     async fn save_as_markdown(&self, doc: &ApiDocumentation) -> Result<()> {
         let mut content = String::new();
-        
+
         // 标题和描述
         content.push_str(&format!("# {}\n\n", doc.title));
         content.push_str(&format!("Version: {}\n\n", doc.version));
         content.push_str(&format!("{}\n\n", doc.description));
         content.push_str(&format!("Base URL: `{}`\n\n", doc.base_url));
-        
+
         // 端点文档
         content.push_str("## API Endpoints\n\n");
         for endpoint in &doc.endpoints {
             content.push_str(&format!("### {} {}\n\n", endpoint.method, endpoint.path));
             content.push_str(&format!("**Summary:** {}\n\n", endpoint.summary));
             content.push_str(&format!("{}\n\n", endpoint.description));
-            
+
             if let Some(request_body) = &endpoint.request_body {
                 content.push_str("**Request Body:**\n\n");
                 content.push_str(&format!("- Required: {}\n", request_body.required));
                 content.push_str(&format!("- Description: {}\n\n", request_body.description));
             }
-            
+
             content.push_str("**Responses:**\n\n");
             for (status, response) in &endpoint.responses {
                 content.push_str(&format!("- **{}**: {}\n", status, response.description));
             }
             content.push_str("\n");
         }
-        
+
         // 保存文件
         let file_path = Path::new(&self.output_dir).join("api_documentation.md");
-        fs::write(file_path, content)
-            .map_err(|e| Error::Io(e))?;
-        
+        fs::write(file_path, content).map_err(|e| Error::Io(e))?;
+
         Ok(())
     }
-    
+
     /// 保存为HTML格式
     async fn save_as_html(&self, doc: &ApiDocumentation) -> Result<()> {
         let mut content = String::new();
-        
+
         content.push_str("<!DOCTYPE html>\n<html>\n<head>\n");
         content.push_str(&format!("<title>{}</title>\n", doc.title));
         content.push_str("<style>\nbody { font-family: Arial, sans-serif; margin: 40px; }\n");
@@ -664,40 +735,48 @@ impl ApiDocumentationGenerator {
         content.push_str("code { background-color: #f4f4f4; padding: 2px 4px; }\n");
         content.push_str("pre { background-color: #f4f4f4; padding: 10px; overflow-x: auto; }\n");
         content.push_str("</style>\n</head>\n<body>\n");
-        
+
         content.push_str(&format!("<h1>{}</h1>\n", doc.title));
-        content.push_str(&format!("<p><strong>Version:</strong> {}</p>\n", doc.version));
+        content.push_str(&format!(
+            "<p><strong>Version:</strong> {}</p>\n",
+            doc.version
+        ));
         content.push_str(&format!("<p>{}</p>\n", doc.description));
-        content.push_str(&format!("<p><strong>Base URL:</strong> <code>{}</code></p>\n", doc.base_url));
-        
+        content.push_str(&format!(
+            "<p><strong>Base URL:</strong> <code>{}</code></p>\n",
+            doc.base_url
+        ));
+
         content.push_str("<h2>API Endpoints</h2>\n");
         for endpoint in &doc.endpoints {
             content.push_str(&format!("<h3>{} {}</h3>\n", endpoint.method, endpoint.path));
-            content.push_str(&format!("<p><strong>Summary:</strong> {}</p>\n", endpoint.summary));
+            content.push_str(&format!(
+                "<p><strong>Summary:</strong> {}</p>\n",
+                endpoint.summary
+            ));
             content.push_str(&format!("<p>{}</p>\n", endpoint.description));
         }
-        
+
         content.push_str("</body>\n</html>");
-        
+
         let file_path = Path::new(&self.output_dir).join("api_documentation.html");
-        fs::write(file_path, content)
-            .map_err(|e| Error::Io(e))?;
-        
+        fs::write(file_path, content).map_err(|e| Error::Io(e))?;
+
         Ok(())
     }
-    
+
     /// 保存为JSON格式
     async fn save_as_json(&self, doc: &ApiDocumentation) -> Result<()> {
-        let json_content = serde_json::to_string_pretty(doc)
-            .map_err(|e| Error::Serialization(format!("Failed to serialize documentation: {}", e)))?;
-        
+        let json_content = serde_json::to_string_pretty(doc).map_err(|e| {
+            Error::Serialization(format!("Failed to serialize documentation: {}", e))
+        })?;
+
         let file_path = Path::new(&self.output_dir).join("api_documentation.json");
-        fs::write(file_path, json_content)
-            .map_err(|e| Error::Io(e))?;
-        
+        fs::write(file_path, json_content).map_err(|e| Error::Io(e))?;
+
         Ok(())
     }
-    
+
     /// 保存为OpenAPI格式
     async fn save_as_openapi(&self, doc: &ApiDocumentation) -> Result<()> {
         let openapi_doc = serde_json::json!({
@@ -717,14 +796,13 @@ impl ApiDocumentationGenerator {
                 "schemas": doc.schemas
             }
         });
-        
+
         let json_content = serde_json::to_string_pretty(&openapi_doc)
             .map_err(|e| Error::Serialization(format!("Failed to serialize OpenAPI doc: {}", e)))?;
-        
+
         let file_path = Path::new(&self.output_dir).join("openapi.json");
-        fs::write(file_path, json_content)
-            .map_err(|e| Error::Io(e))?;
-        
+        fs::write(file_path, json_content).map_err(|e| Error::Io(e))?;
+
         Ok(())
     }
 }

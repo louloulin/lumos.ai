@@ -1,5 +1,5 @@
 //! AWS云服务适配器
-//! 
+//!
 //! 提供对Amazon Web Services的集成支持，包括：
 //! - ECS (Elastic Container Service)
 //! - Lambda (函数计算)
@@ -36,11 +36,7 @@ pub struct AwsAdapter {
 
 impl AwsAdapter {
     /// 创建新的AWS适配器
-    pub fn new(
-        region: String,
-        access_key_id: String,
-        secret_access_key: String,
-    ) -> Self {
+    pub fn new(region: String, access_key_id: String, secret_access_key: String) -> Self {
         Self {
             region,
             access_key_id,
@@ -59,20 +55,20 @@ impl AwsAdapter {
             .or_else(|_| std::env::var("AWS_DEFAULT_REGION"))
             .unwrap_or_else(|_| "us-east-1".to_string());
 
-        let access_key_id = std::env::var("AWS_ACCESS_KEY_ID")
-            .map_err(|_| LumosError::ConfigError {
+        let access_key_id =
+            std::env::var("AWS_ACCESS_KEY_ID").map_err(|_| LumosError::ConfigError {
                 message: "AWS_ACCESS_KEY_ID environment variable not found".to_string(),
             })?;
 
-        let secret_access_key = std::env::var("AWS_SECRET_ACCESS_KEY")
-            .map_err(|_| LumosError::ConfigError {
+        let secret_access_key =
+            std::env::var("AWS_SECRET_ACCESS_KEY").map_err(|_| LumosError::ConfigError {
                 message: "AWS_SECRET_ACCESS_KEY environment variable not found".to_string(),
             })?;
 
         let session_token = std::env::var("AWS_SESSION_TOKEN").ok();
 
-        let ecs_cluster = std::env::var("AWS_ECS_CLUSTER")
-            .unwrap_or_else(|_| "default".to_string());
+        let ecs_cluster =
+            std::env::var("AWS_ECS_CLUSTER").unwrap_or_else(|_| "default".to_string());
 
         let vpc_id = std::env::var("AWS_VPC_ID").ok();
 
@@ -121,8 +117,7 @@ impl AwsAdapter {
         // 为了简化，我们返回一个模拟的任务定义ARN
         let task_def_arn = format!(
             "arn:aws:ecs:{}:123456789012:task-definition/{}:1",
-            self.region,
-            config.name
+            self.region, config.name
         );
 
         // 实际实现中，这里会调用AWS SDK
@@ -138,13 +133,15 @@ impl AwsAdapter {
     }
 
     /// 创建ECS服务
-    async fn create_ecs_service(&self, config: &DeploymentConfig, task_def_arn: &str) -> Result<String> {
+    async fn create_ecs_service(
+        &self,
+        config: &DeploymentConfig,
+        task_def_arn: &str,
+    ) -> Result<String> {
         // 这里应该调用AWS ECS API创建服务
         let service_arn = format!(
             "arn:aws:ecs:{}:123456789012:service/{}/{}",
-            self.region,
-            self.ecs_cluster,
-            config.name
+            self.region, self.ecs_cluster, config.name
         );
 
         // 实际实现中，这里会调用AWS SDK
@@ -165,8 +162,7 @@ impl AwsAdapter {
         // 这里应该调用AWS Lambda API创建函数
         let function_arn = format!(
             "arn:aws:lambda:{}:123456789012:function:{}",
-            self.region,
-            config.name
+            self.region, config.name
         );
 
         // 实际实现中，这里会调用AWS SDK
@@ -184,7 +180,11 @@ impl AwsAdapter {
     }
 
     /// 获取CloudWatch日志
-    async fn get_cloudwatch_logs(&self, log_group: &str, options: &LogOptions) -> Result<Vec<LogEntry>> {
+    async fn get_cloudwatch_logs(
+        &self,
+        log_group: &str,
+        options: &LogOptions,
+    ) -> Result<Vec<LogEntry>> {
         // 这里应该调用AWS CloudWatch Logs API
         let mut logs = Vec::new();
 
@@ -211,7 +211,11 @@ impl AwsAdapter {
     }
 
     /// 获取CloudWatch指标
-    async fn get_cloudwatch_metrics(&self, namespace: &str, options: &MetricsOptions) -> Result<MetricsData> {
+    async fn get_cloudwatch_metrics(
+        &self,
+        namespace: &str,
+        options: &MetricsOptions,
+    ) -> Result<MetricsData> {
         // 这里应该调用AWS CloudWatch API
         let mut data_points = Vec::new();
 
@@ -280,7 +284,10 @@ impl CloudAdapter for AwsAdapter {
         Ok(DeploymentResult {
             deployment_id,
             status: DeploymentStatus::Deploying,
-            url: Some(format!("https://{}.{}.amazonaws.com", config.name, self.region)),
+            url: Some(format!(
+                "https://{}.{}.amazonaws.com",
+                config.name, self.region
+            )),
             metadata,
         })
     }
@@ -291,7 +298,11 @@ impl CloudAdapter for AwsAdapter {
         Ok(DeploymentStatus::Running)
     }
 
-    async fn update_deployment(&self, deployment_id: &str, config: &DeploymentConfig) -> Result<DeploymentResult> {
+    async fn update_deployment(
+        &self,
+        deployment_id: &str,
+        config: &DeploymentConfig,
+    ) -> Result<DeploymentResult> {
         // 这里应该更新AWS服务
         let mut metadata = HashMap::new();
         metadata.insert("updated_at".to_string(), chrono::Utc::now().to_rfc3339());
@@ -299,7 +310,10 @@ impl CloudAdapter for AwsAdapter {
         Ok(DeploymentResult {
             deployment_id: deployment_id.to_string(),
             status: DeploymentStatus::Updating,
-            url: Some(format!("https://{}.{}.amazonaws.com", config.name, self.region)),
+            url: Some(format!(
+                "https://{}.{}.amazonaws.com",
+                config.name, self.region
+            )),
             metadata,
         })
     }
@@ -315,17 +329,29 @@ impl CloudAdapter for AwsAdapter {
         self.get_cloudwatch_logs(&log_group, options).await
     }
 
-    async fn get_metrics(&self, deployment_id: &str, options: &MetricsOptions) -> Result<MetricsData> {
+    async fn get_metrics(
+        &self,
+        deployment_id: &str,
+        options: &MetricsOptions,
+    ) -> Result<MetricsData> {
         let namespace = "AWS/ECS";
         self.get_cloudwatch_metrics(namespace, options).await
     }
 
-    async fn configure_autoscaling(&self, deployment_id: &str, config: &AutoscalingConfig) -> Result<()> {
+    async fn configure_autoscaling(
+        &self,
+        deployment_id: &str,
+        config: &AutoscalingConfig,
+    ) -> Result<()> {
         // 这里应该配置AWS Auto Scaling
         Ok(())
     }
 
-    async fn configure_load_balancer(&self, deployment_id: &str, config: &LoadBalancerConfig) -> Result<()> {
+    async fn configure_load_balancer(
+        &self,
+        deployment_id: &str,
+        config: &LoadBalancerConfig,
+    ) -> Result<()> {
         // 这里应该配置AWS Application Load Balancer
         Ok(())
     }
@@ -345,7 +371,9 @@ mod tests {
 
         assert_eq!(adapter.name(), "aws");
         assert_eq!(adapter.region, "us-east-1");
-        assert!(adapter.supported_services().contains(&CloudService::Container));
+        assert!(adapter
+            .supported_services()
+            .contains(&CloudService::Container));
     }
 
     #[test]
@@ -354,7 +382,8 @@ mod tests {
             "us-east-1".to_string(),
             "test-key".to_string(),
             "test-secret".to_string(),
-        ).with_vpc_config(
+        )
+        .with_vpc_config(
             "vpc-12345".to_string(),
             vec!["subnet-1".to_string(), "subnet-2".to_string()],
             vec!["sg-12345".to_string()],

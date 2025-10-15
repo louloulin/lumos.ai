@@ -3,11 +3,11 @@ use crate::app_layout::{Layout, SideBar};
 use crate::hero::Hero;
 use crate::my_assistants::assistant_card::MyAssistantCard;
 use crate::routes;
+use crate::types::{Prompt, Rbac};
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, Prompt};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(team_id: i32, rbac: Rbac, prompts: Vec<Prompt>) -> String {
     let page = rsx! {

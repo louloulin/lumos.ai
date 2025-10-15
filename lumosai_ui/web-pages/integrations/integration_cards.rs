@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
+use crate::types::BionicOpenAPI;
 use daisy_rsx::*;
 use dioxus::prelude::*;
-use crate::types::BionicOpenAPI;
 
 #[component]
 pub fn IntegrationCards(integrations: Vec<(BionicOpenAPI, i32)>, team_id: i32) -> Element {

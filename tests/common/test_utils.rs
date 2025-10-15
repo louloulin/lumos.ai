@@ -1,10 +1,10 @@
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use lumosai_core::prelude::*;
-use lumosai_core::agent::{BasicAgent, AgentConfig};
+use lumosai_core::agent::{AgentConfig, BasicAgent};
 use lumosai_core::llm::MockLlmProvider;
+use lumosai_core::prelude::*;
 use lumosai_core::vector::MemoryVectorStorage;
 use lumosai_network::AgentNetwork;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 /// 测试工具集
 pub struct TestUtils;
@@ -20,9 +20,12 @@ impl TestUtils {
         };
         Ok(BasicAgent::new(config, llm))
     }
-    
+
     /// 创建带自定义响应的测试Agent
-    pub async fn create_test_agent_with_responses(name: &str, responses: Vec<String>) -> Result<BasicAgent> {
+    pub async fn create_test_agent_with_responses(
+        name: &str,
+        responses: Vec<String>,
+    ) -> Result<BasicAgent> {
         let llm = Arc::new(MockLlmProvider::new(responses));
         let config = AgentConfig {
             name: name.to_string(),
@@ -31,7 +34,7 @@ impl TestUtils {
         };
         Ok(BasicAgent::new(config, llm))
     }
-    
+
     /// 创建测试用RAG系统
     pub async fn create_test_rag_system() -> Result<Box<dyn std::fmt::Debug>> {
         let _storage = MemoryVectorStorage::new(384, None);
@@ -39,18 +42,18 @@ impl TestUtils {
         // 暂时返回一个简单的调试对象，等待RAG实现完善
         Ok(Box::new("MockRagSystem"))
     }
-    
+
     /// 创建测试用工作流
     pub fn create_test_workflow(name: &str) -> String {
         // 暂时返回工作流名称，等待BasicWorkflow实现
         name.to_string()
     }
-    
+
     /// 创建测试用Agent网络
     pub async fn create_test_network() -> AgentNetwork {
         AgentNetwork::new().await
     }
-    
+
     /// 创建真实LLM测试环境
     pub async fn create_real_llm_agent(_model: &str) -> Result<BasicAgent> {
         // 使用真实的qwen3-30b-a3b模型进行测试
@@ -69,20 +72,22 @@ impl TestUtils {
         };
         Ok(BasicAgent::new(config, llm))
     }
-    
+
     /// 创建性能测试环境
     pub fn setup_performance_test() -> PerformanceTestContext {
         PerformanceTestContext::new()
     }
-    
+
     /// 等待异步操作完成
     pub async fn wait_for_completion(duration: Duration) {
         tokio::time::sleep(duration).await;
     }
-    
+
     /// 验证响应内容
     pub fn validate_response(response: &str, expected_keywords: &[&str]) -> bool {
-        expected_keywords.iter().any(|keyword| response.contains(keyword))
+        expected_keywords
+            .iter()
+            .any(|keyword| response.contains(keyword))
     }
 }
 
@@ -123,15 +128,15 @@ impl PerformanceTestContext {
             memory_tracker: MemoryTracker::new(),
         }
     }
-    
+
     pub fn elapsed(&self) -> Duration {
         self.start_time.elapsed()
     }
-    
+
     pub fn memory_usage(&self) -> usize {
         self.memory_tracker.current_usage()
     }
-    
+
     pub fn reset(&mut self) {
         self.start_time = Instant::now();
         self.memory_tracker.reset();
@@ -149,15 +154,15 @@ impl MemoryTracker {
             initial_usage: Self::get_memory_usage(),
         }
     }
-    
+
     pub fn current_usage(&self) -> usize {
         Self::get_memory_usage() - self.initial_usage
     }
-    
+
     pub fn reset(&mut self) {
         self.initial_usage = Self::get_memory_usage();
     }
-    
+
     fn get_memory_usage() -> usize {
         // 简化的内存使用量获取
         // 在实际实现中可以使用更精确的方法
@@ -174,26 +179,29 @@ impl TestAssertions {
         assert!(
             duration <= max_duration,
             "Response time {:?} exceeded maximum {:?}",
-            duration, max_duration
+            duration,
+            max_duration
         );
     }
-    
+
     /// 断言内存使用在合理范围内
     pub fn assert_memory_usage(usage: usize, max_usage: usize) {
         assert!(
             usage <= max_usage,
             "Memory usage {} exceeded maximum {}",
-            usage, max_usage
+            usage,
+            max_usage
         );
     }
-    
+
     /// 断言响应内容包含预期关键词
     pub fn assert_response_contains(response: &str, keywords: &[&str]) {
         for keyword in keywords {
             assert!(
                 response.contains(keyword),
                 "Response '{}' does not contain keyword '{}'",
-                response, keyword
+                response,
+                keyword
             );
         }
     }

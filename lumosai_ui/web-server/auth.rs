@@ -152,7 +152,7 @@ impl AuthManager {
             database,
         }
     }
-    
+
     /// 用户注册
     pub async fn register(&self, request: RegisterRequest) -> Result<AuthResponse, AuthError> {
         // 检查用户是否已存在
@@ -164,19 +164,19 @@ impl AuthManager {
                 error: Some("用户已存在".to_string()),
             });
         }
-        
+
         // 哈希密码
         let password_hash = self.hash_password(&request.password)?;
-        
+
         // 创建用户
         let user = self.database.create_user(&request.email, &request.name).await?;
-        
+
         // TODO: 保存密码哈希到数据库
         // 目前简化实现，实际应该扩展数据库模型
-        
+
         // 生成JWT令牌
         let token = self.generate_token(&user, UserRole::User)?;
-        
+
         Ok(AuthResponse {
             success: true,
             token: Some(token),
@@ -190,7 +190,7 @@ impl AuthManager {
             error: None,
         })
     }
-    
+
     /// 用户登录
     pub async fn login(&self, request: LoginRequest) -> Result<AuthResponse, AuthError> {
         // 获取用户
@@ -203,7 +203,7 @@ impl AuthManager {
                 error: Some("无效的邮箱或密码".to_string()),
             }),
         };
-        
+
         // TODO: 验证密码哈希
         // 目前简化实现，实际应该从数据库获取密码哈希并验证
         if request.password != "password" && request.email != "admin@lumosai.local" {
@@ -214,17 +214,17 @@ impl AuthManager {
                 error: Some("无效的邮箱或密码".to_string()),
             });
         }
-        
+
         // 确定用户角色
         let role = if request.email == "admin@lumosai.local" {
             UserRole::Admin
         } else {
             UserRole::User
         };
-        
+
         // 生成JWT令牌
         let token = self.generate_token(&user, role.clone())?;
-        
+
         Ok(AuthResponse {
             success: true,
             token: Some(token),
@@ -238,7 +238,7 @@ impl AuthManager {
             error: None,
         })
     }
-    
+
     /// 验证JWT令牌
     pub fn verify_token(&self, token: &str) -> Result<Claims, AuthError> {
         let token_data = decode::<Claims>(
@@ -246,10 +246,10 @@ impl AuthManager {
             &DecodingKey::from_secret(self.jwt_secret.as_ref()),
             &Validation::new(Algorithm::HS256),
         )?;
-        
+
         Ok(token_data.claims)
     }
-    
+
     /// 生成JWT令牌
     fn generate_token(&self, user: &crate::database::User, role: UserRole) -> Result<String, AuthError> {
         let now = chrono::Utc::now().timestamp() as usize;
@@ -261,22 +261,22 @@ impl AuthManager {
             iat: now,
             permissions: role.permissions(),
         };
-        
+
         let token = encode(
             &Header::default(),
             &claims,
             &EncodingKey::from_secret(self.jwt_secret.as_ref()),
         )?;
-        
+
         Ok(token)
     }
-    
+
     /// 哈希密码
     fn hash_password(&self, password: &str) -> Result<String, AuthError> {
         // 简化实现，实际应该使用bcrypt
         Ok(format!("hashed_{}", password))
     }
-    
+
     /// 验证密码
     fn verify_password(&self, password: &str, hash: &str) -> Result<bool, AuthError> {
         // 简化实现，实际应该使用bcrypt验证
@@ -317,7 +317,7 @@ where
 
         // 从环境变量获取JWT密钥
         let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "default-secret-key".to_string());
-        
+
         let token_data = decode::<Claims>(
             token,
             &DecodingKey::from_secret(jwt_secret.as_ref()),
@@ -341,7 +341,7 @@ impl JwtAuth {
     pub fn has_permission(&self, permission: &str) -> bool {
         self.claims.permissions.contains(&permission.to_string())
     }
-    
+
     pub fn require_permission(&self, permission: &str) -> Result<(), AuthError> {
         if self.has_permission(permission) {
             Ok(())

@@ -7,7 +7,7 @@ use lumosai::prelude::*;
 #[ignore] // Temporarily disabled - performance tests are resource intensive
 async fn test_rag_performance() {
     init_test_env();
-    
+
     // Test RAG system performance
     // TODO: Implement when performance testing framework is ready
     assert!(true, "RAG performance tests placeholder");
@@ -17,7 +17,7 @@ async fn test_rag_performance() {
 #[ignore] // Temporarily disabled - performance tests are resource intensive
 async fn test_rag_retrieval_performance() {
     init_test_env();
-    
+
     // Test RAG retrieval performance
     // TODO: Implement when performance testing framework is ready
     assert!(true, "RAG performance tests placeholder");

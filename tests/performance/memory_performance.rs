@@ -7,7 +7,7 @@ use lumosai::prelude::*;
 #[ignore] // Temporarily disabled - performance tests are resource intensive
 async fn test_memory_performance() {
     init_test_env();
-    
+
     // Test memory system performance
     // TODO: Implement when performance testing framework is ready
     assert!(true, "Memory performance tests placeholder");
@@ -17,7 +17,7 @@ async fn test_memory_performance() {
 #[ignore] // Temporarily disabled - performance tests are resource intensive
 async fn test_memory_storage_performance() {
     init_test_env();
-    
+
     // Test memory storage performance
     // TODO: Implement when performance testing framework is ready
     assert!(true, "Memory performance tests placeholder");

@@ -37,27 +37,27 @@
 #![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
 #![allow(unexpected_cfgs, unused_assignments)]
 
-pub mod error;
-pub mod types;
-pub mod traits;
 pub mod config;
+pub mod error;
 pub mod performance;
+pub mod traits;
+pub mod types;
 
 #[cfg(test)]
 mod tests;
 
 // Re-export core types for convenience
-pub use error::{VectorError, Result};
-pub use types::*;
-pub use traits::*;
 pub use config::*;
+pub use error::{Result, VectorError};
 pub use performance::*;
+pub use traits::*;
+pub use types::*;
 
 /// Prelude module for convenient imports
 pub mod prelude {
-    pub use crate::error::{VectorError, Result};
-    pub use crate::types::*;
-    pub use crate::traits::*;
     pub use crate::config::*;
+    pub use crate::error::{Result, VectorError};
     pub use crate::performance::*;
+    pub use crate::traits::*;
+    pub use crate::types::*;
 }

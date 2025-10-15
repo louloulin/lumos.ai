@@ -1,5 +1,5 @@
 //! Enhanced CLI tools for Lumos.ai development
-//! 
+//!
 //! This module provides comprehensive command-line tools for:
 //! - Project creation and scaffolding
 //! - Development server with hot reload
@@ -7,20 +7,20 @@
 //! - Deployment and production management
 //! - Debugging and performance monitoring
 
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::fs;
-use serde::{Deserialize, Serialize};
-use clap::{Parser, Subcommand};
-use tokio::process::Command;
 use crate::Result;
+use clap::{Parser, Subcommand};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use tokio::process::Command;
 
 pub mod commands;
-pub mod templates;
-pub mod dev_server;
 pub mod deployment;
-pub mod web_interface;
+pub mod dev_server;
 pub mod enhanced_errors;
+pub mod templates;
+pub mod web_interface;
 
 #[cfg(test)]
 pub mod tests;
@@ -337,24 +337,23 @@ impl CliUtils {
 
     /// Check if we're in a Lumos project
     pub fn is_lumos_project<P: AsRef<Path>>(path: P) -> bool {
-        path.as_ref().join("lumos.toml").exists() || 
-        path.as_ref().join("Lumos.toml").exists()
+        path.as_ref().join("lumos.toml").exists() || path.as_ref().join("Lumos.toml").exists()
     }
 
     /// Find project root
     pub fn find_project_root<P: AsRef<Path>>(start: P) -> Option<PathBuf> {
         let mut current = start.as_ref().to_path_buf();
-        
+
         loop {
             if Self::is_lumos_project(&current) {
                 return Some(current);
             }
-            
+
             if !current.pop() {
                 break;
             }
         }
-        
+
         None
     }
 
@@ -362,13 +361,13 @@ impl CliUtils {
     pub async fn execute_command(cmd: &str, args: &[&str], cwd: Option<&Path>) -> Result<String> {
         let mut command = Command::new(cmd);
         command.args(args);
-        
+
         if let Some(dir) = cwd {
             command.current_dir(dir);
         }
-        
+
         let output = command.output().await?;
-        
+
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {

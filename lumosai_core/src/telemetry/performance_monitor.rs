@@ -1,16 +1,18 @@
 //! 企业级性能监控系统 - 实时性能分析和优化建议
-//! 
+//!
 //! 提供深度性能分析、瓶颈识别、预测性监控和自动化优化建议
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
-use async_trait::async_trait;
 
-use super::metrics::{MetricsCollector, AgentMetrics, ToolMetrics, MetricsSummary};
-use super::analyzer::{PerformanceAnalyzer, PerformanceAnalysis, BottleneckType, OptimizationRecommendation};
+use super::analyzer::{
+    BottleneckType, OptimizationRecommendation, PerformanceAnalysis, PerformanceAnalyzer,
+};
+use super::metrics::{AgentMetrics, MetricsCollector, MetricsSummary, ToolMetrics};
 
 /// 性能监控配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -342,9 +344,8 @@ impl EnterprisePerformanceMonitor {
 
     /// 实时监控循环
     async fn monitoring_loop(&self) {
-        let mut interval = tokio::time::interval(
-            Duration::from_secs(self.config.monitoring_interval_seconds)
-        );
+        let mut interval =
+            tokio::time::interval(Duration::from_secs(self.config.monitoring_interval_seconds));
 
         loop {
             interval.tick().await;
@@ -362,14 +363,19 @@ impl EnterprisePerformanceMonitor {
     }
 
     /// 收集性能指标
-    async fn collect_performance_metrics(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn collect_performance_metrics(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
 
         // 获取基础指标
-        let metrics_summary = self.metrics_collector.get_metrics_summary(None, None, None).await?;
+        let metrics_summary = self
+            .metrics_collector
+            .get_metrics_summary(None, None, None)
+            .await?;
 
         // 构建实时性能指标
         let performance_metrics = RealTimePerformanceMetrics {
@@ -387,7 +393,8 @@ impl EnterprisePerformanceMonitor {
             history.push_back(performance_metrics.clone());
 
             // 限制历史数据大小
-            let max_data_points = (self.config.data_retention_hours * 3600) / self.config.monitoring_interval_seconds;
+            let max_data_points =
+                (self.config.data_retention_hours * 3600) / self.config.monitoring_interval_seconds;
             while history.len() > max_data_points as usize {
                 history.pop_front();
             }
@@ -397,13 +404,17 @@ impl EnterprisePerformanceMonitor {
         self.update_monitoring_statistics().await;
 
         // 检查性能阈值
-        self.check_performance_thresholds(&performance_metrics).await;
+        self.check_performance_thresholds(&performance_metrics)
+            .await;
 
         Ok(())
     }
 
     /// 计算响应时间指标
-    async fn calculate_response_time_metrics(&self, summary: &MetricsSummary) -> ResponseTimeMetrics {
+    async fn calculate_response_time_metrics(
+        &self,
+        summary: &MetricsSummary,
+    ) -> ResponseTimeMetrics {
         // 简化实现 - 在实际应用中应该从详细的执行时间数据计算
         let avg_ms = summary.avg_execution_time_ms;
 
@@ -485,7 +496,8 @@ impl EnterprisePerformanceMonitor {
         let recent_points: Vec<_> = history.iter().rev().take(5).collect();
 
         // 计算响应时间趋势
-        let response_times: Vec<f64> = recent_points.iter()
+        let response_times: Vec<f64> = recent_points
+            .iter()
             .map(|p| p.response_time.avg_ms)
             .collect();
 
@@ -508,7 +520,7 @@ impl EnterprisePerformanceMonitor {
 
         let mut trend_sum = 0.0;
         for i in 1..values.len() {
-            let change = (values[i] - values[i-1]) / values[i-1];
+            let change = (values[i] - values[i - 1]) / values[i - 1];
             trend_sum += change;
         }
 
@@ -520,29 +532,35 @@ impl EnterprisePerformanceMonitor {
         let thresholds = &self.config.thresholds;
 
         if metrics.response_time.avg_ms > thresholds.response_time_ms {
-            println!("⚠️  响应时间超过阈值: {:.2}ms > {:.2}ms",
-                metrics.response_time.avg_ms, thresholds.response_time_ms);
+            println!(
+                "⚠️  响应时间超过阈值: {:.2}ms > {:.2}ms",
+                metrics.response_time.avg_ms, thresholds.response_time_ms
+            );
             self.increment_performance_issues().await;
         }
 
         if metrics.resource_usage.cpu_usage_percent > thresholds.cpu_usage_percent {
-            println!("⚠️  CPU使用率超过阈值: {:.1}% > {:.1}%",
-                metrics.resource_usage.cpu_usage_percent, thresholds.cpu_usage_percent);
+            println!(
+                "⚠️  CPU使用率超过阈值: {:.1}% > {:.1}%",
+                metrics.resource_usage.cpu_usage_percent, thresholds.cpu_usage_percent
+            );
             self.increment_performance_issues().await;
         }
 
         if metrics.error_metrics.error_rate_percent > thresholds.error_rate_percent {
-            println!("⚠️  错误率超过阈值: {:.1}% > {:.1}%",
-                metrics.error_metrics.error_rate_percent, thresholds.error_rate_percent);
+            println!(
+                "⚠️  错误率超过阈值: {:.1}% > {:.1}%",
+                metrics.error_metrics.error_rate_percent, thresholds.error_rate_percent
+            );
             self.increment_performance_issues().await;
         }
     }
 
     /// 预测分析循环
     async fn prediction_loop(&self) {
-        let mut interval = tokio::time::interval(
-            Duration::from_secs(self.config.prediction_config.prediction_window_hours * 3600 / 4)
-        );
+        let mut interval = tokio::time::interval(Duration::from_secs(
+            self.config.prediction_config.prediction_window_hours * 3600 / 4,
+        ));
 
         loop {
             interval.tick().await;
@@ -554,7 +572,9 @@ impl EnterprisePerformanceMonitor {
     }
 
     /// 生成性能预测
-    async fn generate_performance_prediction(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn generate_performance_prediction(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let history = self.performance_history.read().await;
 
         if history.len() < 10 {
@@ -562,11 +582,9 @@ impl EnterprisePerformanceMonitor {
         }
 
         // 获取历史数据用于预测
-        let history_window = self.config.prediction_config.history_window_hours * 3600 / self.config.monitoring_interval_seconds;
-        let recent_data: Vec<_> = history.iter()
-            .rev()
-            .take(history_window as usize)
-            .collect();
+        let history_window = self.config.prediction_config.history_window_hours * 3600
+            / self.config.monitoring_interval_seconds;
+        let recent_data: Vec<_> = history.iter().rev().take(history_window as usize).collect();
 
         // 简化的线性预测模型
         let prediction = self.create_linear_prediction(&recent_data).await;
@@ -586,7 +604,10 @@ impl EnterprisePerformanceMonitor {
     }
 
     /// 创建线性预测
-    async fn create_linear_prediction(&self, data: &[&RealTimePerformanceMetrics]) -> PerformancePrediction {
+    async fn create_linear_prediction(
+        &self,
+        data: &[&RealTimePerformanceMetrics],
+    ) -> PerformancePrediction {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -594,25 +615,35 @@ impl EnterprisePerformanceMonitor {
 
         // 简化的预测算法
         let response_times: Vec<f64> = data.iter().map(|d| d.response_time.avg_ms).collect();
-        let throughputs: Vec<f64> = data.iter().map(|d| d.throughput.requests_per_second).collect();
+        let throughputs: Vec<f64> = data
+            .iter()
+            .map(|d| d.throughput.requests_per_second)
+            .collect();
 
         let predicted_response_time = self.predict_value(&response_times);
         let predicted_throughput = self.predict_value(&throughputs);
 
         // 预测资源使用
-        let cpu_values: Vec<f64> = data.iter().map(|d| d.resource_usage.cpu_usage_percent).collect();
-        let memory_values: Vec<f64> = data.iter().map(|d| d.resource_usage.memory_usage_percent).collect();
+        let cpu_values: Vec<f64> = data
+            .iter()
+            .map(|d| d.resource_usage.cpu_usage_percent)
+            .collect();
+        let memory_values: Vec<f64> = data
+            .iter()
+            .map(|d| d.resource_usage.memory_usage_percent)
+            .collect();
 
         let predicted_resource_usage = ResourceUsageMetrics {
             cpu_usage_percent: self.predict_value(&cpu_values),
             memory_usage_percent: self.predict_value(&memory_values),
-            disk_usage_percent: 35.0, // 简化
+            disk_usage_percent: 35.0,     // 简化
             network_bandwidth_mbps: 12.0, // 简化
-            active_connections: 55, // 简化
+            active_connections: 55,       // 简化
         };
 
         PerformancePrediction {
-            prediction_timestamp: now + (self.config.prediction_config.prediction_window_hours * 3600 * 1000),
+            prediction_timestamp: now
+                + (self.config.prediction_config.prediction_window_hours * 3600 * 1000),
             predicted_response_time_ms: predicted_response_time,
             predicted_throughput_rps: predicted_throughput,
             predicted_resource_usage,
@@ -628,7 +659,8 @@ impl EnterprisePerformanceMonitor {
         }
 
         // 简单的移动平均预测
-        let recent_avg = values.iter().rev().take(5).sum::<f64>() / 5.0_f64.min(values.len() as f64);
+        let recent_avg =
+            values.iter().rev().take(5).sum::<f64>() / 5.0_f64.min(values.len() as f64);
         let overall_avg = values.iter().sum::<f64>() / values.len() as f64;
 
         // 加权平均：70%最近趋势 + 30%整体趋势
@@ -637,9 +669,12 @@ impl EnterprisePerformanceMonitor {
 
     /// 优化建议循环
     async fn optimization_loop(&self) {
-        let mut interval = tokio::time::interval(
-            Duration::from_secs(self.config.auto_optimization_config.execution_interval_minutes * 60)
-        );
+        let mut interval = tokio::time::interval(Duration::from_secs(
+            self.config
+                .auto_optimization_config
+                .execution_interval_minutes
+                * 60,
+        ));
 
         loop {
             interval.tick().await;
@@ -651,7 +686,9 @@ impl EnterprisePerformanceMonitor {
     }
 
     /// 生成优化建议
-    async fn generate_optimization_suggestions(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn generate_optimization_suggestions(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let history = self.performance_history.read().await;
 
         if history.is_empty() {
@@ -663,19 +700,37 @@ impl EnterprisePerformanceMonitor {
 
         // 基于当前性能指标生成建议
         if latest_metrics.response_time.avg_ms > self.config.thresholds.response_time_ms {
-            suggestions.push(self.create_response_time_optimization_suggestion(latest_metrics).await);
+            suggestions.push(
+                self.create_response_time_optimization_suggestion(latest_metrics)
+                    .await,
+            );
         }
 
-        if latest_metrics.resource_usage.cpu_usage_percent > self.config.thresholds.cpu_usage_percent {
-            suggestions.push(self.create_cpu_optimization_suggestion(latest_metrics).await);
+        if latest_metrics.resource_usage.cpu_usage_percent
+            > self.config.thresholds.cpu_usage_percent
+        {
+            suggestions.push(
+                self.create_cpu_optimization_suggestion(latest_metrics)
+                    .await,
+            );
         }
 
-        if latest_metrics.resource_usage.memory_usage_percent > self.config.thresholds.memory_usage_percent {
-            suggestions.push(self.create_memory_optimization_suggestion(latest_metrics).await);
+        if latest_metrics.resource_usage.memory_usage_percent
+            > self.config.thresholds.memory_usage_percent
+        {
+            suggestions.push(
+                self.create_memory_optimization_suggestion(latest_metrics)
+                    .await,
+            );
         }
 
-        if latest_metrics.error_metrics.error_rate_percent > self.config.thresholds.error_rate_percent {
-            suggestions.push(self.create_error_rate_optimization_suggestion(latest_metrics).await);
+        if latest_metrics.error_metrics.error_rate_percent
+            > self.config.thresholds.error_rate_percent
+        {
+            suggestions.push(
+                self.create_error_rate_optimization_suggestion(latest_metrics)
+                    .await,
+            );
         }
 
         // 更新优化建议缓存
@@ -687,18 +742,26 @@ impl EnterprisePerformanceMonitor {
         // 更新统计信息
         self.increment_optimization_suggestions().await;
 
-        println!("💡 生成了{}条优化建议", self.optimization_suggestions.read().await.len());
+        println!(
+            "💡 生成了{}条优化建议",
+            self.optimization_suggestions.read().await.len()
+        );
 
         Ok(())
     }
 
     /// 创建响应时间优化建议
-    async fn create_response_time_optimization_suggestion(&self, metrics: &RealTimePerformanceMetrics) -> PerformanceOptimizationSuggestion {
+    async fn create_response_time_optimization_suggestion(
+        &self,
+        metrics: &RealTimePerformanceMetrics,
+    ) -> PerformanceOptimizationSuggestion {
         PerformanceOptimizationSuggestion {
             id: uuid::Uuid::new_v4().to_string(),
             title: "优化响应时间".to_string(),
-            description: format!("当前平均响应时间为{:.2}ms，超过阈值{:.2}ms",
-                metrics.response_time.avg_ms, self.config.thresholds.response_time_ms),
+            description: format!(
+                "当前平均响应时间为{:.2}ms，超过阈值{:.2}ms",
+                metrics.response_time.avg_ms, self.config.thresholds.response_time_ms
+            ),
             optimization_type: OptimizationStrategy::CacheOptimization,
             expected_improvement: 25.0,
             implementation_difficulty: DifficultyLevel::Medium,
@@ -713,12 +776,17 @@ impl EnterprisePerformanceMonitor {
     }
 
     /// 创建CPU优化建议
-    async fn create_cpu_optimization_suggestion(&self, metrics: &RealTimePerformanceMetrics) -> PerformanceOptimizationSuggestion {
+    async fn create_cpu_optimization_suggestion(
+        &self,
+        metrics: &RealTimePerformanceMetrics,
+    ) -> PerformanceOptimizationSuggestion {
         PerformanceOptimizationSuggestion {
             id: uuid::Uuid::new_v4().to_string(),
             title: "优化CPU使用率".to_string(),
-            description: format!("当前CPU使用率为{:.1}%，超过阈值{:.1}%",
-                metrics.resource_usage.cpu_usage_percent, self.config.thresholds.cpu_usage_percent),
+            description: format!(
+                "当前CPU使用率为{:.1}%，超过阈值{:.1}%",
+                metrics.resource_usage.cpu_usage_percent, self.config.thresholds.cpu_usage_percent
+            ),
             optimization_type: OptimizationStrategy::AutoScaling,
             expected_improvement: 30.0,
             implementation_difficulty: DifficultyLevel::Easy,
@@ -733,12 +801,18 @@ impl EnterprisePerformanceMonitor {
     }
 
     /// 创建内存优化建议
-    async fn create_memory_optimization_suggestion(&self, metrics: &RealTimePerformanceMetrics) -> PerformanceOptimizationSuggestion {
+    async fn create_memory_optimization_suggestion(
+        &self,
+        metrics: &RealTimePerformanceMetrics,
+    ) -> PerformanceOptimizationSuggestion {
         PerformanceOptimizationSuggestion {
             id: uuid::Uuid::new_v4().to_string(),
             title: "优化内存使用".to_string(),
-            description: format!("当前内存使用率为{:.1}%，超过阈值{:.1}%",
-                metrics.resource_usage.memory_usage_percent, self.config.thresholds.memory_usage_percent),
+            description: format!(
+                "当前内存使用率为{:.1}%，超过阈值{:.1}%",
+                metrics.resource_usage.memory_usage_percent,
+                self.config.thresholds.memory_usage_percent
+            ),
             optimization_type: OptimizationStrategy::GarbageCollectionTuning,
             expected_improvement: 20.0,
             implementation_difficulty: DifficultyLevel::Hard,
@@ -753,12 +827,17 @@ impl EnterprisePerformanceMonitor {
     }
 
     /// 创建错误率优化建议
-    async fn create_error_rate_optimization_suggestion(&self, metrics: &RealTimePerformanceMetrics) -> PerformanceOptimizationSuggestion {
+    async fn create_error_rate_optimization_suggestion(
+        &self,
+        metrics: &RealTimePerformanceMetrics,
+    ) -> PerformanceOptimizationSuggestion {
         PerformanceOptimizationSuggestion {
             id: uuid::Uuid::new_v4().to_string(),
             title: "降低错误率".to_string(),
-            description: format!("当前错误率为{:.1}%，超过阈值{:.1}%",
-                metrics.error_metrics.error_rate_percent, self.config.thresholds.error_rate_percent),
+            description: format!(
+                "当前错误率为{:.1}%，超过阈值{:.1}%",
+                metrics.error_metrics.error_rate_percent, self.config.thresholds.error_rate_percent
+            ),
             optimization_type: OptimizationStrategy::LoadBalancingAdjustment,
             expected_improvement: 40.0,
             implementation_difficulty: DifficultyLevel::Medium,
@@ -788,7 +867,8 @@ impl EnterprisePerformanceMonitor {
     /// 清理过期数据
     async fn cleanup_old_data(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut history = self.performance_history.write().await;
-        let max_data_points = (self.config.data_retention_hours * 3600) / self.config.monitoring_interval_seconds;
+        let max_data_points =
+            (self.config.data_retention_hours * 3600) / self.config.monitoring_interval_seconds;
 
         while history.len() > max_data_points as usize {
             history.pop_front();
@@ -811,7 +891,8 @@ impl EnterprisePerformanceMonitor {
         let total_points = stats.total_data_points as f64;
         if total_points > 0.0 {
             stats.avg_monitoring_latency_ms =
-                (stats.avg_monitoring_latency_ms * (total_points - 1.0) + latency_ms) / total_points;
+                (stats.avg_monitoring_latency_ms * (total_points - 1.0) + latency_ms)
+                    / total_points;
         } else {
             stats.avg_monitoring_latency_ms = latency_ms;
         }
@@ -842,7 +923,10 @@ impl EnterprisePerformanceMonitor {
     }
 
     /// 获取性能历史数据
-    pub async fn get_performance_history(&self, limit: Option<usize>) -> Vec<RealTimePerformanceMetrics> {
+    pub async fn get_performance_history(
+        &self,
+        limit: Option<usize>,
+    ) -> Vec<RealTimePerformanceMetrics> {
         let history = self.performance_history.read().await;
         match limit {
             Some(n) => history.iter().rev().take(n).cloned().collect(),
@@ -897,25 +981,35 @@ impl EnterprisePerformanceMonitor {
 
         // 响应时间评分
         if current_metrics.response_time.avg_ms > thresholds.response_time_ms {
-            let penalty = (current_metrics.response_time.avg_ms / thresholds.response_time_ms - 1.0) * 20.0;
+            let penalty =
+                (current_metrics.response_time.avg_ms / thresholds.response_time_ms - 1.0) * 20.0;
             score -= penalty.min(25.0);
         }
 
         // CPU使用率评分
         if current_metrics.resource_usage.cpu_usage_percent > thresholds.cpu_usage_percent {
-            let penalty = (current_metrics.resource_usage.cpu_usage_percent / thresholds.cpu_usage_percent - 1.0) * 15.0;
+            let penalty = (current_metrics.resource_usage.cpu_usage_percent
+                / thresholds.cpu_usage_percent
+                - 1.0)
+                * 15.0;
             score -= penalty.min(20.0);
         }
 
         // 内存使用率评分
         if current_metrics.resource_usage.memory_usage_percent > thresholds.memory_usage_percent {
-            let penalty = (current_metrics.resource_usage.memory_usage_percent / thresholds.memory_usage_percent - 1.0) * 15.0;
+            let penalty = (current_metrics.resource_usage.memory_usage_percent
+                / thresholds.memory_usage_percent
+                - 1.0)
+                * 15.0;
             score -= penalty.min(20.0);
         }
 
         // 错误率评分
         if current_metrics.error_metrics.error_rate_percent > thresholds.error_rate_percent {
-            let penalty = (current_metrics.error_metrics.error_rate_percent / thresholds.error_rate_percent - 1.0) * 25.0;
+            let penalty = (current_metrics.error_metrics.error_rate_percent
+                / thresholds.error_rate_percent
+                - 1.0)
+                * 25.0;
             score -= penalty.min(30.0);
         }
 

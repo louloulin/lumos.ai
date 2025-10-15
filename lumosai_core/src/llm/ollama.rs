@@ -1,5 +1,5 @@
 //! Ollama LLM provider implementation
-//! 
+//!
 //! This module provides integration with Ollama for running local language models.
 
 use async_trait::async_trait;
@@ -7,12 +7,12 @@ use futures::stream::{BoxStream, StreamExt};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Error, Result};
 use super::{
-    LlmProvider, LlmOptions, Message, Role,
     function_calling::{FunctionDefinition, ToolChoice},
-    provider::FunctionCallingResponse
+    provider::FunctionCallingResponse,
+    LlmOptions, LlmProvider, Message, Role,
 };
+use crate::error::{Error, Result};
 
 /// Ollama API configuration
 #[derive(Debug, Clone)]
@@ -26,8 +26,7 @@ impl Default for OllamaConfig {
         Self {
             base_url: std::env::var("OLLAMA_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:11434".to_string()),
-            model: std::env::var("OLLAMA_MODEL")
-                .unwrap_or_else(|_| "llama2".to_string()),
+            model: std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2".to_string()),
         }
     }
 }
@@ -106,14 +105,11 @@ impl OllamaProvider {
     /// Create a new Ollama provider
     pub fn new(base_url: String, model: String) -> Self {
         let config = OllamaConfig { base_url, model };
-        
+
         let client = Client::builder()
             .default_headers({
                 let mut headers = reqwest::header::HeaderMap::new();
-                headers.insert(
-                    "Content-Type",
-                    "application/json".parse().unwrap(),
-                );
+                headers.insert("Content-Type", "application/json".parse().unwrap());
                 headers
             })
             .build()
@@ -156,7 +152,11 @@ impl OllamaProvider {
     fn convert_options(&self, options: &LlmOptions) -> OllamaOptions {
         OllamaOptions {
             temperature: options.temperature,
-            top_p: options.extra.get("top_p").and_then(|v| v.as_f64()).map(|f| f as f32),
+            top_p: options
+                .extra
+                .get("top_p")
+                .and_then(|v| v.as_f64())
+                .map(|f| f as f32),
             top_k: None,
             num_predict: options.max_tokens,
         }
@@ -177,7 +177,8 @@ impl LlmProvider for OllamaProvider {
             options: Some(self.convert_options(options)),
         };
 
-        let response = self.client
+        let response = self
+            .client
             .post(&format!("{}/api/generate", self.config.base_url))
             .json(&request)
             .send()
@@ -186,19 +187,29 @@ impl LlmProvider for OllamaProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Ollama API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Ollama API error: {}",
+                error_text
+            )));
         }
 
-        let response_json: OllamaResponse = response.json().await
+        let response_json: OllamaResponse = response
+            .json()
+            .await
             .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
 
-        response_json.response
+        response_json
+            .response
             .ok_or_else(|| Error::Parsing("No response text in Ollama response".to_string()))
     }
 
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         let ollama_messages = self.convert_messages(messages);
-        
+
         let request = OllamaChatRequest {
             model: self.config.model.clone(),
             messages: ollama_messages,
@@ -206,7 +217,8 @@ impl LlmProvider for OllamaProvider {
             options: Some(self.convert_options(options)),
         };
 
-        let response = self.client
+        let response = self
+            .client
             .post(&format!("{}/api/chat", self.config.base_url))
             .json(&request)
             .send()
@@ -215,13 +227,19 @@ impl LlmProvider for OllamaProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Ollama API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Ollama API error: {}",
+                error_text
+            )));
         }
 
-        let response_json: OllamaResponse = response.json().await
+        let response_json: OllamaResponse = response
+            .json()
+            .await
             .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
 
-        response_json.message
+        response_json
+            .message
             .map(|msg| msg.content)
             .ok_or_else(|| Error::Parsing("No message content in Ollama response".to_string()))
     }
@@ -238,7 +256,8 @@ impl LlmProvider for OllamaProvider {
             options: Some(self.convert_options(options)),
         };
 
-        let response = self.client
+        let response = self
+            .client
             .post(&format!("{}/api/generate", self.config.base_url))
             .json(&request)
             .send()
@@ -247,7 +266,10 @@ impl LlmProvider for OllamaProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Ollama API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Ollama API error: {}",
+                error_text
+            )));
         }
 
         let stream = response
@@ -261,7 +283,7 @@ impl LlmProvider for OllamaProvider {
                             if line.trim().is_empty() {
                                 continue;
                             }
-                            
+
                             match serde_json::from_str::<OllamaResponse>(line) {
                                 Ok(response) => {
                                     if let Some(content) = response.response {
@@ -290,7 +312,8 @@ impl LlmProvider for OllamaProvider {
             prompt: text.to_string(),
         };
 
-        let response = self.client
+        let response = self
+            .client
             .post(&format!("{}/api/embeddings", self.config.base_url))
             .json(&request)
             .send()
@@ -299,10 +322,15 @@ impl LlmProvider for OllamaProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Ollama API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Ollama API error: {}",
+                error_text
+            )));
         }
 
-        let response_json: OllamaEmbeddingResponse = response.json().await
+        let response_json: OllamaEmbeddingResponse = response
+            .json()
+            .await
             .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
 
         Ok(response_json.embedding)
@@ -335,11 +363,9 @@ mod tests {
 
     #[test]
     fn test_ollama_provider_creation() {
-        let provider = OllamaProvider::new(
-            "http://localhost:11434".to_string(),
-            "llama2".to_string(),
-        );
-        
+        let provider =
+            OllamaProvider::new("http://localhost:11434".to_string(), "llama2".to_string());
+
         assert_eq!(provider.name(), "ollama");
         assert_eq!(provider.config.model, "llama2");
     }
@@ -347,7 +373,7 @@ mod tests {
     #[test]
     fn test_message_conversion() {
         let provider = OllamaProvider::localhost("llama2".to_string());
-        
+
         let messages = vec![
             Message {
                 role: Role::System,
@@ -362,7 +388,7 @@ mod tests {
                 name: None,
             },
         ];
-        
+
         let ollama_messages = provider.convert_messages(&messages);
         assert_eq!(ollama_messages.len(), 2);
         assert_eq!(ollama_messages[0].role, "system");
@@ -375,11 +401,11 @@ mod tests {
     #[ignore] // Requires Ollama server running
     async fn test_ollama_integration() {
         let provider = OllamaProvider::localhost("llama2".to_string());
-        
+
         let options = LlmOptions::default()
             .with_temperature(0.7)
             .with_max_tokens(50);
-        
+
         let response = provider.generate("Say hello", &options).await;
         assert!(response.is_ok());
         println!("Ollama response: {}", response.unwrap());

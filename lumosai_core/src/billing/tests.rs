@@ -1,5 +1,5 @@
 //! 企业级计费系统单元测试
-//! 
+//!
 //! 测试计费系统的核心功能，包括订阅管理、使用量跟踪、计费引擎和支付处理
 
 use super::*;
@@ -45,7 +45,8 @@ mod subscription_tests {
                 currency: "USD".to_string(),
             },
             BillingCycle::Monthly,
-        ).with_trial(14);
+        )
+        .with_trial(14);
 
         let tenant_id = Uuid::new_v4();
         let subscription = Subscription::new(tenant_id, "test_plan".to_string(), &plan);
@@ -89,7 +90,7 @@ mod subscription_tests {
     #[test]
     fn test_subscription_manager() {
         let mut manager = SubscriptionManager::new();
-        
+
         let plan = SubscriptionPlan::new(
             "test_plan".to_string(),
             "Test Plan".to_string(),
@@ -104,7 +105,9 @@ mod subscription_tests {
         manager.add_plan(plan);
 
         let tenant_id = Uuid::new_v4();
-        let subscription = manager.create_subscription(tenant_id, "test_plan".to_string()).unwrap();
+        let subscription = manager
+            .create_subscription(tenant_id, "test_plan".to_string())
+            .unwrap();
 
         assert_eq!(subscription.tenant_id, tenant_id);
         assert_eq!(subscription.plan_id, "test_plan");
@@ -123,12 +126,8 @@ mod usage_tracking_tests {
     #[test]
     fn test_usage_record_creation() {
         let tenant_id = Uuid::new_v4();
-        let record = UsageRecord::new(
-            tenant_id,
-            "api_calls".to_string(),
-            100,
-            "calls".to_string(),
-        ).with_cost(10.0);
+        let record = UsageRecord::new(tenant_id, "api_calls".to_string(), 100, "calls".to_string())
+            .with_cost(10.0);
 
         assert_eq!(record.tenant_id, tenant_id);
         assert_eq!(record.resource_type, "api_calls");
@@ -188,12 +187,8 @@ mod usage_tracking_tests {
         tracker.add_usage_limit(limit);
 
         // Record usage
-        let record = UsageRecord::new(
-            tenant_id,
-            "api_calls".to_string(),
-            100,
-            "calls".to_string(),
-        ).with_cost(10.0);
+        let record = UsageRecord::new(tenant_id, "api_calls".to_string(), 100, "calls".to_string())
+            .with_cost(10.0);
 
         tracker.record_usage(record).unwrap();
 
@@ -205,12 +200,9 @@ mod usage_tracking_tests {
 
         // Record more usage to trigger warning
         for _ in 0..8 {
-            let record = UsageRecord::new(
-                tenant_id,
-                "api_calls".to_string(),
-                100,
-                "calls".to_string(),
-            ).with_cost(10.0);
+            let record =
+                UsageRecord::new(tenant_id, "api_calls".to_string(), 100, "calls".to_string())
+                    .with_cost(10.0);
             tracker.record_usage(record).unwrap();
         }
 
@@ -232,7 +224,8 @@ mod usage_tracking_tests {
                 "api_calls".to_string(),
                 i * 10,
                 "calls".to_string(),
-            ).with_cost(i as f64);
+            )
+            .with_cost(i as f64);
             tracker.record_usage(record).unwrap();
         }
 
@@ -285,7 +278,7 @@ mod billing_engine_tests {
     #[test]
     fn test_billing_engine_cost_calculation() {
         let mut engine = BillingEngine::new();
-        
+
         // Add pricing rule
         let rule = PricingRule {
             id: "api_pricing".to_string(),
@@ -309,21 +302,27 @@ mod billing_engine_tests {
         // Create usage stats
         let tenant_id = Uuid::new_v4();
         let mut usage_by_resource = HashMap::new();
-        usage_by_resource.insert("api_calls".to_string(), ResourceUsageStats {
-            resource_type: "api_calls".to_string(),
-            total_usage: 1000,
-            average_usage: 100.0,
-            peak_usage: 200,
-            usage_count: 10,
-            total_cost: 0.0,
-            average_cost: 0.0,
-            unit: "calls".to_string(),
-            daily_usage: Vec::new(),
-        });
+        usage_by_resource.insert(
+            "api_calls".to_string(),
+            ResourceUsageStats {
+                resource_type: "api_calls".to_string(),
+                total_usage: 1000,
+                average_usage: 100.0,
+                peak_usage: 200,
+                usage_count: 10,
+                total_cost: 0.0,
+                average_cost: 0.0,
+                unit: "calls".to_string(),
+                daily_usage: Vec::new(),
+            },
+        );
 
         let usage_stats = UsageStats {
             tenant_id,
-            period: (SystemTime::now() - Duration::from_secs(24 * 60 * 60), SystemTime::now()),
+            period: (
+                SystemTime::now() - Duration::from_secs(24 * 60 * 60),
+                SystemTime::now(),
+            ),
             usage_by_resource,
             total_cost: 0.0,
             currency: "USD".to_string(),
@@ -338,13 +337,18 @@ mod billing_engine_tests {
                 "test_plan".to_string(),
                 "Test Plan".to_string(),
                 "Test".to_string(),
-                PricingModel::Fixed { amount: 99.0, currency: "USD".to_string() },
+                PricingModel::Fixed {
+                    amount: 99.0,
+                    currency: "USD".to_string(),
+                },
                 BillingCycle::Monthly,
             ),
         );
 
         // Calculate cost
-        let billing_items = engine.calculate_usage_cost(&tenant_id, &usage_stats, &subscription).unwrap();
+        let billing_items = engine
+            .calculate_usage_cost(&tenant_id, &usage_stats, &subscription)
+            .unwrap();
         assert_eq!(billing_items.len(), 1);
         assert_eq!(billing_items[0].resource_type, "api_calls");
         assert_eq!(billing_items[0].total_amount, 10.0); // 1000 * 0.01
@@ -355,27 +359,33 @@ mod billing_engine_tests {
         let mut engine = BillingEngine::new();
         let tenant_id = Uuid::new_v4();
 
-        let billing_items = vec![
-            BillingItem {
-                id: Uuid::new_v4().to_string(),
-                name: "API Calls".to_string(),
-                description: "API usage".to_string(),
-                resource_type: "api_calls".to_string(),
-                quantity: 1000,
-                unit_price: 0.01,
-                total_amount: 10.0,
-                billing_period: (SystemTime::now() - Duration::from_secs(24 * 60 * 60), SystemTime::now()),
-                currency: "USD".to_string(),
-                metadata: HashMap::new(),
-            }
-        ];
+        let billing_items = vec![BillingItem {
+            id: Uuid::new_v4().to_string(),
+            name: "API Calls".to_string(),
+            description: "API usage".to_string(),
+            resource_type: "api_calls".to_string(),
+            quantity: 1000,
+            unit_price: 0.01,
+            total_amount: 10.0,
+            billing_period: (
+                SystemTime::now() - Duration::from_secs(24 * 60 * 60),
+                SystemTime::now(),
+            ),
+            currency: "USD".to_string(),
+            metadata: HashMap::new(),
+        }];
 
-        let invoice = engine.generate_invoice(
-            &tenant_id,
-            billing_items,
-            (SystemTime::now() - Duration::from_secs(24 * 60 * 60), SystemTime::now()),
-            30,
-        ).unwrap();
+        let invoice = engine
+            .generate_invoice(
+                &tenant_id,
+                billing_items,
+                (
+                    SystemTime::now() - Duration::from_secs(24 * 60 * 60),
+                    SystemTime::now(),
+                ),
+                30,
+            )
+            .unwrap();
 
         assert_eq!(invoice.tenant_id, tenant_id);
         assert_eq!(invoice.subtotal, 10.0);
@@ -426,7 +436,10 @@ mod payment_processor_tests {
             expiry_year: 2025,
             cardholder_name: "Test User".to_string(),
         };
-        assert!(processor.validate_payment_method(&valid_card).await.unwrap());
+        assert!(processor
+            .validate_payment_method(&valid_card)
+            .await
+            .unwrap());
 
         // Invalid credit card (expired)
         let expired_card = PaymentMethod::CreditCard {
@@ -435,7 +448,10 @@ mod payment_processor_tests {
             expiry_year: 2020,
             cardholder_name: "Test User".to_string(),
         };
-        assert!(!processor.validate_payment_method(&expired_card).await.unwrap());
+        assert!(!processor
+            .validate_payment_method(&expired_card)
+            .await
+            .unwrap());
 
         // Valid bank transfer
         let bank_transfer = PaymentMethod::BankTransfer {
@@ -443,6 +459,9 @@ mod payment_processor_tests {
             routing_number: "987654321".to_string(),
             bank_name: "Test Bank".to_string(),
         };
-        assert!(processor.validate_payment_method(&bank_transfer).await.unwrap());
+        assert!(processor
+            .validate_payment_method(&bank_transfer)
+            .await
+            .unwrap());
     }
 }

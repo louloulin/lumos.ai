@@ -1,15 +1,17 @@
 //! File operation tools inspired by Mastra's file handling
-//! 
+//!
 //! This module provides file reading, writing, and directory operations
 
-use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool, ToolExecutionContext, ToolExecutionOptions};
-use serde_json::{Value, json};
-use std::collections::HashMap;
-use std::path::Path;
-use std::fs;
-use crate::{Result, Error};
 use crate::base::Base;
+use crate::tool::{
+    FunctionTool, ParameterSchema, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
+};
+use crate::{Error, Result};
 use async_trait::async_trait;
+use serde_json::{json, Value};
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 
 /// Create a file reader tool
 /// Similar to Mastra's file reading capabilities
@@ -46,21 +48,24 @@ pub fn create_file_reader_tool() -> FunctionTool {
         "Read content from files with safety checks",
         schema,
         |params| {
-            let path = params.get("path")
+            let path = params
+                .get("path")
                 .and_then(|v| v.as_str())
                 .ok_or("File path is required")?;
-            
-            let encoding = params.get("encoding")
+
+            let encoding = params
+                .get("encoding")
                 .and_then(|v| v.as_str())
                 .unwrap_or("utf-8");
-            
-            let max_size = params.get("max_size")
+
+            let max_size = params
+                .get("max_size")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(1048576);
 
             // Mock file reading - in real implementation would use std::fs
             let file_exists = Path::new(path).extension().is_some();
-            
+
             if file_exists {
                 Ok(json!({
                     "success": true,
@@ -126,19 +131,23 @@ pub fn create_file_writer_tool() -> FunctionTool {
         "Write content to files with safety checks",
         schema,
         |params| {
-            let path = params.get("path")
+            let path = params
+                .get("path")
                 .and_then(|v| v.as_str())
                 .ok_or("File path is required")?;
-            
-            let content = params.get("content")
+
+            let content = params
+                .get("content")
                 .and_then(|v| v.as_str())
                 .ok_or("Content is required")?;
-            
-            let encoding = params.get("encoding")
+
+            let encoding = params
+                .get("encoding")
                 .and_then(|v| v.as_str())
                 .unwrap_or("utf-8");
-            
-            let overwrite = params.get("overwrite")
+
+            let overwrite = params
+                .get("overwrite")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
@@ -198,20 +207,22 @@ pub fn create_directory_lister_tool() -> FunctionTool {
         "List files and directories with filtering options",
         schema,
         |params| {
-            let path = params.get("path")
+            let path = params
+                .get("path")
                 .and_then(|v| v.as_str())
                 .ok_or("Directory path is required")?;
-            
-            let recursive = params.get("recursive")
+
+            let recursive = params
+                .get("recursive")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
-            
-            let include_hidden = params.get("include_hidden")
+
+            let include_hidden = params
+                .get("include_hidden")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
-            
-            let filter = params.get("filter")
-                .and_then(|v| v.as_str());
+
+            let filter = params.get("filter").and_then(|v| v.as_str());
 
             // Mock directory listing
             let mock_files = vec![
@@ -248,23 +259,22 @@ pub fn create_directory_lister_tool() -> FunctionTool {
 /// Create a file info tool
 /// Get detailed information about a file or directory
 pub fn create_file_info_tool() -> FunctionTool {
-    let schema = ToolSchema::new(vec![
-        ParameterSchema {
-            name: "path".to_string(),
-            description: "Path to get information about".to_string(),
-            r#type: "string".to_string(),
-            required: true,
-            properties: None,
-            default: None,
-        },
-    ]);
+    let schema = ToolSchema::new(vec![ParameterSchema {
+        name: "path".to_string(),
+        description: "Path to get information about".to_string(),
+        r#type: "string".to_string(),
+        required: true,
+        properties: None,
+        default: None,
+    }]);
 
     FunctionTool::new(
         "file_info",
         "Get detailed information about files and directories",
         schema,
         |params| {
-            let path = params.get("path")
+            let path = params
+                .get("path")
                 .and_then(|v| v.as_str())
                 .ok_or("Path is required")?;
 
@@ -309,7 +319,8 @@ impl FileManagerTool {
         let schema = ToolSchema::new(vec![
             ParameterSchema {
                 name: "operation".to_string(),
-                description: "File operation to perform (read, write, list, exists, delete)".to_string(),
+                description: "File operation to perform (read, write, list, exists, delete)"
+                    .to_string(),
                 r#type: "string".to_string(),
                 required: true,
                 properties: None,
@@ -336,7 +347,7 @@ impl FileManagerTool {
         Self {
             base: crate::base::BaseComponent::new_with_name(
                 "file_manager".to_string(),
-                crate::logger::Component::Tool
+                crate::logger::Component::Tool,
             ),
             id: "file_manager".to_string(),
             description: "Perform file system operations".to_string(),
@@ -360,7 +371,8 @@ impl FileManagerTool {
 
         let mut files = Vec::new();
         for entry in entries {
-            let entry = entry.map_err(|e| Error::Tool(format!("Failed to read directory entry: {}", e)))?;
+            let entry =
+                entry.map_err(|e| Error::Tool(format!("Failed to read directory entry: {}", e)))?;
             let file_name = entry.file_name().to_string_lossy().to_string();
             files.push(file_name);
         }
@@ -440,13 +452,15 @@ impl Tool for FileManagerTool {
         &self,
         params: Value,
         _context: ToolExecutionContext,
-        _options: &ToolExecutionOptions
+        _options: &ToolExecutionOptions,
     ) -> Result<Value> {
-        let operation = params.get("operation")
+        let operation = params
+            .get("operation")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::Tool("Operation parameter is required".to_string()))?;
 
-        let path = params.get("path")
+        let path = params
+            .get("path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::Tool("Path parameter is required".to_string()))?;
 
@@ -459,11 +473,14 @@ impl Tool for FileManagerTool {
                     "content": content,
                     "size": content.len()
                 }))
-            },
+            }
             "write" => {
-                let content = params.get("content")
+                let content = params
+                    .get("content")
                     .and_then(|v| v.as_str())
-                    .ok_or_else(|| Error::Tool("Content parameter is required for write operation".to_string()))?;
+                    .ok_or_else(|| {
+                        Error::Tool("Content parameter is required for write operation".to_string())
+                    })?;
 
                 self.write_file(path, content)?;
                 Ok(json!({
@@ -472,7 +489,7 @@ impl Tool for FileManagerTool {
                     "size": content.len(),
                     "success": true
                 }))
-            },
+            }
             "list" => {
                 let files = self.list_directory(path)?;
                 Ok(json!({
@@ -481,7 +498,7 @@ impl Tool for FileManagerTool {
                     "files": files,
                     "count": files.len()
                 }))
-            },
+            }
             "exists" => {
                 let exists = self.file_exists(path);
                 Ok(json!({
@@ -489,7 +506,7 @@ impl Tool for FileManagerTool {
                     "path": path,
                     "exists": exists
                 }))
-            },
+            }
             "delete" => {
                 self.delete_file(path)?;
                 Ok(json!({
@@ -497,8 +514,8 @@ impl Tool for FileManagerTool {
                     "path": path,
                     "success": true
                 }))
-            },
-            _ => Err(Error::Tool(format!("Unknown operation: {}", operation)))
+            }
+            _ => Err(Error::Tool(format!("Unknown operation: {}", operation))),
         }
     }
 
@@ -520,16 +537,18 @@ mod tests {
     #[tokio::test]
     async fn test_file_reader_tool() {
         let tool = create_file_reader_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("path".to_string(), json!("test.txt"));
         params.insert("encoding".to_string(), json!("utf-8"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["path"], "test.txt");
         assert_eq!(response["encoding"], "utf-8");
@@ -538,16 +557,18 @@ mod tests {
     #[tokio::test]
     async fn test_file_writer_tool() {
         let tool = create_file_writer_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("path".to_string(), json!("output.txt"));
         params.insert("content".to_string(), json!("Hello, World!"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["path"], "output.txt");
@@ -557,16 +578,18 @@ mod tests {
     #[tokio::test]
     async fn test_directory_lister_tool() {
         let tool = create_directory_lister_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("path".to_string(), json!("/tmp"));
         params.insert("recursive".to_string(), json!(false));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["path"], "/tmp");

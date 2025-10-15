@@ -1,8 +1,8 @@
 //! Enhanced logging system inspired by Mastra's observability features
-//! 
+//!
 //! This module provides structured logging, metrics, and observability tools
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -92,7 +92,7 @@ impl LogEntry {
     }
 
     /// Add multiple tags
-    pub fn with_tags<I, S>(mut self, tags: I) -> Self 
+    pub fn with_tags<I, S>(mut self, tags: I) -> Self
     where
         I: IntoIterator<Item = S>,
         S: Into<String>,
@@ -124,7 +124,8 @@ impl LogEntry {
         // Add fields if present
         if !self.fields.is_empty() {
             output.push_str(" | ");
-            let field_strs: Vec<String> = self.fields
+            let field_strs: Vec<String> = self
+                .fields
                 .iter()
                 .map(|(k, v)| {
                     // Format values without JSON quotes for strings
@@ -286,8 +287,8 @@ impl Logger {
             return;
         }
 
-        let mut entry = LogEntry::new(level, message.to_string(), self.module.clone())
-            .with_fields(fields);
+        let mut entry =
+            LogEntry::new(level, message.to_string(), self.module.clone()).with_fields(fields);
 
         if let Some(correlation_id) = &self.correlation_id {
             entry = entry.with_correlation_id(correlation_id.clone());
@@ -301,10 +302,10 @@ impl Logger {
         match self.config.format {
             LogFormat::Console => {
                 println!("{}", entry.format_console());
-            },
+            }
             LogFormat::Json => {
                 println!("{}", entry.format_json());
-            },
+            }
             LogFormat::Structured => {
                 // Custom structured format
                 println!("{}", entry.format_console());
@@ -352,8 +353,8 @@ macro_rules! log_error {
 /// Agent-specific logging utilities
 pub mod agent_logging {
     use super::*;
-    use crate::agent::BasicAgent;
     use crate::agent::trait_def::Agent;
+    use crate::agent::BasicAgent;
 
     /// Create a logger for an agent
     pub fn create_agent_logger(agent: &BasicAgent) -> Logger {
@@ -368,18 +369,19 @@ pub mod agent_logging {
             [
                 ("agent_name".to_string(), json!(agent_name)),
                 ("config".to_string(), config.clone()),
-            ].into_iter().collect()
+            ]
+            .into_iter()
+            .collect(),
         );
     }
 
     /// Log tool execution
-    pub fn log_tool_execution(
-        logger: &Logger, 
-        tool_name: &str, 
-        duration_ms: u64, 
-        success: bool
-    ) {
-        let level = if success { LogLevel::Info } else { LogLevel::Error };
+    pub fn log_tool_execution(logger: &Logger, tool_name: &str, duration_ms: u64, success: bool) {
+        let level = if success {
+            LogLevel::Info
+        } else {
+            LogLevel::Error
+        };
         let message = if success {
             format!("Tool '{}' executed successfully", tool_name)
         } else {
@@ -393,7 +395,9 @@ pub mod agent_logging {
                 ("tool_name".to_string(), json!(tool_name)),
                 ("duration_ms".to_string(), json!(duration_ms)),
                 ("success".to_string(), json!(success)),
-            ].into_iter().collect()
+            ]
+            .into_iter()
+            .collect(),
         );
     }
 
@@ -403,23 +407,21 @@ pub mod agent_logging {
         input_count: usize,
         output_length: usize,
         duration_ms: u64,
-        token_count: Option<u32>
+        token_count: Option<u32>,
     ) {
         let mut fields = [
             ("input_count".to_string(), json!(input_count)),
             ("output_length".to_string(), json!(output_length)),
             ("duration_ms".to_string(), json!(duration_ms)),
-        ].into_iter().collect::<HashMap<_, _>>();
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
 
         if let Some(tokens) = token_count {
             fields.insert("token_count".to_string(), json!(tokens));
         }
 
-        logger.log_with_fields(
-            LogLevel::Info,
-            "Message processed",
-            fields
-        );
+        logger.log_with_fields(LogLevel::Info, "Message processed", fields);
     }
 }
 
@@ -432,7 +434,7 @@ mod tests {
         let entry = LogEntry::new(
             LogLevel::Info,
             "Test message".to_string(),
-            "test_module".to_string()
+            "test_module".to_string(),
         );
 
         assert_eq!(entry.level, LogLevel::Info);
@@ -446,7 +448,7 @@ mod tests {
         let entry = LogEntry::new(
             LogLevel::Debug,
             "Debug message".to_string(),
-            "debug_module".to_string()
+            "debug_module".to_string(),
         )
         .with_field("key1", "value1")
         .with_field("key2", 42)
@@ -477,7 +479,7 @@ mod tests {
         let entry = LogEntry::new(
             LogLevel::Error,
             "Error occurred".to_string(),
-            "error_module".to_string()
+            "error_module".to_string(),
         )
         .with_field("error_code", 500);
 

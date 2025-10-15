@@ -1,11 +1,11 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
 use crate::charts::{ApiRequestChartCard, TokenUsageChartCard};
+use crate::types::{Model, RateLimit, Rbac};
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, Model, RateLimit};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(
     rbac: Rbac,

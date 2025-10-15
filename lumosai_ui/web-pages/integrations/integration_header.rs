@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 use crate::routes;
+use crate::types::{Integration, Rbac};
 use crate::ConfirmModal;
-use web_assets::files::{button_edit_svg, menu_delete_svg};
 use daisy_rsx::*;
-use crate::types::{Rbac, Integration};
 use dioxus::prelude::*;
+use web_assets::files::{button_edit_svg, menu_delete_svg};
 
 #[component]
 pub fn IntegrationHeader(

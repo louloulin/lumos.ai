@@ -3,9 +3,9 @@ use super::logout_form::LogoutForm;
 use super::snackbar::Snackbar;
 use crate::menu::{NavGroup, NavItem};
 use crate::profile_popup::ProfilePopup;
-use web_assets::files::*;
 use crate::types::*;
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 #[derive(PartialEq, Clone, Eq, Debug)]
 pub enum SideBar {

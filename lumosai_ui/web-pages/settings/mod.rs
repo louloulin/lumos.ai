@@ -13,12 +13,12 @@
 */
 
 pub mod api_keys;
+pub mod integrations;
 pub mod team_management;
 pub mod user_profile;
-pub mod integrations;
 
 // 重新导出主要组件
 pub use api_keys::ApiKeysPage;
+pub use integrations::IntegrationsPage;
 pub use team_management::TeamManagementPage;
 pub use user_profile::UserProfilePage;
-pub use integrations::IntegrationsPage;

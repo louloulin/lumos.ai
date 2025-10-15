@@ -1,5 +1,5 @@
 //! Context management module for RAG systems
-//! 
+//!
 //! This module provides functionality for managing context windows, document ranking,
 //! and context compression for RAG applications.
 
@@ -7,39 +7,39 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::{
-    types::{ScoredDocument, RetrievalResult},
     error::Result,
+    types::{RetrievalResult, ScoredDocument},
 };
 
-pub mod window;
 pub mod compression;
 pub mod ranking;
+pub mod window;
 
-pub use window::*;
 pub use compression::*;
 pub use ranking::*;
+pub use window::*;
 
 /// Context management configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextConfig {
     /// Maximum number of documents in context
     pub max_documents: usize,
-    
+
     /// Maximum total tokens in context
     pub max_tokens: usize,
-    
+
     /// Context window strategy
     pub window_strategy: WindowStrategy,
-    
+
     /// Document ranking strategy
     pub ranking_strategy: RankingStrategy,
-    
+
     /// Context compression configuration
     pub compression: Option<CompressionConfig>,
-    
+
     /// Whether to preserve document order
     pub preserve_order: bool,
-    
+
     /// Minimum relevance score threshold
     pub min_relevance_score: Option<f32>,
 }
@@ -95,13 +95,13 @@ pub enum RankingStrategy {
 pub struct CompressionConfig {
     /// Compression strategy
     pub strategy: CompressionStrategy,
-    
+
     /// Target compression ratio (0.0 to 1.0)
     pub target_ratio: f32,
-    
+
     /// Whether to preserve key information
     pub preserve_key_info: bool,
-    
+
     /// Maximum compression iterations
     pub max_iterations: usize,
 }
@@ -132,7 +132,9 @@ impl ContextManager {
     pub fn new(config: ContextConfig) -> Self {
         let window_manager = Self::create_window_manager(&config.window_strategy);
         let ranker = Self::create_ranker(&config.ranking_strategy);
-        let compressor = config.compression.as_ref()
+        let compressor = config
+            .compression
+            .as_ref()
             .map(|comp_config| Self::create_compressor(comp_config));
 
         Self {
@@ -150,7 +152,9 @@ impl ContextManager {
 
         // Filter by minimum relevance score
         let mut documents = if let Some(min_score) = self.config.min_relevance_score {
-            results.documents.into_iter()
+            results
+                .documents
+                .into_iter()
                 .filter(|doc| doc.score >= min_score)
                 .collect()
         } else {
@@ -161,11 +165,10 @@ impl ContextManager {
         documents = self.ranker.rank_documents(documents).await?;
 
         // Apply window management
-        let windowed_docs = self.window_manager.apply_window(
-            documents,
-            self.config.max_documents,
-            self.config.max_tokens,
-        ).await?;
+        let windowed_docs = self
+            .window_manager
+            .apply_window(documents, self.config.max_documents, self.config.max_tokens)
+            .await?;
 
         // Apply compression if configured
         let final_docs = if let Some(compressor) = &self.compressor {
@@ -187,16 +190,21 @@ impl ContextManager {
 
     /// Estimate token count for documents
     fn estimate_tokens(&self, documents: &[ScoredDocument]) -> usize {
-        documents.iter()
+        documents
+            .iter()
             .map(|doc| doc.document.content.split_whitespace().count())
             .sum()
     }
 
     /// Calculate compression ratio
-    fn calculate_compression_ratio(&self, original: &[ScoredDocument], compressed: &[ScoredDocument]) -> f32 {
+    fn calculate_compression_ratio(
+        &self,
+        original: &[ScoredDocument],
+        compressed: &[ScoredDocument],
+    ) -> f32 {
         let original_tokens = self.estimate_tokens(original);
         let compressed_tokens = self.estimate_tokens(compressed);
-        
+
         if original_tokens == 0 {
             1.0
         } else {
@@ -225,9 +233,15 @@ impl ContextManager {
             RankingStrategy::Recency => Box::new(RecencyRanker::new()),
             RankingStrategy::Length => Box::new(LengthRanker::new()),
             RankingStrategy::Custom => Box::new(CustomRanker::new()),
-            RankingStrategy::Hybrid { relevance_weight, recency_weight, length_weight } => {
-                Box::new(HybridRanker::new(*relevance_weight, *recency_weight, *length_weight))
-            }
+            RankingStrategy::Hybrid {
+                relevance_weight,
+                recency_weight,
+                length_weight,
+            } => Box::new(HybridRanker::new(
+                *relevance_weight,
+                *recency_weight,
+                *length_weight,
+            )),
         }
     }
 
@@ -251,13 +265,13 @@ impl ContextManager {
 pub struct ManagedContext {
     /// Selected and processed documents
     pub documents: Vec<ScoredDocument>,
-    
+
     /// Total estimated tokens
     pub total_tokens: usize,
-    
+
     /// Compression ratio applied
     pub compression_ratio: f32,
-    
+
     /// Additional metadata
     pub metadata: HashMap<String, String>,
 }

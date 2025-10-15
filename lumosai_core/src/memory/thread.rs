@@ -1,17 +1,17 @@
 //! Memory Thread implementation for conversation management
-//! 
+//!
 //! This module provides thread-based memory management similar to Mastra's Memory Thread concept.
 //! It enables persistent storage of conversations with session isolation and message history management.
 
-use std::collections::HashMap;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 use uuid::Uuid;
 
+use crate::error::Error;
 use crate::llm::Message;
 use crate::Result;
-use crate::error::Error;
 
 /// Memory thread for managing conversation history and context
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -200,7 +200,9 @@ impl MemoryThread {
 
     /// Check if thread is owned by the given resource
     pub fn is_owned_by(&self, resource_id: &str) -> bool {
-        self.resource_id.as_ref().map_or(false, |rid| rid == resource_id)
+        self.resource_id
+            .as_ref()
+            .map_or(false, |rid| rid == resource_id)
     }
 
     /// Check if thread belongs to the given agent
@@ -234,13 +236,25 @@ pub trait MemoryThreadStorage: Send + Sync {
     async fn add_message(&self, thread_id: &str, message: &Message) -> Result<()>;
 
     /// Get messages from a thread
-    async fn get_messages(&self, thread_id: &str, params: &GetMessagesParams) -> Result<Vec<Message>>;
+    async fn get_messages(
+        &self,
+        thread_id: &str,
+        params: &GetMessagesParams,
+    ) -> Result<Vec<Message>>;
 
     /// Delete messages from a thread
-    async fn delete_messages(&self, thread_id: &str, message_ids: &[String]) -> Result<MessageOperationResult>;
+    async fn delete_messages(
+        &self,
+        thread_id: &str,
+        message_ids: &[String],
+    ) -> Result<MessageOperationResult>;
 
     /// Search messages across threads
-    async fn search_messages(&self, query: &str, filter: Option<&MessageFilter>) -> Result<Vec<Message>>;
+    async fn search_messages(
+        &self,
+        query: &str,
+        filter: Option<&MessageFilter>,
+    ) -> Result<Vec<Message>>;
 
     /// Get thread statistics
     async fn get_thread_stats(&self, thread_id: &str) -> Result<ThreadStats>;
@@ -282,7 +296,11 @@ impl<S: MemoryThreadStorage> MemoryThreadManager<S> {
     }
 
     /// Get a thread by ID with ownership validation
-    pub async fn get_thread(&self, thread_id: &str, resource_id: Option<&str>) -> Result<Option<MemoryThread>> {
+    pub async fn get_thread(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<Option<MemoryThread>> {
         match self.storage.get_thread(thread_id).await? {
             Some(thread) => {
                 if let Some(resource_id) = resource_id {
@@ -358,7 +376,11 @@ impl<S: MemoryThreadStorage> MemoryThreadManager<S> {
     }
 
     /// Get thread statistics
-    pub async fn get_thread_stats(&self, thread_id: &str, resource_id: Option<&str>) -> Result<ThreadStats> {
+    pub async fn get_thread_stats(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<ThreadStats> {
         // Validate thread ownership if resource_id is provided
         if resource_id.is_some() {
             self.get_thread(thread_id, resource_id).await?;
@@ -419,7 +441,10 @@ mod tests {
         thread.add_metadata("key1".to_string(), Value::String("value1".to_string()));
         thread.add_metadata("key2".to_string(), Value::Number(42.into()));
 
-        assert_eq!(thread.get_metadata("key1"), Some(&Value::String("value1".to_string())));
+        assert_eq!(
+            thread.get_metadata("key1"),
+            Some(&Value::String("value1".to_string()))
+        );
         assert_eq!(thread.get_metadata("key2"), Some(&Value::Number(42.into())));
 
         let removed = thread.remove_metadata("key1");

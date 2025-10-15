@@ -1,13 +1,13 @@
 //! CLI command implementations
-//! 
+//!
 //! This module contains the actual implementation of all CLI commands
 
-use std::path::{Path, PathBuf};
-use std::fs;
-use std::collections::HashMap;
-use crate::Result;
-use super::{ProjectConfig, ToolConfig, ToolSource, CliUtils};
+use super::{CliUtils, ProjectConfig, ToolConfig, ToolSource};
 use crate::marketplace::{Marketplace, ToolCategory};
+use crate::Result;
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 /// Command implementations
 pub struct Commands;
@@ -59,7 +59,9 @@ impl Commands {
         let project_name = project_name.trim();
 
         if project_name.is_empty() {
-            return Err(crate::Error::Other("Project name cannot be empty".to_string()));
+            return Err(crate::Error::Other(
+                "Project name cannot be empty".to_string(),
+            ));
         }
 
         // Get template choice
@@ -134,29 +136,30 @@ impl Commands {
     /// Start development server
     pub async fn dev_server(hot_reload: bool, debug: bool, port: u16) -> Result<()> {
         // Check if we're in a Lumos project
-        let project_root = CliUtils::find_project_root(".")
-            .ok_or_else(|| crate::Error::Other("Not in a Lumos.ai project directory".to_string()))?;
-        
+        let project_root = CliUtils::find_project_root(".").ok_or_else(|| {
+            crate::Error::Other("Not in a Lumos.ai project directory".to_string())
+        })?;
+
         CliUtils::progress("Starting development server...");
-        
+
         // Load project configuration
         let config_path = project_root.join("lumos.toml");
         let config = CliUtils::load_config(&config_path)?;
-        
+
         CliUtils::info(&format!("Project: {} v{}", config.name, config.version));
         CliUtils::info(&format!("Server: http://localhost:{}", port));
-        
+
         if hot_reload {
             CliUtils::info("Hot reload: enabled");
         }
-        
+
         if debug {
             CliUtils::info("Debug mode: enabled");
         }
-        
+
         // Start the development server
         super::dev_server::start_dev_server(port, hot_reload, debug, &project_root).await?;
-        
+
         Ok(())
     }
 
@@ -164,13 +167,13 @@ impl Commands {
     pub async fn list_tools(available: bool, category: Option<String>) -> Result<()> {
         if available {
             CliUtils::progress("Fetching available tools from marketplace...");
-            
+
             // Connect to marketplace
             let marketplace = Marketplace::new(
                 "https://marketplace.lumos.ai".to_string(),
-                PathBuf::from(".lumos/cache")
+                PathBuf::from(".lumos/cache"),
             );
-            
+
             let category_filter = category.as_ref().and_then(|c| match c.as_str() {
                 "web" => Some(ToolCategory::Web),
                 "file" => Some(ToolCategory::File),
@@ -184,35 +187,39 @@ impl Commands {
                 "utility" => Some(ToolCategory::Utility),
                 _ => None,
             });
-            
+
             let tools = marketplace.search("", category_filter).await?;
-            
+
             println!("\n📦 Available Tools:");
             println!("┌─────────────────────────────────────────────────────────────────┐");
-            
+
             for tool in tools {
                 // Use a default icon since ToolPackage doesn't have category field
                 let category_icon = "🔧";
 
-                println!("│ {} {:<20} │ {:<35} │", category_icon, tool.name, tool.description);
+                println!(
+                    "│ {} {:<20} │ {:<35} │",
+                    category_icon, tool.name, tool.description
+                );
             }
-            
+
             println!("└─────────────────────────────────────────────────────────────────┘");
         } else {
             // List installed tools
-            let project_root = CliUtils::find_project_root(".")
-                .ok_or_else(|| crate::Error::Other("Not in a Lumos.ai project directory".to_string()))?;
-            
+            let project_root = CliUtils::find_project_root(".").ok_or_else(|| {
+                crate::Error::Other("Not in a Lumos.ai project directory".to_string())
+            })?;
+
             let config_path = project_root.join("lumos.toml");
             let config = CliUtils::load_config(&config_path)?;
-            
+
             println!("\n🔧 Installed Tools:");
-            
+
             if config.tools.is_empty() {
                 CliUtils::info("No tools installed. Use 'lumos tools add <tool>' to add tools.");
             } else {
                 println!("┌─────────────────────────────────────────────────────────────────┐");
-                
+
                 for tool in &config.tools {
                     let source_info = match &tool.source {
                         ToolSource::Marketplace { package } => format!("marketplace:{}", package),
@@ -220,21 +227,25 @@ impl Commands {
                         ToolSource::Local { path } => format!("local:{}", path.display()),
                         ToolSource::MCP { server } => format!("mcp:{}", server),
                     };
-                    
-                    println!("│ 🔧 {:<20} │ v{:<10} │ {:<20} │", tool.name, tool.version, source_info);
+
+                    println!(
+                        "│ 🔧 {:<20} │ v{:<10} │ {:<20} │",
+                        tool.name, tool.version, source_info
+                    );
                 }
-                
+
                 println!("└─────────────────────────────────────────────────────────────────┘");
             }
         }
-        
+
         Ok(())
     }
 
     /// Add a tool to the project
     pub async fn add_tool(name: &str, version: Option<String>) -> Result<()> {
-        let project_root = CliUtils::find_project_root(".")
-            .ok_or_else(|| crate::Error::Other("Not in a Lumos.ai project directory".to_string()))?;
+        let project_root = CliUtils::find_project_root(".").ok_or_else(|| {
+            crate::Error::Other("Not in a Lumos.ai project directory".to_string())
+        })?;
 
         CliUtils::progress(&format!("Adding tool '{}'...", name));
 
@@ -251,22 +262,25 @@ impl Commands {
         // Connect to marketplace to get tool info
         let mut marketplace = Marketplace::new(
             "https://marketplace.lumos.ai".to_string(),
-            PathBuf::from(".lumos/cache")
+            PathBuf::from(".lumos/cache"),
         );
 
         let tools = marketplace.search(name, None).await?;
-        let tool_info = tools.iter().find(|t| t.name == name)
-            .ok_or_else(|| crate::Error::Other(format!("Tool '{}' not found in marketplace", name)))?;
+        let tool_info = tools.iter().find(|t| t.name == name).ok_or_else(|| {
+            crate::Error::Other(format!("Tool '{}' not found in marketplace", name))
+        })?;
 
         // Install the tool
-        marketplace.install(&tool_info.name, version.as_deref()).await?;
+        marketplace
+            .install(&tool_info.name, version.as_deref())
+            .await?;
 
         // Add to configuration
         let tool_config = ToolConfig {
             name: name.to_string(),
             version: version.unwrap_or_else(|| tool_info.version.clone()),
             source: ToolSource::Marketplace {
-                package: tool_info.name.clone()
+                package: tool_info.name.clone(),
             },
             config: HashMap::new(),
         };
@@ -282,9 +296,14 @@ impl Commands {
     }
 
     /// Add a model to the project
-    pub async fn add_model(provider: &str, model_name: Option<String>, api_key: Option<String>) -> Result<()> {
-        let project_root = CliUtils::find_project_root(".")
-            .ok_or_else(|| crate::Error::Other("Not in a Lumos.ai project directory".to_string()))?;
+    pub async fn add_model(
+        provider: &str,
+        model_name: Option<String>,
+        api_key: Option<String>,
+    ) -> Result<()> {
+        let project_root = CliUtils::find_project_root(".").ok_or_else(|| {
+            crate::Error::Other("Not in a Lumos.ai project directory".to_string())
+        })?;
 
         CliUtils::progress(&format!("Adding model provider '{}'...", provider));
 
@@ -294,12 +313,26 @@ impl Commands {
 
         // Determine model configuration based on provider
         let (model_id, requires_api_key) = match provider {
-            "deepseek" => (model_name.unwrap_or_else(|| "deepseek-chat".to_string()), true),
+            "deepseek" => (
+                model_name.unwrap_or_else(|| "deepseek-chat".to_string()),
+                true,
+            ),
             "openai" => (model_name.unwrap_or_else(|| "gpt-4".to_string()), true),
-            "anthropic" => (model_name.unwrap_or_else(|| "claude-3-sonnet-20240229".to_string()), true),
+            "anthropic" => (
+                model_name.unwrap_or_else(|| "claude-3-sonnet-20240229".to_string()),
+                true,
+            ),
             "ollama" => (model_name.unwrap_or_else(|| "llama2".to_string()), false),
-            "groq" => (model_name.unwrap_or_else(|| "mixtral-8x7b-32768".to_string()), true),
-            _ => return Err(crate::Error::Other(format!("Unsupported model provider: {}", provider))),
+            "groq" => (
+                model_name.unwrap_or_else(|| "mixtral-8x7b-32768".to_string()),
+                true,
+            ),
+            _ => {
+                return Err(crate::Error::Other(format!(
+                    "Unsupported model provider: {}",
+                    provider
+                )))
+            }
         };
 
         // Check if API key is required but not provided
@@ -321,11 +354,14 @@ impl Commands {
         }
 
         let models = config.models.as_mut().unwrap();
-        models.insert(provider.to_string(), serde_json::json!({
-            "model": model_id,
-            "provider": provider,
-            "api_key_env": format!("{}_API_KEY", provider.to_uppercase()),
-        }));
+        models.insert(
+            provider.to_string(),
+            serde_json::json!({
+                "model": model_id,
+                "provider": provider,
+                "api_key_env": format!("{}_API_KEY", provider.to_uppercase()),
+            }),
+        );
 
         // Set as default if no default model is set
         if config.default_model.is_none() {
@@ -335,7 +371,10 @@ impl Commands {
         // Save configuration
         CliUtils::save_config(&config_path, &config)?;
 
-        CliUtils::success(&format!("Model provider '{}' added successfully!", provider));
+        CliUtils::success(&format!(
+            "Model provider '{}' added successfully!",
+            provider
+        ));
         CliUtils::info(&format!("Model: {}", model_id));
 
         if requires_api_key && api_key.is_some() {
@@ -347,72 +386,81 @@ impl Commands {
 
     /// Remove a tool from the project
     pub async fn remove_tool(name: &str) -> Result<()> {
-        let project_root = CliUtils::find_project_root(".")
-            .ok_or_else(|| crate::Error::Other("Not in a Lumos.ai project directory".to_string()))?;
-        
+        let project_root = CliUtils::find_project_root(".").ok_or_else(|| {
+            crate::Error::Other("Not in a Lumos.ai project directory".to_string())
+        })?;
+
         CliUtils::progress(&format!("Removing tool '{}'...", name));
-        
+
         // Load current configuration
         let config_path = project_root.join("lumos.toml");
         let mut config = CliUtils::load_config(&config_path)?;
-        
+
         // Find and remove the tool
         let initial_len = config.tools.len();
         config.tools.retain(|t| t.name != name);
-        
+
         if config.tools.len() == initial_len {
             CliUtils::warning(&format!("Tool '{}' is not installed", name));
             return Ok(());
         }
-        
+
         // Save configuration
         CliUtils::save_config(&config_path, &config)?;
-        
+
         CliUtils::success(&format!("Tool '{}' removed successfully!", name));
-        
+
         Ok(())
     }
 
     /// Search for tools
     pub async fn search_tools(query: &str, limit: usize) -> Result<()> {
         CliUtils::progress(&format!("Searching for tools matching '{}'...", query));
-        
+
         let marketplace = Marketplace::new(
             "https://marketplace.lumos.ai".to_string(),
-            PathBuf::from(".lumos/cache")
+            PathBuf::from(".lumos/cache"),
         );
-        
+
         let tools = marketplace.search(query, None).await?;
         let limited_tools: Vec<_> = tools.into_iter().take(limit).collect();
-        
+
         if limited_tools.is_empty() {
             CliUtils::info(&format!("No tools found matching '{}'", query));
             return Ok(());
         }
-        
+
         println!("\n🔍 Search Results for '{}':", query);
         println!("┌─────────────────────────────────────────────────────────────────┐");
-        
+
         for tool in limited_tools {
             // Use a default icon since ToolPackage doesn't have category field
             let category_icon = "🔧";
 
-            println!("│ {} {:<20} │ v{:<8} │ {:<25} │",
-                category_icon, tool.name, tool.version,
+            println!(
+                "│ {} {:<20} │ v{:<8} │ {:<25} │",
+                category_icon,
+                tool.name,
+                tool.version,
                 tool.description.chars().take(25).collect::<String>()
             );
         }
-        
+
         println!("└─────────────────────────────────────────────────────────────────┘");
         println!("\nUse 'lumos tools add <tool-name>' to install a tool.");
-        
+
         Ok(())
     }
 
     /// Build project for production
-    pub async fn build_project(target: &str, output: Option<PathBuf>, optimize: bool) -> Result<()> {
-        let project_root = CliUtils::find_project_root(".")
-            .ok_or_else(|| crate::Error::Other("Not in a Lumos.ai project directory".to_string()))?;
+    pub async fn build_project(
+        target: &str,
+        output: Option<PathBuf>,
+        optimize: bool,
+    ) -> Result<()> {
+        let project_root = CliUtils::find_project_root(".").ok_or_else(|| {
+            crate::Error::Other("Not in a Lumos.ai project directory".to_string())
+        })?;
 
         CliUtils::progress(&format!("Building project for {}...", target));
 
@@ -445,7 +493,10 @@ impl Commands {
                 // Debug build, no additional flags
             }
             _ => {
-                return Err(crate::Error::Other(format!("Unknown build target: {}", target)));
+                return Err(crate::Error::Other(format!(
+                    "Unknown build target: {}",
+                    target
+                )));
             }
         }
 
@@ -463,16 +514,25 @@ impl Commands {
 
     /// Run tests with optional coverage
     pub async fn test_project(watch: bool, coverage: bool, filter: Option<String>) -> Result<()> {
-        let project_root = CliUtils::find_project_root(".")
-            .ok_or_else(|| crate::Error::Other("Not in a Lumos.ai project directory".to_string()))?;
+        let project_root = CliUtils::find_project_root(".").ok_or_else(|| {
+            crate::Error::Other("Not in a Lumos.ai project directory".to_string())
+        })?;
 
         CliUtils::progress("Running tests...");
 
         if coverage {
             // Install cargo-tarpaulin if not available
-            if CliUtils::execute_command("cargo", &["tarpaulin", "--version"], Some(&project_root)).await.is_err() {
+            if CliUtils::execute_command("cargo", &["tarpaulin", "--version"], Some(&project_root))
+                .await
+                .is_err()
+            {
                 CliUtils::info("Installing cargo-tarpaulin for coverage...");
-                CliUtils::execute_command("cargo", &["install", "cargo-tarpaulin"], Some(&project_root)).await?;
+                CliUtils::execute_command(
+                    "cargo",
+                    &["install", "cargo-tarpaulin"],
+                    Some(&project_root),
+                )
+                .await?;
             }
 
             let mut tarpaulin_args = vec!["tarpaulin", "--out", "Html", "--output-dir", "coverage"];
@@ -485,9 +545,17 @@ impl Commands {
             CliUtils::info("Coverage report: coverage/tarpaulin-report.html");
         } else if watch {
             // Install cargo-watch if not available
-            if CliUtils::execute_command("cargo", &["watch", "--version"], Some(&project_root)).await.is_err() {
+            if CliUtils::execute_command("cargo", &["watch", "--version"], Some(&project_root))
+                .await
+                .is_err()
+            {
                 CliUtils::info("Installing cargo-watch for test watching...");
-                CliUtils::execute_command("cargo", &["install", "cargo-watch"], Some(&project_root)).await?;
+                CliUtils::execute_command(
+                    "cargo",
+                    &["install", "cargo-watch"],
+                    Some(&project_root),
+                )
+                .await?;
             }
 
             let test_cmd = if let Some(ref filter) = filter {
@@ -513,8 +581,9 @@ impl Commands {
 
     /// Format code using rustfmt
     pub async fn format_project(check: bool) -> Result<()> {
-        let project_root = CliUtils::find_project_root(".")
-            .ok_or_else(|| crate::Error::Other("Not in a Lumos.ai project directory".to_string()))?;
+        let project_root = CliUtils::find_project_root(".").ok_or_else(|| {
+            crate::Error::Other("Not in a Lumos.ai project directory".to_string())
+        })?;
 
         CliUtils::progress("Formatting code...");
 
@@ -546,8 +615,9 @@ impl Commands {
 
     /// Lint code using clippy
     pub async fn lint_project(fix: bool) -> Result<()> {
-        let project_root = CliUtils::find_project_root(".")
-            .ok_or_else(|| crate::Error::Other("Not in a Lumos.ai project directory".to_string()))?;
+        let project_root = CliUtils::find_project_root(".").ok_or_else(|| {
+            crate::Error::Other("Not in a Lumos.ai project directory".to_string())
+        })?;
 
         CliUtils::progress("Linting code...");
 
@@ -570,7 +640,9 @@ impl Commands {
                 if fix {
                     CliUtils::warning("Some issues could not be fixed automatically");
                 } else {
-                    CliUtils::error("Linting issues found. Run 'lumos lint --fix' to fix automatically.");
+                    CliUtils::error(
+                        "Linting issues found. Run 'lumos lint --fix' to fix automatically.",
+                    );
                     return Err(crate::Error::Other("Linting failed".to_string()));
                 }
             }
@@ -587,7 +659,10 @@ impl Commands {
             "data-agent" => Self::create_data_agent_template(dir, name).await,
             "chat-bot" => Self::create_chatbot_template(dir, name).await,
             "stock-assistant" => Self::create_stock_assistant_template(dir, name).await,
-            _ => Err(crate::Error::Other(format!("Unknown template: {}", template))),
+            _ => Err(crate::Error::Other(format!(
+                "Unknown template: {}",
+                template
+            ))),
         }
     }
 
@@ -597,10 +672,11 @@ impl Commands {
         fs::create_dir_all(dir.join("src"))?;
         fs::create_dir_all(dir.join("tests"))?;
         fs::create_dir_all(dir.join("examples"))?;
-        
+
         // Create main.rs
-        let main_rs = format!(r#"//! {} - A Lumos.ai Agent
-//! 
+        let main_rs = format!(
+            r#"//! {} - A Lumos.ai Agent
+//!
 //! This is a basic Lumos.ai agent project.
 
 use lumosai::{{agent, tools, Result}};
@@ -621,12 +697,15 @@ async fn main() -> Result<()> {{
 
     Ok(())
 }}
-"#, name, name);
-        
+"#,
+            name, name
+        );
+
         fs::write(dir.join("src/main.rs"), main_rs)?;
-        
+
         // Create Cargo.toml
-        let cargo_toml = format!(r#"[package]
+        let cargo_toml = format!(
+            r#"[package]
 name = "{}"
 version = "0.1.0"
 edition = "2021"
@@ -636,19 +715,22 @@ lumosai = {{ path = "../lumosai_core" }}
 tokio = {{ version = "1.0", features = ["full"] }}
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
-"#, name);
-        
+"#,
+            name
+        );
+
         fs::write(dir.join("Cargo.toml"), cargo_toml)?;
-        
+
         Ok(())
     }
 
     /// Create web agent template
     async fn create_web_agent_template(dir: &Path, name: &str) -> Result<()> {
         Self::create_basic_template(dir, name).await?;
-        
+
         // Override main.rs with web-specific content
-        let main_rs = format!(r#"//! {} - A Web-Enabled Lumos.ai Agent
+        let main_rs = format!(
+            r#"//! {} - A Web-Enabled Lumos.ai Agent
 
 use lumosai::{{agent, tools, Result}};
 
@@ -668,19 +750,22 @@ async fn main() -> Result<()> {{
 
     Ok(())
 }}
-"#, name, name);
-        
+"#,
+            name, name
+        );
+
         fs::write(dir.join("src/main.rs"), main_rs)?;
-        
+
         Ok(())
     }
 
     /// Create data agent template
     async fn create_data_agent_template(dir: &Path, name: &str) -> Result<()> {
         Self::create_basic_template(dir, name).await?;
-        
+
         // Override main.rs with data-specific content
-        let main_rs = format!(r#"//! {} - A Data Processing Lumos.ai Agent
+        let main_rs = format!(
+            r#"//! {} - A Data Processing Lumos.ai Agent
 
 use lumosai::{{agent, tools, Result}};
 
@@ -700,22 +785,25 @@ async fn main() -> Result<()> {{
 
     Ok(())
 }}
-"#, name, name);
-        
+"#,
+            name, name
+        );
+
         fs::write(dir.join("src/main.rs"), main_rs)?;
-        
+
         // Create sample data directory
         fs::create_dir_all(dir.join("data"))?;
-        
+
         Ok(())
     }
 
     /// Create chatbot template
     async fn create_chatbot_template(dir: &Path, name: &str) -> Result<()> {
         Self::create_basic_template(dir, name).await?;
-        
+
         // Override main.rs with chatbot-specific content
-        let main_rs = format!(r#"//! {} - An Interactive Chatbot
+        let main_rs = format!(
+            r#"//! {} - An Interactive Chatbot
 
 use lumosai::{{agent, tools, Result}};
 use std::io::{{self, Write}};
@@ -736,15 +824,15 @@ async fn main() -> Result<()> {{
     loop {{
         print!("You: ");
         io::stdout().flush().unwrap();
-        
+
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         let input = input.trim();
-        
+
         if input.eq_ignore_ascii_case("quit") {{
             break;
         }}
-        
+
         match agent.generate(input).await {{
             Ok(response) => println!("🤖: {{}}\n", response),
             Err(e) => println!("Error: {{}}\n", e),
@@ -754,10 +842,12 @@ async fn main() -> Result<()> {{
     println!("Goodbye! 👋");
     Ok(())
 }}
-"#, name, name, name);
-        
+"#,
+            name, name, name
+        );
+
         fs::write(dir.join("src/main.rs"), main_rs)?;
-        
+
         Ok(())
     }
 
@@ -766,7 +856,8 @@ async fn main() -> Result<()> {{
         Self::create_basic_template(dir, name).await?;
 
         // Override main.rs with stock-specific content
-        let main_rs = format!(r#"//! {} - A Stock Analysis Assistant
+        let main_rs = format!(
+            r#"//! {} - A Stock Analysis Assistant
 //!
 //! This agent can analyze stock data, provide market insights, and track portfolios.
 
@@ -839,7 +930,9 @@ async fn main() -> Result<()> {{
     println!("📊 Thank you for using {} Stock Assistant! 👋");
     Ok(())
 }}
-"#, name, name, name, name);
+"#,
+            name, name, name, name
+        );
 
         fs::write(dir.join("src/main.rs"), main_rs)?;
 
@@ -883,7 +976,8 @@ TSLA,25,200.00,2023-03-01
         fs::write(dir.join("data/portfolio.csv"), sample_portfolio)?;
 
         // Create README with usage instructions
-        let readme = format!(r#"# {} - Stock Analysis Assistant
+        let readme = format!(
+            r#"# {} - Stock Analysis Assistant
 
 A powerful AI-powered stock analysis assistant built with Lumos.ai.
 
@@ -941,7 +1035,9 @@ lumos lint
 ## Disclaimer
 
 This assistant provides educational information only. Always consult with a qualified financial advisor before making investment decisions. Past performance does not guarantee future results.
-"#, name);
+"#,
+            name
+        );
 
         fs::write(dir.join("README.md"), readme)?;
 
@@ -956,13 +1052,17 @@ This assistant provides educational information only. Always consult with a qual
                     ToolConfig {
                         name: "web_search".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "web-search".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "web-search".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                     ToolConfig {
                         name: "http_request".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "http-request".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "http-request".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                 ]);
@@ -972,13 +1072,17 @@ This assistant provides educational information only. Always consult with a qual
                     ToolConfig {
                         name: "csv_reader".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "csv-reader".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "csv-reader".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                     ToolConfig {
                         name: "data_analyzer".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "data-analyzer".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "data-analyzer".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                 ]);
@@ -988,25 +1092,33 @@ This assistant provides educational information only. Always consult with a qual
                     ToolConfig {
                         name: "web_search".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "web-search".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "web-search".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                     ToolConfig {
                         name: "calculator".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "calculator".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "calculator".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                     ToolConfig {
                         name: "data_analyzer".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "data-analyzer".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "data-analyzer".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                     ToolConfig {
                         name: "csv_reader".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "csv-reader".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "csv-reader".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                 ]);
@@ -1016,20 +1128,24 @@ This assistant provides educational information only. Always consult with a qual
                     ToolConfig {
                         name: "memory".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "memory".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "memory".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                     ToolConfig {
                         name: "calculator".to_string(),
                         version: "1.0.0".to_string(),
-                        source: ToolSource::Marketplace { package: "calculator".to_string() },
+                        source: ToolSource::Marketplace {
+                            package: "calculator".to_string(),
+                        },
                         config: HashMap::new(),
                     },
                 ]);
             }
             _ => {} // Basic template has no default tools
         }
-        
+
         Ok(())
     }
 }

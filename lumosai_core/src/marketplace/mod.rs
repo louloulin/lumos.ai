@@ -1,5 +1,5 @@
 //! Tool marketplace infrastructure inspired by Mastra's ecosystem
-//! 
+//!
 //! This module provides tool discovery, installation, and management capabilities
 
 // pub mod registry;
@@ -199,10 +199,14 @@ impl Marketplace {
     }
 
     /// Search for tools
-    pub async fn search(&self, query: &str, category: Option<ToolCategory>) -> crate::Result<Vec<ToolPackage>> {
+    pub async fn search(
+        &self,
+        query: &str,
+        category: Option<ToolCategory>,
+    ) -> crate::Result<Vec<ToolPackage>> {
         // Mock implementation - in real version would query registry
         let mut results = Vec::new();
-        
+
         // Example search results
         if query.contains("web") || category == Some(ToolCategory::Web) {
             results.push(ToolPackage {
@@ -213,7 +217,11 @@ impl Marketplace {
                 license: "MIT".to_string(),
                 homepage: Some("https://github.com/webtools/scraper-pro".to_string()),
                 repository: Some("https://github.com/webtools/scraper-pro".to_string()),
-                keywords: vec!["web".to_string(), "scraping".to_string(), "html".to_string()],
+                keywords: vec![
+                    "web".to_string(),
+                    "scraping".to_string(),
+                    "html".to_string(),
+                ],
                 categories: vec![ToolCategory::Web],
                 dependencies: HashMap::new(),
                 lumos_version: ">=0.1.0".to_string(),
@@ -221,23 +229,21 @@ impl Marketplace {
                     tools: vec![ToolDefinition {
                         name: "scrape_page".to_string(),
                         description: "Scrape content from web pages".to_string(),
-                        parameters: vec![
-                            ParameterDefinition {
-                                name: "url".to_string(),
-                                description: "URL to scrape".to_string(),
-                                r#type: "string".to_string(),
-                                required: true,
-                                default: None,
-                                validation: Some(ValidationRule {
-                                    pattern: Some(r"^https?://".to_string()),
-                                    min_length: Some(10),
-                                    max_length: Some(2048),
-                                    min_value: None,
-                                    max_value: None,
-                                    allowed_values: None,
-                                }),
-                            }
-                        ],
+                        parameters: vec![ParameterDefinition {
+                            name: "url".to_string(),
+                            description: "URL to scrape".to_string(),
+                            r#type: "string".to_string(),
+                            required: true,
+                            default: None,
+                            validation: Some(ValidationRule {
+                                pattern: Some(r"^https?://".to_string()),
+                                min_length: Some(10),
+                                max_length: Some(2048),
+                                min_value: None,
+                                max_value: None,
+                                allowed_values: None,
+                            }),
+                        }],
                         returns: ReturnDefinition {
                             r#type: "object".to_string(),
                             description: "Scraped content and metadata".to_string(),
@@ -259,19 +265,23 @@ impl Marketplace {
                 metadata: HashMap::new(),
             });
         }
-        
+
         Ok(results)
     }
 
     /// Install a tool package
-    pub async fn install(&mut self, package_name: &str, version: Option<&str>) -> crate::Result<()> {
+    pub async fn install(
+        &mut self,
+        package_name: &str,
+        version: Option<&str>,
+    ) -> crate::Result<()> {
         // Mock installation
         let version = version.unwrap_or("latest");
-        
+
         // In real implementation, would download and install the package
         println!("📦 Installing {} v{}", package_name, version);
         println!("✅ Successfully installed {}", package_name);
-        
+
         Ok(())
     }
 
@@ -281,7 +291,10 @@ impl Marketplace {
             println!("🗑️  Uninstalled {}", package_name);
             Ok(())
         } else {
-            Err(crate::Error::Tool(format!("Package '{}' is not installed", package_name)))
+            Err(crate::Error::Tool(format!(
+                "Package '{}' is not installed",
+                package_name
+            )))
         }
     }
 
@@ -299,45 +312,51 @@ impl Marketplace {
                 return Ok(package);
             }
         }
-        
-        Err(crate::Error::Tool(format!("Package '{}' not found", package_name)))
+
+        Err(crate::Error::Tool(format!(
+            "Package '{}' not found",
+            package_name
+        )))
     }
 
     /// Validate tool package
     pub fn validate_package(&self, package: &ToolPackage) -> crate::Result<ValidationReport> {
         let mut report = ValidationReport::new();
-        
+
         // Validate package metadata
         if package.name.is_empty() {
             report.add_error("Package name cannot be empty");
         }
-        
+
         if package.version.is_empty() {
             report.add_error("Package version cannot be empty");
         }
-        
+
         if package.description.is_empty() {
             report.add_warning("Package description is empty");
         }
-        
+
         // Validate tools
         for tool in &package.manifest.tools {
             if tool.name.is_empty() {
                 report.add_error(&format!("Tool name cannot be empty"));
             }
-            
+
             if tool.description.is_empty() {
                 report.add_warning(&format!("Tool '{}' has no description", tool.name));
             }
-            
+
             // Validate parameters
             for param in &tool.parameters {
                 if param.name.is_empty() {
-                    report.add_error(&format!("Parameter name cannot be empty in tool '{}'", tool.name));
+                    report.add_error(&format!(
+                        "Parameter name cannot be empty in tool '{}'",
+                        tool.name
+                    ));
                 }
             }
         }
-        
+
         Ok(report)
     }
 
@@ -378,27 +397,27 @@ impl ValidationReport {
 
     pub fn format_report(&self) -> String {
         let mut output = String::new();
-        
+
         if self.is_valid {
             output.push_str("✅ Package validation passed\n");
         } else {
             output.push_str("❌ Package validation failed\n");
         }
-        
+
         if !self.errors.is_empty() {
             output.push_str("\n🚨 Errors:\n");
             for error in &self.errors {
                 output.push_str(&format!("  • {}\n", error));
             }
         }
-        
+
         if !self.warnings.is_empty() {
             output.push_str("\n⚠️  Warnings:\n");
             for warning in &self.warnings {
                 output.push_str(&format!("  • {}\n", warning));
             }
         }
-        
+
         output
     }
 }
@@ -411,11 +430,8 @@ mod tests {
     #[tokio::test]
     async fn test_marketplace_creation() {
         let cache_dir = env::temp_dir().join("lumos_test_cache");
-        let marketplace = Marketplace::new(
-            "https://registry.lumos.ai".to_string(),
-            cache_dir
-        );
-        
+        let marketplace = Marketplace::new("https://registry.lumos.ai".to_string(), cache_dir);
+
         assert_eq!(marketplace.registry_url, "https://registry.lumos.ai");
         assert_eq!(marketplace.installed_tools.len(), 0);
     }
@@ -423,12 +439,12 @@ mod tests {
     #[tokio::test]
     async fn test_tool_search() {
         let cache_dir = env::temp_dir().join("lumos_test_cache");
-        let marketplace = Marketplace::new(
-            "https://registry.lumos.ai".to_string(),
-            cache_dir
-        );
-        
-        let results = marketplace.search("web", Some(ToolCategory::Web)).await.unwrap();
+        let marketplace = Marketplace::new("https://registry.lumos.ai".to_string(), cache_dir);
+
+        let results = marketplace
+            .search("web", Some(ToolCategory::Web))
+            .await
+            .unwrap();
         assert!(!results.is_empty());
         assert_eq!(results[0].name, "web-scraper-pro");
     }
@@ -436,11 +452,8 @@ mod tests {
     #[tokio::test]
     async fn test_package_validation() {
         let cache_dir = env::temp_dir().join("lumos_test_cache");
-        let marketplace = Marketplace::new(
-            "https://registry.lumos.ai".to_string(),
-            cache_dir
-        );
-        
+        let marketplace = Marketplace::new("https://registry.lumos.ai".to_string(), cache_dir);
+
         let package = ToolPackage {
             name: "test-tool".to_string(),
             version: "1.0.0".to_string(),
@@ -462,7 +475,7 @@ mod tests {
             },
             metadata: HashMap::new(),
         };
-        
+
         let report = marketplace.validate_package(&package).unwrap();
         assert!(report.is_valid);
     }
@@ -478,13 +491,13 @@ mod tests {
     fn test_validation_report() {
         let mut report = ValidationReport::new();
         assert!(report.is_valid);
-        
+
         report.add_warning("Test warning");
         assert!(report.is_valid);
-        
+
         report.add_error("Test error");
         assert!(!report.is_valid);
-        
+
         let formatted = report.format_report();
         assert!(formatted.contains("❌"));
         assert!(formatted.contains("Test error"));

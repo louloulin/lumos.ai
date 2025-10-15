@@ -1,16 +1,16 @@
 //! BM25 keyword retrieval implementation
-//! 
+//!
 //! This module provides a BM25-based keyword retrieval system for exact term matching
 //! and traditional information retrieval scoring.
 
 use async_trait::async_trait;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::{
-    types::Document,
-    retriever::hybrid::{KeywordRetriever, ScoredDocument},
     error::Result,
+    retriever::hybrid::{KeywordRetriever, ScoredDocument},
+    types::Document,
 };
 
 /// Configuration for BM25 algorithm
@@ -41,8 +41,8 @@ impl Default for BM25Config {
 pub struct BM25Retriever {
     documents: Vec<Document>,
     term_frequencies: HashMap<String, HashMap<String, usize>>, // doc_id -> term -> freq
-    document_frequencies: HashMap<String, usize>, // term -> doc_count
-    document_lengths: HashMap<String, usize>, // doc_id -> length
+    document_frequencies: HashMap<String, usize>,              // term -> doc_count
+    document_lengths: HashMap<String, usize>,                  // doc_id -> length
     average_document_length: f32,
     config: BM25Config,
 }
@@ -83,11 +83,13 @@ impl BM25Retriever {
             let doc_length = terms.len();
             total_length += doc_length;
 
-            self.document_lengths.insert(document.id.clone(), doc_length);
+            self.document_lengths
+                .insert(document.id.clone(), doc_length);
 
             let mut term_freq: HashMap<String, usize> = HashMap::new();
             for term in terms {
-                if term.len() >= 2 { // Filter out very short terms
+                if term.len() >= 2 {
+                    // Filter out very short terms
                     *term_freq.entry(term).or_insert(0) += 1;
                 }
             }
@@ -168,9 +170,11 @@ impl BM25Retriever {
             let idf = (total_docs / doc_freq.max(1.0)).ln();
 
             // TF calculation with BM25 normalization
-            let tf_component = (term_freq * (self.config.k1 + 1.0)) /
-                (term_freq + self.config.k1 * (1.0 - self.config.b +
-                    self.config.b * (doc_length / self.average_document_length)));
+            let tf_component = (term_freq * (self.config.k1 + 1.0))
+                / (term_freq
+                    + self.config.k1
+                        * (1.0 - self.config.b
+                            + self.config.b * (doc_length / self.average_document_length)));
 
             score += idf * tf_component;
         }
@@ -193,7 +197,7 @@ impl BM25Retriever {
     /// Remove documents from the index
     pub fn remove_documents(&mut self, doc_ids: &[String]) -> Result<()> {
         self.documents.retain(|doc| !doc_ids.contains(&doc.id));
-        
+
         for doc_id in doc_ids {
             self.term_frequencies.remove(doc_id);
             self.document_lengths.remove(doc_id);
@@ -215,7 +219,8 @@ impl BM25Retriever {
             total_documents: self.documents.len(),
             total_terms: self.document_frequencies.len(),
             average_document_length: self.average_document_length,
-            total_term_occurrences: self.term_frequencies
+            total_term_occurrences: self
+                .term_frequencies
                 .values()
                 .map(|tf| tf.values().sum::<usize>())
                 .sum(),
@@ -244,7 +249,11 @@ impl KeywordRetriever for BM25Retriever {
         }
 
         // Sort by score (descending)
-        scored_docs.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        scored_docs.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Apply limit
         scored_docs.truncate(limit);
@@ -321,10 +330,10 @@ mod tests {
         let retriever = BM25Retriever::with_default_config(documents).unwrap();
 
         let results = retriever.search("fox", 10).await.unwrap();
-        
+
         // Should return documents in descending score order
         for i in 1..results.len() {
-            assert!(results[i-1].score >= results[i].score);
+            assert!(results[i - 1].score >= results[i].score);
         }
     }
 

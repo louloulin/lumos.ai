@@ -1,5 +1,5 @@
 //! GCP云服务适配器
-//! 
+//!
 //! 提供对Google Cloud Platform的集成支持，包括：
 //! - Cloud Run (容器服务)
 //! - Cloud Functions (函数计算)
@@ -28,11 +28,7 @@ pub struct GcpAdapter {
 
 impl GcpAdapter {
     /// 创建新的GCP适配器
-    pub fn new(
-        project_id: String,
-        service_account_key: String,
-        region: String,
-    ) -> Self {
+    pub fn new(project_id: String, service_account_key: String, region: String) -> Self {
         Self {
             project_id,
             service_account_key,
@@ -46,7 +42,8 @@ impl GcpAdapter {
         let project_id = std::env::var("GOOGLE_CLOUD_PROJECT")
             .or_else(|_| std::env::var("GCP_PROJECT_ID"))
             .map_err(|_| LumosError::ConfigError {
-                message: "GOOGLE_CLOUD_PROJECT or GCP_PROJECT_ID environment variable not found".to_string(),
+                message: "GOOGLE_CLOUD_PROJECT or GCP_PROJECT_ID environment variable not found"
+                    .to_string(),
             })?;
 
         let service_account_key = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
@@ -55,8 +52,7 @@ impl GcpAdapter {
                 message: "GOOGLE_APPLICATION_CREDENTIALS or GCP_SERVICE_ACCOUNT_KEY environment variable not found".to_string(),
             })?;
 
-        let region = std::env::var("GCP_REGION")
-            .unwrap_or_else(|_| "us-central1".to_string());
+        let region = std::env::var("GCP_REGION").unwrap_or_else(|_| "us-central1".to_string());
 
         let zone = std::env::var("GCP_ZONE").ok();
 
@@ -77,8 +73,12 @@ impl GcpAdapter {
     /// 创建Cloud Run服务
     async fn create_cloud_run_service(&self, config: &DeploymentConfig) -> Result<String> {
         // 这里应该调用Google Cloud Run API
-        let service_name = format!("{}-{}", config.name, uuid::Uuid::new_v4().to_string()[..8].to_string());
-        
+        let service_name = format!(
+            "{}-{}",
+            config.name,
+            uuid::Uuid::new_v4().to_string()[..8].to_string()
+        );
+
         // 实际实现中，这里会调用GCP SDK
         // let run_client = google_cloud_run::Client::new(...);
         // let service = run_client
@@ -97,8 +97,12 @@ impl GcpAdapter {
     /// 创建Cloud Function
     async fn create_cloud_function(&self, config: &DeploymentConfig) -> Result<String> {
         // 这里应该调用Google Cloud Functions API
-        let function_name = format!("{}-func-{}", config.name, uuid::Uuid::new_v4().to_string()[..8].to_string());
-        
+        let function_name = format!(
+            "{}-func-{}",
+            config.name,
+            uuid::Uuid::new_v4().to_string()[..8].to_string()
+        );
+
         // 实际实现中，这里会调用GCP SDK
         // let functions_client = google_cloud_functions::Client::new(...);
         // let function = functions_client
@@ -115,7 +119,11 @@ impl GcpAdapter {
     }
 
     /// 获取Cloud Logging日志
-    async fn get_cloud_logging_logs(&self, resource_name: &str, options: &LogOptions) -> Result<Vec<LogEntry>> {
+    async fn get_cloud_logging_logs(
+        &self,
+        resource_name: &str,
+        options: &LogOptions,
+    ) -> Result<Vec<LogEntry>> {
         // 这里应该调用Google Cloud Logging API
         let mut logs = Vec::new();
 
@@ -142,7 +150,11 @@ impl GcpAdapter {
     }
 
     /// 获取Cloud Monitoring指标
-    async fn get_cloud_monitoring_metrics(&self, resource_name: &str, options: &MetricsOptions) -> Result<MetricsData> {
+    async fn get_cloud_monitoring_metrics(
+        &self,
+        resource_name: &str,
+        options: &MetricsOptions,
+    ) -> Result<MetricsData> {
         // 这里应该调用Google Cloud Monitoring API
         let mut data_points = Vec::new();
 
@@ -223,7 +235,11 @@ impl CloudAdapter for GcpAdapter {
         Ok(DeploymentStatus::Running)
     }
 
-    async fn update_deployment(&self, deployment_id: &str, config: &DeploymentConfig) -> Result<DeploymentResult> {
+    async fn update_deployment(
+        &self,
+        deployment_id: &str,
+        config: &DeploymentConfig,
+    ) -> Result<DeploymentResult> {
         // 这里应该更新GCP服务
         let mut metadata = HashMap::new();
         metadata.insert("updated_at".to_string(), chrono::Utc::now().to_rfc3339());
@@ -246,16 +262,29 @@ impl CloudAdapter for GcpAdapter {
         self.get_cloud_logging_logs(deployment_id, options).await
     }
 
-    async fn get_metrics(&self, deployment_id: &str, options: &MetricsOptions) -> Result<MetricsData> {
-        self.get_cloud_monitoring_metrics(deployment_id, options).await
+    async fn get_metrics(
+        &self,
+        deployment_id: &str,
+        options: &MetricsOptions,
+    ) -> Result<MetricsData> {
+        self.get_cloud_monitoring_metrics(deployment_id, options)
+            .await
     }
 
-    async fn configure_autoscaling(&self, deployment_id: &str, config: &AutoscalingConfig) -> Result<()> {
+    async fn configure_autoscaling(
+        &self,
+        deployment_id: &str,
+        config: &AutoscalingConfig,
+    ) -> Result<()> {
         // 这里应该配置GCP Auto Scaling
         Ok(())
     }
 
-    async fn configure_load_balancer(&self, deployment_id: &str, config: &LoadBalancerConfig) -> Result<()> {
+    async fn configure_load_balancer(
+        &self,
+        deployment_id: &str,
+        config: &LoadBalancerConfig,
+    ) -> Result<()> {
         // 这里应该配置GCP Load Balancer
         Ok(())
     }
@@ -276,7 +305,9 @@ mod tests {
         assert_eq!(adapter.name(), "gcp");
         assert_eq!(adapter.project_id, "my-project");
         assert_eq!(adapter.region, "us-central1");
-        assert!(adapter.supported_services().contains(&CloudService::Container));
+        assert!(adapter
+            .supported_services()
+            .contains(&CloudService::Container));
     }
 
     #[test]
@@ -285,7 +316,8 @@ mod tests {
             "my-project".to_string(),
             "service-account-key.json".to_string(),
             "us-central1".to_string(),
-        ).with_zone("us-central1-a".to_string());
+        )
+        .with_zone("us-central1-a".to_string());
 
         assert_eq!(adapter.zone, Some("us-central1-a".to_string()));
     }
@@ -295,7 +327,7 @@ mod tests {
         // 清除环境变量
         std::env::remove_var("GOOGLE_CLOUD_PROJECT");
         std::env::remove_var("GCP_PROJECT_ID");
-        
+
         let result = GcpAdapter::from_env();
         assert!(result.is_err());
     }

@@ -1,31 +1,31 @@
 //! 威胁检测模块
-//! 
+//!
 //! 实时安全威胁监控和响应
 
 use async_trait::async_trait;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc, Duration, Timelike};
-use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Duration, Timelike, Utc};
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-use crate::error::{LumosError, Result};
 use super::{SecurityContext, ThreatSeverity};
+use crate::error::{LumosError, Result};
 
 /// 威胁检测配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThreatDetectionConfig {
     /// 是否启用实时检测
     pub enable_realtime_detection: bool,
-    
+
     /// 检测规则更新间隔（小时）
     pub rule_update_interval_hours: u64,
-    
+
     /// 威胁情报源
     pub threat_intelligence_sources: Vec<String>,
-    
+
     /// 异常检测敏感度
     pub anomaly_sensitivity: f64,
-    
+
     /// 自动响应配置
     pub auto_response: AutoResponseConfig,
 }
@@ -35,10 +35,7 @@ impl Default for ThreatDetectionConfig {
         Self {
             enable_realtime_detection: true,
             rule_update_interval_hours: 1,
-            threat_intelligence_sources: vec![
-                "internal".to_string(),
-                "mitre_attack".to_string(),
-            ],
+            threat_intelligence_sources: vec!["internal".to_string(), "mitre_attack".to_string()],
             anomaly_sensitivity: 0.8,
             auto_response: AutoResponseConfig::default(),
         }
@@ -50,13 +47,13 @@ impl Default for ThreatDetectionConfig {
 pub struct AutoResponseConfig {
     /// 是否启用自动阻断
     pub enable_auto_block: bool,
-    
+
     /// 自动阻断阈值
     pub auto_block_threshold: ThreatSeverity,
-    
+
     /// 是否启用自动隔离
     pub enable_auto_quarantine: bool,
-    
+
     /// 通知配置
     pub notification_config: NotificationConfig,
 }
@@ -229,7 +226,7 @@ impl ThreatDetector {
         let threat_intelligence = ThreatIntelligence::new().await?;
         let anomaly_detector = AnomalyDetector::new(config.anomaly_sensitivity).await?;
         let response_engine = ResponseEngine::new(&config.auto_response).await?;
-        
+
         Ok(Self {
             config: config.clone(),
             detection_rules,
@@ -239,80 +236,97 @@ impl ThreatDetector {
             threat_history: Vec::new(),
         })
     }
-    
+
     /// 检测威胁
     pub async fn detect(&mut self, context: &SecurityContext) -> Result<Vec<ThreatAlert>> {
         let mut alerts = Vec::new();
-        
+
         // 1. 基于规则的检测
         alerts.extend(self.rule_based_detection(context).await?);
-        
+
         // 2. 威胁情报检测
         alerts.extend(self.threat_intelligence_detection(context).await?);
-        
+
         // 3. 异常检测
         alerts.extend(self.anomaly_detection(context).await?);
-        
+
         // 4. 处理告警
         for alert in &alerts {
             self.process_alert(alert).await?;
         }
-        
+
         // 5. 保存到历史记录
         self.threat_history.extend(alerts.clone());
-        
+
         Ok(alerts)
     }
-    
+
     /// 获取当前威胁级别
     pub async fn get_current_threat_level(&self) -> Result<ThreatLevel> {
-        let recent_alerts: Vec<_> = self.threat_history.iter()
+        let recent_alerts: Vec<_> = self
+            .threat_history
+            .iter()
             .filter(|alert| {
                 let cutoff = Utc::now() - Duration::hours(24);
                 alert.timestamp > cutoff
             })
             .collect();
-        
-        if recent_alerts.iter().any(|a| matches!(a.severity, ThreatSeverity::Critical)) {
+
+        if recent_alerts
+            .iter()
+            .any(|a| matches!(a.severity, ThreatSeverity::Critical))
+        {
             Ok(ThreatLevel::Critical)
-        } else if recent_alerts.iter().any(|a| matches!(a.severity, ThreatSeverity::High)) {
+        } else if recent_alerts
+            .iter()
+            .any(|a| matches!(a.severity, ThreatSeverity::High))
+        {
             Ok(ThreatLevel::High)
-        } else if recent_alerts.iter().any(|a| matches!(a.severity, ThreatSeverity::Medium)) {
+        } else if recent_alerts
+            .iter()
+            .any(|a| matches!(a.severity, ThreatSeverity::Medium))
+        {
             Ok(ThreatLevel::Medium)
         } else {
             Ok(ThreatLevel::Low)
         }
     }
-    
+
     /// 添加检测规则
     pub async fn add_rule(&mut self, rule: DetectionRule) -> Result<()> {
         self.detection_rules.push(rule);
         Ok(())
     }
-    
+
     /// 更新威胁情报
     pub async fn update_threat_intelligence(&mut self) -> Result<()> {
         self.threat_intelligence.update().await
     }
-    
+
     /// 基于规则的检测
     async fn rule_based_detection(&self, context: &SecurityContext) -> Result<Vec<ThreatAlert>> {
         let mut alerts = Vec::new();
-        
+
         for rule in &self.detection_rules {
             if !rule.enabled {
                 continue;
             }
-            
+
             match rule.rule_type {
                 RuleType::Regex => {
                     if let Ok(regex) = Regex::new(&rule.pattern) {
-                        let text = format!("{} {} {}",
+                        let text = format!(
+                            "{} {} {}",
                             context.request_path,
                             context.user_agent.as_deref().unwrap_or(""),
-                            context.headers.values().map(|s| s.as_str()).collect::<Vec<_>>().join(" ")
+                            context
+                                .headers
+                                .values()
+                                .map(|s| s.as_str())
+                                .collect::<Vec<_>>()
+                                .join(" ")
                         );
-                        
+
                         if regex.is_match(&text) {
                             alerts.push(ThreatAlert {
                                 id: uuid::Uuid::new_v4().to_string(),
@@ -337,14 +351,17 @@ impl ThreatDetector {
                 }
             }
         }
-        
+
         Ok(alerts)
     }
-    
+
     /// 威胁情报检测
-    async fn threat_intelligence_detection(&self, context: &SecurityContext) -> Result<Vec<ThreatAlert>> {
+    async fn threat_intelligence_detection(
+        &self,
+        context: &SecurityContext,
+    ) -> Result<Vec<ThreatAlert>> {
         let mut alerts = Vec::new();
-        
+
         // 检查IP地址
         if let Some(indicator) = self.threat_intelligence.indicators.get(&context.ip_address) {
             alerts.push(ThreatAlert {
@@ -363,14 +380,14 @@ impl ThreatDetector {
                 status: AlertStatus::New,
             });
         }
-        
+
         Ok(alerts)
     }
-    
+
     /// 异常检测
     async fn anomaly_detection(&self, context: &SecurityContext) -> Result<Vec<ThreatAlert>> {
         let mut alerts = Vec::new();
-        
+
         // 简化的异常检测：检查请求频率
         let hour = context.timestamp.hour();
         if hour < 6 || hour > 22 {
@@ -381,18 +398,16 @@ impl ThreatDetector {
                 source: context.ip_address.clone(),
                 target: context.request_path.clone(),
                 description: "Access during unusual hours".to_string(),
-                indicators: HashMap::from([
-                    ("hour".to_string(), hour.to_string()),
-                ]),
+                indicators: HashMap::from([("hour".to_string(), hour.to_string())]),
                 confidence: 0.6,
                 timestamp: Utc::now(),
                 status: AlertStatus::New,
             });
         }
-        
+
         Ok(alerts)
     }
-    
+
     /// 处理告警
     async fn process_alert(&mut self, alert: &ThreatAlert) -> Result<()> {
         // 根据严重程度和配置决定响应
@@ -410,10 +425,10 @@ impl ThreatDetector {
                 // 仅记录日志
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// 加载默认规则
     async fn load_default_rules() -> Result<Vec<DetectionRule>> {
         Ok(vec![
@@ -444,23 +459,26 @@ impl ThreatDetector {
 impl ThreatIntelligence {
     async fn new() -> Result<Self> {
         let mut indicators = HashMap::new();
-        
+
         // 添加一些示例威胁指标
-        indicators.insert("192.168.100.100".to_string(), ThreatIndicator {
-            value: "192.168.100.100".to_string(),
-            indicator_type: IndicatorType::IpAddress,
-            severity: ThreatSeverity::High,
-            source: "internal_blacklist".to_string(),
-            first_seen: Utc::now() - Duration::days(30),
-            last_seen: Utc::now() - Duration::hours(1),
-        });
-        
+        indicators.insert(
+            "192.168.100.100".to_string(),
+            ThreatIndicator {
+                value: "192.168.100.100".to_string(),
+                indicator_type: IndicatorType::IpAddress,
+                severity: ThreatSeverity::High,
+                source: "internal_blacklist".to_string(),
+                first_seen: Utc::now() - Duration::days(30),
+                last_seen: Utc::now() - Duration::hours(1),
+            },
+        );
+
         Ok(Self {
             indicators,
             last_updated: Utc::now(),
         })
     }
-    
+
     async fn update(&mut self) -> Result<()> {
         // 在实际实现中，这里会从外部威胁情报源更新数据
         self.last_updated = Utc::now();
@@ -484,7 +502,7 @@ impl ResponseEngine {
             active_responses: HashMap::new(),
         })
     }
-    
+
     async fn block_source(&mut self, source: &str) -> Result<()> {
         let response_id = uuid::Uuid::new_v4().to_string();
         let response = ActiveResponse {
@@ -494,26 +512,26 @@ impl ResponseEngine {
             started_at: Utc::now(),
             expires_at: Some(Utc::now() + Duration::hours(24)),
         };
-        
+
         self.active_responses.insert(response_id, response);
-        
+
         // 在实际实现中，这里会调用防火墙或其他安全设备的API
         println!("Blocked source: {}", source);
-        
+
         Ok(())
     }
-    
+
     async fn send_notification(&self, alert: &ThreatAlert) -> Result<()> {
         if self.config.notification_config.email_alerts {
             // 发送邮件通知
             println!("Email alert sent for threat: {}", alert.threat_type);
         }
-        
+
         if let Some(webhook_url) = &self.config.notification_config.webhook_url {
             // 发送Webhook通知
             println!("Webhook notification sent to: {}", webhook_url);
         }
-        
+
         Ok(())
     }
 }
@@ -521,19 +539,19 @@ impl ResponseEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_threat_detector_creation() {
         let config = ThreatDetectionConfig::default();
         let detector = ThreatDetector::new(&config).await;
         assert!(detector.is_ok());
     }
-    
+
     #[tokio::test]
     async fn test_sql_injection_detection() {
         let config = ThreatDetectionConfig::default();
         let mut detector = ThreatDetector::new(&config).await.unwrap();
-        
+
         let context = SecurityContext {
             user_id: Some("test_user".to_string()),
             session_id: None,
@@ -544,9 +562,11 @@ mod tests {
             headers: HashMap::new(),
             timestamp: Utc::now(),
         };
-        
+
         let alerts = detector.detect(&context).await.unwrap();
         assert!(!alerts.is_empty());
-        assert!(alerts.iter().any(|a| a.threat_type == "SQL Injection Attempt"));
+        assert!(alerts
+            .iter()
+            .any(|a| a.threat_type == "SQL Injection Attempt"));
     }
 }

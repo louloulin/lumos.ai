@@ -9,12 +9,12 @@ use std::fs;
 
 fn main() {
     println!("🌐 Generating HTML page for browser testing...");
-    
+
     let html = generate_complete_page();
-    
+
     // Write to file
     fs::write("lumosai_ui_test.html", html).expect("Failed to write HTML file");
-    
+
     println!("✅ HTML page generated: lumosai_ui_test.html");
     println!("🌐 Open this file in your browser to test the UI!");
 }
@@ -25,7 +25,7 @@ fn generate_complete_page() -> String {
             class: "min-h-screen bg-gray-50 py-8",
             div {
                 class: "max-w-6xl mx-auto px-4",
-                
+
                 // Header
                 header {
                     class: "text-center mb-12",
@@ -49,11 +49,11 @@ fn generate_complete_page() -> String {
                         }
                     }
                 }
-                
+
                 // Component showcase grid
                 div {
                     class: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12",
-                    
+
                     // Buttons showcase
                     Card {
                         class: "p-6",
@@ -119,7 +119,7 @@ fn generate_complete_page() -> String {
                             }
                         }
                     }
-                    
+
                     // Forms showcase
                     Card {
                         class: "p-6",
@@ -172,7 +172,7 @@ fn generate_complete_page() -> String {
                             }
                         }
                     }
-                    
+
                     // Navigation showcase
                     Card {
                         class: "p-6",
@@ -207,33 +207,33 @@ fn generate_complete_page() -> String {
                                     class: "bg-gray-100 rounded-lg p-3",
                                     ul {
                                         class: "space-y-1",
-                                        li { 
-                                            a { 
-                                                href: "#", 
+                                        li {
+                                            a {
+                                                href: "#",
                                                 class: "block px-3 py-2 text-sm text-gray-700 hover:bg-gray-200 rounded",
-                                                "Dashboard" 
-                                            } 
+                                                "Dashboard"
+                                            }
                                         }
-                                        li { 
-                                            a { 
-                                                href: "#", 
+                                        li {
+                                            a {
+                                                href: "#",
                                                 class: "block px-3 py-2 text-sm text-gray-700 hover:bg-gray-200 rounded",
-                                                "Assistants" 
-                                            } 
+                                                "Assistants"
+                                            }
                                         }
-                                        li { 
-                                            a { 
-                                                href: "#", 
+                                        li {
+                                            a {
+                                                href: "#",
                                                 class: "block px-3 py-2 text-sm text-gray-700 hover:bg-gray-200 rounded",
-                                                "Settings" 
-                                            } 
+                                                "Settings"
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    
+
                     // Labels showcase
                     Card {
                         class: "p-6",
@@ -264,7 +264,7 @@ fn generate_complete_page() -> String {
                             }
                         }
                     }
-                    
+
                     // Data display
                     Card {
                         class: "p-6",
@@ -283,24 +283,24 @@ fn generate_complete_page() -> String {
                                         thead {
                                             class: "bg-gray-50",
                                             tr {
-                                                th { 
+                                                th {
                                                     class: "px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b",
-                                                    "Name" 
+                                                    "Name"
                                                 }
-                                                th { 
+                                                th {
                                                     class: "px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b",
-                                                    "Status" 
+                                                    "Status"
                                                 }
                                             }
                                         }
                                         tbody {
                                             tr {
                                                 class: "border-b",
-                                                td { 
+                                                td {
                                                     class: "px-4 py-2 text-sm text-gray-900",
-                                                    "John Doe" 
+                                                    "John Doe"
                                                 }
-                                                td { 
+                                                td {
                                                     class: "px-4 py-2",
                                                     Label {
                                                         label_role: LabelRole::Success,
@@ -309,11 +309,11 @@ fn generate_complete_page() -> String {
                                                 }
                                             }
                                             tr {
-                                                td { 
+                                                td {
                                                     class: "px-4 py-2 text-sm text-gray-900",
-                                                    "Jane Smith" 
+                                                    "Jane Smith"
                                                 }
-                                                td { 
+                                                td {
                                                     class: "px-4 py-2",
                                                     Label {
                                                         label_role: LabelRole::Warning,
@@ -327,7 +327,7 @@ fn generate_complete_page() -> String {
                             }
                         }
                     }
-                    
+
                     // Cards showcase
                     Card {
                         class: "p-6",
@@ -354,7 +354,7 @@ fn generate_complete_page() -> String {
                         }
                     }
                 }
-                
+
                 // Status section
                 div {
                     class: "text-center",
@@ -398,7 +398,7 @@ fn generate_complete_page() -> String {
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom styles for better component appearance */
-        .btn {{ 
+        .btn {{
             @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2;
         }}
         .btn-primary {{ @apply text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500; }}
@@ -406,21 +406,21 @@ fn generate_complete_page() -> String {
         .btn-success {{ @apply text-white bg-green-600 hover:bg-green-700 focus:ring-green-500; }}
         .btn-warning {{ @apply text-white bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500; }}
         .btn-error {{ @apply text-white bg-red-600 hover:bg-red-700 focus:ring-red-500; }}
-        
+
         .label {{ @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }}
         .label-success {{ @apply bg-green-100 text-green-800; }}
         .label-warning {{ @apply bg-yellow-100 text-yellow-800; }}
         .label-danger {{ @apply bg-red-100 text-red-800; }}
         .label-info {{ @apply bg-blue-100 text-blue-800; }}
-        
+
         .card {{ @apply bg-white overflow-hidden shadow rounded-lg border; }}
-        
-        .form-input {{ 
+
+        .form-input {{
             @apply mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500;
         }}
-        
+
         .form-label {{ @apply block text-sm font-medium text-gray-700 mb-1; }}
-        
+
         .breadcrumb {{ @apply flex items-center space-x-2 text-sm text-gray-500; }}
         .breadcrumb a {{ @apply text-blue-600 hover:text-blue-800; }}
         .breadcrumb-separator {{ @apply text-gray-400; }}
@@ -432,13 +432,13 @@ fn generate_complete_page() -> String {
         // Add some interactivity
         document.addEventListener('DOMContentLoaded', function() {{
             console.log('🌟 LumosAI UI Component Showcase loaded successfully!');
-            
+
             // Add click handlers to buttons
             document.querySelectorAll('button').forEach(button => {{
                 button.addEventListener('click', function(e) {{
                     e.preventDefault();
                     console.log('Button clicked:', this.textContent);
-                    
+
                     // Add a visual feedback
                     this.style.transform = 'scale(0.95)';
                     setTimeout(() => {{
@@ -446,7 +446,7 @@ fn generate_complete_page() -> String {
                     }}, 100);
                 }});
             }});
-            
+
             // Add form interaction
             document.querySelectorAll('input, select').forEach(input => {{
                 input.addEventListener('focus', function() {{

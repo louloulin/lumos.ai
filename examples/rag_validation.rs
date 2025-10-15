@@ -1,11 +1,11 @@
-use lumosai_rag::{Document, ChunkingStrategy, ChunkingConfig, Metadata};
-use lumosai_rag::document::{TextChunker, DocumentChunker};
+use async_trait::async_trait;
+use lumosai_rag::document::{DocumentChunker, TextChunker};
+use lumosai_rag::embedding::EmbeddingProvider;
 use lumosai_rag::retriever::{InMemoryVectorStore, VectorStore};
 use lumosai_rag::types::{RetrievalOptions, ScoredDocument};
-use lumosai_rag::embedding::EmbeddingProvider;
+use lumosai_rag::{ChunkingConfig, ChunkingStrategy, Document, Metadata};
 use serde_json::json;
 use std::time::Instant;
-use async_trait::async_trait;
 
 // Mock embedding provider for testing
 struct MockEmbeddingProvider;
@@ -19,8 +19,6 @@ impl EmbeddingProvider for MockEmbeddingProvider {
             .collect();
         Ok(embedding)
     }
-
-
 }
 
 /// RAG系统全面验证测试
@@ -28,31 +26,31 @@ impl EmbeddingProvider for MockEmbeddingProvider {
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 LumosAI RAG系统验证测试");
     println!("========================================");
-    
+
     // 测试1: 文档处理验证
     println!("\n📋 测试1: 文档处理验证");
     test_document_processing().await?;
-    
+
     // 测试2: 文本分块验证
     println!("\n📋 测试2: 文本分块验证");
     test_text_chunking().await?;
-    
+
     // 测试3: 向量化验证
     println!("\n📋 测试3: 向量化验证");
     test_embedding_generation().await?;
-    
+
     // 测试4: 向量检索验证
     println!("\n📋 测试4: 向量检索验证");
     test_vector_retrieval().await?;
-    
+
     // 测试5: 上下文管理验证
     println!("\n📋 测试5: 上下文管理验证");
     test_context_management().await?;
-    
+
     // 测试6: 端到端RAG流程验证
     println!("\n📋 测试6: 端到端RAG流程验证");
     test_end_to_end_rag().await?;
-    
+
     println!("\n✅ 所有RAG系统验证测试完成！");
     Ok(())
 }
@@ -89,7 +87,14 @@ async fn test_document_processing() -> std::result::Result<(), Box<dyn std::erro
         println!("✅ 文档 '{}' 处理成功! 耗时: {:?}", doc_id, duration);
         println!("📝 文档ID: {}", document.id);
         println!("📝 内容长度: {} 字符", document.content.len());
-        println!("📝 内容类型: {}", document.metadata.fields.get("content_type").unwrap_or(&json!("未知")));
+        println!(
+            "📝 内容类型: {}",
+            document
+                .metadata
+                .fields
+                .get("content_type")
+                .unwrap_or(&json!("未知"))
+        );
 
         // 验证文档内容
         if !document.content.is_empty() {
@@ -152,9 +157,28 @@ async fn test_text_chunking() -> std::result::Result<(), Box<dyn std::error::Err
 
     // 测试不同分块策略
     let strategies = vec![
-        ("递归分块", ChunkingStrategy::Recursive { separators: None, is_separator_regex: false }),
-        ("字符分块", ChunkingStrategy::Character { separator: "\n".to_string(), is_separator_regex: false }),
-        ("Markdown分块", ChunkingStrategy::Markdown { headers: None, return_each_line: false, strip_headers: false }),
+        (
+            "递归分块",
+            ChunkingStrategy::Recursive {
+                separators: None,
+                is_separator_regex: false,
+            },
+        ),
+        (
+            "字符分块",
+            ChunkingStrategy::Character {
+                separator: "\n".to_string(),
+                is_separator_regex: false,
+            },
+        ),
+        (
+            "Markdown分块",
+            ChunkingStrategy::Markdown {
+                headers: None,
+                return_each_line: false,
+                strip_headers: false,
+            },
+        ),
     ];
 
     for (strategy_name, strategy) in strategies {
@@ -177,7 +201,12 @@ async fn test_text_chunking() -> std::result::Result<(), Box<dyn std::error::Err
         let chunks = chunker.chunk(test_doc, &config).await?;
         let duration = start_time.elapsed();
 
-        println!("✅ {} 策略测试完成! 耗时: {:?}, 分块数: {}", strategy_name, duration, chunks.len());
+        println!(
+            "✅ {} 策略测试完成! 耗时: {:?}, 分块数: {}",
+            strategy_name,
+            duration,
+            chunks.len()
+        );
     }
 
     Ok(())
@@ -185,11 +214,11 @@ async fn test_text_chunking() -> std::result::Result<(), Box<dyn std::error::Err
 
 async fn test_embedding_generation() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🧪 测试向量化...");
-    
+
     // 注意：这里需要实际的API密钥才能测试
     // 为了演示，我们创建一个模拟的嵌入提供商
     println!("⚠️ 使用模拟嵌入提供商进行测试");
-    
+
     let test_texts = vec![
         "这是第一个测试文本，用于生成向量嵌入。",
         "这是第二个测试文本，内容与第一个相似。",
@@ -197,32 +226,30 @@ async fn test_embedding_generation() -> std::result::Result<(), Box<dyn std::err
         "人工智能和机器学习是现代技术的重要组成部分。",
         "Rust是一种系统编程语言，注重安全性和性能。",
     ];
-    
+
     // 模拟嵌入生成
     let mut embeddings = Vec::new();
     for (i, text) in test_texts.iter().enumerate() {
         let start_time = Instant::now();
-        
+
         // 模拟嵌入向量（实际应用中应该调用真实的嵌入API）
-        let embedding: Vec<f32> = (0..384)
-            .map(|j| ((i + j) as f32 * 0.01) % 1.0)
-            .collect();
-        
+        let embedding: Vec<f32> = (0..384).map(|j| ((i + j) as f32 * 0.01) % 1.0).collect();
+
         let duration = start_time.elapsed();
         embeddings.push(embedding);
-        
+
         println!("✅ 文本 {} 向量化完成! 耗时: {:?}", i + 1, duration);
         println!("📝 文本: {}", text);
         println!("📊 向量维度: {}", embeddings[i].len());
     }
-    
+
     // 验证嵌入质量
     println!("📊 嵌入质量验证:");
     for (i, embedding) in embeddings.iter().enumerate() {
         let norm: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         println!("📈 向量 {} 的L2范数: {:.4}", i + 1, norm);
     }
-    
+
     Ok(())
 }
 
@@ -273,7 +300,9 @@ async fn test_vector_retrieval() -> std::result::Result<(), Box<dyn std::error::
     };
 
     let start_time = Instant::now();
-    let results = vector_store.query_by_text("人工智能相关技术", &options, &embedding_provider).await?;
+    let results = vector_store
+        .query_by_text("人工智能相关技术", &options, &embedding_provider)
+        .await?;
     let duration = start_time.elapsed();
 
     println!("✅ 向量检索完成! 耗时: {:?}", duration);
@@ -366,7 +395,10 @@ async fn test_context_management() -> std::result::Result<(), Box<dyn std::error
 
     println!("📊 上下文统计:");
     println!("   文档数量: {}", scored_documents.len());
-    println!("   平均相似度: {:.4}", scored_documents.iter().map(|d| d.score).sum::<f32>() / scored_documents.len() as f32);
+    println!(
+        "   平均相似度: {:.4}",
+        scored_documents.iter().map(|d| d.score).sum::<f32>() / scored_documents.len() as f32
+    );
 
     Ok(())
 }
@@ -423,9 +455,7 @@ async fn test_end_to_end_rag() -> std::result::Result<(), Box<dyn std::error::Er
     // 3. 向量化（模拟）
     let mut chunk_documents = Vec::new();
     for (i, chunk) in all_chunks.iter().enumerate() {
-        let embedding: Vec<f32> = (0..384)
-            .map(|j| ((i + j) as f32 * 0.01) % 1.0)
-            .collect();
+        let embedding: Vec<f32> = (0..384).map(|j| ((i + j) as f32 * 0.01) % 1.0).collect();
 
         let mut metadata = Metadata::new();
         metadata.add("chunk_id", i);
@@ -462,7 +492,9 @@ async fn test_end_to_end_rag() -> std::result::Result<(), Box<dyn std::error::Er
     };
 
     let start_time = Instant::now();
-    let search_results = vector_store.query_by_text(query, &options, &embedding_provider).await?;
+    let search_results = vector_store
+        .query_by_text(query, &options, &embedding_provider)
+        .await?;
     let duration = start_time.elapsed();
 
     println!("✅ 步骤5: 查询检索完成 - 耗时: {:?}", duration);
@@ -483,7 +515,10 @@ async fn test_end_to_end_rag() -> std::result::Result<(), Box<dyn std::error::Er
     // 7. 结果展示
     println!("\n📋 端到端RAG流程结果:");
     println!("🔍 查询: {}", query);
-    println!("📊 检索到 {} 个相关文档片段", search_results.documents.len());
+    println!(
+        "📊 检索到 {} 个相关文档片段",
+        search_results.documents.len()
+    );
     println!("📝 构建的上下文长度: {} 字符", context.len());
 
     for (i, scored_doc) in search_results.documents.iter().enumerate() {

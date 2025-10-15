@@ -41,4 +41,4 @@ impl TableName {
             TableName::Traces => TABLE_TRACES,
         }
     }
-} 
+}

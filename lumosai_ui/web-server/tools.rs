@@ -102,15 +102,13 @@ impl Tool for CalculatorTool {
         ToolDefinition {
             name: "calculator".to_string(),
             description: "执行基本的数学计算".to_string(),
-            parameters: vec![
-                ToolParameter {
-                    name: "expression".to_string(),
-                    r#type: "string".to_string(),
-                    description: "要计算的数学表达式".to_string(),
-                    required: true,
-                    default: None,
-                },
-            ],
+            parameters: vec![ToolParameter {
+                name: "expression".to_string(),
+                r#type: "string".to_string(),
+                description: "要计算的数学表达式".to_string(),
+                required: true,
+                default: None,
+            }],
             category: "数学".to_string(),
             enabled: true,
         }
@@ -119,14 +117,15 @@ impl Tool for CalculatorTool {
     fn clone_box(&self) -> Box<dyn Tool> {
         Box::new(self.clone())
     }
-    
+
     fn execute(&self, params: Value, _context: &ToolContext) -> Result<ToolResult, ToolError> {
         let start_time = std::time::Instant::now();
-        
-        let expression = params.get("expression")
+
+        let expression = params
+            .get("expression")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ToolError::InvalidParameters("缺少expression参数".to_string()))?;
-        
+
         // 简单的计算器实现
         let result = match self.evaluate_expression(expression) {
             Ok(value) => ToolResult {
@@ -142,7 +141,7 @@ impl Tool for CalculatorTool {
                 execution_time_ms: start_time.elapsed().as_millis() as u64,
             },
         };
-        
+
         Ok(result)
     }
 }
@@ -151,7 +150,7 @@ impl CalculatorTool {
     fn evaluate_expression(&self, expr: &str) -> Result<f64, String> {
         // 简化的表达式计算器
         let expr = expr.replace(" ", "");
-        
+
         // 支持基本的四则运算
         if let Some(pos) = expr.find('+') {
             let (left, right) = expr.split_at(pos);
@@ -160,7 +159,7 @@ impl CalculatorTool {
             let right_val = self.parse_number(right)?;
             return Ok(left_val + right_val);
         }
-        
+
         if let Some(pos) = expr.find('-') {
             let (left, right) = expr.split_at(pos);
             let right = &right[1..];
@@ -168,7 +167,7 @@ impl CalculatorTool {
             let right_val = self.parse_number(right)?;
             return Ok(left_val - right_val);
         }
-        
+
         if let Some(pos) = expr.find('*') {
             let (left, right) = expr.split_at(pos);
             let right = &right[1..];
@@ -176,7 +175,7 @@ impl CalculatorTool {
             let right_val = self.parse_number(right)?;
             return Ok(left_val * right_val);
         }
-        
+
         if let Some(pos) = expr.find('/') {
             let (left, right) = expr.split_at(pos);
             let right = &right[1..];
@@ -187,11 +186,11 @@ impl CalculatorTool {
             }
             return Ok(left_val / right_val);
         }
-        
+
         // 如果没有运算符，直接解析数字
         self.parse_number(&expr)
     }
-    
+
     fn parse_number(&self, s: &str) -> Result<f64, String> {
         s.parse::<f64>().map_err(|_| format!("无效的数字: {}", s))
     }
@@ -206,15 +205,13 @@ impl Tool for TimeTool {
         ToolDefinition {
             name: "current_time".to_string(),
             description: "获取当前时间信息".to_string(),
-            parameters: vec![
-                ToolParameter {
-                    name: "format".to_string(),
-                    r#type: "string".to_string(),
-                    description: "时间格式 (iso, timestamp, readable)".to_string(),
-                    required: false,
-                    default: Some(json!("iso")),
-                },
-            ],
+            parameters: vec![ToolParameter {
+                name: "format".to_string(),
+                r#type: "string".to_string(),
+                description: "时间格式 (iso, timestamp, readable)".to_string(),
+                required: false,
+                default: Some(json!("iso")),
+            }],
             category: "系统".to_string(),
             enabled: true,
         }
@@ -223,16 +220,17 @@ impl Tool for TimeTool {
     fn clone_box(&self) -> Box<dyn Tool> {
         Box::new(self.clone())
     }
-    
+
     fn execute(&self, params: Value, _context: &ToolContext) -> Result<ToolResult, ToolError> {
         let start_time = std::time::Instant::now();
-        
-        let format = params.get("format")
+
+        let format = params
+            .get("format")
             .and_then(|v| v.as_str())
             .unwrap_or("iso");
-        
+
         let now = chrono::Utc::now();
-        
+
         let result = match format {
             "iso" => json!({
                 "time": now.to_rfc3339(),
@@ -249,7 +247,7 @@ impl Tool for TimeTool {
             }),
             _ => return Err(ToolError::InvalidParameters("无效的时间格式".to_string())),
         };
-        
+
         Ok(ToolResult {
             success: true,
             result: Some(result),
@@ -277,10 +275,10 @@ impl Tool for SystemInfoTool {
     fn clone_box(&self) -> Box<dyn Tool> {
         Box::new(self.clone())
     }
-    
+
     fn execute(&self, _params: Value, _context: &ToolContext) -> Result<ToolResult, ToolError> {
         let start_time = std::time::Instant::now();
-        
+
         let result = json!({
             "platform": std::env::consts::OS,
             "architecture": std::env::consts::ARCH,
@@ -288,7 +286,7 @@ impl Tool for SystemInfoTool {
             "version": env!("CARGO_PKG_VERSION"),
             "name": env!("CARGO_PKG_NAME")
         });
-        
+
         Ok(ToolResult {
             success: true,
             result: Some(result),
@@ -318,36 +316,36 @@ impl ToolRegistry {
         let mut registry = Self {
             tools: HashMap::new(),
         };
-        
+
         // 注册内置工具
         registry.register_builtin_tools();
-        
+
         registry
     }
-    
+
     /// 注册内置工具
     fn register_builtin_tools(&mut self) {
         self.register_tool(Box::new(CalculatorTool));
         self.register_tool(Box::new(TimeTool));
         self.register_tool(Box::new(SystemInfoTool));
     }
-    
+
     /// 注册工具
     pub fn register_tool(&mut self, tool: Box<dyn Tool>) {
         let name = tool.definition().name.clone();
         self.tools.insert(name, tool);
     }
-    
+
     /// 获取工具
     pub fn get_tool(&self, name: &str) -> Option<&Box<dyn Tool>> {
         self.tools.get(name)
     }
-    
+
     /// 获取所有工具定义
     pub fn get_all_definitions(&self) -> Vec<ToolDefinition> {
         self.tools.values().map(|tool| tool.definition()).collect()
     }
-    
+
     /// 获取启用的工具定义
     pub fn get_enabled_definitions(&self) -> Vec<ToolDefinition> {
         self.tools
@@ -356,7 +354,7 @@ impl ToolRegistry {
             .filter(|def| def.enabled)
             .collect()
     }
-    
+
     /// 执行工具
     pub fn execute_tool(
         &self,
@@ -364,9 +362,10 @@ impl ToolRegistry {
         params: Value,
         context: &ToolContext,
     ) -> Result<ToolResult, ToolError> {
-        let tool = self.get_tool(name)
+        let tool = self
+            .get_tool(name)
             .ok_or_else(|| ToolError::ToolNotFound(name.to_string()))?;
-        
+
         tool.execute(params, context)
     }
 }

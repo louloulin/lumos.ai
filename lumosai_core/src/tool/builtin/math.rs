@@ -1,13 +1,15 @@
 //! Mathematical computation tools inspired by Mastra's math utilities
-//! 
+//!
 //! This module provides calculator, statistics, and mathematical operations
 
-use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool, ToolExecutionContext, ToolExecutionOptions};
-use serde_json::{Value, json};
-use std::collections::HashMap;
-use crate::{Result, Error};
 use crate::base::Base;
+use crate::tool::{
+    FunctionTool, ParameterSchema, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
+};
+use crate::{Error, Result};
 use async_trait::async_trait;
+use serde_json::{json, Value};
+use std::collections::HashMap;
 
 /// Create a calculator tool
 /// Similar to Mastra's mathematical computation capabilities
@@ -44,16 +46,19 @@ pub fn create_calculator_tool() -> FunctionTool {
         "Evaluate mathematical expressions with high precision",
         schema,
         |params| {
-            let expression = params.get("expression")
+            let expression = params
+                .get("expression")
                 .and_then(|v| v.as_str())
                 .ok_or("Expression is required")?;
-            
-            let precision = params.get("precision")
+
+            let precision = params
+                .get("precision")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(10)
                 .min(20) as usize; // Limit precision to 20 decimal places
-            
-            let format = params.get("format")
+
+            let format = params
+                .get("format")
                 .and_then(|v| v.as_str())
                 .unwrap_or("decimal");
 
@@ -72,7 +77,7 @@ pub fn create_calculator_tool() -> FunctionTool {
                             } else {
                                 format!("{:.precision$}", value, precision = precision)
                             }
-                        },
+                        }
                         _ => format!("{:.precision$}", value, precision = precision),
                     };
 
@@ -89,15 +94,13 @@ pub fn create_calculator_tool() -> FunctionTool {
                             "absolute_value": value.abs()
                         }
                     }))
-                },
-                Err(e) => {
-                    Ok(json!({
-                        "success": false,
-                        "expression": expression,
-                        "error": e,
-                        "supported_operations": ["+", "-", "*", "/", "^", "sqrt", "sin", "cos", "tan", "log"]
-                    }))
                 }
+                Err(e) => Ok(json!({
+                    "success": false,
+                    "expression": expression,
+                    "error": e,
+                    "supported_operations": ["+", "-", "*", "/", "^", "sqrt", "sin", "cos", "tan", "log"]
+                })),
             }
         },
     )
@@ -138,22 +141,26 @@ pub fn create_statistics_tool() -> FunctionTool {
         "Perform statistical analysis on numerical data",
         schema,
         |params| {
-            let data = params.get("data")
+            let data = params
+                .get("data")
                 .and_then(|v| v.as_array())
                 .ok_or("Data array is required")?;
-            
-            let operations = params.get("operations")
+
+            let operations = params
+                .get("operations")
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
                 .unwrap_or_else(|| vec!["mean", "median", "mode", "std_dev", "variance"]);
-            
-            let precision = params.get("precision")
+
+            let precision = params
+                .get("precision")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(6)
                 .min(15) as usize;
 
             // Convert JSON array to f64 vector
-            let numbers: std::result::Result<Vec<f64>, &str> = data.iter()
+            let numbers: std::result::Result<Vec<f64>, &str> = data
+                .iter()
                 .map(|v| v.as_f64().ok_or("All data elements must be numbers"))
                 .collect();
 
@@ -182,7 +189,10 @@ pub fn create_statistics_tool() -> FunctionTool {
                             _ => continue,
                         };
 
-                        results.insert(operation, format!("{:.precision$}", result, precision = precision));
+                        results.insert(
+                            operation,
+                            format!("{:.precision$}", result, precision = precision),
+                        );
                     }
 
                     Ok(json!({
@@ -198,13 +208,11 @@ pub fn create_statistics_tool() -> FunctionTool {
                             "operations_performed": operations
                         }
                     }))
-                },
-                Err(e) => {
-                    Ok(json!({
-                        "success": false,
-                        "error": e
-                    }))
                 }
+                Err(e) => Ok(json!({
+                    "success": false,
+                    "error": e
+                })),
             }
         },
     )
@@ -213,7 +221,7 @@ pub fn create_statistics_tool() -> FunctionTool {
 /// Simple expression evaluator (mock implementation)
 fn evaluate_simple_expression(expr: &str) -> std::result::Result<f64, String> {
     let expr = expr.trim().replace(" ", "");
-    
+
     // Very basic calculator - in real implementation would use a proper parser
     if expr.contains("+") {
         let parts: Vec<&str> = expr.split('+').collect();
@@ -223,7 +231,7 @@ fn evaluate_simple_expression(expr: &str) -> std::result::Result<f64, String> {
             return Ok(a + b);
         }
     }
-    
+
     if expr.contains("-") && !expr.starts_with("-") {
         let parts: Vec<&str> = expr.split('-').collect();
         if parts.len() == 2 {
@@ -232,7 +240,7 @@ fn evaluate_simple_expression(expr: &str) -> std::result::Result<f64, String> {
             return Ok(a - b);
         }
     }
-    
+
     if expr.contains("*") {
         let parts: Vec<&str> = expr.split('*').collect();
         if parts.len() == 2 {
@@ -241,7 +249,7 @@ fn evaluate_simple_expression(expr: &str) -> std::result::Result<f64, String> {
             return Ok(a * b);
         }
     }
-    
+
     if expr.contains("/") {
         let parts: Vec<&str> = expr.split('/').collect();
         if parts.len() == 2 {
@@ -253,9 +261,10 @@ fn evaluate_simple_expression(expr: &str) -> std::result::Result<f64, String> {
             return Ok(a / b);
         }
     }
-    
+
     // Try to parse as a single number
-    expr.parse::<f64>().map_err(|_| format!("Unable to evaluate expression: {}", expr))
+    expr.parse::<f64>()
+        .map_err(|_| format!("Unable to evaluate expression: {}", expr))
 }
 
 /// Calculate mean of a dataset
@@ -267,7 +276,7 @@ fn calculate_mean(data: &[f64]) -> f64 {
 fn calculate_median(data: &[f64]) -> f64 {
     let mut sorted = data.to_vec();
     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    
+
     let len = sorted.len();
     if len % 2 == 0 {
         (sorted[len / 2 - 1] + sorted[len / 2]) / 2.0
@@ -282,13 +291,14 @@ fn calculate_mode(data: &[f64]) -> f64 {
     for &value in data {
         *counts.entry(value.to_bits()).or_insert(0) += 1;
     }
-    
+
     let max_count = counts.values().max().unwrap_or(&0);
-    let mode_bits = counts.iter()
+    let mode_bits = counts
+        .iter()
         .find(|(_, &count)| count == *max_count)
         .map(|(&bits, _)| bits)
         .unwrap_or(0);
-    
+
     f64::from_bits(mode_bits)
 }
 
@@ -300,9 +310,7 @@ fn calculate_std_dev(data: &[f64]) -> f64 {
 /// Calculate variance
 fn calculate_variance(data: &[f64]) -> f64 {
     let mean = calculate_mean(data);
-    let sum_squared_diff: f64 = data.iter()
-        .map(|&x| (x - mean).powi(2))
-        .sum();
+    let sum_squared_diff: f64 = data.iter().map(|&x| (x - mean).powi(2)).sum();
     sum_squared_diff / data.len() as f64
 }
 
@@ -318,21 +326,19 @@ pub struct CalculatorTool {
 impl CalculatorTool {
     /// Create a new calculator tool
     pub fn new() -> Self {
-        let schema = ToolSchema::new(vec![
-            ParameterSchema {
-                name: "expression".to_string(),
-                description: "Mathematical expression to evaluate".to_string(),
-                r#type: "string".to_string(),
-                required: true,
-                properties: None,
-                default: None,
-            },
-        ]);
+        let schema = ToolSchema::new(vec![ParameterSchema {
+            name: "expression".to_string(),
+            description: "Mathematical expression to evaluate".to_string(),
+            r#type: "string".to_string(),
+            required: true,
+            properties: None,
+            default: None,
+        }]);
 
         Self {
             base: crate::base::BaseComponent::new_with_name(
                 "calculator".to_string(),
-                crate::logger::Component::Tool
+                crate::logger::Component::Tool,
             ),
             id: "calculator".to_string(),
             description: "Evaluate mathematical expressions".to_string(),
@@ -445,9 +451,10 @@ impl Tool for CalculatorTool {
         &self,
         params: Value,
         _context: ToolExecutionContext,
-        _options: &ToolExecutionOptions
+        _options: &ToolExecutionOptions,
     ) -> Result<Value> {
-        let expression = params.get("expression")
+        let expression = params
+            .get("expression")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::Tool("Expression parameter is required".to_string()))?;
 
@@ -477,16 +484,18 @@ mod tests {
     #[tokio::test]
     async fn test_calculator_tool() {
         let tool = create_calculator_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("expression".to_string(), json!("2 + 3"));
         params.insert("precision".to_string(), json!(2));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["result"], 5.0);
@@ -495,16 +504,18 @@ mod tests {
     #[tokio::test]
     async fn test_statistics_tool() {
         let tool = create_statistics_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("data".to_string(), json!([1, 2, 3, 4, 5]));
         params.insert("operations".to_string(), json!(["mean", "median"]));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["data_count"], 5);

@@ -12,9 +12,9 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
 use crate::types::Rbac;
+use dioxus::prelude::*;
 
 // 临时类型定义
 #[derive(Clone, Debug, PartialEq)]
@@ -50,10 +50,7 @@ pub struct TeamInfo {
 
 /// 团队管理页面
 #[component]
-pub fn TeamManagementPage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn TeamManagementPage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟数据
     let team_info = TeamInfo {
         id: team_id,
@@ -96,16 +93,14 @@ pub fn TeamManagementPage(
         },
     ];
 
-    let invitations = vec![
-        TeamInvitation {
-            id: 1,
-            email: "newdev@lumosai.com".to_string(),
-            role: "Developer".to_string(),
-            invited_by: "admin@lumosai.com".to_string(),
-            invited_at: "2024-01-18".to_string(),
-            expires_at: "2024-01-25".to_string(),
-        },
-    ];
+    let invitations = vec![TeamInvitation {
+        id: 1,
+        email: "newdev@lumosai.com".to_string(),
+        role: "Developer".to_string(),
+        invited_by: "admin@lumosai.com".to_string(),
+        invited_at: "2024-01-18".to_string(),
+        expires_at: "2024-01-25".to_string(),
+    }];
 
     rsx! {
         Layout {
@@ -211,10 +206,7 @@ fn TeamOverview(team_info: TeamInfo) -> Element {
 
 /// 团队成员列表组件
 #[component]
-fn TeamMembersList(
-    members: Vec<TeamMember>,
-    rbac: Rbac,
-) -> Element {
+fn TeamMembersList(members: Vec<TeamMember>, rbac: Rbac) -> Element {
     rsx! {
         div {
             class: "card bg-base-100 shadow-lg",
@@ -263,10 +255,7 @@ fn TeamMembersList(
 
 /// 团队成员行组件
 #[component]
-fn TeamMemberRow(
-    member: TeamMember,
-    rbac: Rbac,
-) -> Element {
+fn TeamMemberRow(member: TeamMember, rbac: Rbac) -> Element {
     let display_name = if let (Some(first), Some(last)) = (&member.first_name, &member.last_name) {
         format!("{} {}", first, last)
     } else {
@@ -379,10 +368,7 @@ fn TeamMemberRow(
 
 /// 待处理邀请组件
 #[component]
-fn PendingInvitations(
-    invitations: Vec<TeamInvitation>,
-    rbac: Rbac,
-) -> Element {
+fn PendingInvitations(invitations: Vec<TeamInvitation>, rbac: Rbac) -> Element {
     rsx! {
         div {
             class: "card bg-base-100 shadow-lg",
@@ -489,7 +475,7 @@ fn RolePermissions() -> Element {
                 }
                 div {
                     class: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4",
-                    
+
                     div {
                         class: "p-4 bg-primary/10 rounded-lg",
                         h5 {
@@ -503,7 +489,7 @@ fn RolePermissions() -> Element {
                             li { "• Delete team" }
                         }
                     }
-                    
+
                     div {
                         class: "p-4 bg-secondary/10 rounded-lg",
                         h5 {
@@ -517,7 +503,7 @@ fn RolePermissions() -> Element {
                             li { "• View all data" }
                         }
                     }
-                    
+
                     div {
                         class: "p-4 bg-accent/10 rounded-lg",
                         h5 {
@@ -531,7 +517,7 @@ fn RolePermissions() -> Element {
                             li { "• View team data" }
                         }
                     }
-                    
+
                     div {
                         class: "p-4 bg-neutral/10 rounded-lg",
                         h5 {

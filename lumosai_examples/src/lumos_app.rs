@@ -1,11 +1,11 @@
-use lumosai_core::{Result, Agent};
-use lumosai_core::llm::{DeepSeekProvider, LlmOptions, LlmProvider, Message, Role};
+use async_trait::async_trait;
+use lumos_macro::{agent, tools};
 use lumosai_core::agent::types::AgentGenerateOptions;
+use lumosai_core::llm::{DeepSeekProvider, LlmOptions, LlmProvider, Message, Role};
+use lumosai_core::{Agent, Result};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_trait::async_trait;
-use lumos_macro::{tools, agent};
 
 // 创建DeepSeek适配器，包装DeepSeekProvider以符合宏要求
 // #[derive(LlmAdapter)] // 暂时禁用宏，使用手动实现
@@ -40,8 +40,14 @@ impl LlmProvider for DeepSeekLlmAdapter {
         self.provider.generate(prompt, options).await
     }
 
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
-        self.provider.generate_with_messages(messages, options).await
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
+        self.provider
+            .generate_with_messages(messages, options)
+            .await
     }
 
     async fn generate_stream<'a>(
@@ -287,10 +293,19 @@ async fn main() -> Result<()> {
 
     // 演示各种股票查询功能
     let demo_queries = [
-        ("📊 股票价格查询", "请查询苹果公司(AAPL)的当前股票价格和基本信息"),
-        ("📰 股票新闻分析", "请获取苹果公司的最新新闻，并分析对股价的影响"),
+        (
+            "📊 股票价格查询",
+            "请查询苹果公司(AAPL)的当前股票价格和基本信息",
+        ),
+        (
+            "📰 股票新闻分析",
+            "请获取苹果公司的最新新闻，并分析对股价的影响",
+        ),
         ("💹 多股票对比", "请对比苹果(AAPL)和微软(MSFT)的股票表现"),
-        ("🔍 投资建议", "基于特斯拉(TSLA)的最新数据，给我一些投资建议"),
+        (
+            "🔍 投资建议",
+            "基于特斯拉(TSLA)的最新数据，给我一些投资建议",
+        ),
     ];
 
     for (title, query) in demo_queries.iter() {
@@ -308,10 +323,13 @@ async fn main() -> Result<()> {
             name: None,
         };
 
-        match app.generate(&[user_message], &AgentGenerateOptions::default()).await {
+        match app
+            .generate(&[user_message], &AgentGenerateOptions::default())
+            .await
+        {
             Ok(result) => {
                 println!("\n💬 Lumos股票助手: {}", result.response);
-            },
+            }
             Err(e) => {
                 println!("❌ 错误: {}", e);
             }

@@ -1,33 +1,33 @@
 use async_trait::async_trait;
 // use futures::stream; // Unused
-use futures::stream::BoxStream;
 use async_openai::{
+    config::OpenAIConfig,
+    error::OpenAIError,
     types::{
-        ChatCompletionRequestSystemMessage,
-        ChatCompletionRequestUserMessage,
         ChatCompletionRequestAssistantMessage,
         ChatCompletionRequestMessage,
-        Role as OpenAIRole,
-        CreateEmbeddingRequest,
-        CreateChatCompletionRequestArgs,
+        ChatCompletionRequestSystemMessage,
+        ChatCompletionRequestUserMessage,
         ChatCompletionRequestUserMessageContent,
+        CreateChatCompletionRequestArgs,
+        CreateEmbeddingRequest,
         EmbeddingInput,
         // CreateChatCompletionStreamResponse, // Unused
+        Role as OpenAIRole,
     },
-    error::OpenAIError,
     Client,
-    config::OpenAIConfig,
 };
+use futures::stream::BoxStream;
 use futures::{/* Stream, StreamExt, */ TryStreamExt}; // Removed unused imports
 use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, json};
 // use std::collections::HashMap; // Unused
 
-use crate::Result;
-use crate::Error;
 use super::provider::LlmProvider;
 use super::types::{LlmOptions, Message, Role};
+use crate::Error;
+use crate::Result;
 
 impl From<OpenAIError> for Error {
     fn from(err: OpenAIError) -> Self {
@@ -234,10 +234,10 @@ pub struct QwenProvider {
 impl QwenProvider {
     /// Create a new Qwen provider with custom base URL and API type
     pub fn new_with_api_type(
-        api_key: impl Into<String>, 
-        model: impl Into<String>, 
-        base_url: impl Into<String>, 
-        api_type: QwenApiType
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        base_url: impl Into<String>,
+        api_type: QwenApiType,
     ) -> Self {
         let api_key_str = api_key.into();
         let config = OpenAIConfig::new()
@@ -257,7 +257,11 @@ impl QwenProvider {
     }
 
     /// Create a new Qwen provider with DashScope API
-    pub fn new(api_key: impl Into<String>, model: impl Into<String>, base_url: impl Into<String>) -> Self {
+    pub fn new(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        base_url: impl Into<String>,
+    ) -> Self {
         Self::new_with_api_type(api_key, model, base_url, QwenApiType::DashScope)
     }
 
@@ -267,7 +271,7 @@ impl QwenProvider {
             api_key,
             model,
             "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            QwenApiType::DashScope
+            QwenApiType::DashScope,
         )
     }
 
@@ -277,62 +281,66 @@ impl QwenProvider {
             api_key,
             model,
             "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            QwenApiType::DashScope
+            QwenApiType::DashScope,
         )
     }
 
     /// Create a new Qwen provider with OpenAI-compatible API
     pub fn new_openai_compatible(
-        api_key: impl Into<String>, 
+        api_key: impl Into<String>,
         model: impl Into<String>,
         base_url: Option<impl Into<String>>,
     ) -> Self {
         Self::new_with_api_type(
             api_key,
             model,
-            base_url.map(|url| url.into())
+            base_url
+                .map(|url| url.into())
                 .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1".to_string()),
-            QwenApiType::OpenAICompatible
+            QwenApiType::OpenAICompatible,
         )
     }
 
     /// Convert internal Message type to OpenAI ChatCompletionRequestMessage
     fn convert_messages(&self, messages: &[Message]) -> Vec<ChatCompletionRequestMessage> {
-        messages.iter().map(|msg| {
-            match msg.role {
-                Role::System => ChatCompletionRequestMessage::System(
-                    ChatCompletionRequestSystemMessage {
-                        role: OpenAIRole::System,
-                        content: msg.content.clone(),
-                        name: msg.name.clone(),
+        messages
+            .iter()
+            .map(|msg| {
+                match msg.role {
+                    Role::System => {
+                        ChatCompletionRequestMessage::System(ChatCompletionRequestSystemMessage {
+                            role: OpenAIRole::System,
+                            content: msg.content.clone(),
+                            name: msg.name.clone(),
+                        })
                     }
-                ),
-                Role::User => ChatCompletionRequestMessage::User(
-                    ChatCompletionRequestUserMessage {
+                    Role::User => {
+                        ChatCompletionRequestMessage::User(ChatCompletionRequestUserMessage {
+                            role: OpenAIRole::User,
+                            content: ChatCompletionRequestUserMessageContent::Text(
+                                msg.content.clone(),
+                            ),
+                            name: msg.name.clone(),
+                        })
+                    }
+                    Role::Assistant => ChatCompletionRequestMessage::Assistant(
+                        ChatCompletionRequestAssistantMessage {
+                            role: OpenAIRole::Assistant,
+                            content: Some(msg.content.clone()),
+                            name: msg.name.clone(),
+                            tool_calls: None,
+                            #[allow(deprecated)]
+                            function_call: None, // Deprecated but still required
+                        },
+                    ),
+                    _ => ChatCompletionRequestMessage::User(ChatCompletionRequestUserMessage {
                         role: OpenAIRole::User,
                         content: ChatCompletionRequestUserMessageContent::Text(msg.content.clone()),
                         name: msg.name.clone(),
-                    }
-                ),
-                Role::Assistant => ChatCompletionRequestMessage::Assistant(
-                    ChatCompletionRequestAssistantMessage {
-                        role: OpenAIRole::Assistant,
-                        content: Some(msg.content.clone()),
-                        name: msg.name.clone(),
-                        tool_calls: None,
-                        #[allow(deprecated)]
-                        function_call: None, // Deprecated but still required
-                    }
-                ),
-                _ => ChatCompletionRequestMessage::User(
-                    ChatCompletionRequestUserMessage {
-                        role: OpenAIRole::User,
-                        content: ChatCompletionRequestUserMessageContent::Text(msg.content.clone()),
-                        name: msg.name.clone(),
-                    }
-                ),
-            }
-        }).collect()
+                    }),
+                }
+            })
+            .collect()
     }
 }
 
@@ -352,21 +360,28 @@ impl LlmProvider for QwenProvider {
         self.generate_with_messages(&messages, options).await
     }
 
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         match self.api_type {
             QwenApiType::OpenAICompatible => {
                 // For Qwen models, we need to use direct HTTP requests to handle enable_thinking parameter
-                let messages_json: Vec<serde_json::Value> = messages.iter().map(|msg| {
-                    json!({
-                        "role": match msg.role {
-                            Role::System => "system",
-                            Role::User => "user",
-                            Role::Assistant => "assistant",
-                            _ => "user"
-                        },
-                        "content": msg.content
+                let messages_json: Vec<serde_json::Value> = messages
+                    .iter()
+                    .map(|msg| {
+                        json!({
+                            "role": match msg.role {
+                                Role::System => "system",
+                                Role::User => "user",
+                                Role::Assistant => "assistant",
+                                _ => "user"
+                            },
+                            "content": msg.content
+                        })
                     })
-                }).collect();
+                    .collect();
 
                 let request = json!({
                     "model": self.model,
@@ -386,11 +401,18 @@ impl LlmProvider for QwenProvider {
                     .await
                     .map_err(|e| Error::Llm(e.to_string()))?;
 
-                let response_text = response.text().await
+                let response_text = response
+                    .text()
+                    .await
                     .map_err(|e| Error::Llm(e.to_string()))?;
 
                 let response_json: OpenAICompatResponse = serde_json::from_str(&response_text)
-                    .map_err(|e| Error::Llm(format!("Failed to parse response: {}\nResponse text: {}", e, response_text)))?;
+                    .map_err(|e| {
+                        Error::Llm(format!(
+                            "Failed to parse response: {}\nResponse text: {}",
+                            e, response_text
+                        ))
+                    })?;
 
                 if let Some(choice) = response_json.choices.first() {
                     if let Some(content) = &choice.message.content {
@@ -404,17 +426,20 @@ impl LlmProvider for QwenProvider {
             }
             QwenApiType::DashScope => {
                 // Convert messages to DashScope format
-                let messages_json: Vec<serde_json::Value> = messages.iter().map(|msg| {
-                    json!({
-                        "role": match msg.role {
-                            Role::System => "system",
-                            Role::User => "user",
-                            Role::Assistant => "assistant",
-                            _ => "user"
-                        },
-                        "content": msg.content
+                let messages_json: Vec<serde_json::Value> = messages
+                    .iter()
+                    .map(|msg| {
+                        json!({
+                            "role": match msg.role {
+                                Role::System => "system",
+                                Role::User => "user",
+                                Role::Assistant => "assistant",
+                                _ => "user"
+                            },
+                            "content": msg.content
+                        })
                     })
-                }).collect();
+                    .collect();
 
                 // Build DashScope request
                 let request = json!({
@@ -441,11 +466,18 @@ impl LlmProvider for QwenProvider {
                     .await
                     .map_err(|e| Error::Llm(e.to_string()))?;
 
-                let response_text = response.text().await
+                let response_text = response
+                    .text()
+                    .await
                     .map_err(|e| Error::Llm(e.to_string()))?;
 
                 let response_json: DashScopeResponse = serde_json::from_str(&response_text)
-                    .map_err(|e| Error::Llm(format!("Failed to parse response: {}\nResponse text: {}", e, response_text)))?;
+                    .map_err(|e| {
+                        Error::Llm(format!(
+                            "Failed to parse response: {}\nResponse text: {}",
+                            e, response_text
+                        ))
+                    })?;
 
                 if let Some(text) = response_json.output.text {
                     Ok(text)
@@ -465,7 +497,7 @@ impl LlmProvider for QwenProvider {
     async fn generate_stream<'a>(
         &'a self,
         prompt: &'a str,
-        _options: &'a LlmOptions // Prefixed with underscore to indicate unused
+        _options: &'a LlmOptions, // Prefixed with underscore to indicate unused
     ) -> Result<BoxStream<'a, Result<String>>> {
         let messages = vec![Message {
             role: Role::User,
@@ -473,7 +505,7 @@ impl LlmProvider for QwenProvider {
             metadata: None,
             name: None,
         }];
-        
+
         let request = CreateChatCompletionRequestArgs::default()
             .model(&self.model)
             .messages(self.convert_messages(&messages))
@@ -481,13 +513,17 @@ impl LlmProvider for QwenProvider {
             .build()?;
 
         let stream = self.client.chat().create_stream(request).await?;
-        
-        Ok(Box::pin(stream
-            .map_err(|e| Error::Llm(e.to_string()))
-            .try_filter_map(|response| async move {
-                Ok(response.choices.first()
-                    .and_then(|choice| choice.delta.content.clone()))
-            })))
+
+        Ok(Box::pin(
+            stream
+                .map_err(|e| Error::Llm(e.to_string()))
+                .try_filter_map(|response| async move {
+                    Ok(response
+                        .choices
+                        .first()
+                        .and_then(|choice| choice.delta.content.clone()))
+                }),
+        ))
     }
 
     async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
@@ -500,7 +536,7 @@ impl LlmProvider for QwenProvider {
         };
 
         let response = self.client.embeddings().create(request).await?;
-        
+
         if let Some(embedding) = response.data.first() {
             Ok(embedding.embedding.clone())
         } else {
@@ -529,22 +565,32 @@ mod tests {
 
         // Test basic prompt generation
         let result = block_on(provider.generate("Hello", &LlmOptions::default()));
-        assert!(result.is_ok(), "Failed to generate text: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Failed to generate text: {:?}",
+            result.err()
+        );
 
         // Test message-based generation
-        let messages = vec![
-            Message {
-                role: Role::User,
-                content: "Hello".to_string(),
-                metadata: None,
-                name: None,
-            },
-        ];
+        let messages = vec![Message {
+            role: Role::User,
+            content: "Hello".to_string(),
+            metadata: None,
+            name: None,
+        }];
         let result = block_on(provider.generate_with_messages(&messages, &LlmOptions::default()));
-        assert!(result.is_ok(), "Failed to generate text with messages: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Failed to generate text with messages: {:?}",
+            result.err()
+        );
 
         // Test embeddings
         let result = block_on(provider.get_embedding("Hello"));
-        assert!(result.is_ok(), "Failed to get embedding: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Failed to get embedding: {:?}",
+            result.err()
+        );
     }
-} 
+}

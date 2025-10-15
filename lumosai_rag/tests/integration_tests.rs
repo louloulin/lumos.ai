@@ -23,14 +23,14 @@ impl EmbeddingProvider for MockEmbeddingProvider {
     async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, RagError> {
         // Generate a simple mock embedding based on text length and content
         let mut embedding = vec![0.0; self.dimension];
-        
+
         // Simple hash-like function for consistent embeddings
         let text_bytes = text.as_bytes();
         for (i, &byte) in text_bytes.iter().enumerate() {
             let idx = i % self.dimension;
             embedding[idx] += (byte as f32) / 255.0;
         }
-        
+
         // Normalize the embedding
         let norm: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         if norm > 0.0 {
@@ -38,7 +38,7 @@ impl EmbeddingProvider for MockEmbeddingProvider {
                 *val /= norm;
             }
         }
-        
+
         Ok(embedding)
     }
 }
@@ -46,14 +46,14 @@ impl EmbeddingProvider for MockEmbeddingProvider {
 #[tokio::test]
 async fn test_enhanced_chunker_recursive_strategy() {
     let chunker = EnhancedChunker::new();
-    
+
     let document = Document {
         id: "test-doc".to_string(),
         content: "This is the first paragraph.\n\nThis is the second paragraph.\n\nThis is the third paragraph with more content to test chunking.".to_string(),
         metadata: Metadata::new(),
         embedding: None,
     };
-    
+
     let config = ChunkingConfig {
         chunk_size: 50,
         chunk_overlap: 10,
@@ -63,16 +63,22 @@ async fn test_enhanced_chunker_recursive_strategy() {
         },
         ..Default::default()
     };
-    
+
     let chunks = chunker.chunk(document, &config).await.unwrap();
-    
+
     assert!(!chunks.is_empty());
     assert!(chunks.len() >= 2); // Should create multiple chunks
-    
+
     // Verify chunk metadata
     for (i, chunk) in chunks.iter().enumerate() {
-        assert_eq!(chunk.metadata.fields.get("chunk_index").unwrap(), &serde_json::json!(i as i64));
-        assert_eq!(chunk.metadata.fields.get("parent_document_id").unwrap(), &serde_json::json!("test-doc"));
+        assert_eq!(
+            chunk.metadata.fields.get("chunk_index").unwrap(),
+            &serde_json::json!(i as i64)
+        );
+        assert_eq!(
+            chunk.metadata.fields.get("parent_document_id").unwrap(),
+            &serde_json::json!("test-doc")
+        );
         assert!(!chunk.content.is_empty());
     }
 }
@@ -80,14 +86,14 @@ async fn test_enhanced_chunker_recursive_strategy() {
 #[tokio::test]
 async fn test_enhanced_chunker_markdown_strategy() {
     let chunker = EnhancedChunker::new();
-    
+
     let document = Document {
         id: "markdown-doc".to_string(),
         content: "# Main Title\n\nThis is the introduction.\n\n## Section 1\n\nContent of section 1.\n\n## Section 2\n\nContent of section 2.".to_string(),
         metadata: Metadata::new(),
         embedding: None,
     };
-    
+
     let config = ChunkingConfig {
         chunk_size: 100,
         chunk_overlap: 0,
@@ -98,27 +104,31 @@ async fn test_enhanced_chunker_markdown_strategy() {
         },
         ..Default::default()
     };
-    
+
     let chunks = chunker.chunk(document, &config).await.unwrap();
-    
+
     assert!(!chunks.is_empty());
-    
+
     // Verify that chunks contain header information
-    let content_combined: String = chunks.iter().map(|c| c.content.clone()).collect::<Vec<_>>().join(" ");
+    let content_combined: String = chunks
+        .iter()
+        .map(|c| c.content.clone())
+        .collect::<Vec<_>>()
+        .join(" ");
     assert!(content_combined.contains("Main Title") || content_combined.contains("Section"));
 }
 
 #[tokio::test]
 async fn test_enhanced_chunker_token_strategy() {
     let chunker = EnhancedChunker::new();
-    
+
     let document = Document {
         id: "token-doc".to_string(),
         content: "The quick brown fox jumps over the lazy dog. This is a test sentence for token-based chunking.".to_string(),
         metadata: Metadata::new(),
         embedding: None,
     };
-    
+
     let config = ChunkingConfig {
         chunk_size: 5, // 5 words per chunk
         chunk_overlap: 1,
@@ -128,12 +138,12 @@ async fn test_enhanced_chunker_token_strategy() {
         },
         ..Default::default()
     };
-    
+
     let chunks = chunker.chunk(document, &config).await.unwrap();
-    
+
     assert!(!chunks.is_empty());
     assert!(chunks.len() >= 2); // Should create multiple chunks
-    
+
     // Verify that each chunk has approximately the right number of words
     for chunk in &chunks {
         let word_count = chunk.content.split_whitespace().count();
@@ -145,18 +155,18 @@ async fn test_enhanced_chunker_token_strategy() {
 async fn test_rag_pipeline_basic_processing() {
     let embedding_provider = Box::new(MockEmbeddingProvider::new(384));
     let pipeline = RagPipeline::new(embedding_provider);
-    
+
     let document = Document {
         id: "pipeline-test".to_string(),
         content: "This is a test document for the RAG pipeline. It should be chunked and embedded properly.".to_string(),
         metadata: Metadata::new(),
         embedding: None,
     };
-    
+
     let processed_chunks = pipeline.process_document(document).await.unwrap();
-    
+
     assert!(!processed_chunks.is_empty());
-    
+
     // Verify that all chunks have embeddings
     for chunk in &processed_chunks {
         assert!(chunk.embedding.is_some());
@@ -168,7 +178,7 @@ async fn test_rag_pipeline_basic_processing() {
 #[tokio::test]
 async fn test_rag_pipeline_builder() {
     let embedding_provider = Box::new(MockEmbeddingProvider::new(512));
-    
+
     let pipeline = RagPipelineBuilder::new()
         .embedding_provider(embedding_provider)
         .chunk_size(200)
@@ -180,18 +190,18 @@ async fn test_rag_pipeline_builder() {
         .extract_metadata(true, true, true)
         .build()
         .unwrap();
-    
+
     let document = Document {
         id: "builder-test".to_string(),
         content: "First paragraph with some content.\n\nSecond paragraph with different content.\n\nThird paragraph for testing.".to_string(),
         metadata: Metadata::new(),
         embedding: None,
     };
-    
+
     let processed_chunks = pipeline.process_document(document).await.unwrap();
-    
+
     assert!(!processed_chunks.is_empty());
-    
+
     // Verify embeddings have correct dimension
     for chunk in &processed_chunks {
         assert!(chunk.embedding.is_some());
@@ -203,7 +213,7 @@ async fn test_rag_pipeline_builder() {
 async fn test_rag_pipeline_multiple_documents() {
     let embedding_provider = Box::new(MockEmbeddingProvider::new(256));
     let pipeline = RagPipeline::new(embedding_provider);
-    
+
     let documents = vec![
         Document {
             id: "doc1".to_string(),
@@ -218,22 +228,28 @@ async fn test_rag_pipeline_multiple_documents() {
             embedding: None,
         },
     ];
-    
+
     let processed_chunks = pipeline.process_documents(documents).await.unwrap();
-    
+
     assert!(!processed_chunks.is_empty());
-    
+
     // Verify that we have chunks from both documents
-    let doc1_chunks: Vec<_> = processed_chunks.iter()
-        .filter(|chunk| chunk.metadata.fields.get("parent_document_id") == Some(&serde_json::json!("doc1")))
+    let doc1_chunks: Vec<_> = processed_chunks
+        .iter()
+        .filter(|chunk| {
+            chunk.metadata.fields.get("parent_document_id") == Some(&serde_json::json!("doc1"))
+        })
         .collect();
-    let doc2_chunks: Vec<_> = processed_chunks.iter()
-        .filter(|chunk| chunk.metadata.fields.get("parent_document_id") == Some(&serde_json::json!("doc2")))
+    let doc2_chunks: Vec<_> = processed_chunks
+        .iter()
+        .filter(|chunk| {
+            chunk.metadata.fields.get("parent_document_id") == Some(&serde_json::json!("doc2"))
+        })
         .collect();
-    
+
     assert!(!doc1_chunks.is_empty());
     assert!(!doc2_chunks.is_empty());
-    
+
     // Verify all chunks have embeddings
     for chunk in &processed_chunks {
         assert!(chunk.embedding.is_some());
@@ -244,7 +260,7 @@ async fn test_rag_pipeline_multiple_documents() {
 #[tokio::test]
 async fn test_json_chunking_strategy() {
     let chunker = EnhancedChunker::new();
-    
+
     let json_content = r#"
     {
         "users": [
@@ -257,14 +273,14 @@ async fn test_json_chunking_strategy() {
         }
     }
     "#;
-    
+
     let document = Document {
         id: "json-doc".to_string(),
         content: json_content.to_string(),
         metadata: Metadata::new(),
         embedding: None,
     };
-    
+
     let config = ChunkingConfig {
         chunk_size: 200,
         chunk_overlap: 0,
@@ -274,22 +290,24 @@ async fn test_json_chunking_strategy() {
         },
         ..Default::default()
     };
-    
+
     let chunks = chunker.chunk(document, &config).await.unwrap();
-    
+
     assert!(!chunks.is_empty());
-    
+
     // Verify that chunks contain JSON structure information
-    let all_content: String = chunks.iter().map(|c| c.content.clone()).collect::<Vec<_>>().join(" ");
+    let all_content: String = chunks
+        .iter()
+        .map(|c| c.content.clone())
+        .collect::<Vec<_>>()
+        .join(" ");
     assert!(all_content.contains("users") || all_content.contains("settings"));
 }
 
 #[tokio::test]
 async fn test_pipeline_error_handling() {
     // Test with missing embedding provider
-    let result = RagPipelineBuilder::new()
-        .chunk_size(100)
-        .build();
+    let result = RagPipelineBuilder::new().chunk_size(100).build();
 
     assert!(result.is_err());
     if let Err(error) = result {

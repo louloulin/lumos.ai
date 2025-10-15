@@ -7,10 +7,10 @@
 //! - 实时异常监控和告警
 
 use async_trait::async_trait;
-use std::collections::{HashMap, VecDeque};
-use chrono::{DateTime, Utc, Duration, Timelike, Datelike};
-use uuid::Uuid;
+use chrono::{DateTime, Datelike, Duration, Timelike, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, VecDeque};
+use uuid::Uuid;
 
 use crate::error::LumosError;
 use crate::telemetry::AgentMetrics;
@@ -811,7 +811,9 @@ impl AnomalyDetectionEngine {
     /// 创建新的异常检测引擎
     pub fn new(config: AnomalyDetectionConfig) -> Self {
         Self {
-            statistical_detector: StatisticalAnomalyDetector::new(StatisticalDetectionConfig::default()),
+            statistical_detector: StatisticalAnomalyDetector::new(
+                StatisticalDetectionConfig::default(),
+            ),
             ml_detector: if config.ml_detection_enabled {
                 Some(MLAnomalyDetector::new(MLDetectionConfig::default()))
             } else {
@@ -824,12 +826,21 @@ impl AnomalyDetectionEngine {
     }
 
     /// 检测指标异常
-    pub async fn detect_metric_anomaly(&mut self, metric_name: &str, value: f64, timestamp: DateTime<Utc>) -> Result<Vec<AnomalyEvent>, LumosError> {
+    pub async fn detect_metric_anomaly(
+        &mut self,
+        metric_name: &str,
+        value: f64,
+        timestamp: DateTime<Utc>,
+    ) -> Result<Vec<AnomalyEvent>, LumosError> {
         let mut anomalies: Vec<AnomalyEvent> = Vec::new();
 
         // 统计异常检测
         if self.config.statistical_detection_enabled {
-            if let Some(anomaly) = self.statistical_detector.detect_anomaly(metric_name, value, timestamp).await? {
+            if let Some(anomaly) = self
+                .statistical_detector
+                .detect_anomaly(metric_name, value, timestamp)
+                .await?
+            {
                 anomalies.push(anomaly);
             }
         }
@@ -837,7 +848,10 @@ impl AnomalyDetectionEngine {
         // 机器学习异常检测
         if self.config.ml_detection_enabled {
             if let Some(ref mut ml_detector) = self.ml_detector {
-                if let Some(anomaly) = ml_detector.detect_anomaly(metric_name, value, timestamp).await? {
+                if let Some(anomaly) = ml_detector
+                    .detect_anomaly(metric_name, value, timestamp)
+                    .await?
+                {
                     anomalies.push(anomaly);
                 }
             }
@@ -852,12 +866,19 @@ impl AnomalyDetectionEngine {
     }
 
     /// 检测行为异常
-    pub async fn detect_behavior_anomaly(&mut self, user_id: &str, behavior_data: &BehaviorData) -> Result<Vec<AnomalyEvent>, LumosError> {
+    pub async fn detect_behavior_anomaly(
+        &mut self,
+        user_id: &str,
+        behavior_data: &BehaviorData,
+    ) -> Result<Vec<AnomalyEvent>, LumosError> {
         if !self.config.behavior_detection_enabled {
             return Ok(Vec::new());
         }
 
-        let anomalies = self.behavior_detector.detect_anomaly(user_id, behavior_data).await?;
+        let anomalies = self
+            .behavior_detector
+            .detect_anomaly(user_id, behavior_data)
+            .await?;
 
         // 记录异常到历史
         for anomaly in &anomalies {
@@ -885,9 +906,13 @@ impl AnomalyDetectionEngine {
     }
 
     /// 生成异常报告
-    pub async fn generate_anomaly_report(&self, time_range: Option<(DateTime<Utc>, DateTime<Utc>)>) -> Result<AnomalyReport, LumosError> {
+    pub async fn generate_anomaly_report(
+        &self,
+        time_range: Option<(DateTime<Utc>, DateTime<Utc>)>,
+    ) -> Result<AnomalyReport, LumosError> {
         let filtered_anomalies = if let Some((start, end)) = time_range {
-            self.anomaly_history.iter()
+            self.anomaly_history
+                .iter()
                 .filter(|a| a.detected_at >= start && a.detected_at <= end)
                 .cloned()
                 .collect()
@@ -896,13 +921,18 @@ impl AnomalyDetectionEngine {
         };
 
         let total_anomalies = filtered_anomalies.len() as u64;
-        let critical_anomalies = filtered_anomalies.iter()
+        let critical_anomalies = filtered_anomalies
+            .iter()
             .filter(|a| a.severity == AnomalySeverity::Critical)
             .count() as u64;
 
         // 计算平均异常分数
         let average_anomaly_score = if total_anomalies > 0 {
-            filtered_anomalies.iter().map(|a| a.anomaly_score).sum::<f64>() / total_anomalies as f64
+            filtered_anomalies
+                .iter()
+                .map(|a| a.anomaly_score)
+                .sum::<f64>()
+                / total_anomalies as f64
         } else {
             0.0
         };
@@ -910,13 +940,17 @@ impl AnomalyDetectionEngine {
         // 按类型分组异常
         let mut anomalies_by_type = HashMap::new();
         for anomaly in &filtered_anomalies {
-            *anomalies_by_type.entry(anomaly.anomaly_type.clone()).or_insert(0u64) += 1;
+            *anomalies_by_type
+                .entry(anomaly.anomaly_type.clone())
+                .or_insert(0u64) += 1;
         }
 
         // 按严重程度分组异常
         let mut anomalies_by_severity = HashMap::new();
         for anomaly in &filtered_anomalies {
-            *anomalies_by_severity.entry(anomaly.severity.clone()).or_insert(0u64) += 1;
+            *anomalies_by_severity
+                .entry(anomaly.severity.clone())
+                .or_insert(0u64) += 1;
         }
 
         Ok(AnomalyReport {
@@ -936,7 +970,9 @@ impl AnomalyDetectionEngine {
     fn get_top_anomalous_metrics(&self, anomalies: &[AnomalyEvent]) -> Vec<(String, u64)> {
         let mut metric_counts = HashMap::new();
         for anomaly in anomalies {
-            *metric_counts.entry(anomaly.metric_name.clone()).or_insert(0u64) += 1;
+            *metric_counts
+                .entry(anomaly.metric_name.clone())
+                .or_insert(0u64) += 1;
         }
 
         let mut sorted: Vec<_> = metric_counts.into_iter().collect();
@@ -953,8 +989,12 @@ impl AnomalyDetectionEngine {
             *daily_counts.entry(date).or_insert(0u64) += 1;
         }
 
-        daily_counts.into_iter()
-            .map(|(date, count)| AnomalyTrend { date, anomaly_count: count })
+        daily_counts
+            .into_iter()
+            .map(|(date, count)| AnomalyTrend {
+                date,
+                anomaly_count: count,
+            })
             .collect()
     }
 }
@@ -1048,7 +1088,12 @@ impl StatisticalAnomalyDetector {
     }
 
     /// 检测异常
-    pub async fn detect_anomaly(&mut self, metric_name: &str, value: f64, timestamp: DateTime<Utc>) -> Result<Option<AnomalyEvent>, LumosError> {
+    pub async fn detect_anomaly(
+        &mut self,
+        metric_name: &str,
+        value: f64,
+        timestamp: DateTime<Utc>,
+    ) -> Result<Option<AnomalyEvent>, LumosError> {
         // 添加数据点到窗口
         self.add_data_point(metric_name, value, timestamp);
 
@@ -1059,7 +1104,8 @@ impl StatisticalAnomalyDetector {
         if let Some(baseline) = self.baseline_models.get(metric_name) {
             for method in &self.detection_algorithms {
                 if let Some(anomaly_score) = self.calculate_anomaly_score(method, baseline, value) {
-                    if anomaly_score > 0.7 { // 阈值
+                    if anomaly_score > 0.7 {
+                        // 阈值
                         return Ok(Some(AnomalyEvent {
                             id: Uuid::new_v4(),
                             anomaly_type: AnomalyType::PointAnomaly,
@@ -1071,7 +1117,10 @@ impl StatisticalAnomalyDetector {
                             confidence: 0.8,
                             severity: self.determine_severity(anomaly_score),
                             detected_at: timestamp,
-                            description: format!("统计异常检测: {} 方法检测到异常值", self.method_name(method)),
+                            description: format!(
+                                "统计异常检测: {} 方法检测到异常值",
+                                self.method_name(method)
+                            ),
                             context: HashMap::new(),
                             root_cause_analysis: None,
                         }));
@@ -1085,7 +1134,10 @@ impl StatisticalAnomalyDetector {
 
     /// 添加数据点
     fn add_data_point(&mut self, metric_name: &str, value: f64, timestamp: DateTime<Utc>) {
-        let window = self.data_windows.entry(metric_name.to_string()).or_insert_with(VecDeque::new);
+        let window = self
+            .data_windows
+            .entry(metric_name.to_string())
+            .or_insert_with(VecDeque::new);
 
         window.push_back(DataPoint {
             timestamp,
@@ -1102,11 +1154,13 @@ impl StatisticalAnomalyDetector {
     /// 更新基线模型
     fn update_baseline_model(&mut self, metric_name: &str) -> Result<(), LumosError> {
         if let Some(window) = self.data_windows.get(metric_name) {
-            if window.len() >= 10 { // 最少需要10个数据点
+            if window.len() >= 10 {
+                // 最少需要10个数据点
                 let values: Vec<f64> = window.iter().map(|dp| dp.value).collect();
 
                 let mean = values.iter().sum::<f64>() / values.len() as f64;
-                let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
+                let variance =
+                    values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
                 let std_dev = variance.sqrt();
 
                 let mut sorted_values = values.clone();
@@ -1115,7 +1169,9 @@ impl StatisticalAnomalyDetector {
                 let min = sorted_values[0];
                 let max = sorted_values[sorted_values.len() - 1];
                 let median = if sorted_values.len() % 2 == 0 {
-                    (sorted_values[sorted_values.len() / 2 - 1] + sorted_values[sorted_values.len() / 2]) / 2.0
+                    (sorted_values[sorted_values.len() / 2 - 1]
+                        + sorted_values[sorted_values.len() / 2])
+                        / 2.0
                 } else {
                     sorted_values[sorted_values.len() / 2]
                 };
@@ -1139,7 +1195,8 @@ impl StatisticalAnomalyDetector {
                     seasonal_patterns: None, // 简化实现
                 };
 
-                self.baseline_models.insert(metric_name.to_string(), baseline);
+                self.baseline_models
+                    .insert(metric_name.to_string(), baseline);
             }
         }
 
@@ -1147,13 +1204,21 @@ impl StatisticalAnomalyDetector {
     }
 
     /// 计算异常分数
-    fn calculate_anomaly_score(&self, method: &StatisticalMethod, baseline: &BaselineModel, value: f64) -> Option<f64> {
+    fn calculate_anomaly_score(
+        &self,
+        method: &StatisticalMethod,
+        baseline: &BaselineModel,
+        value: f64,
+    ) -> Option<f64> {
         match method {
             StatisticalMethod::ZScore => {
                 if baseline.std_dev > 0.0 {
                     let z_score = (value - baseline.mean).abs() / baseline.std_dev;
                     if z_score > self.config.z_score_threshold {
-                        Some((z_score - self.config.z_score_threshold) / self.config.z_score_threshold)
+                        Some(
+                            (z_score - self.config.z_score_threshold)
+                                / self.config.z_score_threshold,
+                        )
                     } else {
                         None
                     }
@@ -1233,9 +1298,16 @@ impl MLAnomalyDetector {
     }
 
     /// 检测异常
-    pub async fn detect_anomaly(&mut self, metric_name: &str, value: f64, timestamp: DateTime<Utc>) -> Result<Option<AnomalyEvent>, LumosError> {
+    pub async fn detect_anomaly(
+        &mut self,
+        metric_name: &str,
+        value: f64,
+        timestamp: DateTime<Utc>,
+    ) -> Result<Option<AnomalyEvent>, LumosError> {
         // 提取特征
-        let features = self.feature_extractor.extract_features(metric_name, value, timestamp)?;
+        let features = self
+            .feature_extractor
+            .extract_features(metric_name, value, timestamp)?;
 
         // 使用模型预测
         if let Some(model) = self.models.get(metric_name) {
@@ -1246,7 +1318,9 @@ impl MLAnomalyDetector {
                     return Ok(Some(AnomalyEvent {
                         id: Uuid::new_v4(),
                         anomaly_type: AnomalyType::PointAnomaly,
-                        detection_method: DetectionMethod::MachineLearning(model.model_type.clone()),
+                        detection_method: DetectionMethod::MachineLearning(
+                            model.model_type.clone(),
+                        ),
                         metric_name: metric_name.to_string(),
                         anomalous_value: value,
                         expected_value: 0.0, // 简化实现
@@ -1254,7 +1328,10 @@ impl MLAnomalyDetector {
                         confidence: model.accuracy,
                         severity: self.determine_severity(anomaly_score),
                         detected_at: timestamp,
-                        description: format!("机器学习异常检测: {:?} 模型检测到异常", model.model_type),
+                        description: format!(
+                            "机器学习异常检测: {:?} 模型检测到异常",
+                            model.model_type
+                        ),
                         context: HashMap::new(),
                         root_cause_analysis: None,
                     }));
@@ -1266,7 +1343,11 @@ impl MLAnomalyDetector {
     }
 
     /// 预测异常分数
-    fn predict_anomaly_score(&self, _model: &MLModel, _features: &[f64]) -> Result<f64, LumosError> {
+    fn predict_anomaly_score(
+        &self,
+        _model: &MLModel,
+        _features: &[f64],
+    ) -> Result<f64, LumosError> {
         // 简化实现，实际应该调用真实的ML模型
         Ok(0.5)
     }
@@ -1306,7 +1387,12 @@ impl FeatureExtractor {
         }
     }
 
-    fn extract_features(&mut self, _metric_name: &str, value: f64, timestamp: DateTime<Utc>) -> Result<Vec<f64>, LumosError> {
+    fn extract_features(
+        &mut self,
+        _metric_name: &str,
+        value: f64,
+        timestamp: DateTime<Utc>,
+    ) -> Result<Vec<f64>, LumosError> {
         let mut features = Vec::new();
 
         // 基本数值特征
@@ -1358,28 +1444,24 @@ impl BehaviorAnomalyDetector {
                 BehaviorAnomalyRule {
                     rule_id: "unusual_login_time".to_string(),
                     rule_name: "异常登录时间".to_string(),
-                    conditions: vec![
-                        BehaviorCondition {
-                            field: "login_hour".to_string(),
-                            operator: BehaviorOperator::DeviatesFromNormal,
-                            threshold: 2.0,
-                            time_window: None,
-                        }
-                    ],
+                    conditions: vec![BehaviorCondition {
+                        field: "login_hour".to_string(),
+                        operator: BehaviorOperator::DeviatesFromNormal,
+                        threshold: 2.0,
+                        time_window: None,
+                    }],
                     anomaly_score: 0.6,
                     enabled: true,
                 },
                 BehaviorAnomalyRule {
                     rule_id: "unusual_location".to_string(),
                     rule_name: "异常登录位置".to_string(),
-                    conditions: vec![
-                        BehaviorCondition {
-                            field: "geo_location".to_string(),
-                            operator: BehaviorOperator::NotEquals,
-                            threshold: 0.0,
-                            time_window: None,
-                        }
-                    ],
+                    conditions: vec![BehaviorCondition {
+                        field: "geo_location".to_string(),
+                        operator: BehaviorOperator::NotEquals,
+                        threshold: 0.0,
+                        time_window: None,
+                    }],
                     anomaly_score: 0.8,
                     enabled: config.geo_location_detection_enabled,
                 },
@@ -1389,7 +1471,11 @@ impl BehaviorAnomalyDetector {
     }
 
     /// 检测行为异常
-    pub async fn detect_anomaly(&mut self, user_id: &str, behavior_data: &BehaviorData) -> Result<Vec<AnomalyEvent>, LumosError> {
+    pub async fn detect_anomaly(
+        &mut self,
+        user_id: &str,
+        behavior_data: &BehaviorData,
+    ) -> Result<Vec<AnomalyEvent>, LumosError> {
         let mut anomalies = Vec::new();
 
         // 更新用户行为画像
@@ -1398,7 +1484,10 @@ impl BehaviorAnomalyDetector {
         // 检查异常规则
         for rule in &self.anomaly_rules {
             if rule.enabled {
-                if let Some(anomaly) = self.check_behavior_rule(user_id, behavior_data, rule).await? {
+                if let Some(anomaly) = self
+                    .check_behavior_rule(user_id, behavior_data, rule)
+                    .await?
+                {
                     anomalies.push(anomaly);
                 }
             }
@@ -1408,9 +1497,15 @@ impl BehaviorAnomalyDetector {
     }
 
     /// 更新用户行为画像
-    async fn update_user_profile(&mut self, user_id: &str, behavior_data: &BehaviorData) -> Result<(), LumosError> {
-        let profile = self.user_profiles.entry(user_id.to_string()).or_insert_with(|| {
-            UserBehaviorProfile {
+    async fn update_user_profile(
+        &mut self,
+        user_id: &str,
+        behavior_data: &BehaviorData,
+    ) -> Result<(), LumosError> {
+        let profile = self
+            .user_profiles
+            .entry(user_id.to_string())
+            .or_insert_with(|| UserBehaviorProfile {
                 user_id: user_id.to_string(),
                 normal_patterns: Vec::new(),
                 activity_time_distribution: HashMap::new(),
@@ -1419,13 +1514,17 @@ impl BehaviorAnomalyDetector {
                 access_locations: Vec::new(),
                 device_fingerprints: Vec::new(),
                 last_updated: Utc::now(),
-            }
-        });
+            });
 
         // 更新活动时间分布
         let hour = behavior_data.timestamp.hour() as u8;
-        let current_count = profile.activity_time_distribution.get(&hour).unwrap_or(&0.0);
-        profile.activity_time_distribution.insert(hour, current_count + 1.0);
+        let current_count = profile
+            .activity_time_distribution
+            .get(&hour)
+            .unwrap_or(&0.0);
+        profile
+            .activity_time_distribution
+            .insert(hour, current_count + 1.0);
 
         // 更新访问位置
         if let Some(ref location) = behavior_data.geo_location {
@@ -1447,14 +1546,21 @@ impl BehaviorAnomalyDetector {
     }
 
     /// 检查行为规则
-    async fn check_behavior_rule(&self, user_id: &str, behavior_data: &BehaviorData, rule: &BehaviorAnomalyRule) -> Result<Option<AnomalyEvent>, LumosError> {
+    async fn check_behavior_rule(
+        &self,
+        user_id: &str,
+        behavior_data: &BehaviorData,
+        rule: &BehaviorAnomalyRule,
+    ) -> Result<Option<AnomalyEvent>, LumosError> {
         if let Some(profile) = self.user_profiles.get(user_id) {
             for condition in &rule.conditions {
                 if self.evaluate_behavior_condition(profile, behavior_data, condition)? {
                     return Ok(Some(AnomalyEvent {
                         id: Uuid::new_v4(),
                         anomaly_type: AnomalyType::BehavioralAnomaly,
-                        detection_method: DetectionMethod::BehaviorAnalysis(BehaviorMethod::UserBehaviorProfiling),
+                        detection_method: DetectionMethod::BehaviorAnalysis(
+                            BehaviorMethod::UserBehaviorProfiling,
+                        ),
                         metric_name: format!("behavior_{}", rule.rule_id),
                         anomalous_value: 1.0,
                         expected_value: 0.0,
@@ -1479,7 +1585,12 @@ impl BehaviorAnomalyDetector {
     }
 
     /// 评估行为条件
-    fn evaluate_behavior_condition(&self, profile: &UserBehaviorProfile, behavior_data: &BehaviorData, condition: &BehaviorCondition) -> Result<bool, LumosError> {
+    fn evaluate_behavior_condition(
+        &self,
+        profile: &UserBehaviorProfile,
+        behavior_data: &BehaviorData,
+        condition: &BehaviorCondition,
+    ) -> Result<bool, LumosError> {
         match condition.field.as_str() {
             "login_hour" => {
                 let current_hour = behavior_data.timestamp.hour() as u8;

@@ -1,21 +1,21 @@
 //! Tool builder for simplified tool creation
-//! 
+//!
 //! This module provides a fluent builder API for creating tools,
 //! inspired by Mastra's design but optimized for Rust.
 
-use std::collections::HashMap;
 use serde_json::Value;
+use std::collections::HashMap;
 
-use crate::{Result, Error};
-use super::{Tool, FunctionTool, ToolSchema, ParameterSchema};
+use super::{FunctionTool, ParameterSchema, Tool, ToolSchema};
+use crate::{Error, Result};
 
 /// Builder for creating tools with a fluent API
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use lumosai_core::tool::ToolBuilder;
-/// 
+///
 /// let tool = ToolBuilder::new()
 ///     .name("calculator")
 ///     .description("Performs basic math operations")
@@ -26,7 +26,7 @@ use super::{Tool, FunctionTool, ToolSchema, ParameterSchema};
 ///         let a = params.get("a")?.as_f64().ok_or("Invalid number a")?;
 ///         let b = params.get("b")?.as_f64().ok_or("Invalid number b")?;
 ///         let op = params.get("operation")?.as_str().ok_or("Invalid operation")?;
-///         
+///
 ///         let result = match op {
 ///             "+" => a + b,
 ///             "-" => a - b,
@@ -34,7 +34,7 @@ use super::{Tool, FunctionTool, ToolSchema, ParameterSchema};
 ///             "/" => a / b,
 ///             _ => return Err("Unknown operation".into()),
 ///         };
-///         
+///
 ///         Ok(serde_json::json!({"result": result}))
 ///     })
 ///     .build()
@@ -72,11 +72,11 @@ impl ToolBuilder {
 
     /// Add a parameter to the tool
     pub fn parameter<S: Into<String>>(
-        mut self, 
-        name: S, 
-        param_type: S, 
-        description: S, 
-        required: bool
+        mut self,
+        name: S,
+        param_type: S,
+        description: S,
+        required: bool,
     ) -> Self {
         let param = ParameterSchema {
             name: name.into(),
@@ -92,12 +92,12 @@ impl ToolBuilder {
 
     /// Add a parameter with default value
     pub fn parameter_with_default<S: Into<String>>(
-        mut self, 
-        name: S, 
-        param_type: S, 
-        description: S, 
+        mut self,
+        name: S,
+        param_type: S,
+        description: S,
         required: bool,
-        default: Value
+        default: Value,
     ) -> Self {
         let param = ParameterSchema {
             name: name.into(),
@@ -118,7 +118,7 @@ impl ToolBuilder {
         param_type: S,
         description: S,
         required: bool,
-        properties: HashMap<String, ParameterSchema>
+        properties: HashMap<String, ParameterSchema>,
     ) -> Self {
         let param = ParameterSchema {
             name: name.into(),
@@ -144,9 +144,15 @@ impl ToolBuilder {
     /// Build the tool
     pub fn build(self) -> Result<FunctionTool> {
         // Validate required fields
-        let name = self.name.ok_or_else(|| Error::Configuration("Tool name is required".to_string()))?;
-        let description = self.description.ok_or_else(|| Error::Configuration("Tool description is required".to_string()))?;
-        let handler = self.handler.ok_or_else(|| Error::Configuration("Tool handler is required".to_string()))?;
+        let name = self
+            .name
+            .ok_or_else(|| Error::Configuration("Tool name is required".to_string()))?;
+        let description = self
+            .description
+            .ok_or_else(|| Error::Configuration("Tool description is required".to_string()))?;
+        let handler = self
+            .handler
+            .ok_or_else(|| Error::Configuration("Tool handler is required".to_string()))?;
 
         // Create schema
         let schema = ToolSchema::new(self.parameters);
@@ -163,12 +169,12 @@ impl Default for ToolBuilder {
 }
 
 /// Convenience function to create a simple tool
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use lumosai_core::tool::create_tool;
-/// 
+///
 /// let tool = create_tool(
 ///     "echo",
 ///     "Echo a message",
@@ -188,9 +194,7 @@ pub fn create_tool<F>(
 where
     F: Fn(Value) -> Result<Value> + Send + Sync + 'static,
 {
-    let mut builder = ToolBuilder::new()
-        .name(name)
-        .description(description);
+    let mut builder = ToolBuilder::new().name(name).description(description);
 
     for (param_name, param_type, param_desc, required) in parameters {
         builder = builder.parameter(param_name, param_type, param_desc, required);
@@ -211,7 +215,10 @@ mod tests {
             .description("A test tool")
             .parameter("input", "string", "Test input", true)
             .handler(|params| {
-                let input = params.get("input").and_then(|v| v.as_str()).unwrap_or("default");
+                let input = params
+                    .get("input")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("default");
                 Ok(json!({"output": input}))
             })
             .build()
@@ -244,10 +251,14 @@ mod tests {
             "Echo a message",
             vec![("message", "string", "Message to echo", true)],
             |params| {
-                let message = params.get("message").and_then(|v| v.as_str()).unwrap_or("No message");
+                let message = params
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("No message");
                 Ok(json!({"echo": message}))
-            }
-        ).expect("Failed to create tool");
+            },
+        )
+        .expect("Failed to create tool");
 
         assert_eq!(tool.id(), "echo");
         assert_eq!(tool.description(), "Echo a message");

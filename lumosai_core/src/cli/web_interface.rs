@@ -1,13 +1,13 @@
 //! Web interface for development server
-//! 
+//!
 //! This module provides a web-based interface for testing and debugging agents
 
+use super::{CliUtils, ProjectConfig};
+use crate::Result;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
-use crate::Result;
-use super::{ProjectConfig, CliUtils};
 
 /// Web interface configuration
 #[derive(Debug, Clone)]
@@ -163,15 +163,21 @@ impl WebInterface {
 
     /// Start the web interface server
     pub async fn start(&self) -> Result<()> {
-        CliUtils::info(&format!("Starting web interface on {}:{}", self.config.host, self.config.port));
-        
+        CliUtils::info(&format!(
+            "Starting web interface on {}:{}",
+            self.config.host, self.config.port
+        ));
+
         // In a real implementation, this would start an HTTP server
         // For now, we'll simulate the web interface functionality
-        
+
         self.setup_routes().await?;
         self.start_background_tasks().await?;
-        
-        CliUtils::success(&format!("Web interface available at http://{}:{}", self.config.host, self.config.port));
+
+        CliUtils::success(&format!(
+            "Web interface available at http://{}:{}",
+            self.config.host, self.config.port
+        ));
         CliUtils::info("Available endpoints:");
         CliUtils::info("  GET  /api/status - Project status");
         CliUtils::info("  POST /api/sessions - Create agent session");
@@ -180,7 +186,7 @@ impl WebInterface {
         CliUtils::info("  GET  /api/tools - List available tools");
         CliUtils::info("  GET  /api/agents - List available agents");
         CliUtils::info("  GET  / - Web dashboard");
-        
+
         Ok(())
     }
 
@@ -188,44 +194,47 @@ impl WebInterface {
     async fn setup_routes(&self) -> Result<()> {
         // This would typically set up actual HTTP routes
         // For demonstration, we'll just log the available endpoints
-        
+
         CliUtils::info("Setting up web interface routes...");
-        
+
         // Simulate route setup
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
+
         Ok(())
     }
 
     /// Start background tasks
     async fn start_background_tasks(&self) -> Result<()> {
         let sessions = self.sessions.clone();
-        
+
         // Session cleanup task
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300)); // 5 minutes
-            
+
             loop {
                 interval.tick().await;
-                
+
                 // Clean up old sessions
                 let mut sessions_guard = sessions.write().await;
                 let now = chrono::Utc::now();
-                
+
                 sessions_guard.retain(|_, session| {
                     let age = now.signed_duration_since(session.created_at);
                     age.num_hours() < 24 // Keep sessions for 24 hours
                 });
             }
         });
-        
+
         Ok(())
     }
 
     /// Create a new agent session
-    pub async fn create_session(&self, request: CreateSessionRequest) -> Result<CreateSessionResponse> {
+    pub async fn create_session(
+        &self,
+        request: CreateSessionRequest,
+    ) -> Result<CreateSessionResponse> {
         let session_id = uuid::Uuid::new_v4().to_string();
-        
+
         let mut session = AgentSession {
             id: session_id.clone(),
             agent_name: request.agent_name.clone(),
@@ -258,9 +267,14 @@ impl WebInterface {
     }
 
     /// Send a message to an agent session
-    pub async fn send_message(&self, session_id: &str, request: SendMessageRequest) -> Result<SendMessageResponse> {
+    pub async fn send_message(
+        &self,
+        session_id: &str,
+        request: SendMessageRequest,
+    ) -> Result<SendMessageResponse> {
         let mut sessions = self.sessions.write().await;
-        let session = sessions.get_mut(session_id)
+        let session = sessions
+            .get_mut(session_id)
             .ok_or_else(|| crate::Error::Other(format!("Session {} not found", session_id)))?;
 
         // Add user message
@@ -276,7 +290,7 @@ impl WebInterface {
         // Simulate agent response
         let response_content = format!("This is a simulated response to: {}", request.content);
         let response_id = uuid::Uuid::new_v4().to_string();
-        
+
         let metadata = MessageMetadata {
             tool_calls: None,
             execution_time_ms: Some(150),
@@ -303,36 +317,44 @@ impl WebInterface {
     /// Get project status
     pub async fn get_project_status(&self) -> Result<ProjectStatusResponse> {
         let config = self.project_config.read().await;
-        
-        let tools: Vec<ToolInfo> = config.tools.iter().map(|tool| ToolInfo {
-            name: tool.name.clone(),
-            version: tool.version.clone(),
-            category: "general".to_string(), // Would be determined from tool metadata
-            status: "active".to_string(),
-        }).collect();
+
+        let tools: Vec<ToolInfo> = config
+            .tools
+            .iter()
+            .map(|tool| ToolInfo {
+                name: tool.name.clone(),
+                version: tool.version.clone(),
+                category: "general".to_string(), // Would be determined from tool metadata
+                status: "active".to_string(),
+            })
+            .collect();
 
         // Simulate agent discovery
-        let agents = vec![
-            AgentInfo {
-                name: "default".to_string(),
-                instructions: "A helpful assistant".to_string(),
-                model: "gpt-4".to_string(),
-                tools: tools.iter().map(|t| t.name.clone()).collect(),
-                status: "ready".to_string(),
-            }
-        ];
+        let agents = vec![AgentInfo {
+            name: "default".to_string(),
+            instructions: "A helpful assistant".to_string(),
+            model: "gpt-4".to_string(),
+            tools: tools.iter().map(|t| t.name.clone()).collect(),
+            status: "ready".to_string(),
+        }];
 
         let mut components = HashMap::new();
-        components.insert("tools".to_string(), ComponentHealth {
-            status: "healthy".to_string(),
-            message: format!("{} tools loaded", tools.len()),
-            last_check: chrono::Utc::now(),
-        });
-        components.insert("agents".to_string(), ComponentHealth {
-            status: "healthy".to_string(),
-            message: format!("{} agents available", agents.len()),
-            last_check: chrono::Utc::now(),
-        });
+        components.insert(
+            "tools".to_string(),
+            ComponentHealth {
+                status: "healthy".to_string(),
+                message: format!("{} tools loaded", tools.len()),
+                last_check: chrono::Utc::now(),
+            },
+        );
+        components.insert(
+            "agents".to_string(),
+            ComponentHealth {
+                status: "healthy".to_string(),
+                message: format!("{} agents available", agents.len()),
+                last_check: chrono::Utc::now(),
+            },
+        );
 
         Ok(ProjectStatusResponse {
             name: config.name.clone(),
@@ -349,7 +371,8 @@ impl WebInterface {
     /// Get session details
     pub async fn get_session(&self, session_id: &str) -> Result<AgentSession> {
         let sessions = self.sessions.read().await;
-        sessions.get(session_id)
+        sessions
+            .get(session_id)
             .cloned()
             .ok_or_else(|| crate::Error::Other(format!("Session {} not found", session_id)))
     }

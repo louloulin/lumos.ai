@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
 use crate::routes;
-use web_assets::files::*;
+use crate::types::{BionicOpenAPI, Rbac};
 use daisy_rsx::*;
-use crate::types::{Rbac, BionicOpenAPI};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(team_id: i32, rbac: Rbac, integrations: Vec<(BionicOpenAPI, i32)>) -> String {
     let page = rsx! {

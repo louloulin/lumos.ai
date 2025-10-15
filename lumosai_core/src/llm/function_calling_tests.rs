@@ -140,10 +140,10 @@ mod tests {
 
         let tools = utils::function_definitions_to_openai_tools(&[func_def]);
         assert!(tools.is_array());
-        
+
         let tool_array = tools.as_array().unwrap();
         assert_eq!(tool_array.len(), 1);
-        
+
         let tool = &tool_array[0];
         assert_eq!(tool["type"], "function");
         assert_eq!(tool["function"]["name"], "test_function");

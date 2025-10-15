@@ -1,5 +1,5 @@
 //! 企业级监控和可观测性扩展
-//! 
+//!
 //! 基于现有的telemetry基础设施，提供企业级监控功能：
 //! - 合规监控和审计追踪
 //! - 业务指标收集和分析
@@ -8,47 +8,47 @@
 //! - SLA监控和报告
 
 use async_trait::async_trait;
+use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc, Duration};
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
 
-use crate::telemetry::{
-    MetricsCollector, AlertManager, PerformanceAnalyzer,
-    AgentMetrics, ExecutionTrace, AlertEvent, AlertSeverity
-};
 use crate::error::LumosError;
+use crate::telemetry::{
+    AgentMetrics, AlertEvent, AlertManager, AlertSeverity, ExecutionTrace, MetricsCollector,
+    PerformanceAnalyzer,
+};
 
 /// 企业级监控系统
-/// 
+///
 /// 整合所有企业级监控功能的主要接口
 pub struct EnterpriseMonitoring {
     /// 基础指标收集器
     metrics_collector: Arc<dyn MetricsCollector>,
-    
+
     /// 告警管理器
     alert_manager: Arc<dyn AlertManager>,
-    
+
     /// 性能分析器
     performance_analyzer: Arc<dyn PerformanceAnalyzer>,
-    
+
     /// 合规监控器
     compliance_monitor: Arc<RwLock<ComplianceMonitor>>,
-    
+
     /// 业务指标收集器
     business_metrics: Arc<RwLock<BusinessMetricsCollector>>,
-    
+
     /// 异常检测引擎
     anomaly_detector: Arc<RwLock<AnomalyDetector>>,
-    
+
     /// 容量规划器
     capacity_planner: Arc<RwLock<CapacityPlanner>>,
-    
+
     /// SLA监控器
     sla_monitor: Arc<RwLock<SLAMonitor>>,
-    
+
     /// 配置
     config: EnterpriseMonitoringConfig,
 }
@@ -58,25 +58,25 @@ pub struct EnterpriseMonitoring {
 pub struct EnterpriseMonitoringConfig {
     /// 是否启用合规监控
     pub compliance_monitoring_enabled: bool,
-    
+
     /// 是否启用业务指标收集
     pub business_metrics_enabled: bool,
-    
+
     /// 是否启用异常检测
     pub anomaly_detection_enabled: bool,
-    
+
     /// 是否启用容量规划
     pub capacity_planning_enabled: bool,
-    
+
     /// 是否启用SLA监控
     pub sla_monitoring_enabled: bool,
-    
+
     /// 数据保留期（天）
     pub data_retention_days: u32,
-    
+
     /// 报告生成间隔（小时）
     pub report_generation_interval_hours: u32,
-    
+
     /// 告警聚合窗口（分钟）
     pub alert_aggregation_window_minutes: u32,
 }
@@ -86,25 +86,25 @@ pub struct EnterpriseMonitoringConfig {
 pub struct EnterpriseMetric {
     /// 指标ID
     pub id: Uuid,
-    
+
     /// 指标名称
     pub name: String,
-    
+
     /// 指标类型
     pub metric_type: EnterpriseMetricType,
-    
+
     /// 指标值
     pub value: f64,
-    
+
     /// 标签
     pub labels: HashMap<String, String>,
-    
+
     /// 时间戳
     pub timestamp: DateTime<Utc>,
-    
+
     /// 业务上下文
     pub business_context: Option<BusinessContext>,
-    
+
     /// 合规相关性
     pub compliance_relevance: Vec<String>,
 }
@@ -131,16 +131,16 @@ pub enum EnterpriseMetricType {
 pub struct BusinessContext {
     /// 租户ID
     pub tenant_id: Option<String>,
-    
+
     /// 用户ID
     pub user_id: Option<String>,
-    
+
     /// 业务流程
     pub business_process: String,
-    
+
     /// 成本中心
     pub cost_center: Option<String>,
-    
+
     /// 服务级别
     pub service_level: ServiceLevel,
 }
@@ -162,10 +162,10 @@ pub enum ServiceLevel {
 pub struct ComplianceMonitor {
     /// 审计事件存储
     audit_events: Vec<AuditEvent>,
-    
+
     /// 合规规则
     compliance_rules: Vec<ComplianceRule>,
-    
+
     /// 违规检测器
     violation_detector: ViolationDetector,
 }
@@ -175,25 +175,25 @@ pub struct ComplianceMonitor {
 pub struct AuditEvent {
     /// 事件ID
     pub id: Uuid,
-    
+
     /// 事件类型
     pub event_type: AuditEventType,
-    
+
     /// 时间戳
     pub timestamp: DateTime<Utc>,
-    
+
     /// 用户ID
     pub user_id: Option<String>,
-    
+
     /// 资源ID
     pub resource_id: Option<String>,
-    
+
     /// 动作
     pub action: String,
-    
+
     /// 结果
     pub result: AuditResult,
-    
+
     /// 详细信息
     pub details: HashMap<String, String>,
 }
@@ -289,7 +289,7 @@ pub enum ComplianceSeverity {
 pub struct ViolationDetector {
     /// 检测规则
     rules: Vec<ComplianceRule>,
-    
+
     /// 违规历史
     violations: Vec<ComplianceViolation>,
 }
@@ -299,19 +299,19 @@ pub struct ViolationDetector {
 pub struct ComplianceViolation {
     /// 违规ID
     pub id: Uuid,
-    
+
     /// 规则ID
     pub rule_id: String,
-    
+
     /// 相关事件
     pub event: AuditEvent,
-    
+
     /// 检测时间
     pub detected_at: DateTime<Utc>,
-    
+
     /// 严重程度
     pub severity: ComplianceSeverity,
-    
+
     /// 描述
     pub description: String,
 }
@@ -320,13 +320,13 @@ pub struct ComplianceViolation {
 pub struct BusinessMetricsCollector {
     /// 收入指标
     revenue_metrics: RevenueMetrics,
-    
+
     /// 使用指标
     usage_metrics: UsageMetrics,
-    
+
     /// 客户指标
     customer_metrics: CustomerMetrics,
-    
+
     /// 运营指标
     operational_metrics: OperationalMetrics,
 }
@@ -336,16 +336,16 @@ pub struct BusinessMetricsCollector {
 pub struct RevenueMetrics {
     /// 月度经常性收入
     pub monthly_recurring_revenue: f64,
-    
+
     /// 年度经常性收入
     pub annual_recurring_revenue: f64,
-    
+
     /// 客户生命周期价值
     pub customer_lifetime_value: f64,
-    
+
     /// 客户获取成本
     pub customer_acquisition_cost: f64,
-    
+
     /// 最后更新时间
     pub last_updated: DateTime<Utc>,
 }
@@ -355,19 +355,19 @@ pub struct RevenueMetrics {
 pub struct UsageMetrics {
     /// 活跃用户数
     pub active_users: u64,
-    
+
     /// API调用次数
     pub api_calls: u64,
-    
+
     /// 数据处理量（字节）
     pub data_processed_bytes: u64,
-    
+
     /// 模型推理次数
     pub model_inferences: u64,
-    
+
     /// 工具调用次数
     pub tool_executions: u64,
-    
+
     /// 最后更新时间
     pub last_updated: DateTime<Utc>,
 }
@@ -377,16 +377,16 @@ pub struct UsageMetrics {
 pub struct CustomerMetrics {
     /// 客户满意度
     pub customer_satisfaction: f64,
-    
+
     /// 客户流失率
     pub churn_rate: f64,
-    
+
     /// 净推荐值
     pub net_promoter_score: f64,
-    
+
     /// 支持票据数量
     pub support_tickets: u64,
-    
+
     /// 最后更新时间
     pub last_updated: DateTime<Utc>,
 }
@@ -396,16 +396,16 @@ pub struct CustomerMetrics {
 pub struct OperationalMetrics {
     /// 系统可用性
     pub system_availability: f64,
-    
+
     /// 平均响应时间
     pub average_response_time: f64,
-    
+
     /// 错误率
     pub error_rate: f64,
-    
+
     /// 吞吐量
     pub throughput: f64,
-    
+
     /// 最后更新时间
     pub last_updated: DateTime<Utc>,
 }
@@ -414,10 +414,10 @@ pub struct OperationalMetrics {
 pub struct AnomalyDetector {
     /// 基线模型
     baseline_models: HashMap<String, BaselineModel>,
-    
+
     /// 检测算法
     detection_algorithms: Vec<DetectionAlgorithm>,
-    
+
     /// 异常历史
     anomaly_history: Vec<AnomalyEvent>,
 }
@@ -427,22 +427,22 @@ pub struct AnomalyDetector {
 pub struct BaselineModel {
     /// 指标名称
     pub metric_name: String,
-    
+
     /// 平均值
     pub mean: f64,
-    
+
     /// 标准差
     pub std_dev: f64,
-    
+
     /// 最小值
     pub min: f64,
-    
+
     /// 最大值
     pub max: f64,
-    
+
     /// 样本数量
     pub sample_count: u64,
-    
+
     /// 最后更新时间
     pub last_updated: DateTime<Utc>,
 }
@@ -476,25 +476,25 @@ pub enum DetectionAlgorithm {
 pub struct AnomalyEvent {
     /// 事件ID
     pub id: Uuid,
-    
+
     /// 指标名称
     pub metric_name: String,
-    
+
     /// 异常值
     pub anomalous_value: f64,
-    
+
     /// 期望值
     pub expected_value: f64,
-    
+
     /// 异常分数
     pub anomaly_score: f64,
-    
+
     /// 检测时间
     pub detected_at: DateTime<Utc>,
-    
+
     /// 严重程度
     pub severity: AnomalySeverity,
-    
+
     /// 描述
     pub description: String,
 }
@@ -540,7 +540,7 @@ impl EnterpriseMonitoring {
         let anomaly_detector = Arc::new(RwLock::new(AnomalyDetector::new()));
         let capacity_planner = Arc::new(RwLock::new(CapacityPlanner::new()));
         let sla_monitor = Arc::new(RwLock::new(SLAMonitor::new()));
-        
+
         Ok(Self {
             metrics_collector,
             alert_manager,
@@ -553,7 +553,7 @@ impl EnterpriseMonitoring {
             config,
         })
     }
-    
+
     /// 记录企业级指标
     pub async fn record_metric(&self, metric: EnterpriseMetric) -> Result<(), LumosError> {
         // 根据指标类型分发到相应的收集器
@@ -572,10 +572,10 @@ impl EnterpriseMonitoring {
                 // 简化实现，实际需要更复杂的转换逻辑
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// 记录审计事件
     pub async fn record_audit_event(&self, event: AuditEvent) -> Result<(), LumosError> {
         if self.config.compliance_monitoring_enabled {
@@ -584,7 +584,7 @@ impl EnterpriseMonitoring {
         }
         Ok(())
     }
-    
+
     /// 检测异常
     pub async fn detect_anomalies(&self) -> Result<Vec<AnomalyEvent>, LumosError> {
         if self.config.anomaly_detection_enabled {
@@ -594,7 +594,7 @@ impl EnterpriseMonitoring {
             Ok(Vec::new())
         }
     }
-    
+
     /// 生成企业级报告
     pub async fn generate_enterprise_report(&self) -> Result<EnterpriseReport, LumosError> {
         let compliance_report = if self.config.compliance_monitoring_enabled {
@@ -603,21 +603,21 @@ impl EnterpriseMonitoring {
         } else {
             None
         };
-        
+
         let business_report = if self.config.business_metrics_enabled {
             let collector = self.business_metrics.read().await;
             Some(collector.generate_report().await?)
         } else {
             None
         };
-        
+
         let anomaly_report = if self.config.anomaly_detection_enabled {
             let detector = self.anomaly_detector.read().await;
             Some(detector.generate_report().await?)
         } else {
             None
         };
-        
+
         Ok(EnterpriseReport {
             generated_at: Utc::now(),
             compliance_report,
@@ -633,16 +633,16 @@ impl EnterpriseMonitoring {
 pub struct EnterpriseReport {
     /// 生成时间
     pub generated_at: DateTime<Utc>,
-    
+
     /// 合规报告
     pub compliance_report: Option<ComplianceReport>,
-    
+
     /// 业务报告
     pub business_report: Option<BusinessReport>,
-    
+
     /// 异常报告
     pub anomaly_report: Option<AnomalyReport>,
-    
+
     /// 摘要
     pub summary: String,
 }
@@ -652,10 +652,10 @@ pub struct EnterpriseReport {
 pub struct ComplianceReport {
     /// 审计事件数量
     pub audit_events_count: u64,
-    
+
     /// 违规数量
     pub violations_count: u64,
-    
+
     /// 合规分数
     pub compliance_score: f64,
 }
@@ -665,10 +665,10 @@ pub struct ComplianceReport {
 pub struct BusinessReport {
     /// 收入指标
     pub revenue_metrics: RevenueMetrics,
-    
+
     /// 使用指标
     pub usage_metrics: UsageMetrics,
-    
+
     /// 客户指标
     pub customer_metrics: CustomerMetrics,
 }
@@ -678,10 +678,10 @@ pub struct BusinessReport {
 pub struct AnomalyReport {
     /// 异常事件数量
     pub anomaly_events_count: u64,
-    
+
     /// 严重异常数量
     pub critical_anomalies_count: u64,
-    
+
     /// 异常分数
     pub anomaly_score: f64,
 }
@@ -714,7 +714,10 @@ impl CapacityPlanner {
         Ok(())
     }
 
-    pub async fn generate_capacity_forecast(&self, _resource_type: &str) -> Result<String, LumosError> {
+    pub async fn generate_capacity_forecast(
+        &self,
+        _resource_type: &str,
+    ) -> Result<String, LumosError> {
         Ok("Capacity forecast report".to_string())
     }
 
@@ -740,7 +743,11 @@ impl SLAMonitor {
         Ok(())
     }
 
-    pub async fn generate_report(&self, _start_time: DateTime<Utc>, _end_time: DateTime<Utc>) -> Result<String, LumosError> {
+    pub async fn generate_report(
+        &self,
+        _start_time: DateTime<Utc>,
+        _end_time: DateTime<Utc>,
+    ) -> Result<String, LumosError> {
         Ok("SLA monitoring report".to_string())
     }
 }
@@ -757,17 +764,17 @@ impl ComplianceMonitor {
             },
         }
     }
-    
+
     async fn record_metric(&mut self, _metric: &EnterpriseMetric) -> Result<(), LumosError> {
         // 简化实现
         Ok(())
     }
-    
+
     async fn record_audit_event(&mut self, event: AuditEvent) -> Result<(), LumosError> {
         self.audit_events.push(event);
         Ok(())
     }
-    
+
     async fn generate_report(&self) -> Result<ComplianceReport, LumosError> {
         Ok(ComplianceReport {
             audit_events_count: self.audit_events.len() as u64,
@@ -812,7 +819,7 @@ impl BusinessMetricsCollector {
             },
         }
     }
-    
+
     pub async fn record_user_activity(&mut self, _user_id: &str) -> Result<(), LumosError> {
         self.usage_metrics.active_users += 1;
         Ok(())
@@ -840,7 +847,7 @@ impl BusinessMetricsCollector {
         // 简化实现
         Ok(())
     }
-    
+
     async fn generate_report(&self) -> Result<BusinessReport, LumosError> {
         Ok(BusinessReport {
             revenue_metrics: self.revenue_metrics.clone(),
@@ -855,22 +862,29 @@ impl AnomalyDetector {
         Self {
             baseline_models: HashMap::new(),
             detection_algorithms: vec![
-                DetectionAlgorithm::Statistical { std_dev_multiplier: 2.0 },
-                DetectionAlgorithm::MovingAverage { window_size: 10, threshold: 0.1 },
+                DetectionAlgorithm::Statistical {
+                    std_dev_multiplier: 2.0,
+                },
+                DetectionAlgorithm::MovingAverage {
+                    window_size: 10,
+                    threshold: 0.1,
+                },
             ],
             anomaly_history: Vec::new(),
         }
     }
-    
+
     async fn detect_anomalies(&self) -> Result<Vec<AnomalyEvent>, LumosError> {
         // 简化实现
         Ok(Vec::new())
     }
-    
+
     async fn generate_report(&self) -> Result<AnomalyReport, LumosError> {
         Ok(AnomalyReport {
             anomaly_events_count: self.anomaly_history.len() as u64,
-            critical_anomalies_count: self.anomaly_history.iter()
+            critical_anomalies_count: self
+                .anomaly_history
+                .iter()
                 .filter(|e| e.severity == AnomalySeverity::Critical)
                 .count() as u64,
             anomaly_score: 0.1, // 简化计算

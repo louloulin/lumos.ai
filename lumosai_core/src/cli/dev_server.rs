@@ -1,17 +1,17 @@
 //! Development server with hot reload and debugging features
-//! 
+//!
 //! This module provides a comprehensive development server for Lumos.ai projects
 
+use super::web_interface::{WebInterface, WebInterfaceConfig};
+use super::{CliUtils, ProjectConfig};
+use crate::Result;
+use notify::{Event, EventKind, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
+use std::sync::mpsc;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::time::interval;
-use notify::{Watcher, RecursiveMode, Event, EventKind};
-use std::sync::mpsc;
-use crate::Result;
-use super::{ProjectConfig, CliUtils};
-use super::web_interface::{WebInterface, WebInterfaceConfig};
 
 /// Development server configuration
 #[derive(Debug, Clone)]
@@ -63,8 +63,11 @@ impl DevServer {
             *running = true;
         }
 
-        CliUtils::success(&format!("Development server started on port {}", self.config.port));
-        
+        CliUtils::success(&format!(
+            "Development server started on port {}",
+            self.config.port
+        ));
+
         // Start web interface if available
         if let Some(ref web_interface) = self.web_interface {
             web_interface.start().await?;
@@ -89,7 +92,8 @@ impl DevServer {
 
         // Watch project files
         for watch_path in &self.config.watch_paths {
-            watcher.watch(&watch_path, RecursiveMode::Recursive)
+            watcher
+                .watch(&watch_path, RecursiveMode::Recursive)
                 .map_err(|e| crate::Error::Other(format!("Failed to watch path: {}", e)))?;
         }
 
@@ -101,7 +105,9 @@ impl DevServer {
             while *is_running.read().await {
                 match rx.try_recv() {
                     Ok(Ok(event)) => {
-                        if let Err(e) = Self::handle_file_change(event, &project_config, &project_root).await {
+                        if let Err(e) =
+                            Self::handle_file_change(event, &project_config, &project_root).await
+                        {
                             CliUtils::error(&format!("Hot reload error: {}", e));
                         }
                     }
@@ -135,7 +141,9 @@ impl DevServer {
                                 CliUtils::info(&format!("Rust file changed: {}", path.display()));
                                 Self::rebuild_project(project_root).await?;
                             }
-                            Some("toml") if path.file_name() == Some(std::ffi::OsStr::new("lumos.toml")) => {
+                            Some("toml")
+                                if path.file_name() == Some(std::ffi::OsStr::new("lumos.toml")) =>
+                            {
                                 CliUtils::info("Configuration changed - reloading");
                                 Self::reload_config(project_config, &path).await?;
                             }
@@ -157,7 +165,7 @@ impl DevServer {
     /// Rebuild the project
     async fn rebuild_project(project_root: &Path) -> Result<()> {
         CliUtils::progress("Rebuilding project...");
-        
+
         match CliUtils::execute_command("cargo", &["check"], Some(project_root)).await {
             Ok(_) => {
                 CliUtils::success("Project rebuilt successfully");
@@ -166,7 +174,7 @@ impl DevServer {
                 CliUtils::error(&format!("Build failed: {}", e));
             }
         }
-        
+
         Ok(())
     }
 
@@ -191,20 +199,20 @@ impl DevServer {
     /// Run the main server loop
     async fn run_server_loop(&self) -> Result<()> {
         let mut interval = interval(Duration::from_secs(1));
-        
+
         while *self.is_running.read().await {
             interval.tick().await;
-            
+
             // Perform periodic tasks
             self.perform_health_checks().await?;
-            
+
             // Check for shutdown signal
             if tokio::signal::ctrl_c().await.is_ok() {
                 CliUtils::info("Shutdown signal received");
                 break;
             }
         }
-        
+
         self.shutdown().await?;
         Ok(())
     }
@@ -221,7 +229,7 @@ impl DevServer {
         // Check if dependencies are up to date
         // This is a simplified check - in a real implementation,
         // we would check tool versions, etc.
-        
+
         Ok(())
     }
 
@@ -231,7 +239,7 @@ impl DevServer {
             let mut running = self.is_running.write().await;
             *running = false;
         }
-        
+
         CliUtils::info("Development server stopped");
         Ok(())
     }
@@ -249,10 +257,7 @@ pub async fn start_dev_server(
     let project_config = CliUtils::load_config(&config_path)?;
 
     // Set up watch paths
-    let mut watch_paths = vec![
-        project_root.join("src"),
-        project_root.join("lumos.toml"),
-    ];
+    let mut watch_paths = vec![project_root.join("src"), project_root.join("lumos.toml")];
 
     // Add additional paths if they exist
     if project_root.join("examples").exists() {
@@ -289,13 +294,13 @@ impl DevServerUtils {
     /// Check if a path should be ignored
     pub fn should_ignore_path(path: &Path, ignore_patterns: &[String]) -> bool {
         let path_str = path.to_string_lossy();
-        
+
         for pattern in ignore_patterns {
             if path_str.contains(pattern) {
                 return true;
             }
         }
-        
+
         false
     }
 
@@ -331,7 +336,7 @@ impl DevServerUtils {
     /// Get project statistics
     pub async fn get_project_stats(project_root: &Path) -> Result<ProjectStats> {
         let mut stats = ProjectStats::default();
-        
+
         // Count source files
         if let Ok(entries) = std::fs::read_dir(project_root.join("src")) {
             for entry in entries.flatten() {
@@ -343,7 +348,7 @@ impl DevServerUtils {
                 }
             }
         }
-        
+
         // Count test files
         if let Ok(entries) = std::fs::read_dir(project_root.join("tests")) {
             for entry in entries.flatten() {
@@ -354,7 +359,7 @@ impl DevServerUtils {
                 }
             }
         }
-        
+
         Ok(stats)
     }
 }
@@ -374,8 +379,11 @@ impl ProjectStats {
         println!("\n📊 Project Statistics:");
         println!("  Source files: {}", self.source_files);
         println!("  Test files: {}", self.test_files);
-        println!("  Total size: {}", DevServerUtils::format_file_size(self.total_size));
-        
+        println!(
+            "  Total size: {}",
+            DevServerUtils::format_file_size(self.total_size)
+        );
+
         if let Some(modified) = self.last_modified {
             if let Ok(duration) = modified.duration_since(std::time::UNIX_EPOCH) {
                 println!("  Last modified: {} seconds ago", duration.as_secs());

@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
-use daisy_rsx::{select::SelectOption, *};
 use crate::types::Prompt;
+use daisy_rsx::{select::SelectOption, *};
 use dioxus::prelude::*;
 
 #[component]

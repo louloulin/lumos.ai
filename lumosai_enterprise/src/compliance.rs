@@ -29,28 +29,28 @@ pub struct AuditManager {
 pub struct AuditEvent {
     /// 事件ID
     pub id: Uuid,
-    
+
     /// 事件类型
     pub event_type: AuditEventType,
-    
+
     /// 时间戳
     pub timestamp: DateTime<Utc>,
-    
+
     /// 用户ID
     pub user_id: Option<String>,
-    
+
     /// 资源ID
     pub resource_id: Option<String>,
-    
+
     /// 动作
     pub action: String,
-    
+
     /// 结果
     pub result: AuditResult,
-    
+
     /// 详细信息
     pub details: HashMap<String, String>,
-    
+
     /// 合规标准
     pub compliance_standards: Vec<ComplianceStandard>,
 }
@@ -94,10 +94,10 @@ pub enum AuditResult {
 pub struct RetentionPolicy {
     /// 默认保留期（天）
     pub default_retention_days: u32,
-    
+
     /// 按标准的保留期
     pub standard_retention: HashMap<ComplianceStandard, u32>,
-    
+
     /// 按事件类型的保留期
     pub event_type_retention: HashMap<AuditEventType, u32>,
 }
@@ -113,22 +113,22 @@ pub struct PolicyEngine {
 pub struct CompliancePolicy {
     /// 策略ID
     pub id: String,
-    
+
     /// 策略名称
     pub name: String,
-    
+
     /// 适用标准
     pub standards: Vec<ComplianceStandard>,
-    
+
     /// 策略规则
     pub rules: Vec<PolicyRule>,
-    
+
     /// 生效时间
     pub effective_from: DateTime<Utc>,
-    
+
     /// 失效时间
     pub effective_until: Option<DateTime<Utc>>,
-    
+
     /// 严重程度
     pub severity: PolicySeverity,
 }
@@ -138,16 +138,16 @@ pub struct CompliancePolicy {
 pub struct PolicyRule {
     /// 规则ID
     pub id: String,
-    
+
     /// 规则描述
     pub description: String,
-    
+
     /// 条件
     pub conditions: Vec<PolicyCondition>,
-    
+
     /// 动作
     pub actions: Vec<PolicyAction>,
-    
+
     /// 优先级
     pub priority: u32,
 }
@@ -157,10 +157,10 @@ pub struct PolicyRule {
 pub struct PolicyCondition {
     /// 字段
     pub field: String,
-    
+
     /// 操作符
     pub operator: ConditionOperator,
-    
+
     /// 值
     pub value: String,
 }
@@ -224,16 +224,16 @@ pub struct PolicyEvaluator {
 pub struct PolicyEvaluationResult {
     /// 策略ID
     pub policy_id: String,
-    
+
     /// 是否符合
     pub compliant: bool,
-    
+
     /// 违规项
     pub violations: Vec<PolicyViolation>,
-    
+
     /// 评估时间
     pub evaluated_at: DateTime<Utc>,
-    
+
     /// 建议动作
     pub recommended_actions: Vec<PolicyAction>,
 }
@@ -243,19 +243,19 @@ pub struct PolicyEvaluationResult {
 pub struct PolicyViolation {
     /// 违规ID
     pub id: Uuid,
-    
+
     /// 规则ID
     pub rule_id: String,
-    
+
     /// 违规描述
     pub description: String,
-    
+
     /// 严重程度
     pub severity: PolicySeverity,
-    
+
     /// 发现时间
     pub detected_at: DateTime<Utc>,
-    
+
     /// 相关数据
     pub related_data: HashMap<String, String>,
 }
@@ -271,13 +271,13 @@ pub struct DataClassifier {
 pub struct ClassificationRule {
     /// 规则ID
     pub id: String,
-    
+
     /// 数据模式
     pub pattern: String,
-    
+
     /// 分类级别
     pub classification: DataClassification,
-    
+
     /// 置信度
     pub confidence: f64,
 }
@@ -311,7 +311,7 @@ pub struct ComplianceChecker {
 pub trait StandardChecker: Send + Sync {
     /// 检查合规性
     async fn check_compliance(&self, context: &ComplianceContext) -> Result<ComplianceCheckResult>;
-    
+
     /// 获取要求
     fn get_requirements(&self) -> Vec<ComplianceRequirement>;
 }
@@ -321,13 +321,13 @@ pub trait StandardChecker: Send + Sync {
 pub struct ComplianceContext {
     /// 检查范围
     pub scope: ComplianceScope,
-    
+
     /// 数据源
     pub data_sources: Vec<String>,
-    
+
     /// 时间范围
     pub time_range: TimeRange,
-    
+
     /// 额外参数
     pub parameters: HashMap<String, String>,
 }
@@ -350,7 +350,7 @@ pub enum ComplianceScope {
 pub struct TimeRange {
     /// 开始时间
     pub start: DateTime<Utc>,
-    
+
     /// 结束时间
     pub end: DateTime<Utc>,
 }
@@ -360,19 +360,19 @@ pub struct TimeRange {
 pub struct ComplianceCheckResult {
     /// 标准
     pub standard: ComplianceStandard,
-    
+
     /// 整体合规状态
     pub overall_status: ComplianceStatus,
-    
+
     /// 要求检查结果
     pub requirement_results: Vec<RequirementCheckResult>,
-    
+
     /// 检查时间
     pub checked_at: DateTime<Utc>,
-    
+
     /// 有效期
     pub valid_until: DateTime<Utc>,
-    
+
     /// 建议
     pub recommendations: Vec<ComplianceRecommendation>,
 }
@@ -395,16 +395,16 @@ pub enum ComplianceStatus {
 pub struct RequirementCheckResult {
     /// 要求ID
     pub requirement_id: String,
-    
+
     /// 状态
     pub status: ComplianceStatus,
-    
+
     /// 详细信息
     pub details: String,
-    
+
     /// 证据
     pub evidence: Vec<ComplianceEvidence>,
-    
+
     /// 差距
     pub gaps: Vec<ComplianceGap>,
 }
@@ -414,19 +414,19 @@ pub struct RequirementCheckResult {
 pub struct ComplianceRequirement {
     /// 要求ID
     pub id: String,
-    
+
     /// 要求名称
     pub name: String,
-    
+
     /// 要求描述
     pub description: String,
-    
+
     /// 控制类型
     pub control_type: ControlType,
-    
+
     /// 严重程度
     pub severity: PolicySeverity,
-    
+
     /// 检查频率
     pub check_frequency: CheckFrequency,
 }
@@ -466,16 +466,16 @@ pub enum CheckFrequency {
 pub struct ComplianceEvidence {
     /// 证据ID
     pub id: Uuid,
-    
+
     /// 证据类型
     pub evidence_type: EvidenceType,
-    
+
     /// 证据内容
     pub content: String,
-    
+
     /// 收集时间
     pub collected_at: DateTime<Utc>,
-    
+
     /// 来源
     pub source: String,
 }
@@ -500,16 +500,16 @@ pub enum EvidenceType {
 pub struct ComplianceGap {
     /// 差距ID
     pub id: Uuid,
-    
+
     /// 差距描述
     pub description: String,
-    
+
     /// 影响
     pub impact: String,
-    
+
     /// 建议修复
     pub recommended_fix: String,
-    
+
     /// 优先级
     pub priority: PolicySeverity,
 }
@@ -519,16 +519,16 @@ pub struct ComplianceGap {
 pub struct ComplianceRecommendation {
     /// 建议ID
     pub id: Uuid,
-    
+
     /// 建议类型
     pub recommendation_type: RecommendationType,
-    
+
     /// 建议内容
     pub content: String,
-    
+
     /// 优先级
     pub priority: PolicySeverity,
-    
+
     /// 预估工作量
     pub estimated_effort: Option<String>,
 }
@@ -555,7 +555,7 @@ impl ComplianceManager {
         let policy_engine = PolicyEngine::new()?;
         let data_classifier = DataClassifier::new()?;
         let compliance_checker = ComplianceChecker::new(&config.enabled_standards)?;
-        
+
         Ok(Self {
             config,
             audit_manager,
@@ -564,22 +564,22 @@ impl ComplianceManager {
             compliance_checker,
         })
     }
-    
+
     /// 记录审计事件
     pub async fn record_audit_event(&mut self, event: AuditEvent) -> Result<()> {
         self.audit_manager.record_event(event).await
     }
-    
+
     /// 检查合规性
     pub async fn check_compliance(&self, context: ComplianceContext) -> Result<Vec<ComplianceCheckResult>> {
         self.compliance_checker.check_all_standards(&context).await
     }
-    
+
     /// 分类数据
     pub async fn classify_data(&self, data: &str) -> Result<DataClassification> {
         self.data_classifier.classify(data).await
     }
-    
+
     /// 评估策略
     pub async fn evaluate_policy(&self, policy_id: &str, context: &HashMap<String, String>) -> Result<PolicyEvaluationResult> {
         self.policy_engine.evaluate_policy(policy_id, context).await
@@ -598,7 +598,7 @@ impl AuditManager {
             },
         })
     }
-    
+
     async fn record_event(&mut self, event: AuditEvent) -> Result<()> {
         let trail_key = event.user_id.clone().unwrap_or_else(|| "system".to_string());
         self.audit_trails.entry(trail_key).or_insert_with(Vec::new).push(event);
@@ -615,7 +615,7 @@ impl PolicyEngine {
             },
         })
     }
-    
+
     async fn evaluate_policy(&self, _policy_id: &str, _context: &HashMap<String, String>) -> Result<PolicyEvaluationResult> {
         // 简化实现
         Ok(PolicyEvaluationResult {
@@ -635,7 +635,7 @@ impl DataClassifier {
             data_catalog: HashMap::new(),
         })
     }
-    
+
     async fn classify(&self, _data: &str) -> Result<DataClassification> {
         // 简化实现
         Ok(DataClassification::Internal)
@@ -648,7 +648,7 @@ impl ComplianceChecker {
             checkers: HashMap::new(),
         })
     }
-    
+
     async fn check_all_standards(&self, _context: &ComplianceContext) -> Result<Vec<ComplianceCheckResult>> {
         // 简化实现
         Ok(Vec::new())
@@ -658,21 +658,21 @@ impl ComplianceChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_compliance_manager_creation() {
         let config = ComplianceConfig::default();
         let manager = ComplianceManager::new(config).await.unwrap();
-        
+
         let classification = manager.classify_data("test data").await.unwrap();
         assert_eq!(classification, DataClassification::Internal);
     }
-    
+
     #[tokio::test]
     async fn test_audit_event_recording() {
         let config = ComplianceConfig::default();
         let mut manager = ComplianceManager::new(config).await.unwrap();
-        
+
         let event = AuditEvent {
             id: Uuid::new_v4(),
             event_type: AuditEventType::DataAccess,
@@ -684,7 +684,7 @@ mod tests {
             details: HashMap::new(),
             compliance_standards: vec![ComplianceStandard::SOC2],
         };
-        
+
         assert!(manager.record_audit_event(event).await.is_ok());
     }
 }

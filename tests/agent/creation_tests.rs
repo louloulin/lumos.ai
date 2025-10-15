@@ -16,24 +16,24 @@ mod agent_creation_tests {
     async fn test_agent_builder_validation() {
         // 测试AgentBuilder的参数验证
         let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
-        
+
         // 测试有效配置
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a test agent".to_string(),
             ..Default::default()
         };
-        
+
         let agent = BasicAgent::new(config, llm.clone());
         assert!(agent.is_ok());
-        
+
         // 测试空名称
         let invalid_config = AgentConfig {
             name: "".to_string(),
             instructions: "You are a test agent".to_string(),
             ..Default::default()
         };
-        
+
         let result = BasicAgent::new(invalid_config, llm.clone());
         // 应该处理空名称的情况
         assert!(result.is_ok() || result.is_err());
@@ -43,15 +43,15 @@ mod agent_creation_tests {
     async fn test_agent_with_invalid_model() {
         // 测试无效模型配置的错误处理
         let llm = Arc::new(MockLlmProvider::new(vec![])); // 空响应
-        
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "Test agent".to_string(),
             ..Default::default()
         };
-        
+
         let agent = BasicAgent::new(config, llm).unwrap();
-        
+
         // 测试空响应的处理
         let result = agent.generate("Hello").await;
         // 应该优雅地处理空响应
@@ -62,7 +62,7 @@ mod agent_creation_tests {
     async fn test_agent_memory_configuration() {
         // 测试不同内存配置的Agent创建
         let llm = Arc::new(MockLlmProvider::new(vec!["Memory test response".to_string()]));
-        
+
         // 测试带内存管理器的Agent
         let memory_manager = MemoryManager::new();
         let config = AgentConfig {
@@ -71,10 +71,10 @@ mod agent_creation_tests {
             memory_manager: Some(Arc::new(memory_manager)),
             ..Default::default()
         };
-        
+
         let agent = BasicAgent::new(config, llm);
         assert!(agent.is_ok());
-        
+
         let agent = agent.unwrap();
         let response = agent.generate("Remember this: important data").await;
         assert!(response.is_ok());
@@ -84,15 +84,15 @@ mod agent_creation_tests {
     async fn test_agent_tool_integration() {
         // 测试工具集成的正确性
         let llm = Arc::new(MockLlmProvider::new(vec!["Tool integration test".to_string()]));
-        
+
         let config = AgentConfig {
             name: "tool-agent".to_string(),
             instructions: "Agent with tools".to_string(),
             ..Default::default()
         };
-        
+
         let agent = BasicAgent::new(config, llm).unwrap();
-        
+
         // 测试基础功能
         let response = agent.generate("Use a tool").await;
         assert!(response.is_ok());
@@ -107,13 +107,13 @@ mod agent_creation_tests {
                 TestUtils::create_test_agent(&agent_name).await
             })
         }).collect();
-        
+
         let mut results = Vec::new();
         for task in tasks {
             let result = task.await.unwrap();
             results.push(result);
         }
-        
+
         // 验证所有Agent都成功创建
         assert_eq!(results.len(), 10);
         for result in results {
@@ -125,7 +125,7 @@ mod agent_creation_tests {
     async fn test_agent_configuration_validation() {
         // 测试配置参数验证
         let llm = Arc::new(MockLlmProvider::new(vec!["Config test".to_string()]));
-        
+
         // 测试最大长度限制
         let long_name = "a".repeat(1000);
         let config = AgentConfig {
@@ -133,17 +133,17 @@ mod agent_creation_tests {
             instructions: "Test".to_string(),
             ..Default::default()
         };
-        
+
         let agent = BasicAgent::new(config, llm.clone());
         assert!(agent.is_ok()); // 应该处理长名称
-        
+
         // 测试特殊字符
         let special_config = AgentConfig {
             name: "test-agent-🤖".to_string(),
             instructions: "Special chars: @#$%^&*()".to_string(),
             ..Default::default()
         };
-        
+
         let agent = BasicAgent::new(special_config, llm);
         assert!(agent.is_ok());
     }
@@ -152,13 +152,13 @@ mod agent_creation_tests {
     async fn test_agent_default_configuration() {
         // 测试默认配置
         let llm = Arc::new(MockLlmProvider::new(vec!["Default config test".to_string()]));
-        
+
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
-        
+
         assert!(agent.is_ok());
         let agent = agent.unwrap();
-        
+
         // 测试默认配置下的基本功能
         let response = agent.generate("Hello").await;
         assert!(response.is_ok());
@@ -168,16 +168,16 @@ mod agent_creation_tests {
     async fn test_agent_timeout_configuration() {
         // 测试超时配置
         let llm = Arc::new(MockLlmProvider::new(vec!["Timeout test".to_string()]));
-        
+
         let config = AgentConfig {
             name: "timeout-agent".to_string(),
             instructions: "Test timeout".to_string(),
             timeout: Some(Duration::from_millis(100)),
             ..Default::default()
         };
-        
+
         let agent = BasicAgent::new(config, llm).unwrap();
-        
+
         // 测试在超时限制内的操作
         let result = timeout(Duration::from_millis(200), agent.generate("Quick response")).await;
         assert!(result.is_ok());
@@ -187,11 +187,11 @@ mod agent_creation_tests {
     async fn test_agent_clone_and_copy() {
         // 测试Agent的克隆和复制
         let agent = TestUtils::create_test_agent("clone-test").await.unwrap();
-        
+
         // 测试基本功能
         let response1 = agent.generate("First message").await;
         assert!(response1.is_ok());
-        
+
         // 如果Agent支持克隆，测试克隆后的功能
         // let cloned_agent = agent.clone();
         // let response2 = cloned_agent.generate("Second message").await;
@@ -202,13 +202,13 @@ mod agent_creation_tests {
     async fn test_agent_resource_cleanup() {
         // 测试资源清理
         let agent = TestUtils::create_test_agent("cleanup-test").await.unwrap();
-        
+
         // 使用Agent
         let _response = agent.generate("Test message").await;
-        
+
         // Agent应该在drop时自动清理资源
         drop(agent);
-        
+
         // 验证没有资源泄漏（这里是概念性测试）
         assert!(true);
     }

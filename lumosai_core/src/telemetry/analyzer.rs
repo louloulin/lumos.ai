@@ -1,5 +1,5 @@
 //! 智能性能分析器
-//! 
+//!
 //! 提供自动化性能分析、异常检测、趋势预测等功能
 
 use crate::telemetry::metrics::*;
@@ -197,19 +197,35 @@ pub enum PredictionModel {
 #[async_trait]
 pub trait PerformanceAnalyzer: Send + Sync {
     /// 分析性能数据
-    async fn analyze(&self, metrics: &[AgentMetrics], time_range: TimeRange) -> Result<PerformanceAnalysis, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn analyze(
+        &self,
+        metrics: &[AgentMetrics],
+        time_range: TimeRange,
+    ) -> Result<PerformanceAnalysis, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 检测异常
-    async fn detect_anomalies(&self, metrics: &[AgentMetrics]) -> Result<Vec<PerformanceAnomaly>, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn detect_anomalies(
+        &self,
+        metrics: &[AgentMetrics],
+    ) -> Result<Vec<PerformanceAnomaly>, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 识别瓶颈
-    async fn identify_bottlenecks(&self, metrics: &[AgentMetrics]) -> Result<Vec<PerformanceBottleneck>, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn identify_bottlenecks(
+        &self,
+        metrics: &[AgentMetrics],
+    ) -> Result<Vec<PerformanceBottleneck>, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 生成优化建议
-    async fn generate_recommendations(&self, analysis: &PerformanceAnalysis) -> Result<Vec<OptimizationRecommendation>, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn generate_recommendations(
+        &self,
+        analysis: &PerformanceAnalysis,
+    ) -> Result<Vec<OptimizationRecommendation>, Box<dyn std::error::Error + Send + Sync>>;
+
     /// 预测性能趋势
-    async fn predict_trends(&self, metrics: &[AgentMetrics]) -> Result<Vec<PerformancePrediction>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn predict_trends(
+        &self,
+        metrics: &[AgentMetrics],
+    ) -> Result<Vec<PerformancePrediction>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// 智能性能分析器实现
@@ -247,21 +263,25 @@ impl IntelligentPerformanceAnalyzer {
             },
         }
     }
-    
+
     /// 计算性能评分
     fn calculate_performance_score(&self, metrics: &[AgentMetrics]) -> f64 {
         if metrics.is_empty() {
             return 0.0;
         }
-        
-        let success_rate = metrics.iter()
+
+        let success_rate = metrics
+            .iter()
             .map(|m| if m.success { 1.0 } else { 0.0 })
-            .sum::<f64>() / metrics.len() as f64;
-        
-        let avg_response_time = metrics.iter()
+            .sum::<f64>()
+            / metrics.len() as f64;
+
+        let avg_response_time = metrics
+            .iter()
             .map(|m| m.execution_time_ms as f64)
-            .sum::<f64>() / metrics.len() as f64;
-        
+            .sum::<f64>()
+            / metrics.len() as f64;
+
         // 响应时间评分 (越低越好)
         let response_score = if avg_response_time <= 100.0 {
             100.0
@@ -270,36 +290,38 @@ impl IntelligentPerformanceAnalyzer {
         } else {
             0.0
         };
-        
+
         // 综合评分
         (success_rate * 100.0 * 0.7) + (response_score * 0.3)
     }
-    
+
     /// 分析性能趋势
     fn analyze_trend(&self, metrics: &[AgentMetrics]) -> PerformanceTrend {
         if metrics.len() < 10 {
             return PerformanceTrend::Stable { variance: 0.0 };
         }
-        
-        let response_times: Vec<f64> = metrics.iter()
-            .map(|m| m.execution_time_ms as f64)
-            .collect();
-        
+
+        let response_times: Vec<f64> = metrics.iter().map(|m| m.execution_time_ms as f64).collect();
+
         // 简单的线性回归分析趋势
         let n = response_times.len() as f64;
         let sum_x: f64 = (0..response_times.len()).map(|i| i as f64).sum();
         let sum_y: f64 = response_times.iter().sum();
-        let sum_xy: f64 = response_times.iter().enumerate()
+        let sum_xy: f64 = response_times
+            .iter()
+            .enumerate()
             .map(|(i, &y)| i as f64 * y)
             .sum();
         let sum_x2: f64 = (0..response_times.len()).map(|i| (i as f64).powi(2)).sum();
-        
+
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x.powi(2));
-        
+
         if slope.abs() < 0.1 {
-            let variance = response_times.iter()
+            let variance = response_times
+                .iter()
                 .map(|&x| (x - sum_y / n).powi(2))
-                .sum::<f64>() / n;
+                .sum::<f64>()
+                / n;
             PerformanceTrend::Stable { variance }
         } else if slope > 0.1 {
             PerformanceTrend::Degrading { rate: slope }
@@ -311,8 +333,15 @@ impl IntelligentPerformanceAnalyzer {
 
 #[async_trait]
 impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
-    async fn analyze(&self, metrics: &[AgentMetrics], time_range: TimeRange) -> Result<PerformanceAnalysis, Box<dyn std::error::Error + Send + Sync>> {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+    async fn analyze(
+        &self,
+        metrics: &[AgentMetrics],
+        time_range: TimeRange,
+    ) -> Result<PerformanceAnalysis, Box<dyn std::error::Error + Send + Sync>> {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
 
         // 计算整体性能评分
         let overall_score = self.calculate_performance_score(metrics);
@@ -349,7 +378,10 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         })
     }
 
-    async fn detect_anomalies(&self, metrics: &[AgentMetrics]) -> Result<Vec<PerformanceAnomaly>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn detect_anomalies(
+        &self,
+        metrics: &[AgentMetrics],
+    ) -> Result<Vec<PerformanceAnomaly>, Box<dyn std::error::Error + Send + Sync>> {
         let mut anomalies = Vec::new();
 
         if metrics.len() < 10 {
@@ -357,20 +389,23 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         }
 
         // 检测响应时间异常
-        let response_times: Vec<f64> = metrics.iter()
-            .map(|m| m.execution_time_ms as f64)
-            .collect();
+        let response_times: Vec<f64> = metrics.iter().map(|m| m.execution_time_ms as f64).collect();
 
         let mean = response_times.iter().sum::<f64>() / response_times.len() as f64;
-        let variance = response_times.iter()
+        let variance = response_times
+            .iter()
             .map(|&x| (x - mean).powi(2))
-            .sum::<f64>() / response_times.len() as f64;
+            .sum::<f64>()
+            / response_times.len() as f64;
         let std_dev = variance.sqrt();
 
         for (_i, &time) in response_times.iter().enumerate() {
             let deviation = (time - mean).abs() / std_dev;
             if deviation > self.anomaly_sensitivity {
-                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64;
                 anomalies.push(PerformanceAnomaly {
                     anomaly_type: AnomalyType::ResponseTimeSpike,
                     detected_at: now,
@@ -384,7 +419,8 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         }
 
         // 检测错误率异常
-        let error_rates: Vec<f64> = metrics.windows(10)
+        let error_rates: Vec<f64> = metrics
+            .windows(10)
             .map(|window| {
                 let errors = window.iter().filter(|m| !m.success).count();
                 errors as f64 / window.len() as f64
@@ -394,8 +430,12 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         if !error_rates.is_empty() {
             let mean_error_rate = error_rates.iter().sum::<f64>() / error_rates.len() as f64;
             for &rate in &error_rates {
-                if rate > mean_error_rate + 0.1 { // 错误率增加超过10%
-                    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+                if rate > mean_error_rate + 0.1 {
+                    // 错误率增加超过10%
+                    let now = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis() as u64;
                     anomalies.push(PerformanceAnomaly {
                         anomaly_type: AnomalyType::ErrorRateSpike,
                         detected_at: now,
@@ -403,7 +443,11 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
                         expected_value: mean_error_rate,
                         deviation: (rate - mean_error_rate) / mean_error_rate,
                         confidence: 0.8,
-                        description: format!("错误率异常: {:.1}% (期望: {:.1}%)", rate * 100.0, mean_error_rate * 100.0),
+                        description: format!(
+                            "错误率异常: {:.1}% (期望: {:.1}%)",
+                            rate * 100.0,
+                            mean_error_rate * 100.0
+                        ),
                     });
                 }
             }
@@ -412,7 +456,10 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         Ok(anomalies)
     }
 
-    async fn identify_bottlenecks(&self, metrics: &[AgentMetrics]) -> Result<Vec<PerformanceBottleneck>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn identify_bottlenecks(
+        &self,
+        metrics: &[AgentMetrics],
+    ) -> Result<Vec<PerformanceBottleneck>, Box<dyn std::error::Error + Send + Sync>> {
         let mut bottlenecks = Vec::new();
 
         if metrics.is_empty() {
@@ -420,9 +467,11 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         }
 
         // 分析响应时间瓶颈
-        let avg_response_time = metrics.iter()
+        let avg_response_time = metrics
+            .iter()
             .map(|m| m.execution_time_ms as f64)
-            .sum::<f64>() / metrics.len() as f64;
+            .sum::<f64>()
+            / metrics.len() as f64;
 
         if avg_response_time > 1000.0 {
             let mut bottleneck_metrics = HashMap::new();
@@ -443,9 +492,7 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         }
 
         // 分析工具执行瓶颈
-        let tool_calls: Vec<usize> = metrics.iter()
-            .map(|m| m.tool_calls_count)
-            .collect();
+        let tool_calls: Vec<usize> = metrics.iter().map(|m| m.tool_calls_count).collect();
 
         if !tool_calls.is_empty() {
             let avg_tool_calls = tool_calls.iter().sum::<usize>() as f64 / tool_calls.len() as f64;
@@ -471,7 +518,10 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         Ok(bottlenecks)
     }
 
-    async fn generate_recommendations(&self, analysis: &PerformanceAnalysis) -> Result<Vec<OptimizationRecommendation>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn generate_recommendations(
+        &self,
+        analysis: &PerformanceAnalysis,
+    ) -> Result<Vec<OptimizationRecommendation>, Box<dyn std::error::Error + Send + Sync>> {
         let mut recommendations = Vec::new();
 
         // 基于性能评分生成建议
@@ -517,7 +567,7 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
                         "可能需要较长的开发周期".to_string(),
                     ],
                 });
-            },
+            }
             PerformanceTrend::Volatile { amplitude } => {
                 recommendations.push(OptimizationRecommendation {
                     recommendation_type: RecommendationType::Configuration,
@@ -532,11 +582,9 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
                         "增加系统缓冲".to_string(),
                         "实施平滑处理".to_string(),
                     ],
-                    risks: vec![
-                        "配置调整可能影响峰值性能".to_string(),
-                    ],
+                    risks: vec!["配置调整可能影响峰值性能".to_string()],
                 });
-            },
+            }
             _ => {}
         }
 
@@ -557,7 +605,7 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
                             "需要充分测试".to_string(),
                         ],
                     });
-                },
+                }
                 BottleneckType::ToolExecution => {
                     recommendations.push(OptimizationRecommendation {
                         recommendation_type: RecommendationType::Architecture,
@@ -567,11 +615,9 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
                         expected_benefit: "减少工具调用次数20-40%".to_string(),
                         implementation_difficulty: DifficultyLevel::Medium,
                         steps: bottleneck.solutions.clone(),
-                        risks: vec![
-                            "工具优化可能影响功能完整性".to_string(),
-                        ],
+                        risks: vec!["工具优化可能影响功能完整性".to_string()],
                     });
-                },
+                }
                 _ => {}
             }
         }
@@ -582,7 +628,10 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         Ok(recommendations)
     }
 
-    async fn predict_trends(&self, metrics: &[AgentMetrics]) -> Result<Vec<PerformancePrediction>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn predict_trends(
+        &self,
+        metrics: &[AgentMetrics],
+    ) -> Result<Vec<PerformancePrediction>, Box<dyn std::error::Error + Send + Sync>> {
         let mut predictions = Vec::new();
 
         if metrics.len() < self.prediction_config.window_size {
@@ -590,17 +639,19 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         }
 
         // 预测响应时间趋势
-        let response_times: Vec<f64> = metrics.iter()
-            .map(|m| m.execution_time_ms as f64)
-            .collect();
+        let response_times: Vec<f64> = metrics.iter().map(|m| m.execution_time_ms as f64).collect();
 
         // 简单的移动平均预测
         let window_size = self.prediction_config.window_size.min(response_times.len());
         let recent_avg = response_times[response_times.len() - window_size..]
             .iter()
-            .sum::<f64>() / window_size as f64;
+            .sum::<f64>()
+            / window_size as f64;
 
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
         let future_time = now + (60 * 1000); // 1分钟后
 
         predictions.push(PerformancePrediction {
@@ -613,7 +664,8 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
         });
 
         // 预测成功率趋势
-        let success_rates: Vec<f64> = metrics.windows(10)
+        let success_rates: Vec<f64> = metrics
+            .windows(10)
             .map(|window| {
                 let successes = window.iter().filter(|m| m.success).count();
                 successes as f64 / window.len() as f64
@@ -627,7 +679,10 @@ impl PerformanceAnalyzer for IntelligentPerformanceAnalyzer {
                 metric_name: "success_rate".to_string(),
                 predicted_at: future_time,
                 predicted_value: recent_success_rate,
-                confidence_interval: ((recent_success_rate - 0.1).max(0.0), (recent_success_rate + 0.1).min(1.0)),
+                confidence_interval: (
+                    (recent_success_rate - 0.1).max(0.0),
+                    (recent_success_rate + 0.1).min(1.0),
+                ),
                 model_type: PredictionModel::MovingAverage,
                 accuracy: 0.8,
             });

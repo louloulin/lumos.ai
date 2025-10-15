@@ -1,5 +1,5 @@
 //! 报告生成模块
-//! 
+//!
 //! 提供企业级报告生成功能
 
 use async_trait::async_trait;
@@ -20,13 +20,13 @@ pub struct ReportGenerator {
 pub struct ReportTemplate {
     /// 模板ID
     pub id: String,
-    
+
     /// 模板名称
     pub name: String,
-    
+
     /// 报告类型
     pub report_type: ReportType,
-    
+
     /// 模板内容
     pub template_content: String,
 }
@@ -46,13 +46,13 @@ pub enum ReportType {
 pub struct ComplianceReport {
     /// 报告ID
     pub id: String,
-    
+
     /// 生成时间
     pub generated_at: DateTime<Utc>,
-    
+
     /// 报告内容
     pub content: String,
-    
+
     /// 合规分数
     pub compliance_score: f64,
 }
@@ -62,13 +62,13 @@ pub struct ComplianceReport {
 pub struct PerformanceReport {
     /// 报告ID
     pub id: String,
-    
+
     /// 生成时间
     pub generated_at: DateTime<Utc>,
-    
+
     /// 报告内容
     pub content: String,
-    
+
     /// 性能指标
     pub metrics: HashMap<String, f64>,
 }
@@ -80,7 +80,7 @@ impl ReportGenerator {
             templates: HashMap::new(),
         }
     }
-    
+
     /// 生成合规报告
     pub async fn generate_compliance_report(&self) -> Result<ComplianceReport> {
         Ok(ComplianceReport {
@@ -90,14 +90,14 @@ impl ReportGenerator {
             compliance_score: 95.0,
         })
     }
-    
+
     /// 生成性能报告
     pub async fn generate_performance_report(&self) -> Result<PerformanceReport> {
         let mut metrics = HashMap::new();
         metrics.insert("cpu_usage".to_string(), 75.0);
         metrics.insert("memory_usage".to_string(), 60.0);
         metrics.insert("response_time".to_string(), 150.0);
-        
+
         Ok(PerformanceReport {
             id: uuid::Uuid::new_v4().to_string(),
             generated_at: Utc::now(),

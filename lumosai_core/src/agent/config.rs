@@ -1,10 +1,10 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
+use crate::agent::types::{TelemetrySettings, VoiceConfig};
+use crate::llm::{LlmOptions, Message};
 use crate::memory::MemoryConfig;
 use crate::memory::WorkingMemoryConfig;
-use crate::llm::{LlmOptions, Message};
-use crate::agent::types::{VoiceConfig, TelemetrySettings};
 
 /// Configuration for an agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,4 +134,4 @@ impl Default for AgentGenerateOptions {
             llm_options: LlmOptions::default(),
         }
     }
-} 
+}

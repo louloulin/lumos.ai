@@ -1,5 +1,5 @@
 //! Cohere LLM provider implementation
-//! 
+//!
 //! This module provides integration with Cohere's language models and embedding models.
 
 use async_trait::async_trait;
@@ -7,12 +7,12 @@ use futures::stream::BoxStream;
 use reqwest::Client;
 use serde_json::json;
 
-use crate::error::{Error, Result};
 use super::{
-    LlmProvider, LlmOptions, Message, Role,
     function_calling::{FunctionDefinition, ToolChoice},
-    provider::FunctionCallingResponse
+    provider::FunctionCallingResponse,
+    LlmOptions, LlmProvider, Message, Role,
 };
+use crate::error::{Error, Result};
 
 /// Cohere API configuration
 #[derive(Debug, Clone)]
@@ -49,7 +49,7 @@ impl CohereProvider {
             model,
             ..Default::default()
         };
-        
+
         let client = Client::builder()
             .default_headers({
                 let mut headers = reqwest::header::HeaderMap::new();
@@ -59,10 +59,7 @@ impl CohereProvider {
                         .parse()
                         .expect("Invalid API key format"),
                 );
-                headers.insert(
-                    "Content-Type",
-                    "application/json".parse().unwrap(),
-                );
+                headers.insert("Content-Type", "application/json".parse().unwrap());
                 headers
             })
             .build()
@@ -73,12 +70,12 @@ impl CohereProvider {
 
     /// Create from environment variables
     pub fn from_env() -> Result<Self> {
-        let api_key = std::env::var("COHERE_API_KEY")
-            .map_err(|_| Error::Configuration("COHERE_API_KEY environment variable not set".to_string()))?;
-        
-        let model = std::env::var("COHERE_MODEL")
-            .unwrap_or_else(|_| "command-r-plus".to_string());
-            
+        let api_key = std::env::var("COHERE_API_KEY").map_err(|_| {
+            Error::Configuration("COHERE_API_KEY environment variable not set".to_string())
+        })?;
+
+        let model = std::env::var("COHERE_MODEL").unwrap_or_else(|_| "command-r-plus".to_string());
+
         Ok(Self::new(api_key, model))
     }
 
@@ -87,7 +84,7 @@ impl CohereProvider {
         // Cohere uses a simple prompt format for now
         // In the future, we can implement proper conversation format
         let mut prompt = String::new();
-        
+
         for message in messages {
             match message.role {
                 Role::System => {
@@ -105,10 +102,10 @@ impl CohereProvider {
                 }
             }
         }
-        
+
         // Add final prompt for assistant response
         prompt.push_str("Assistant: ");
-        
+
         Ok(prompt)
     }
 }
@@ -130,7 +127,8 @@ impl LlmProvider for CohereProvider {
             "return_likelihoods": "NONE"
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(&format!("{}/v1/generate", self.config.base_url))
             .json(&request_body)
             .send()
@@ -139,10 +137,15 @@ impl LlmProvider for CohereProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Cohere API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Cohere API error: {}",
+                error_text
+            )));
         }
 
-        let response_json: serde_json::Value = response.json().await
+        let response_json: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
 
         let text = response_json["generations"][0]["text"]
@@ -152,7 +155,11 @@ impl LlmProvider for CohereProvider {
         Ok(text.trim().to_string())
     }
 
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         let prompt = self.convert_messages(messages)?;
         self.generate(&prompt, options).await
     }
@@ -176,7 +183,8 @@ impl LlmProvider for CohereProvider {
             "input_type": "search_document"
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(&format!("{}/v1/embed", self.config.base_url))
             .json(&request_body)
             .send()
@@ -185,10 +193,15 @@ impl LlmProvider for CohereProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Cohere API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Cohere API error: {}",
+                error_text
+            )));
         }
 
-        let response_json: serde_json::Value = response.json().await
+        let response_json: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
 
         let embeddings = response_json["embeddings"][0]
@@ -234,22 +247,16 @@ mod tests {
 
     #[test]
     fn test_cohere_provider_creation() {
-        let provider = CohereProvider::new(
-            "test-key".to_string(),
-            "command-r-plus".to_string(),
-        );
-        
+        let provider = CohereProvider::new("test-key".to_string(), "command-r-plus".to_string());
+
         assert_eq!(provider.name(), "cohere");
         assert_eq!(provider.config.model, "command-r-plus");
     }
 
     #[test]
     fn test_message_conversion() {
-        let provider = CohereProvider::new(
-            "test-key".to_string(),
-            "command-r-plus".to_string(),
-        );
-        
+        let provider = CohereProvider::new("test-key".to_string(), "command-r-plus".to_string());
+
         let messages = vec![
             Message {
                 role: Role::System,
@@ -264,7 +271,7 @@ mod tests {
                 name: None,
             },
         ];
-        
+
         let prompt = provider.convert_messages(&messages).unwrap();
         assert!(prompt.contains("System: You are a helpful assistant."));
         assert!(prompt.contains("Human: Hello!"));
@@ -276,11 +283,11 @@ mod tests {
     async fn test_cohere_integration() {
         let api_key = std::env::var("COHERE_API_KEY").expect("COHERE_API_KEY not set");
         let provider = CohereProvider::new(api_key, "command-r-plus".to_string());
-        
+
         let options = LlmOptions::default()
             .with_temperature(0.7)
             .with_max_tokens(50);
-        
+
         let response = provider.generate("Say hello", &options).await;
         assert!(response.is_ok());
         println!("Cohere response: {}", response.unwrap());

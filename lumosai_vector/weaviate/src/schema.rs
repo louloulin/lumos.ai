@@ -9,21 +9,21 @@ pub struct WeaviateClass {
     /// Class name (must start with uppercase)
     #[serde(rename = "class")]
     pub class: String,
-    
+
     /// Optional description
     pub description: Option<String>,
-    
+
     /// Vector index type (usually "hnsw")
     #[serde(rename = "vectorIndexType")]
     pub vector_index_type: String,
-    
+
     /// Vector index configuration
     #[serde(rename = "vectorIndexConfig")]
     pub vector_index_config: Value,
-    
+
     /// Vectorizer module
     pub vectorizer: String,
-    
+
     /// Class properties
     pub properties: Vec<WeaviateProperty>,
 }
@@ -33,14 +33,14 @@ pub struct WeaviateClass {
 pub struct WeaviateProperty {
     /// Property name
     pub name: String,
-    
+
     /// Data type(s)
     #[serde(rename = "dataType")]
     pub data_type: Vec<String>,
-    
+
     /// Optional description
     pub description: Option<String>,
-    
+
     /// Whether to index this property
     pub index: Option<bool>,
 }
@@ -74,21 +74,24 @@ impl WeaviateClass {
             ],
         }
     }
-    
+
     /// Set the distance metric
     pub fn with_distance(mut self, distance: &str) -> Self {
         if let Some(config) = self.vector_index_config.as_object_mut() {
-            config.insert("distance".to_string(), serde_json::Value::String(distance.to_string()));
+            config.insert(
+                "distance".to_string(),
+                serde_json::Value::String(distance.to_string()),
+            );
         }
         self
     }
-    
+
     /// Set the vectorizer
     pub fn with_vectorizer(mut self, vectorizer: String) -> Self {
         self.vectorizer = vectorizer;
         self
     }
-    
+
     /// Add a property
     pub fn with_property(mut self, property: WeaviateProperty) -> Self {
         self.properties.push(property);
@@ -106,13 +109,13 @@ impl WeaviateProperty {
             index: None,
         }
     }
-    
+
     /// Set description
     pub fn with_description(mut self, description: String) -> Self {
         self.description = Some(description);
         self
     }
-    
+
     /// Set indexing
     pub fn with_index(mut self, index: bool) -> Self {
         self.index = Some(index);

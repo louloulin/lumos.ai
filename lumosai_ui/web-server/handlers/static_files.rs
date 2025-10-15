@@ -14,16 +14,16 @@ pub struct StaticFilePath {
 
 pub async fn static_path(StaticFilePath { path }: StaticFilePath) -> impl IntoResponse {
     let path = format!("/static/{}", path);
-    
+
     tracing::debug!("Serving static file: {}", path);
-    
+
     let data = StaticFile::get(&path);
-    
+
     if let Some(data) = data {
         match tokio::fs::File::open(&data.file_name).await {
             Ok(file) => {
                 let stream = ReaderStream::new(file);
-                
+
                 Response::builder()
                     .status(StatusCode::OK)
                     .header(

@@ -1,20 +1,20 @@
 //! Agent builder for simplified agent creation
-//! 
+//!
 //! This module provides a fluent builder API for creating agents,
 //! inspired by Mastra's design but optimized for Rust.
 
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
-use serde_json::Value;
 
-use crate::{Result, Error};
-use crate::llm::LlmProvider;
-use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
-use crate::memory::{MemoryConfig, WorkingMemoryConfig};
-use super::{AgentConfig, BasicAgent, ModelResolver};
 use super::trait_def::Agent;
-use super::types::{VoiceConfig, TelemetrySettings};
+use super::types::{TelemetrySettings, VoiceConfig};
+use super::{AgentConfig, BasicAgent, ModelResolver};
 use crate::base::Base;
+use crate::llm::LlmProvider;
+use crate::memory::{MemoryConfig, WorkingMemoryConfig};
+use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
+use crate::{Error, Result};
 use async_trait::async_trait;
 
 /// Wrapper to convert Arc<dyn Tool> to Box<dyn Tool>
@@ -74,7 +74,7 @@ impl Tool for ToolWrapper {
         &self,
         params: Value,
         context: ToolExecutionContext,
-        options: &ToolExecutionOptions
+        options: &ToolExecutionOptions,
     ) -> Result<Value> {
         self.0.execute(params, context, options).await
     }
@@ -123,8 +123,8 @@ pub struct AgentBuilder {
     tools: Vec<Box<dyn Tool>>,
     smart_defaults: bool,
     model_resolver: Option<ModelResolver>, // Model resolver for string names
-    tenant_id: Option<String>, // Multi-tenant support
-    isolation_level: Option<String>, // Isolation level for multi-tenancy
+    tenant_id: Option<String>,             // Multi-tenant support
+    isolation_level: Option<String>,       // Isolation level for multi-tenancy
 }
 
 impl Default for AgentBuilder {
@@ -369,12 +369,6 @@ impl AgentBuilder {
         self
     }
 
-
-
-
-
-
-
     /// Build the agent
     pub fn build(mut self) -> Result<BasicAgent> {
         // Apply smart defaults if enabled
@@ -383,22 +377,30 @@ impl AgentBuilder {
         }
 
         // Validate required fields
-        let name = self.name.ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
-        let instructions = self.instructions.ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
+        let name = self
+            .name
+            .ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
+        let instructions = self
+            .instructions
+            .ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
 
         // Check if we have either a model or model_name
         if self.model.is_none() && self.model_name.is_none() {
-            return Err(Error::Configuration("Either model or model_name is required".to_string()));
+            return Err(Error::Configuration(
+                "Either model or model_name is required".to_string(),
+            ));
         }
 
         // If we have a model_name but no model, we need to resolve it asynchronously
         if self.model.is_none() && self.model_name.is_some() {
             return Err(Error::Configuration(
-                "Model name resolution requires async build. Use build_async() instead".to_string()
+                "Model name resolution requires async build. Use build_async() instead".to_string(),
             ));
         }
 
-        let model = self.model.ok_or_else(|| Error::Configuration("Agent model is required".to_string()))?;
+        let model = self
+            .model
+            .ok_or_else(|| Error::Configuration("Agent model is required".to_string()))?;
 
         // Create config
         let config = AgentConfig {
@@ -437,8 +439,12 @@ impl AgentBuilder {
         }
 
         // Validate required fields
-        let name = self.name.ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
-        let instructions = self.instructions.ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
+        let name = self
+            .name
+            .ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
+        let instructions = self
+            .instructions
+            .ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
 
         // Resolve model if needed
         let model = if let Some(model) = self.model {
@@ -447,7 +453,9 @@ impl AgentBuilder {
             let resolver = self.model_resolver.unwrap_or_default();
             resolver.resolve(&model_name).await?
         } else {
-            return Err(Error::Configuration("Either model or model_name is required".to_string()));
+            return Err(Error::Configuration(
+                "Either model or model_name is required".to_string(),
+            ));
         };
 
         // Create config
@@ -520,12 +528,12 @@ impl AgentBuilder {
 mod tests {
     use super::*;
     use crate::llm::MockLlmProvider;
-    use crate::tool::{FunctionTool, ToolSchema, ParameterSchema};
+    use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
 
     #[tokio::test]
     async fn test_agent_builder_basic() {
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
+
         let agent = AgentBuilder::new()
             .name("test_agent")
             .instructions("You are a test assistant")
@@ -540,28 +548,24 @@ mod tests {
     #[tokio::test]
     async fn test_agent_builder_with_tools() {
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
+
         // Create a test tool
-        let schema = ToolSchema::new(vec![
-            ParameterSchema {
-                name: "message".to_string(),
-                description: "Message to echo".to_string(),
-                r#type: "string".to_string(),
-                required: true,
-                properties: None,
-                default: None,
-            },
-        ]);
-        
-        let echo_tool = FunctionTool::new(
-            "echo",
-            "Echo a message",
-            schema,
-            |params| {
-                let message = params.get("message").and_then(|v| v.as_str()).unwrap_or("No message");
-                Ok(serde_json::json!(format!("Echo: {}", message)))
-            },
-        );
+        let schema = ToolSchema::new(vec![ParameterSchema {
+            name: "message".to_string(),
+            description: "Message to echo".to_string(),
+            r#type: "string".to_string(),
+            required: true,
+            properties: None,
+            default: None,
+        }]);
+
+        let echo_tool = FunctionTool::new("echo", "Echo a message", schema, |params| {
+            let message = params
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("No message");
+            Ok(serde_json::json!(format!("Echo: {}", message)))
+        });
 
         let agent = AgentBuilder::new()
             .name("test_agent")
@@ -588,10 +592,7 @@ mod tests {
 
         // Test missing instructions
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        let result = AgentBuilder::new()
-            .name("test")
-            .model(llm)
-            .build();
+        let result = AgentBuilder::new().name("test").model(llm).build();
         assert!(result.is_err());
     }
 }

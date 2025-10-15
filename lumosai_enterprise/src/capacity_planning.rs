@@ -1,5 +1,5 @@
 //! 容量规划模块
-//! 
+//!
 //! 提供企业级容量规划和预测功能
 
 use async_trait::async_trait;
@@ -13,7 +13,7 @@ use crate::error::{EnterpriseError, Result};
 pub struct CapacityPlanner {
     /// 容量指标
     capacity_metrics: Vec<CapacityMetrics>,
-    
+
     /// 扩容建议
     scaling_recommendations: Vec<ScalingRecommendation>,
 }
@@ -23,16 +23,16 @@ pub struct CapacityPlanner {
 pub struct CapacityMetrics {
     /// 资源类型
     pub resource_type: String,
-    
+
     /// 当前使用量
     pub current_usage: f64,
-    
+
     /// 总容量
     pub total_capacity: f64,
-    
+
     /// 使用率
     pub utilization_rate: f64,
-    
+
     /// 测量时间
     pub measured_at: DateTime<Utc>,
 }
@@ -42,19 +42,19 @@ pub struct CapacityMetrics {
 pub struct ScalingRecommendation {
     /// 资源类型
     pub resource_type: String,
-    
+
     /// 建议操作
     pub action: ScalingAction,
-    
+
     /// 建议值
     pub recommended_value: f64,
-    
+
     /// 理由
     pub reason: String,
-    
+
     /// 优先级
     pub priority: RecommendationPriority,
-    
+
     /// 生成时间
     pub generated_at: DateTime<Utc>,
 }
@@ -84,17 +84,17 @@ impl CapacityPlanner {
             scaling_recommendations: Vec::new(),
         }
     }
-    
+
     /// 添加容量指标
     pub async fn add_metrics(&mut self, metrics: CapacityMetrics) -> Result<()> {
         self.capacity_metrics.push(metrics);
         Ok(())
     }
-    
+
     /// 生成扩容建议
     pub async fn generate_recommendations(&mut self) -> Result<Vec<ScalingRecommendation>> {
         self.scaling_recommendations.clear();
-        
+
         for metrics in &self.capacity_metrics {
             if metrics.utilization_rate > 0.8 {
                 let recommendation = ScalingRecommendation {
@@ -122,7 +122,7 @@ impl CapacityPlanner {
                 self.scaling_recommendations.push(recommendation);
             }
         }
-        
+
         Ok(self.scaling_recommendations.clone())
     }
 }

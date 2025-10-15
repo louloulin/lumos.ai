@@ -69,9 +69,10 @@ mod tests {
     fn test_search_result_builder() {
         let result = SearchResult::new("doc1", 0.95)
             .with_vector(vec![0.1, 0.2, 0.3])
-            .with_metadata(HashMap::from([
-                ("type".to_string(), MetadataValue::String("article".to_string())),
-            ]))
+            .with_metadata(HashMap::from([(
+                "type".to_string(),
+                MetadataValue::String("article".to_string()),
+            )]))
             .with_content("Test content");
 
         assert_eq!(result.id, "doc1");
@@ -93,7 +94,7 @@ mod tests {
         let cosine_calc = CosineSimilarity;
         let cosine_ab = cosine_calc.calculate_similarity(&vec_a, &vec_b).unwrap();
         let cosine_ac = cosine_calc.calculate_similarity(&vec_a, &vec_c).unwrap();
-        
+
         assert!((cosine_ab - 0.0).abs() < 1e-6); // Orthogonal vectors
         assert!((cosine_ac - 1.0).abs() < 1e-6); // Identical vectors
 
@@ -101,7 +102,7 @@ mod tests {
         let dot_calc = DotProductSimilarity;
         let dot_ab = dot_calc.calculate_similarity(&vec_a, &vec_b).unwrap();
         let dot_ac = dot_calc.calculate_similarity(&vec_a, &vec_c).unwrap();
-        
+
         assert!((dot_ab - 0.0).abs() < 1e-6);
         assert!((dot_ac - 1.0).abs() < 1e-6);
 
@@ -109,7 +110,7 @@ mod tests {
         let euclidean_calc = EuclideanSimilarity;
         let euclidean_ab = euclidean_calc.calculate_similarity(&vec_a, &vec_b).unwrap();
         let euclidean_ac = euclidean_calc.calculate_similarity(&vec_a, &vec_c).unwrap();
-        
+
         assert!(euclidean_ab < euclidean_ac); // Different vectors should be less similar
         assert!((euclidean_ac - 1.0).abs() < 1e-6); // Identical vectors should have max similarity
     }
@@ -120,13 +121,19 @@ mod tests {
 
         let evaluator = StandardFilterEvaluator;
         let metadata = HashMap::from([
-            ("type".to_string(), MetadataValue::String("article".to_string())),
+            (
+                "type".to_string(),
+                MetadataValue::String("article".to_string()),
+            ),
             ("score".to_string(), MetadataValue::Float(0.85)),
             ("active".to_string(), MetadataValue::Boolean(true)),
-            ("tags".to_string(), MetadataValue::Array(vec![
-                MetadataValue::String("tech".to_string()),
-                MetadataValue::String("ai".to_string()),
-            ])),
+            (
+                "tags".to_string(),
+                MetadataValue::Array(vec![
+                    MetadataValue::String("tech".to_string()),
+                    MetadataValue::String("ai".to_string()),
+                ]),
+            ),
         ]);
 
         // Test equality filter
@@ -179,8 +186,11 @@ mod tests {
         let memory_config = StorageConfigBuilder::memory()
             .with_initial_capacity(1000)
             .build();
-        
-        if let StorageConfig::Memory { initial_capacity, .. } = memory_config {
+
+        if let StorageConfig::Memory {
+            initial_capacity, ..
+        } = memory_config
+        {
             assert_eq!(initial_capacity, Some(1000));
         } else {
             panic!("Expected memory config");
@@ -188,7 +198,7 @@ mod tests {
 
         // Test SQLite config
         let sqlite_config = StorageConfigBuilder::sqlite("test.db").build();
-        
+
         if let StorageConfig::Sqlite { database_path, .. } = sqlite_config {
             assert_eq!(database_path, "test.db");
         } else {
@@ -196,12 +206,20 @@ mod tests {
         }
 
         // Test Qdrant config
-        let qdrant_config = StorageConfigBuilder::qdrant("http://localhost:6333", "test_collection")
-            .with_api_key("secret")
-            .with_tls(true)
-            .build();
-        
-        if let StorageConfig::Qdrant { url, collection_name, api_key, tls, .. } = qdrant_config {
+        let qdrant_config =
+            StorageConfigBuilder::qdrant("http://localhost:6333", "test_collection")
+                .with_api_key("secret")
+                .with_tls(true)
+                .build();
+
+        if let StorageConfig::Qdrant {
+            url,
+            collection_name,
+            api_key,
+            tls,
+            ..
+        } = qdrant_config
+        {
             assert_eq!(url, "http://localhost:6333");
             assert_eq!(collection_name, "test_collection");
             assert_eq!(api_key, Some("secret".to_string()));

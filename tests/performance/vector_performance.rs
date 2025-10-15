@@ -7,7 +7,7 @@ use lumosai::prelude::*;
 #[ignore] // Temporarily disabled - performance tests are resource intensive
 async fn test_vector_performance() {
     init_test_env();
-    
+
     // Test vector storage performance
     // TODO: Implement when performance testing framework is ready
     assert!(true, "Vector performance tests placeholder");
@@ -17,7 +17,7 @@ async fn test_vector_performance() {
 #[ignore] // Temporarily disabled - performance tests are resource intensive
 async fn test_vector_search_performance() {
     init_test_env();
-    
+
     // Test vector search performance
     // TODO: Implement when performance testing framework is ready
     assert!(true, "Vector performance tests placeholder");

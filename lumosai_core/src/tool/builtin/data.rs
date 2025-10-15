@@ -7,10 +7,10 @@
 //! - Data validation and cleaning
 //! - Schema validation and type conversion
 
-use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool};
-use serde_json::{Value, json};
-use std::collections::HashMap;
+use crate::tool::{FunctionTool, ParameterSchema, Tool, ToolSchema};
 use regex::Regex;
+use serde_json::{json, Value};
+use std::collections::HashMap;
 
 /// Create a JSON parser tool
 /// Similar to Mastra's JSON processing capabilities
@@ -47,12 +47,14 @@ pub fn create_json_parser_tool() -> FunctionTool {
         "Parse and manipulate JSON data with path extraction",
         schema,
         |params| {
-            let json_string = params.get("json_string")
+            let json_string = params
+                .get("json_string")
                 .and_then(|v| v.as_str())
                 .ok_or("JSON string is required")?;
-            
+
             let path = params.get("path").and_then(|v| v.as_str());
-            let validate_schema = params.get("validate_schema")
+            let validate_schema = params
+                .get("validate_schema")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
@@ -89,14 +91,12 @@ pub fn create_json_parser_tool() -> FunctionTool {
                             "size": json_string.len()
                         }
                     }))
-                },
-                Err(e) => {
-                    Ok(json!({
-                        "success": false,
-                        "error": format!("JSON parsing error: {}", e),
-                        "input": json_string
-                    }))
                 }
+                Err(e) => Ok(json!({
+                    "success": false,
+                    "error": format!("JSON parsing error: {}", e),
+                    "input": json_string
+                })),
             }
         },
     )
@@ -145,19 +145,23 @@ pub fn create_csv_parser_tool() -> FunctionTool {
         "Parse CSV data into structured format",
         schema,
         |params| {
-            let csv_data = params.get("csv_data")
+            let csv_data = params
+                .get("csv_data")
                 .and_then(|v| v.as_str())
                 .ok_or("CSV data is required")?;
-            
-            let delimiter = params.get("delimiter")
+
+            let delimiter = params
+                .get("delimiter")
                 .and_then(|v| v.as_str())
                 .unwrap_or(",");
-            
-            let has_headers = params.get("has_headers")
+
+            let has_headers = params
+                .get("has_headers")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
-            
-            let max_rows = params.get("max_rows")
+
+            let max_rows = params
+                .get("max_rows")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(1000);
 
@@ -168,20 +172,30 @@ pub fn create_csv_parser_tool() -> FunctionTool {
 
             if !lines.is_empty() {
                 if has_headers {
-                    headers = lines[0].split(delimiter).map(|s| s.trim().to_string()).collect();
+                    headers = lines[0]
+                        .split(delimiter)
+                        .map(|s| s.trim().to_string())
+                        .collect();
                     for (i, line) in lines.iter().skip(1).enumerate() {
-                        if i >= max_rows as usize { break; }
+                        if i >= max_rows as usize {
+                            break;
+                        }
                         let values: Vec<&str> = line.split(delimiter).collect();
                         let mut row = HashMap::new();
                         for (j, value) in values.iter().enumerate() {
-                            let header = headers.get(j).cloned().unwrap_or_else(|| format!("col_{}", j));
+                            let header = headers
+                                .get(j)
+                                .cloned()
+                                .unwrap_or_else(|| format!("col_{}", j));
                             row.insert(header, value.trim().to_string());
                         }
                         rows.push(row);
                     }
                 } else {
                     for (i, line) in lines.iter().enumerate() {
-                        if i >= max_rows as usize { break; }
+                        if i >= max_rows as usize {
+                            break;
+                        }
                         let values: Vec<&str> = line.split(delimiter).collect();
                         let mut row = HashMap::new();
                         for (j, value) in values.iter().enumerate() {
@@ -243,13 +257,13 @@ pub fn create_data_transformer_tool() -> FunctionTool {
         "Transform data using various operations",
         schema,
         |params| {
-            let data = params.get("data")
-                .ok_or("Data is required")?;
-            
-            let operation = params.get("operation")
+            let data = params.get("data").ok_or("Data is required")?;
+
+            let operation = params
+                .get("operation")
                 .and_then(|v| v.as_str())
                 .ok_or("Operation is required")?;
-            
+
             let parameters = params.get("parameters");
 
             // Mock data transformation
@@ -261,7 +275,7 @@ pub fn create_data_transformer_tool() -> FunctionTool {
                         "filtered_data": data, // Mock: return same data
                         "parameters": parameters
                     })
-                },
+                }
                 "map" => {
                     json!({
                         "operation": "map",
@@ -269,7 +283,7 @@ pub fn create_data_transformer_tool() -> FunctionTool {
                         "mapped_data": data, // Mock: return same data
                         "parameters": parameters
                     })
-                },
+                }
                 "sort" => {
                     json!({
                         "operation": "sort",
@@ -277,7 +291,7 @@ pub fn create_data_transformer_tool() -> FunctionTool {
                         "sorted_data": data, // Mock: return same data
                         "parameters": parameters
                     })
-                },
+                }
                 "group" => {
                     json!({
                         "operation": "group",
@@ -287,7 +301,7 @@ pub fn create_data_transformer_tool() -> FunctionTool {
                         },
                         "parameters": parameters
                     })
-                },
+                }
                 _ => {
                     return Ok(json!({
                         "success": false,
@@ -319,7 +333,8 @@ pub fn create_excel_reader_tool() -> FunctionTool {
         },
         ParameterSchema {
             name: "sheet_name".to_string(),
-            description: "Name of the sheet to read (optional, defaults to first sheet)".to_string(),
+            description: "Name of the sheet to read (optional, defaults to first sheet)"
+                .to_string(),
             r#type: "string".to_string(),
             required: false,
             properties: None,
@@ -356,21 +371,22 @@ pub fn create_excel_reader_tool() -> FunctionTool {
         "Read data from Excel files with support for multiple sheets and ranges",
         schema,
         |params| {
-            let file_path = params.get("file_path")
+            let file_path = params
+                .get("file_path")
                 .and_then(|v| v.as_str())
                 .ok_or("File path is required")?;
 
-            let sheet_name = params.get("sheet_name")
-                .and_then(|v| v.as_str());
+            let sheet_name = params.get("sheet_name").and_then(|v| v.as_str());
 
-            let range = params.get("range")
-                .and_then(|v| v.as_str());
+            let range = params.get("range").and_then(|v| v.as_str());
 
-            let headers = params.get("headers")
+            let headers = params
+                .get("headers")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
 
-            let max_rows = params.get("max_rows")
+            let max_rows = params
+                .get("max_rows")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(1000);
 
@@ -450,19 +466,23 @@ pub fn create_pdf_parser_tool() -> FunctionTool {
         "Extract text, tables, and metadata from PDF files",
         schema,
         |params| {
-            let file_path = params.get("file_path")
+            let file_path = params
+                .get("file_path")
                 .and_then(|v| v.as_str())
                 .ok_or("File path is required")?;
 
-            let pages = params.get("pages")
+            let pages = params
+                .get("pages")
                 .and_then(|v| v.as_str())
                 .unwrap_or("all");
 
-            let extract_images = params.get("extract_images")
+            let extract_images = params
+                .get("extract_images")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
-            let extract_tables = params.get("extract_tables")
+            let extract_tables = params
+                .get("extract_tables")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
@@ -556,17 +576,17 @@ pub fn create_data_validator_tool() -> FunctionTool {
         "Validate data against schemas with detailed error reporting",
         schema,
         |params| {
-            let data = params.get("data")
-                .ok_or("Data is required")?;
+            let data = params.get("data").ok_or("Data is required")?;
 
-            let schema = params.get("schema")
-                .ok_or("Schema is required")?;
+            let schema = params.get("schema").ok_or("Schema is required")?;
 
-            let strict_mode = params.get("strict_mode")
+            let strict_mode = params
+                .get("strict_mode")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
-            let return_errors = params.get("return_errors")
+            let return_errors = params
+                .get("return_errors")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
 
@@ -587,7 +607,9 @@ pub fn create_data_validator_tool() -> FunctionTool {
             let is_valid = errors.is_empty() || !strict_mode;
             let total_items = if data.is_array() {
                 data.as_array().unwrap().len()
-            } else { 1 };
+            } else {
+                1
+            };
 
             let mut result = json!({
                 "valid": is_valid,
@@ -650,15 +672,16 @@ pub fn create_data_cleaner_tool() -> FunctionTool {
         "Clean and normalize data with configurable operations",
         schema,
         |params| {
-            let data = params.get("data")
-                .ok_or("Data is required")?;
+            let data = params.get("data").ok_or("Data is required")?;
 
-            let operations = params.get("operations")
+            let operations = params
+                .get("operations")
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
                 .unwrap_or_else(|| vec!["trim_whitespace", "remove_nulls", "normalize_case"]);
 
-            let preserve_structure = params.get("preserve_structure")
+            let preserve_structure = params
+                .get("preserve_structure")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
 
@@ -670,21 +693,22 @@ pub fn create_data_cleaner_tool() -> FunctionTool {
             for operation in &operations {
                 match *operation {
                     "trim_whitespace" => {
-                        operations_applied.push("Trimmed whitespace from string values".to_string());
+                        operations_applied
+                            .push("Trimmed whitespace from string values".to_string());
                         items_modified += 5; // Mock count
-                    },
+                    }
                     "remove_nulls" => {
                         operations_applied.push("Removed null values".to_string());
                         items_modified += 2;
-                    },
+                    }
                     "normalize_case" => {
                         operations_applied.push("Normalized text case".to_string());
                         items_modified += 3;
-                    },
+                    }
                     "remove_duplicates" => {
                         operations_applied.push("Removed duplicate entries".to_string());
                         items_modified += 1;
-                    },
+                    }
                     _ => {
                         operations_applied.push(format!("Applied custom operation: {}", operation));
                     }
@@ -864,18 +888,20 @@ pub fn create_schema_generator_tool() -> FunctionTool {
         "Automatically generate schemas from sample data",
         schema,
         |params| {
-            let _data = params.get("data")
-                .ok_or("Data is required")?;
+            let _data = params.get("data").ok_or("Data is required")?;
 
-            let schema_type = params.get("schema_type")
+            let schema_type = params
+                .get("schema_type")
                 .and_then(|v| v.as_str())
                 .unwrap_or("json_schema");
 
-            let include_examples = params.get("include_examples")
+            let include_examples = params
+                .get("include_examples")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
 
-            let strict_types = params.get("strict_types")
+            let strict_types = params
+                .get("strict_types")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
@@ -901,7 +927,7 @@ pub fn create_schema_generator_tool() -> FunctionTool {
                         {"name": "email", "type": ["null", "string"], "default": null}
                     ]
                 }),
-                _ => json!({"error": "Unsupported schema type"})
+                _ => json!({"error": "Unsupported schema type"}),
             };
 
             Ok(json!({
@@ -933,16 +959,21 @@ mod tests {
     #[tokio::test]
     async fn test_json_parser_tool() {
         let tool = create_json_parser_tool();
-        
+
         let mut params = HashMap::new();
-        params.insert("json_string".to_string(), json!(r#"{"name": "test", "value": 42}"#));
+        params.insert(
+            "json_string".to_string(),
+            json!(r#"{"name": "test", "value": 42}"#),
+        );
         params.insert("path".to_string(), json!("$.name"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["extracted"], "test");
@@ -951,7 +982,7 @@ mod tests {
     #[tokio::test]
     async fn test_csv_parser_tool() {
         let tool = create_csv_parser_tool();
-        
+
         let csv_data = "name,age,city\nJohn,30,NYC\nJane,25,LA";
         let mut params = HashMap::new();
         params.insert("csv_data".to_string(), json!(csv_data));
@@ -959,9 +990,11 @@ mod tests {
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["metadata"]["total_rows"], 2);
@@ -971,16 +1004,18 @@ mod tests {
     #[tokio::test]
     async fn test_data_transformer_tool() {
         let tool = create_data_transformer_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("data".to_string(), json!({"items": [1, 2, 3]}));
         params.insert("operation".to_string(), json!("filter"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["result"]["operation"], "filter");
@@ -997,7 +1032,9 @@ mod tests {
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
 
         let response = result.unwrap();
@@ -1017,7 +1054,9 @@ mod tests {
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
 
         let response = result.unwrap();
@@ -1038,7 +1077,9 @@ mod tests {
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
 
         let response = result.unwrap();
@@ -1051,12 +1092,20 @@ mod tests {
         let tool = create_data_cleaner_tool();
 
         let mut params = HashMap::new();
-        params.insert("data".to_string(), json!([{"name": "  Alice  ", "age": 30}]));
-        params.insert("operations".to_string(), json!(["trim_whitespace", "remove_nulls"]));
+        params.insert(
+            "data".to_string(),
+            json!([{"name": "  Alice  ", "age": 30}]),
+        );
+        params.insert(
+            "operations".to_string(),
+            json!(["trim_whitespace", "remove_nulls"]),
+        );
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
 
         let response = result.unwrap();
@@ -1070,14 +1119,19 @@ mod tests {
 
         let mut params = HashMap::new();
         params.insert("data".to_string(), json!([{"name": "Alice", "age": 30}]));
-        params.insert("transformations".to_string(), json!([
-            {"operation": "map", "field": "age", "function": "multiply", "value": 2}
-        ]));
+        params.insert(
+            "transformations".to_string(),
+            json!([
+                {"operation": "map", "field": "age", "function": "multiply", "value": 2}
+            ]),
+        );
         params.insert("output_format".to_string(), json!("json"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
 
         let response = result.unwrap();
@@ -1097,7 +1151,9 @@ mod tests {
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
 
         let response = result.unwrap();

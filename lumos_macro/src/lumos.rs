@@ -1,9 +1,11 @@
 use proc_macro::TokenStream;
-use quote::{quote, format_ident};
+use quote::{format_ident, quote};
 use syn::{
-    parse_macro_input, braced, Expr, Ident, LitStr, Token,
+    braced,
     parse::{Parse, ParseStream},
+    parse_macro_input,
     punctuated::Punctuated,
+    Expr, Ident, LitStr, Token,
 };
 
 // 应用组件项目
@@ -15,14 +17,14 @@ struct ComponentItem {
 impl Parse for ComponentItem {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let name: Ident = input.parse()?;
-        
+
         let expr = if input.peek(Token![:]) {
             let _: Token![:] = input.parse()?;
             Some(input.parse()?)
         } else {
             None
         };
-        
+
         Ok(ComponentItem { name, expr })
     }
 }
@@ -36,9 +38,9 @@ impl Parse for ComponentsConfig {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
         let _ = braced!(content in input);
-        
+
         let items = Punctuated::parse_terminated(&content)?;
-        
+
         Ok(ComponentsConfig { items })
     }
 }
@@ -58,7 +60,7 @@ impl Parse for LumosAppDef {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
         let _ = braced!(content in input);
-        
+
         let mut name = None;
         let mut description = None;
         let mut agents = None;
@@ -66,46 +68,56 @@ impl Parse for LumosAppDef {
         let mut rags = None;
         let mut workflows = None;
         let mut mcp_endpoints = None;
-        
+
         while !content.is_empty() {
             let key: Ident = content.parse()?;
             let _: Token![:] = content.parse()?;
-            
+
             match key.to_string().as_str() {
                 "name" => {
                     name = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "description" => {
                     description = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "agents" => {
                     agents = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "tools" => {
                     tools = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "rags" => {
                     rags = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "workflows" => {
                     workflows = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "mcp_endpoints" => {
                     mcp_endpoints = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
-                _ => return Err(syn::Error::new(key.span(), "Unknown field in Lumos app definition")),
+                }
+                _ => {
+                    return Err(syn::Error::new(
+                        key.span(),
+                        "Unknown field in Lumos app definition",
+                    ))
+                }
             }
         }
-        
-        let name = name.ok_or_else(|| syn::Error::new(content.span(), "Missing 'name' field in Lumos app definition"))?;
-        
+
+        let name = name.ok_or_else(|| {
+            syn::Error::new(
+                content.span(),
+                "Missing 'name' field in Lumos app definition",
+            )
+        })?;
+
         Ok(LumosAppDef {
             name,
             description,
@@ -121,7 +133,7 @@ impl Parse for LumosAppDef {
 /// 实现lumos!宏
 pub fn lumos(input: TokenStream) -> TokenStream {
     let app_def = parse_macro_input!(input as LumosAppDef);
-    
+
     let app_name = &app_def.name;
     let app_name_str = app_name.value();
     let _app_var_name = format_ident!("{}", app_name_str.to_lowercase().replace("-", "_")); // 标记为未使用
@@ -134,92 +146,108 @@ pub fn lumos(input: TokenStream) -> TokenStream {
 
     // 处理代理
     let _agent_registrations = if let Some(agents) = &app_def.agents {
-        let agent_statements = agents.items.iter().map(|item| {
-            let agent_name = &item.name;
-            
-            let agent_expr = match &item.expr {
-                Some(expr) => quote! { #expr },
-                None => quote! { #agent_name },
-            };
-            
-            quote! {
-                app.add_agent(#agent_name.to_string(), #agent_expr);
-            }
-        }).collect::<Vec<_>>();
-        
+        let agent_statements = agents
+            .items
+            .iter()
+            .map(|item| {
+                let agent_name = &item.name;
+
+                let agent_expr = match &item.expr {
+                    Some(expr) => quote! { #expr },
+                    None => quote! { #agent_name },
+                };
+
+                quote! {
+                    app.add_agent(#agent_name.to_string(), #agent_expr);
+                }
+            })
+            .collect::<Vec<_>>();
+
         quote! {
             #(#agent_statements)*
         }
     } else {
         quote! {}
     };
-    
+
     // 处理工具
     let _tool_registrations = if let Some(tools) = &app_def.tools {
-        let tool_statements = tools.items.iter().map(|item| {
-            let tool_name = &item.name;
-            
-            let tool_expr = match &item.expr {
-                Some(expr) => quote! { #expr() },
-                None => quote! { #tool_name() },
-            };
-            
-            quote! {
-                app.add_tool(#tool_name.to_string(), #tool_expr);
-            }
-        }).collect::<Vec<_>>();
-        
+        let tool_statements = tools
+            .items
+            .iter()
+            .map(|item| {
+                let tool_name = &item.name;
+
+                let tool_expr = match &item.expr {
+                    Some(expr) => quote! { #expr() },
+                    None => quote! { #tool_name() },
+                };
+
+                quote! {
+                    app.add_tool(#tool_name.to_string(), #tool_expr);
+                }
+            })
+            .collect::<Vec<_>>();
+
         quote! {
             #(#tool_statements)*
         }
     } else {
         quote! {}
     };
-    
+
     // 处理RAG
     let _rag_registrations = if let Some(rags) = &app_def.rags {
-        let rag_statements = rags.items.iter().map(|item| {
-            let rag_name = &item.name;
-            
-            let rag_expr = match &item.expr {
-                Some(expr) => quote! { #expr },
-                None => quote! { #rag_name },
-            };
-            
-            quote! {
-                app.add_rag(#rag_name.to_string(), #rag_expr);
-            }
-        }).collect::<Vec<_>>();
-        
+        let rag_statements = rags
+            .items
+            .iter()
+            .map(|item| {
+                let rag_name = &item.name;
+
+                let rag_expr = match &item.expr {
+                    Some(expr) => quote! { #expr },
+                    None => quote! { #rag_name },
+                };
+
+                quote! {
+                    app.add_rag(#rag_name.to_string(), #rag_expr);
+                }
+            })
+            .collect::<Vec<_>>();
+
         quote! {
             #(#rag_statements)*
         }
     } else {
         quote! {}
     };
-    
+
     // 处理工作流
     let _workflow_registrations = if let Some(workflows) = &app_def.workflows {
-        let workflow_statements = workflows.items.iter().map(|item| {
-            let workflow_name = &item.name;
-            
-            let workflow_expr = match &item.expr {
-                Some(expr) => quote! { #expr },
-                None => quote! { #workflow_name },
-            };
-            
-            quote! {
-                app.add_workflow(#workflow_name.to_string(), #workflow_expr);
-            }
-        }).collect::<Vec<_>>();
-        
+        let workflow_statements = workflows
+            .items
+            .iter()
+            .map(|item| {
+                let workflow_name = &item.name;
+
+                let workflow_expr = match &item.expr {
+                    Some(expr) => quote! { #expr },
+                    None => quote! { #workflow_name },
+                };
+
+                quote! {
+                    app.add_workflow(#workflow_name.to_string(), #workflow_expr);
+                }
+            })
+            .collect::<Vec<_>>();
+
         quote! {
             #(#workflow_statements)*
         }
     } else {
         quote! {}
     };
-    
+
     // 处理MCP端点
     let _mcp_config = if let Some(endpoints) = &app_def.mcp_endpoints {
         quote! {
@@ -228,7 +256,7 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     } else {
         quote! {}
     };
-    
+
     // 简化的应用实现，返回第一个代理
     let expanded = if let Some(agents) = &app_def.agents {
         if let Some(first_agent) = agents.items.first() {
@@ -244,6 +272,6 @@ pub fn lumos(input: TokenStream) -> TokenStream {
     } else {
         quote! { compile_error!("Lumos app must have at least one agent") }
     };
-    
+
     TokenStream::from(expanded)
-} 
+}

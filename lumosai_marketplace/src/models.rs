@@ -1,87 +1,87 @@
 //! 工具市场数据模型定义
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 use semver::Version;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
+use uuid::Uuid;
 
 /// 工具包元数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolPackage {
     /// 工具包ID
     pub id: Uuid,
-    
+
     /// 工具包名称
     pub name: String,
-    
+
     /// 版本
     pub version: Version,
-    
+
     /// 描述
     pub description: String,
-    
+
     /// 作者
     pub author: String,
-    
+
     /// 作者邮箱
     pub author_email: Option<String>,
-    
+
     /// 许可证
     pub license: String,
-    
+
     /// 主页URL
     pub homepage: Option<String>,
-    
+
     /// 仓库URL
     pub repository: Option<String>,
-    
+
     /// 关键词
     pub keywords: Vec<String>,
-    
+
     /// 分类
     pub categories: Vec<ToolCategory>,
-    
+
     /// 依赖
     pub dependencies: HashMap<String, String>,
-    
+
     /// Lumos版本要求
     pub lumos_version: String,
-    
+
     /// 工具清单
     pub manifest: ToolManifest,
-    
+
     /// 额外元数据
     pub metadata: HashMap<String, Value>,
-    
+
     /// 创建时间
     pub created_at: DateTime<Utc>,
-    
+
     /// 更新时间
     pub updated_at: DateTime<Utc>,
-    
+
     /// 发布时间
     pub published_at: Option<DateTime<Utc>>,
-    
+
     /// 下载次数
     pub download_count: u64,
-    
+
     /// 评分
     pub rating: f64,
-    
+
     /// 评分数量
     pub rating_count: u32,
-    
+
     /// 是否已发布
     pub published: bool,
-    
+
     /// 是否已验证
     pub verified: bool,
-    
+
     /// 安全扫描结果
     pub security_audit: Option<SecurityAuditResult>,
-    
+
     /// 性能基准测试结果
     pub performance_benchmark: Option<PerformanceBenchmark>,
 }
@@ -130,7 +130,7 @@ impl ToolCategory {
             ToolCategory::Custom => "自定义",
         }
     }
-    
+
     /// 获取分类的图标
     pub fn emoji(&self) -> &'static str {
         match self {
@@ -154,22 +154,22 @@ impl ToolCategory {
 pub struct ToolManifest {
     /// 工具定义列表
     pub tools: Vec<ToolDefinition>,
-    
+
     /// 入口点
     pub entry_point: String,
-    
+
     /// 导出的符号
     pub exports: Vec<String>,
-    
+
     /// 权限要求
     pub permissions: Vec<Permission>,
-    
+
     /// 配置模式
     pub config_schema: Option<Value>,
-    
+
     /// 最小Rust版本
     pub rust_version: Option<String>,
-    
+
     /// 构建脚本
     pub build_script: Option<String>,
 }
@@ -179,28 +179,28 @@ pub struct ToolManifest {
 pub struct ToolDefinition {
     /// 工具名称
     pub name: String,
-    
+
     /// 工具描述
     pub description: String,
-    
+
     /// 参数定义
     pub parameters: Vec<ParameterDefinition>,
-    
+
     /// 返回值定义
     pub returns: ReturnDefinition,
-    
+
     /// 使用示例
     pub examples: Vec<ToolExample>,
-    
+
     /// 标签
     pub tags: Vec<String>,
-    
+
     /// 是否为异步工具
     pub async_tool: bool,
-    
+
     /// 是否需要认证
     pub requires_auth: bool,
-    
+
     /// 权限要求
     pub permissions: Vec<Permission>,
 }
@@ -210,22 +210,22 @@ pub struct ToolDefinition {
 pub struct ParameterDefinition {
     /// 参数名称
     pub name: String,
-    
+
     /// 参数描述
     pub description: String,
-    
+
     /// 参数类型
     pub r#type: String,
-    
+
     /// 是否必需
     pub required: bool,
-    
+
     /// 默认值
     pub default: Option<Value>,
-    
+
     /// 验证规则
     pub validation: Option<ValidationRule>,
-    
+
     /// 示例值
     pub examples: Vec<Value>,
 }
@@ -235,13 +235,13 @@ pub struct ParameterDefinition {
 pub struct ReturnDefinition {
     /// 返回类型
     pub r#type: String,
-    
+
     /// 返回描述
     pub description: String,
-    
+
     /// JSON模式
     pub schema: Option<Value>,
-    
+
     /// 示例返回值
     pub examples: Vec<Value>,
 }
@@ -251,16 +251,16 @@ pub struct ReturnDefinition {
 pub struct ToolExample {
     /// 示例标题
     pub title: String,
-    
+
     /// 示例描述
     pub description: String,
-    
+
     /// 输入参数
     pub input: Value,
-    
+
     /// 期望输出
     pub output: Value,
-    
+
     /// 代码示例
     pub code: Option<String>,
 }
@@ -270,22 +270,22 @@ pub struct ToolExample {
 pub struct ValidationRule {
     /// 最小值
     pub min: Option<f64>,
-    
+
     /// 最大值
     pub max: Option<f64>,
-    
+
     /// 最小长度
     pub min_length: Option<usize>,
-    
+
     /// 最大长度
     pub max_length: Option<usize>,
-    
+
     /// 正则表达式模式
     pub pattern: Option<String>,
-    
+
     /// 枚举值
     pub enum_values: Option<Vec<Value>>,
-    
+
     /// 自定义验证器
     pub custom_validator: Option<String>,
 }
@@ -331,13 +331,16 @@ impl Permission {
             Permission::Custom(name) => format!("自定义: {}", name),
         }
     }
-    
+
     /// 获取权限的风险级别
     pub fn risk_level(&self) -> RiskLevel {
         match self {
             Permission::FileRead | Permission::Environment => RiskLevel::Low,
             Permission::FileWrite | Permission::Network | Permission::Database => RiskLevel::Medium,
-            Permission::SystemCommand | Permission::Crypto | Permission::UserData | Permission::Admin => RiskLevel::High,
+            Permission::SystemCommand
+            | Permission::Crypto
+            | Permission::UserData
+            | Permission::Admin => RiskLevel::High,
             Permission::Custom(_) => RiskLevel::Medium,
         }
     }
@@ -359,19 +362,19 @@ pub enum RiskLevel {
 pub struct SecurityAuditResult {
     /// 审计时间
     pub audit_time: DateTime<Utc>,
-    
+
     /// 安全级别
     pub security_level: SecurityLevel,
-    
+
     /// 发现的问题
     pub issues: Vec<SecurityIssue>,
-    
+
     /// 审计分数 (0-100)
     pub score: u8,
-    
+
     /// 审计报告
     pub report: String,
-    
+
     /// 审计器版本
     pub auditor_version: String,
 }
@@ -394,19 +397,19 @@ pub enum SecurityLevel {
 pub struct SecurityIssue {
     /// 问题类型
     pub issue_type: SecurityIssueType,
-    
+
     /// 严重程度
     pub severity: Severity,
-    
+
     /// 问题描述
     pub description: String,
-    
+
     /// 文件位置
     pub file_path: Option<String>,
-    
+
     /// 行号
     pub line_number: Option<u32>,
-    
+
     /// 修复建议
     pub fix_suggestion: Option<String>,
 }
@@ -452,22 +455,22 @@ pub enum Severity {
 pub struct PerformanceBenchmark {
     /// 测试时间
     pub benchmark_time: DateTime<Utc>,
-    
+
     /// 平均执行时间（毫秒）
     pub avg_execution_time_ms: f64,
-    
+
     /// 内存使用量（字节）
     pub memory_usage_bytes: u64,
-    
+
     /// CPU使用率（百分比）
     pub cpu_usage_percent: f64,
-    
+
     /// 吞吐量（操作/秒）
     pub throughput_ops_per_sec: f64,
-    
+
     /// 测试环境
     pub test_environment: TestEnvironment,
-    
+
     /// 基准测试分数
     pub benchmark_score: u32,
 }
@@ -477,16 +480,16 @@ pub struct PerformanceBenchmark {
 pub struct TestEnvironment {
     /// 操作系统
     pub os: String,
-    
+
     /// CPU型号
     pub cpu: String,
-    
+
     /// 内存大小（GB）
     pub memory_gb: u32,
-    
+
     /// Rust版本
     pub rust_version: String,
-    
+
     /// 编译器优化级别
     pub optimization_level: String,
 }
@@ -494,19 +497,19 @@ pub struct TestEnvironment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_tool_category_display() {
         assert_eq!(ToolCategory::Web.display_name(), "网络工具");
         assert_eq!(ToolCategory::Web.emoji(), "🌐");
     }
-    
+
     #[test]
     fn test_permission_risk_level() {
         assert_eq!(Permission::FileRead.risk_level(), RiskLevel::Low);
         assert_eq!(Permission::SystemCommand.risk_level(), RiskLevel::High);
     }
-    
+
     #[test]
     fn test_severity_ordering() {
         assert!(Severity::Critical > Severity::High);

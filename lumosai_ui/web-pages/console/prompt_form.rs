@@ -2,11 +2,10 @@
 use crate::console::tools_modal::ToolsModal;
 use crate::routes;
 
-use web_assets::files::*;
+use crate::types::{BionicToolDefinition, Capability, ModelCapability};
 use daisy_rsx::*;
-use crate::types::{Capability, ModelCapability, BionicToolDefinition};
 use dioxus::prelude::*;
-
+use web_assets::files::*;
 
 #[component]
 pub fn Form(

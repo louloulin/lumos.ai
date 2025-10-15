@@ -1,16 +1,16 @@
 //! Workflow execution engine
-//! 
+//!
 //! Provides different execution strategies for workflows
 
+use async_trait::async_trait;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_trait::async_trait;
-use serde_json::{Value, json};
 use tokio::sync::RwLock;
 
-use crate::{Result, Error};
+use super::enhanced::{StepFlowEntry, WorkflowStep};
 use crate::agent::types::RuntimeContext;
-use super::enhanced::{WorkflowStep, StepFlowEntry};
+use crate::{Error, Result};
 
 /// Execution engine trait
 #[async_trait]
@@ -111,14 +111,14 @@ impl DefaultExecutionEngine {
         let mut metrics = self.metrics.write().await;
         metrics.total_steps += 1;
         metrics.total_execution_time_ms += execution_time_ms;
-        
+
         if success {
             metrics.successful_executions += 1;
         } else {
             metrics.failed_executions += 1;
         }
-        
-        metrics.avg_execution_time_ms = 
+
+        metrics.avg_execution_time_ms =
             metrics.total_execution_time_ms as f64 / metrics.total_steps as f64;
     }
 }
@@ -132,7 +132,7 @@ impl ExecutionEngine for DefaultExecutionEngine {
         context: &RuntimeContext,
     ) -> Result<Value> {
         let start_time = std::time::Instant::now();
-        
+
         if self.config.enable_tracing {
             tracing::info!("Executing step: {}", step.id);
         }
@@ -140,40 +140,47 @@ impl ExecutionEngine for DefaultExecutionEngine {
         // Create timeout future
         let timeout = tokio::time::timeout(
             tokio::time::Duration::from_millis(self.config.default_timeout_ms),
-            step.execute.execute(input, context)
+            step.execute.execute(input, context),
         );
 
         let result = match timeout.await {
             Ok(Ok(output)) => {
                 let execution_time = start_time.elapsed().as_millis() as u64;
                 self.update_metrics(true, execution_time).await;
-                
+
                 if self.config.enable_tracing {
-                    tracing::info!("Step {} completed successfully in {}ms", step.id, execution_time);
+                    tracing::info!(
+                        "Step {} completed successfully in {}ms",
+                        step.id,
+                        execution_time
+                    );
                 }
-                
+
                 Ok(output)
             }
             Ok(Err(e)) => {
                 let execution_time = start_time.elapsed().as_millis() as u64;
                 self.update_metrics(false, execution_time).await;
-                
+
                 if self.config.enable_tracing {
                     tracing::error!("Step {} failed: {}", step.id, e);
                 }
-                
+
                 Err(e)
             }
             Err(_) => {
                 let execution_time = start_time.elapsed().as_millis() as u64;
                 self.update_metrics(false, execution_time).await;
-                
-                let error = Error::Timeout(format!("Step {} timed out after {}ms", step.id, self.config.default_timeout_ms));
-                
+
+                let error = Error::Timeout(format!(
+                    "Step {} timed out after {}ms",
+                    step.id, self.config.default_timeout_ms
+                ));
+
                 if self.config.enable_tracing {
                     tracing::error!("Step {} timed out", step.id);
                 }
-                
+
                 Err(error)
             }
         };
@@ -191,7 +198,11 @@ impl ExecutionEngine for DefaultExecutionEngine {
         let effective_concurrency = concurrency.min(self.config.max_parallel_executions);
 
         if self.config.enable_tracing {
-            tracing::info!("Executing {} steps in parallel with concurrency {}", steps.len(), effective_concurrency);
+            tracing::info!(
+                "Executing {} steps in parallel with concurrency {}",
+                steps.len(),
+                effective_concurrency
+            );
         }
 
         // For now, execute sequentially to avoid lifetime issues
@@ -246,7 +257,11 @@ pub struct WorkerNode {
 #[async_trait]
 pub trait LoadBalancer: Send + Sync {
     /// Select the best worker for a task
-    async fn select_worker(&self, workers: &HashMap<String, WorkerNode>, task_type: &str) -> Option<String>;
+    async fn select_worker(
+        &self,
+        workers: &HashMap<String, WorkerNode>,
+        task_type: &str,
+    ) -> Option<String>;
 }
 
 /// Round-robin load balancer
@@ -265,7 +280,11 @@ impl RoundRobinLoadBalancer {
 
 #[async_trait]
 impl LoadBalancer for RoundRobinLoadBalancer {
-    async fn select_worker(&self, workers: &HashMap<String, WorkerNode>, _task_type: &str) -> Option<String> {
+    async fn select_worker(
+        &self,
+        workers: &HashMap<String, WorkerNode>,
+        _task_type: &str,
+    ) -> Option<String> {
         let available_workers: Vec<_> = workers
             .iter()
             .filter(|(_, node)| node.available)
@@ -279,7 +298,7 @@ impl LoadBalancer for RoundRobinLoadBalancer {
         let mut index = self.current_index.write().await;
         let selected = available_workers[*index % available_workers.len()].clone();
         *index += 1;
-        
+
         Some(selected)
     }
 }
@@ -320,7 +339,10 @@ impl ExecutionEngine for DistributedExecutionEngine {
     ) -> Result<Value> {
         // Try to find a suitable worker
         let workers = self.workers.read().await;
-        let worker_id = self.load_balancer.select_worker(&workers, &step.step_type.to_string()).await;
+        let worker_id = self
+            .load_balancer
+            .select_worker(&workers, &step.step_type.to_string())
+            .await;
 
         match worker_id {
             Some(_worker_id) => {
@@ -346,7 +368,9 @@ impl ExecutionEngine for DistributedExecutionEngine {
     ) -> Result<Vec<Value>> {
         // For distributed parallel execution, we could distribute steps across workers
         // For now, use local execution
-        self.local_engine.execute_parallel(steps, input, context, concurrency).await
+        self.local_engine
+            .execute_parallel(steps, input, context, concurrency)
+            .await
     }
 
     async fn get_metrics(&self) -> ExecutionMetrics {

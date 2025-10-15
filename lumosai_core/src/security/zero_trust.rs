@@ -1,34 +1,34 @@
 //! 零信任架构模块
-//! 
+//!
 //! 实现基于身份验证的细粒度访问控制
 
 use async_trait::async_trait;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc, Duration, Timelike};
+use chrono::{DateTime, Duration, Timelike, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
+use super::{AccessDecision, AccessRequest, SecurityContext};
 use crate::error::{LumosError, Result};
-use super::{AccessRequest, AccessDecision, SecurityContext};
 
 /// 零信任配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZeroTrustConfig {
     /// 默认访问策略
     pub default_policy: DefaultPolicy,
-    
+
     /// 会话超时时间（分钟）
     pub session_timeout_minutes: u64,
-    
+
     /// 是否启用设备信任
     pub enable_device_trust: bool,
-    
+
     /// 是否启用地理位置检查
     pub enable_geo_check: bool,
-    
+
     /// 是否启用行为分析
     pub enable_behavior_analysis: bool,
-    
+
     /// 风险评分阈值
     pub risk_threshold: f64,
 }
@@ -190,8 +190,9 @@ impl ZeroTrustEngine {
         let policy_engine = PolicyEngine::new().await?;
         let context_analyzer = ContextAnalyzer::new().await?;
         let risk_calculator = RiskCalculator::new().await?;
-        let session_manager = SessionManager::new(Duration::minutes(config.session_timeout_minutes as i64));
-        
+        let session_manager =
+            SessionManager::new(Duration::minutes(config.session_timeout_minutes as i64));
+
         Ok(Self {
             config: config.clone(),
             policy_engine,
@@ -200,37 +201,47 @@ impl ZeroTrustEngine {
             session_manager,
         })
     }
-    
+
     /// 验证访问权限
     pub async fn verify_access(&self, request: &AccessRequest) -> Result<AccessDecision> {
         // 1. 检查会话有效性
         if let Some(session_id) = &request.context.session_id {
             if !self.session_manager.is_session_valid(session_id).await? {
-                return Ok(AccessDecision::Deny { 
-                    reason: "Invalid or expired session".to_string() 
+                return Ok(AccessDecision::Deny {
+                    reason: "Invalid or expired session".to_string(),
                 });
             }
         }
-        
+
         // 2. 计算风险评分
-        let risk_score = self.risk_calculator.calculate_risk(&request.context).await?;
-        
+        let risk_score = self
+            .risk_calculator
+            .calculate_risk(&request.context)
+            .await?;
+
         if risk_score > self.config.risk_threshold {
-            return Ok(AccessDecision::Deny { 
-                reason: format!("Risk score {} exceeds threshold {}", risk_score, self.config.risk_threshold)
+            return Ok(AccessDecision::Deny {
+                reason: format!(
+                    "Risk score {} exceeds threshold {}",
+                    risk_score, self.config.risk_threshold
+                ),
             });
         }
-        
+
         // 3. 评估策略
         let policy_decision = self.policy_engine.evaluate_policies(request).await?;
-        
+
         // 4. 上下文分析
-        let context_decision = self.context_analyzer.analyze_context(&request.context).await?;
-        
+        let context_decision = self
+            .context_analyzer
+            .analyze_context(&request.context)
+            .await?;
+
         // 5. 综合决策
-        self.make_final_decision(policy_decision, context_decision, risk_score).await
+        self.make_final_decision(policy_decision, context_decision, risk_score)
+            .await
     }
-    
+
     /// 获取零信任状态
     pub async fn get_status(&self) -> Result<ZeroTrustStatus> {
         Ok(ZeroTrustStatus {
@@ -241,22 +252,32 @@ impl ZeroTrustEngine {
             policy_violations_24h: self.get_policy_violations_24h().await?,
         })
     }
-    
+
     /// 添加访问策略
     pub async fn add_policy(&mut self, policy: AccessPolicy) -> Result<()> {
         self.policy_engine.add_policy(policy).await
     }
-    
+
     /// 更新设备信任
-    pub async fn update_device_trust(&mut self, device_id: &str, trust_level: TrustLevel) -> Result<()> {
-        self.context_analyzer.update_device_trust(device_id, trust_level).await
+    pub async fn update_device_trust(
+        &mut self,
+        device_id: &str,
+        trust_level: TrustLevel,
+    ) -> Result<()> {
+        self.context_analyzer
+            .update_device_trust(device_id, trust_level)
+            .await
     }
-    
+
     /// 创建用户会话
-    pub async fn create_session(&mut self, user_id: &str, context: &SecurityContext) -> Result<String> {
+    pub async fn create_session(
+        &mut self,
+        user_id: &str,
+        context: &SecurityContext,
+    ) -> Result<String> {
         self.session_manager.create_session(user_id, context).await
     }
-    
+
     /// 综合决策
     async fn make_final_decision(
         &self,
@@ -271,27 +292,23 @@ impl ZeroTrustEngine {
             }
             (PolicyDecision::Deny, _) | (_, AccessDecision::Deny { .. }) => {
                 Ok(AccessDecision::Deny {
-                    reason: "Policy or context denied access".to_string()
+                    reason: "Policy or context denied access".to_string(),
                 })
             }
-            (PolicyDecision::RequireMFA, _) => {
-                Ok(AccessDecision::Conditional {
-                    conditions: vec!["MFA required".to_string()]
-                })
-            }
-            (PolicyDecision::RequireApproval, _) => {
-                Ok(AccessDecision::Conditional {
-                    conditions: vec!["Manager approval required".to_string()]
-                })
-            }
+            (PolicyDecision::RequireMFA, _) => Ok(AccessDecision::Conditional {
+                conditions: vec!["MFA required".to_string()],
+            }),
+            (PolicyDecision::RequireApproval, _) => Ok(AccessDecision::Conditional {
+                conditions: vec!["Manager approval required".to_string()],
+            }),
         }
     }
-    
+
     async fn calculate_average_risk_score(&self) -> Result<f64> {
         // 简化实现
         Ok(0.3)
     }
-    
+
     async fn get_policy_violations_24h(&self) -> Result<usize> {
         // 简化实现
         Ok(0)
@@ -301,23 +318,26 @@ impl ZeroTrustEngine {
 impl PolicyEngine {
     async fn new() -> Result<Self> {
         let mut policies = HashMap::new();
-        
+
         // 添加默认策略
-        policies.insert("default-admin".to_string(), AccessPolicy {
-            id: "default-admin".to_string(),
-            name: "Admin Full Access".to_string(),
-            resource_pattern: "*".to_string(),
-            action_pattern: "*".to_string(),
-            conditions: vec![PolicyCondition::UserRole { 
-                roles: vec!["admin".to_string()] 
-            }],
-            decision: PolicyDecision::Allow,
-            priority: 100,
-        });
-        
+        policies.insert(
+            "default-admin".to_string(),
+            AccessPolicy {
+                id: "default-admin".to_string(),
+                name: "Admin Full Access".to_string(),
+                resource_pattern: "*".to_string(),
+                action_pattern: "*".to_string(),
+                conditions: vec![PolicyCondition::UserRole {
+                    roles: vec!["admin".to_string()],
+                }],
+                decision: PolicyDecision::Allow,
+                priority: 100,
+            },
+        );
+
         Ok(Self { policies })
     }
-    
+
     async fn evaluate_policies(&self, request: &AccessRequest) -> Result<PolicyDecision> {
         // 简化实现：检查用户是否为管理员
         if request.user_id == "admin" {
@@ -326,7 +346,7 @@ impl PolicyEngine {
             Ok(PolicyDecision::RequireMFA)
         }
     }
-    
+
     async fn add_policy(&mut self, policy: AccessPolicy) -> Result<()> {
         self.policies.insert(policy.id.clone(), policy);
         Ok(())
@@ -343,25 +363,32 @@ impl ContextAnalyzer {
             },
         })
     }
-    
+
     async fn analyze_context(&self, context: &SecurityContext) -> Result<AccessDecision> {
         // 简化实现：基于IP地址的基本检查
         if context.ip_address.starts_with("192.168.") || context.ip_address.starts_with("10.") {
             Ok(AccessDecision::Allow)
         } else {
-            Ok(AccessDecision::Conditional { 
-                conditions: vec!["External IP requires additional verification".to_string()] 
+            Ok(AccessDecision::Conditional {
+                conditions: vec!["External IP requires additional verification".to_string()],
             })
         }
     }
-    
-    async fn update_device_trust(&mut self, device_id: &str, trust_level: TrustLevel) -> Result<()> {
-        self.device_trust_store.insert(device_id.to_string(), DeviceTrust {
-            device_id: device_id.to_string(),
-            trust_level,
-            last_seen: Utc::now(),
-            fingerprint: format!("fp-{}", device_id),
-        });
+
+    async fn update_device_trust(
+        &mut self,
+        device_id: &str,
+        trust_level: TrustLevel,
+    ) -> Result<()> {
+        self.device_trust_store.insert(
+            device_id.to_string(),
+            DeviceTrust {
+                device_id: device_id.to_string(),
+                trust_level,
+                last_seen: Utc::now(),
+                fingerprint: format!("fp-{}", device_id),
+            },
+        );
         Ok(())
     }
 }
@@ -396,18 +423,22 @@ impl RiskCalculator {
             ],
         })
     }
-    
+
     async fn calculate_risk(&self, context: &SecurityContext) -> Result<f64> {
         let mut total_risk = 0.0;
         let mut total_weight = 0.0;
-        
+
         for factor in &self.risk_factors {
             let risk = (factor.calculator)(context);
             total_risk += risk * factor.weight;
             total_weight += factor.weight;
         }
-        
-        Ok(if total_weight > 0.0 { total_risk / total_weight } else { 0.0 })
+
+        Ok(if total_weight > 0.0 {
+            total_risk / total_weight
+        } else {
+            0.0
+        })
     }
 }
 
@@ -418,7 +449,7 @@ impl SessionManager {
             session_timeout: timeout,
         }
     }
-    
+
     async fn create_session(&mut self, user_id: &str, context: &SecurityContext) -> Result<String> {
         let session_id = Uuid::new_v4().to_string();
         let session = UserSession {
@@ -430,11 +461,11 @@ impl SessionManager {
             ip_address: context.ip_address.clone(),
             risk_score: 0.0,
         };
-        
+
         self.active_sessions.insert(session_id.clone(), session);
         Ok(session_id)
     }
-    
+
     async fn is_session_valid(&self, session_id: &str) -> Result<bool> {
         if let Some(session) = self.active_sessions.get(session_id) {
             let elapsed = Utc::now().signed_duration_since(session.last_activity);
@@ -448,19 +479,19 @@ impl SessionManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_zero_trust_engine_creation() {
         let config = ZeroTrustConfig::default();
         let engine = ZeroTrustEngine::new(&config).await;
         assert!(engine.is_ok());
     }
-    
+
     #[tokio::test]
     async fn test_access_verification() {
         let config = ZeroTrustConfig::default();
         let engine = ZeroTrustEngine::new(&config).await.unwrap();
-        
+
         let request = AccessRequest {
             user_id: "test_user".to_string(),
             resource: "test_resource".to_string(),
@@ -476,7 +507,7 @@ mod tests {
                 timestamp: Utc::now(),
             },
         };
-        
+
         let decision = engine.verify_access(&request).await;
         assert!(decision.is_ok());
     }

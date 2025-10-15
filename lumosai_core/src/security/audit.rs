@@ -1,34 +1,34 @@
 //! 审计日志模块
-//! 
+//!
 //! 完整的操作记录和追踪
 
 use async_trait::async_trait;
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::error::{LumosError, Result};
 use super::SecurityEvent;
+use crate::error::{LumosError, Result};
 
 /// 审计配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditConfig {
     /// 是否启用审计
     pub enabled: bool,
-    
+
     /// 日志保留天数
     pub retention_days: u32,
-    
+
     /// 存储后端
     pub storage_backend: StorageBackend,
-    
+
     /// 是否启用实时流
     pub enable_realtime_stream: bool,
-    
+
     /// 审计级别
     pub audit_level: AuditLevel,
-    
+
     /// 敏感字段掩码
     pub sensitive_fields: Vec<String>,
 }
@@ -65,10 +65,10 @@ pub enum StorageBackend {
 /// 审计级别
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuditLevel {
-    Minimal,    // 仅记录关键操作
-    Standard,   // 记录大部分操作
-    Detailed,   // 记录所有操作
-    Debug,      // 包含调试信息
+    Minimal,  // 仅记录关键操作
+    Standard, // 记录大部分操作
+    Detailed, // 记录所有操作
+    Debug,    // 包含调试信息
 }
 
 /// 审计日志记录器
@@ -166,27 +166,23 @@ impl AuditLogger {
     /// 创建新的审计日志记录器
     pub async fn new(config: &AuditConfig) -> Result<Self> {
         let storage: Box<dyn AuditStorage> = match &config.storage_backend {
-            StorageBackend::File { path } => {
-                Box::new(FileStorage::new(path).await?)
-            }
+            StorageBackend::File { path } => Box::new(FileStorage::new(path).await?),
             _ => {
                 return Err(LumosError::SecurityError(
-                    "Unsupported storage backend".to_string()
+                    "Unsupported storage backend".to_string(),
                 ));
             }
         };
-        
-        let event_processor = EventProcessor::new(
-            config.sensitive_fields.clone(),
-            config.audit_level.clone(),
-        );
-        
+
+        let event_processor =
+            EventProcessor::new(config.sensitive_fields.clone(), config.audit_level.clone());
+
         let realtime_stream = if config.enable_realtime_stream {
             Some(RealtimeStream::new())
         } else {
             None
         };
-        
+
         Ok(Self {
             config: config.clone(),
             storage,
@@ -194,44 +190,44 @@ impl AuditLogger {
             realtime_stream,
         })
     }
-    
+
     /// 记录安全事件
     pub async fn log_event(&mut self, security_event: SecurityEvent) -> Result<()> {
         let audit_event = self.convert_security_event(security_event)?;
         self.log_audit_event(audit_event).await
     }
-    
+
     /// 记录审计事件
     pub async fn log_audit_event(&mut self, mut event: AuditEvent) -> Result<()> {
         if !self.config.enabled {
             return Ok(());
         }
-        
+
         // 处理事件（掩码敏感字段等）
         self.event_processor.process_event(&mut event)?;
-        
+
         // 存储事件
         self.storage.store_event(&event).await?;
-        
+
         // 实时流推送
         if let Some(stream) = &mut self.realtime_stream {
             stream.publish_event(&event).await?;
         }
-        
+
         Ok(())
     }
-    
+
     /// 查询审计事件
     pub async fn query_events(&self, query: &AuditQuery) -> Result<Vec<AuditEvent>> {
         self.storage.query_events(query).await
     }
-    
+
     /// 清理过期事件
     pub async fn cleanup_expired_events(&mut self) -> Result<usize> {
         let cutoff_date = Utc::now() - chrono::Duration::days(self.config.retention_days as i64);
         self.storage.cleanup_old_events(cutoff_date).await
     }
-    
+
     /// 添加实时订阅者
     pub async fn add_subscriber(&mut self, subscriber: Box<dyn AuditSubscriber>) -> Result<()> {
         if let Some(stream) = &mut self.realtime_stream {
@@ -239,7 +235,7 @@ impl AuditLogger {
         }
         Ok(())
     }
-    
+
     /// 生成合规报告
     pub async fn generate_compliance_report(
         &self,
@@ -257,68 +253,169 @@ impl AuditLogger {
             limit: None,
             offset: None,
         };
-        
+
         let events = self.query_events(&query).await?;
-        let filtered_events: Vec<_> = events.into_iter()
+        let filtered_events: Vec<_> = events
+            .into_iter()
             .filter(|e| e.compliance_tags.contains(&compliance_standard.to_string()))
             .collect();
-        
+
         Ok(ComplianceReport {
             standard: compliance_standard.to_string(),
             period_start: start_time,
             period_end: end_time,
             total_events: filtered_events.len(),
-            success_events: filtered_events.iter().filter(|e| matches!(e.outcome, AuditOutcome::Success)).count(),
-            failure_events: filtered_events.iter().filter(|e| matches!(e.outcome, AuditOutcome::Failure)).count(),
+            success_events: filtered_events
+                .iter()
+                .filter(|e| matches!(e.outcome, AuditOutcome::Success))
+                .count(),
+            failure_events: filtered_events
+                .iter()
+                .filter(|e| matches!(e.outcome, AuditOutcome::Failure))
+                .count(),
             events: filtered_events,
             generated_at: Utc::now(),
         })
     }
-    
+
     /// 转换安全事件为审计事件
     fn convert_security_event(&self, security_event: SecurityEvent) -> Result<AuditEvent> {
-        let (event_type, user_id, ip_address, resource, action, outcome, details, timestamp) = match security_event {
-            SecurityEvent::LoginAttempt { user_id, success, ip_address, timestamp } => {
-                let outcome = if success { AuditOutcome::Success } else { AuditOutcome::Failure };
-                let details = HashMap::from([
-                    ("login_attempt".to_string(), serde_json::Value::Bool(true)),
-                ]);
-                (AuditEventType::Authentication, Some(user_id), ip_address, "login".to_string(), "authenticate".to_string(), outcome, details, timestamp)
-            }
-            SecurityEvent::PermissionCheck { user_id, resource, action, granted, timestamp } => {
-                let outcome = if granted { AuditOutcome::Success } else { AuditOutcome::Failure };
-                let details = HashMap::from([
-                    ("permission_check".to_string(), serde_json::Value::Bool(true)),
-                ]);
-                (AuditEventType::Authorization, Some(user_id), "unknown".to_string(), resource, action, outcome, details, timestamp)
-            }
-            SecurityEvent::DataAccess { user_id, resource_type, resource_id, action, timestamp } => {
-                let details = HashMap::from([
-                    ("resource_type".to_string(), serde_json::Value::String(resource_type)),
-                    ("resource_id".to_string(), serde_json::Value::String(resource_id)),
-                ]);
-                (AuditEventType::DataAccess, Some(user_id), "unknown".to_string(), "data".to_string(), action, AuditOutcome::Success, details, timestamp)
-            }
-            SecurityEvent::ThreatDetected { threat_type, severity, source, details, timestamp } => {
-                let mut audit_details = HashMap::new();
-                audit_details.insert("threat_type".to_string(), serde_json::Value::String(threat_type));
-                audit_details.insert("severity".to_string(), serde_json::to_value(severity)?);
-                for (k, v) in details {
-                    audit_details.insert(k, serde_json::Value::String(v));
+        let (event_type, user_id, ip_address, resource, action, outcome, details, timestamp) =
+            match security_event {
+                SecurityEvent::LoginAttempt {
+                    user_id,
+                    success,
+                    ip_address,
+                    timestamp,
+                } => {
+                    let outcome = if success {
+                        AuditOutcome::Success
+                    } else {
+                        AuditOutcome::Failure
+                    };
+                    let details = HashMap::from([(
+                        "login_attempt".to_string(),
+                        serde_json::Value::Bool(true),
+                    )]);
+                    (
+                        AuditEventType::Authentication,
+                        Some(user_id),
+                        ip_address,
+                        "login".to_string(),
+                        "authenticate".to_string(),
+                        outcome,
+                        details,
+                        timestamp,
+                    )
                 }
-                (AuditEventType::SecurityEvent, None, source, "threat_detection".to_string(), "detect".to_string(), AuditOutcome::Success, audit_details, timestamp)
-            }
-            SecurityEvent::ComplianceViolation { standard, rule, severity, details, timestamp } => {
-                let audit_details = HashMap::from([
-                    ("standard".to_string(), serde_json::Value::String(standard)),
-                    ("rule".to_string(), serde_json::Value::String(rule)),
-                    ("severity".to_string(), serde_json::to_value(severity)?),
-                    ("details".to_string(), serde_json::Value::String(details)),
-                ]);
-                (AuditEventType::ComplianceEvent, None, "system".to_string(), "compliance".to_string(), "check".to_string(), AuditOutcome::Failure, audit_details, timestamp)
-            }
-        };
-        
+                SecurityEvent::PermissionCheck {
+                    user_id,
+                    resource,
+                    action,
+                    granted,
+                    timestamp,
+                } => {
+                    let outcome = if granted {
+                        AuditOutcome::Success
+                    } else {
+                        AuditOutcome::Failure
+                    };
+                    let details = HashMap::from([(
+                        "permission_check".to_string(),
+                        serde_json::Value::Bool(true),
+                    )]);
+                    (
+                        AuditEventType::Authorization,
+                        Some(user_id),
+                        "unknown".to_string(),
+                        resource,
+                        action,
+                        outcome,
+                        details,
+                        timestamp,
+                    )
+                }
+                SecurityEvent::DataAccess {
+                    user_id,
+                    resource_type,
+                    resource_id,
+                    action,
+                    timestamp,
+                } => {
+                    let details = HashMap::from([
+                        (
+                            "resource_type".to_string(),
+                            serde_json::Value::String(resource_type),
+                        ),
+                        (
+                            "resource_id".to_string(),
+                            serde_json::Value::String(resource_id),
+                        ),
+                    ]);
+                    (
+                        AuditEventType::DataAccess,
+                        Some(user_id),
+                        "unknown".to_string(),
+                        "data".to_string(),
+                        action,
+                        AuditOutcome::Success,
+                        details,
+                        timestamp,
+                    )
+                }
+                SecurityEvent::ThreatDetected {
+                    threat_type,
+                    severity,
+                    source,
+                    details,
+                    timestamp,
+                } => {
+                    let mut audit_details = HashMap::new();
+                    audit_details.insert(
+                        "threat_type".to_string(),
+                        serde_json::Value::String(threat_type),
+                    );
+                    audit_details.insert("severity".to_string(), serde_json::to_value(severity)?);
+                    for (k, v) in details {
+                        audit_details.insert(k, serde_json::Value::String(v));
+                    }
+                    (
+                        AuditEventType::SecurityEvent,
+                        None,
+                        source,
+                        "threat_detection".to_string(),
+                        "detect".to_string(),
+                        AuditOutcome::Success,
+                        audit_details,
+                        timestamp,
+                    )
+                }
+                SecurityEvent::ComplianceViolation {
+                    standard,
+                    rule,
+                    severity,
+                    details,
+                    timestamp,
+                } => {
+                    let audit_details = HashMap::from([
+                        ("standard".to_string(), serde_json::Value::String(standard)),
+                        ("rule".to_string(), serde_json::Value::String(rule)),
+                        ("severity".to_string(), serde_json::to_value(severity)?),
+                        ("details".to_string(), serde_json::Value::String(details)),
+                    ]);
+                    (
+                        AuditEventType::ComplianceEvent,
+                        None,
+                        "system".to_string(),
+                        "compliance".to_string(),
+                        "check".to_string(),
+                        AuditOutcome::Failure,
+                        audit_details,
+                        timestamp,
+                    )
+                }
+            };
+
         Ok(AuditEvent {
             id: Uuid::new_v4().to_string(),
             event_type,
@@ -357,7 +454,7 @@ impl EventProcessor {
             audit_level,
         }
     }
-    
+
     fn process_event(&self, event: &mut AuditEvent) -> Result<()> {
         // 掩码敏感字段
         for field in &self.sensitive_fields {
@@ -365,7 +462,7 @@ impl EventProcessor {
                 *value = serde_json::Value::String("***MASKED***".to_string());
             }
         }
-        
+
         // 根据审计级别过滤详细信息
         match self.audit_level {
             AuditLevel::Minimal => {
@@ -378,7 +475,7 @@ impl EventProcessor {
                 // 保留所有字段
             }
         }
-        
+
         Ok(())
     }
 }
@@ -389,11 +486,11 @@ impl RealtimeStream {
             subscribers: Vec::new(),
         }
     }
-    
+
     fn add_subscriber(&mut self, subscriber: Box<dyn AuditSubscriber>) {
         self.subscribers.push(subscriber);
     }
-    
+
     async fn publish_event(&mut self, event: &AuditEvent) -> Result<()> {
         for subscriber in &mut self.subscribers {
             subscriber.on_audit_event(event).await?;
@@ -405,9 +502,10 @@ impl RealtimeStream {
 impl FileStorage {
     async fn new(base_path: &str) -> Result<Self> {
         // 创建目录
-        std::fs::create_dir_all(base_path)
-            .map_err(|e| LumosError::SecurityError(format!("Failed to create audit directory: {}", e)))?;
-        
+        std::fs::create_dir_all(base_path).map_err(|e| {
+            LumosError::SecurityError(format!("Failed to create audit directory: {}", e))
+        })?;
+
         Ok(Self {
             base_path: base_path.to_string(),
         })
@@ -419,29 +517,31 @@ impl AuditStorage for FileStorage {
     async fn store_event(&mut self, event: &AuditEvent) -> Result<()> {
         let date = event.timestamp.format("%Y-%m-%d").to_string();
         let file_path = format!("{}/audit-{}.jsonl", self.base_path, date);
-        
-        let event_json = serde_json::to_string(event)
-            .map_err(|e| LumosError::SecurityError(format!("Failed to serialize audit event: {}", e)))?;
-        
+
+        let event_json = serde_json::to_string(event).map_err(|e| {
+            LumosError::SecurityError(format!("Failed to serialize audit event: {}", e))
+        })?;
+
         use std::io::Write;
         let mut file = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&file_path)
             .map_err(|e| LumosError::SecurityError(format!("Failed to open audit file: {}", e)))?;
-        
-        writeln!(file, "{}", event_json)
-            .map_err(|e| LumosError::SecurityError(format!("Failed to write audit event: {}", e)))?;
-        
+
+        writeln!(file, "{}", event_json).map_err(|e| {
+            LumosError::SecurityError(format!("Failed to write audit event: {}", e))
+        })?;
+
         Ok(())
     }
-    
+
     async fn query_events(&self, _query: &AuditQuery) -> Result<Vec<AuditEvent>> {
         // 简化实现：返回空结果
         // 在实际实现中，这里会解析文件并根据查询条件过滤
         Ok(Vec::new())
     }
-    
+
     async fn cleanup_old_events(&mut self, cutoff_date: DateTime<Utc>) -> Result<usize> {
         // 简化实现：返回0
         // 在实际实现中，这里会删除过期的日志文件
@@ -452,7 +552,7 @@ impl AuditStorage for FileStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     #[ignore] // Temporarily disabled due to directory creation issues in test environment
     async fn test_audit_logger_creation() {
@@ -460,20 +560,20 @@ mod tests {
         let logger = AuditLogger::new(&config).await;
         assert!(logger.is_ok());
     }
-    
+
     #[tokio::test]
     #[ignore] // Temporarily disabled due to directory creation issues in test environment
     async fn test_log_security_event() {
         let config = AuditConfig::default();
         let mut logger = AuditLogger::new(&config).await.unwrap();
-        
+
         let security_event = SecurityEvent::LoginAttempt {
             user_id: "test_user".to_string(),
             success: true,
             ip_address: "192.168.1.1".to_string(),
             timestamp: Utc::now(),
         };
-        
+
         let result = logger.log_event(security_event).await;
         assert!(result.is_ok());
     }

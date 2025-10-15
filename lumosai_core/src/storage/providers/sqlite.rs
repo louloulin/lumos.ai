@@ -1,13 +1,13 @@
 // This is a placeholder for SQLite storage provider that will be implemented later
-// Currently we only need this file to exist for the compilation process 
+// Currently we only need this file to exist for the compilation process
 
-use std::path::Path;
 use async_trait::async_trait;
 use serde_json::Value;
+use std::path::Path;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::storage::{Storage, Thread, Message, TableMap, EvalResults, TraceData};
+use crate::storage::{EvalResults, Message, Storage, TableMap, Thread, TraceData};
 
 /// SQLite storage provider
 pub struct SqliteStorage {
@@ -20,10 +20,7 @@ pub struct SqliteStorage {
 impl SqliteStorage {
     /// Create a new SQLite storage provider
     pub fn new(name: String, path: String) -> Result<Self> {
-        Ok(Self {
-            name,
-            path,
-        })
+        Ok(Self { name, path })
     }
 }
 
@@ -88,7 +85,11 @@ impl Storage for SqliteStorage {
         Ok(Vec::new())
     }
 
-    async fn save_messages(&self, _thread_id: &str, _messages: Vec<Message>) -> Result<Vec<String>> {
+    async fn save_messages(
+        &self,
+        _thread_id: &str,
+        _messages: Vec<Message>,
+    ) -> Result<Vec<String>> {
         // Placeholder implementation
         Ok(Vec::new())
     }
@@ -103,11 +104,7 @@ impl Storage for SqliteStorage {
         Ok(Vec::new())
     }
 
-    async fn persist_workflow_snapshot(
-        &self,
-        _workflow_id: &str,
-        _snapshot: Value,
-    ) -> Result<()> {
+    async fn persist_workflow_snapshot(&self, _workflow_id: &str, _snapshot: Value) -> Result<()> {
         // Placeholder implementation
         Ok(())
     }
@@ -116,4 +113,4 @@ impl Storage for SqliteStorage {
         // Placeholder implementation
         Ok(None)
     }
-} 
+}

@@ -1,13 +1,13 @@
 #![allow(non_snake_case)]
+use crate::types::{ApiKey, Prompt, PromptType as DBPromptType, Rbac};
 use crate::{
     app_layout::{Layout, SideBar},
     charts::{ApiRequestChartCard, TokenUsageChartCard},
     render, ConfirmModal,
 };
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, ApiKey, Prompt, PromptType as DBPromptType};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(
     rbac: Rbac,

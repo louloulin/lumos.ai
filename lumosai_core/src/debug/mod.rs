@@ -1,5 +1,5 @@
 //! Debug tools and utilities inspired by Mastra's debugging capabilities
-//! 
+//!
 //! This module provides comprehensive debugging tools for agents, tools, and workflows
 
 // pub mod inspector;
@@ -10,7 +10,7 @@
 // use crate::agent::BasicAgent;
 // use crate::tool::Tool;
 use crate::llm::Message;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
@@ -107,24 +107,33 @@ impl DebugSession {
 
         for event in &self.events {
             match event {
-                DebugEvent::ToolExecuted { tool_name, duration, output, .. } => {
+                DebugEvent::ToolExecuted {
+                    tool_name,
+                    duration,
+                    output,
+                    ..
+                } => {
                     summary.tool_executions += 1;
                     summary.total_tool_time += *duration;
                     if output.is_err() {
                         summary.tool_errors += 1;
                     }
                     *summary.tool_usage.entry(tool_name.clone()).or_insert(0) += 1;
-                },
-                DebugEvent::MessageProcessed { duration, token_usage, .. } => {
+                }
+                DebugEvent::MessageProcessed {
+                    duration,
+                    token_usage,
+                    ..
+                } => {
                     summary.message_count += 1;
                     summary.total_message_time += *duration;
                     if let Some(usage) = token_usage {
                         summary.total_tokens += usage.total_tokens;
                     }
-                },
+                }
                 DebugEvent::ErrorOccurred { .. } => {
                     summary.error_count += 1;
-                },
+                }
                 _ => {}
             }
         }
@@ -146,15 +155,25 @@ impl DebugSession {
 
     fn event_to_json(&self, event: &DebugEvent) -> Value {
         match event {
-            DebugEvent::AgentCreated { agent_name, timestamp, config } => {
+            DebugEvent::AgentCreated {
+                agent_name,
+                timestamp,
+                config,
+            } => {
                 json!({
                     "type": "agent_created",
                     "timestamp_ms": timestamp.elapsed().as_millis(),
                     "agent_name": agent_name,
                     "config": config
                 })
-            },
-            DebugEvent::ToolExecuted { tool_name, timestamp, duration, input, output } => {
+            }
+            DebugEvent::ToolExecuted {
+                tool_name,
+                timestamp,
+                duration,
+                input,
+                output,
+            } => {
                 json!({
                     "type": "tool_executed",
                     "timestamp_ms": timestamp.elapsed().as_millis(),
@@ -166,8 +185,14 @@ impl DebugSession {
                         Err(err) => json!({"success": false, "error": err})
                     }
                 })
-            },
-            DebugEvent::MessageProcessed { timestamp, duration, input_messages, output_message, token_usage } => {
+            }
+            DebugEvent::MessageProcessed {
+                timestamp,
+                duration,
+                input_messages,
+                output_message,
+                token_usage,
+            } => {
                 json!({
                     "type": "message_processed",
                     "timestamp_ms": timestamp.elapsed().as_millis(),
@@ -176,16 +201,25 @@ impl DebugSession {
                     "output_length": output_message.len(),
                     "token_usage": token_usage
                 })
-            },
-            DebugEvent::ErrorOccurred { timestamp, error, context } => {
+            }
+            DebugEvent::ErrorOccurred {
+                timestamp,
+                error,
+                context,
+            } => {
                 json!({
                     "type": "error_occurred",
                     "timestamp_ms": timestamp.elapsed().as_millis(),
                     "error": error,
                     "context": context
                 })
-            },
-            DebugEvent::MemoryAccessed { timestamp, operation, key, value } => {
+            }
+            DebugEvent::MemoryAccessed {
+                timestamp,
+                operation,
+                key,
+                value,
+            } => {
                 json!({
                     "type": "memory_accessed",
                     "timestamp_ms": timestamp.elapsed().as_millis(),
@@ -232,33 +266,39 @@ impl DebugSummary {
     /// Format summary for display
     pub fn format_display(&self) -> String {
         let mut output = String::new();
-        
+
         output.push_str(&format!("🔍 Debug Session Summary ({})\n", self.session_id));
         output.push_str(&format!("⏱️  Total Duration: {:?}\n", self.total_duration));
-        output.push_str(&format!("🔧 Tool Executions: {} (errors: {})\n", self.tool_executions, self.tool_errors));
+        output.push_str(&format!(
+            "🔧 Tool Executions: {} (errors: {})\n",
+            self.tool_executions, self.tool_errors
+        ));
         output.push_str(&format!("💬 Messages Processed: {}\n", self.message_count));
         output.push_str(&format!("🎯 Total Tokens: {}\n", self.total_tokens));
         output.push_str(&format!("❌ Errors: {}\n", self.error_count));
-        
+
         if !self.tool_usage.is_empty() {
             output.push_str("\n📊 Tool Usage:\n");
             for (tool, count) in &self.tool_usage {
                 output.push_str(&format!("  • {}: {} times\n", tool, count));
             }
         }
-        
+
         // Performance metrics
         if self.tool_executions > 0 {
             let avg_tool_time = self.total_tool_time.as_millis() / self.tool_executions as u128;
             output.push_str(&format!("\n⚡ Performance:\n"));
             output.push_str(&format!("  • Avg Tool Execution: {}ms\n", avg_tool_time));
         }
-        
+
         if self.message_count > 0 {
             let avg_message_time = self.total_message_time.as_millis() / self.message_count as u128;
-            output.push_str(&format!("  • Avg Message Processing: {}ms\n", avg_message_time));
+            output.push_str(&format!(
+                "  • Avg Message Processing: {}ms\n",
+                avg_message_time
+            ));
         }
-        
+
         output
     }
 }
@@ -356,13 +396,13 @@ mod tests {
     #[test]
     fn test_event_addition() {
         let mut session = DebugSession::new();
-        
+
         let event = DebugEvent::AgentCreated {
             agent_name: "test_agent".to_string(),
             timestamp: Instant::now(),
             config: json!({"name": "test"}),
         };
-        
+
         session.add_event(event);
         assert_eq!(session.events.len(), 1);
     }
@@ -370,7 +410,7 @@ mod tests {
     #[test]
     fn test_summary_generation() {
         let mut session = DebugSession::new();
-        
+
         // Add some events
         session.add_event(DebugEvent::ToolExecuted {
             tool_name: "calculator".to_string(),
@@ -379,13 +419,13 @@ mod tests {
             input: json!({"operation": "add"}),
             output: Ok(json!({"result": 42})),
         });
-        
+
         session.add_event(DebugEvent::ErrorOccurred {
             timestamp: Instant::now(),
             error: "Test error".to_string(),
             context: HashMap::new(),
         });
-        
+
         let summary = session.generate_summary();
         assert_eq!(summary.tool_executions, 1);
         assert_eq!(summary.error_count, 1);
@@ -396,17 +436,17 @@ mod tests {
     fn test_debug_manager() {
         let mut manager = DebugManager::new();
         assert!(!manager.enabled);
-        
+
         let session_id = manager.start_session();
         assert!(manager.enabled);
         assert!(!session_id.is_empty());
-        
+
         manager.add_event(DebugEvent::AgentCreated {
             agent_name: "test".to_string(),
             timestamp: Instant::now(),
             config: json!({}),
         });
-        
+
         let summary = manager.end_session();
         assert!(summary.is_some());
         assert!(!manager.enabled);

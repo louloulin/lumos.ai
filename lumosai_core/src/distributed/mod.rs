@@ -1,11 +1,11 @@
+use crate::agent::trait_def::Agent;
+use crate::error::{Error, Result};
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
-use tokio::sync::{RwLock, Mutex};
-use crate::error::{Error, Result};
-use crate::agent::trait_def::Agent;
+use tokio::sync::{Mutex, RwLock};
 
 /// 分布式Agent管理器
 pub struct DistributedAgentManager {
@@ -65,11 +65,15 @@ pub enum NodeStatus {
 #[async_trait]
 pub trait LoadBalancer: Send + Sync {
     /// 选择最佳节点
-    async fn select_node(&self, nodes: &[NodeInfo], criteria: &SelectionCriteria) -> Result<Option<NodeInfo>>;
-    
+    async fn select_node(
+        &self,
+        nodes: &[NodeInfo],
+        criteria: &SelectionCriteria,
+    ) -> Result<Option<NodeInfo>>;
+
     /// 更新节点负载
     async fn update_load(&self, node_id: &str, load: f64) -> Result<()>;
-    
+
     /// 获取负载均衡策略
     fn strategy(&self) -> LoadBalancingStrategy;
 }
@@ -99,16 +103,16 @@ pub enum LoadBalancingStrategy {
 pub trait ConsensusManager: Send + Sync {
     /// 开始选举
     async fn start_election(&self) -> Result<()>;
-    
+
     /// 投票
     async fn vote(&self, candidate_id: &str, term: u64) -> Result<bool>;
-    
+
     /// 获取当前领导者
     async fn get_leader(&self) -> Option<String>;
-    
+
     /// 提交日志条目
     async fn commit_log_entry(&self, entry: LogEntry) -> Result<()>;
-    
+
     /// 获取日志
     async fn get_log(&self, from_index: u64, to_index: u64) -> Result<Vec<LogEntry>>;
 }
@@ -139,16 +143,16 @@ pub enum LogEntryType {
 pub trait MessageBroker: Send + Sync {
     /// 发送消息
     async fn send_message(&self, target: &str, message: DistributedMessage) -> Result<()>;
-    
+
     /// 广播消息
     async fn broadcast_message(&self, message: DistributedMessage) -> Result<()>;
-    
+
     /// 订阅消息类型
     async fn subscribe(&self, message_type: &str) -> Result<()>;
-    
+
     /// 取消订阅
     async fn unsubscribe(&self, message_type: &str) -> Result<()>;
-    
+
     /// 接收消息
     async fn receive_message(&self) -> Result<DistributedMessage>;
 }
@@ -192,7 +196,7 @@ impl DistributedAgentManager {
         message_broker: Arc<dyn MessageBroker>,
     ) -> Self {
         let node_id = cluster_config.node_id.clone();
-        
+
         Self {
             node_id,
             cluster_config,
@@ -203,24 +207,24 @@ impl DistributedAgentManager {
             health_monitor: Arc::new(Mutex::new(HealthMonitor::new(Duration::from_secs(30), 3))),
         }
     }
-    
+
     /// 启动分布式管理器
     pub async fn start(&self) -> Result<()> {
         // 加入集群
         self.join_cluster().await?;
-        
+
         // 启动心跳
         self.start_heartbeat().await?;
-        
+
         // 启动健康检查
         self.start_health_monitoring().await?;
-        
+
         // 启动消息处理
         self.start_message_processing().await?;
-        
+
         Ok(())
     }
-    
+
     /// 加入集群
     async fn join_cluster(&self) -> Result<()> {
         let join_message = DistributedMessage {
@@ -243,9 +247,9 @@ impl DistributedAgentManager {
             timestamp: SystemTime::now(),
             ttl: Some(Duration::from_secs(30)),
         };
-        
+
         self.message_broker.broadcast_message(join_message).await?;
-        
+
         // 更新本地注册表
         let mut registry = self.node_registry.write().await;
         registry.add_node(NodeInfo {
@@ -258,22 +262,22 @@ impl DistributedAgentManager {
             last_heartbeat: SystemTime::now(),
             metadata: HashMap::new(),
         });
-        
+
         Ok(())
     }
-    
+
     /// 启动心跳
     async fn start_heartbeat(&self) -> Result<()> {
         let node_id = self.node_id.clone();
         let message_broker = self.message_broker.clone();
         let interval = self.cluster_config.heartbeat_interval;
-        
+
         tokio::spawn(async move {
             let mut interval_timer = tokio::time::interval(interval);
-            
+
             loop {
                 interval_timer.tick().await;
-                
+
                 let heartbeat_message = DistributedMessage {
                     id: uuid::Uuid::new_v4().to_string(),
                     from: node_id.clone(),
@@ -286,45 +290,45 @@ impl DistributedAgentManager {
                     timestamp: SystemTime::now(),
                     ttl: Some(Duration::from_secs(10)),
                 };
-                
+
                 if let Err(e) = message_broker.broadcast_message(heartbeat_message).await {
                     eprintln!("Failed to send heartbeat: {}", e);
                 }
             }
         });
-        
+
         Ok(())
     }
-    
+
     /// 启动健康监控
     async fn start_health_monitoring(&self) -> Result<()> {
         let health_monitor = self.health_monitor.clone();
         let node_registry = self.node_registry.clone();
-        
+
         tokio::spawn(async move {
             let mut interval_timer = tokio::time::interval(Duration::from_secs(30));
-            
+
             loop {
                 interval_timer.tick().await;
-                
+
                 let mut monitor = health_monitor.lock().await;
                 let registry = node_registry.read().await;
-                
+
                 for node in registry.get_all_nodes() {
                     monitor.check_node_health(&node).await;
                 }
             }
         });
-        
+
         Ok(())
     }
-    
+
     /// 启动消息处理
     async fn start_message_processing(&self) -> Result<()> {
         let message_broker = self.message_broker.clone();
         let node_registry = self.node_registry.clone();
         let node_id = self.node_id.clone();
-        
+
         tokio::spawn(async move {
             loop {
                 match message_broker.receive_message().await {
@@ -340,10 +344,10 @@ impl DistributedAgentManager {
                 }
             }
         });
-        
+
         Ok(())
     }
-    
+
     /// 处理分布式消息
     async fn handle_distributed_message(
         message: DistributedMessage,
@@ -369,7 +373,7 @@ impl DistributedAgentManager {
             }
         }
     }
-    
+
     /// 部署Agent到集群
     pub async fn deploy_agent<T: Agent + 'static>(
         &self,
@@ -379,19 +383,19 @@ impl DistributedAgentManager {
         // 选择最佳节点
         let registry = self.node_registry.read().await;
         let nodes = registry.get_active_nodes();
-        
+
         let criteria = SelectionCriteria {
             required_capabilities: deployment_config.required_capabilities.clone(),
             preferred_region: deployment_config.preferred_region.clone(),
             max_load: Some(0.8),
             exclude_nodes: vec![],
         };
-        
+
         let selected_node = self.load_balancer.select_node(&nodes, &criteria).await?;
-        
+
         if let Some(node) = selected_node {
             let deployment_id = uuid::Uuid::new_v4().to_string();
-            
+
             let deploy_message = DistributedMessage {
                 id: uuid::Uuid::new_v4().to_string(),
                 from: self.node_id.clone(),
@@ -405,20 +409,24 @@ impl DistributedAgentManager {
                 timestamp: SystemTime::now(),
                 ttl: Some(Duration::from_secs(60)),
             };
-            
-            self.message_broker.send_message(&node.node_id, deploy_message).await?;
-            
+
+            self.message_broker
+                .send_message(&node.node_id, deploy_message)
+                .await?;
+
             Ok(deployment_id)
         } else {
-            Err(Error::Distributed("No suitable node found for deployment".to_string()))
+            Err(Error::Distributed(
+                "No suitable node found for deployment".to_string(),
+            ))
         }
     }
-    
+
     /// 获取集群状态
     pub async fn get_cluster_status(&self) -> ClusterStatus {
         let registry = self.node_registry.read().await;
         let health_monitor = self.health_monitor.lock().await;
-        
+
         ClusterStatus {
             cluster_name: self.cluster_config.cluster_name.clone(),
             total_nodes: registry.get_all_nodes().len(),
@@ -466,35 +474,36 @@ impl NodeRegistry {
             last_updated: SystemTime::now(),
         }
     }
-    
+
     pub fn add_node(&mut self, node: NodeInfo) {
         self.nodes.insert(node.node_id.clone(), node);
         self.last_updated = SystemTime::now();
     }
-    
+
     pub fn remove_node(&mut self, node_id: &str) {
         self.nodes.remove(node_id);
         self.last_updated = SystemTime::now();
     }
-    
+
     pub fn update_heartbeat(&mut self, node_id: &str) {
         if let Some(node) = self.nodes.get_mut(node_id) {
             node.last_heartbeat = SystemTime::now();
             node.status = NodeStatus::Active;
         }
     }
-    
+
     pub fn get_all_nodes(&self) -> Vec<NodeInfo> {
         self.nodes.values().cloned().collect()
     }
-    
+
     pub fn get_active_nodes(&self) -> Vec<NodeInfo> {
-        self.nodes.values()
+        self.nodes
+            .values()
             .filter(|node| node.status == NodeStatus::Active)
             .cloned()
             .collect()
     }
-    
+
     pub fn get_node(&self, node_id: &str) -> Option<&NodeInfo> {
         self.nodes.get(node_id)
     }
@@ -508,9 +517,11 @@ impl HealthMonitor {
             failure_threshold,
         }
     }
-    
+
     pub async fn check_node_health(&mut self, node: &NodeInfo) {
-        let health = self.node_health.entry(node.node_id.clone())
+        let health = self
+            .node_health
+            .entry(node.node_id.clone())
             .or_insert_with(|| NodeHealth {
                 node_id: node.node_id.clone(),
                 is_healthy: true,
@@ -519,12 +530,12 @@ impl HealthMonitor {
                 response_time: Duration::from_millis(0),
                 error_rate: 0.0,
             });
-        
+
         // 检查心跳超时
         let heartbeat_age = SystemTime::now()
             .duration_since(node.last_heartbeat)
             .unwrap_or(Duration::from_secs(0));
-        
+
         if heartbeat_age > Duration::from_secs(60) {
             health.consecutive_failures += 1;
             if health.consecutive_failures >= self.failure_threshold {
@@ -534,14 +545,14 @@ impl HealthMonitor {
             health.consecutive_failures = 0;
             health.is_healthy = true;
         }
-        
+
         health.last_check = SystemTime::now();
     }
-    
+
     pub fn get_all_health_status(&self) -> Vec<NodeHealth> {
         self.node_health.values().cloned().collect()
     }
-    
+
     pub fn get_node_health(&self, node_id: &str) -> Option<&NodeHealth> {
         self.node_health.get(node_id)
     }
@@ -562,8 +573,13 @@ impl RoundRobinLoadBalancer {
 
 #[async_trait]
 impl LoadBalancer for RoundRobinLoadBalancer {
-    async fn select_node(&self, nodes: &[NodeInfo], criteria: &SelectionCriteria) -> Result<Option<NodeInfo>> {
-        let filtered_nodes: Vec<_> = nodes.iter()
+    async fn select_node(
+        &self,
+        nodes: &[NodeInfo],
+        criteria: &SelectionCriteria,
+    ) -> Result<Option<NodeInfo>> {
+        let filtered_nodes: Vec<_> = nodes
+            .iter()
             .filter(|node| {
                 // 检查必需能力
                 criteria.required_capabilities.iter()
@@ -574,23 +590,23 @@ impl LoadBalancer for RoundRobinLoadBalancer {
                 !criteria.exclude_nodes.contains(&node.node_id)
             })
             .collect();
-        
+
         if filtered_nodes.is_empty() {
             return Ok(None);
         }
-        
+
         let mut index = self.current_index.lock().await;
         let selected = filtered_nodes[*index % filtered_nodes.len()].clone();
         *index += 1;
-        
+
         Ok(Some(selected))
     }
-    
+
     async fn update_load(&self, _node_id: &str, _load: f64) -> Result<()> {
         // Round robin doesn't use load information
         Ok(())
     }
-    
+
     fn strategy(&self) -> LoadBalancingStrategy {
         LoadBalancingStrategy::RoundRobin
     }

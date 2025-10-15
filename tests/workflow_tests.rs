@@ -1,8 +1,8 @@
-use std::time::{Duration, Instant};
-use lumosai_core::workflow::{EnhancedWorkflow, WorkflowStep, WorkflowStatus, Workflow};
-use lumosai_core::workflow::{WorkflowState, StepContext};
 use lumosai_core::agent::types::RuntimeContext;
+use lumosai_core::workflow::{EnhancedWorkflow, Workflow, WorkflowStatus, WorkflowStep};
+use lumosai_core::workflow::{StepContext, WorkflowState};
 use serde_json::json;
+use std::time::{Duration, Instant};
 
 mod common;
 use common::TestAssertions;

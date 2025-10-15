@@ -1,13 +1,13 @@
 //! 资源管理器
-//! 
+//!
 //! 提供智能资源分配、自动扩缩容、成本优化和资源监控功能
 
 use super::*;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use async_trait::async_trait;
 
 /// 资源管理器trait
 #[async_trait]
@@ -18,39 +18,33 @@ pub trait ResourceManager: Send + Sync {
         tenant_id: &Uuid,
         resource_request: ResourceRequest,
     ) -> BillingResult<ResourceAllocation>;
-    
+
     /// 释放资源
-    async fn deallocate_resources(
-        &self,
-        allocation_id: &str,
-    ) -> BillingResult<()>;
-    
+    async fn deallocate_resources(&self, allocation_id: &str) -> BillingResult<()>;
+
     /// 扩容资源
     async fn scale_up_resources(
         &self,
         allocation_id: &str,
         scale_factor: f64,
     ) -> BillingResult<ResourceAllocation>;
-    
+
     /// 缩容资源
     async fn scale_down_resources(
         &self,
         allocation_id: &str,
         scale_factor: f64,
     ) -> BillingResult<ResourceAllocation>;
-    
+
     /// 获取资源使用情况
-    async fn get_resource_usage(
-        &self,
-        tenant_id: &Uuid,
-    ) -> BillingResult<Vec<ResourceUsage>>;
-    
+    async fn get_resource_usage(&self, tenant_id: &Uuid) -> BillingResult<Vec<ResourceUsage>>;
+
     /// 优化资源配置
     async fn optimize_resources(
         &self,
         tenant_id: &Uuid,
     ) -> BillingResult<Vec<ResourceOptimization>>;
-    
+
     /// 预测资源需求
     async fn predict_resource_demand(
         &self,
@@ -406,23 +400,30 @@ impl IntelligentResourceManager {
             optimization_engine: OptimizationEngine::new(),
         }
     }
-    
+
     /// 添加资源池
     pub fn add_resource_pool(&mut self, pool: ResourcePool) {
         self.resource_pools.insert(pool.resource_type.clone(), pool);
     }
-    
+
     /// 更新性能指标
-    pub fn update_performance_metrics(&mut self, allocation_id: &str, metrics: ResourcePerformanceMetrics) {
+    pub fn update_performance_metrics(
+        &mut self,
+        allocation_id: &str,
+        metrics: ResourcePerformanceMetrics,
+    ) {
         if let Some(allocation) = self.allocations.get_mut(allocation_id) {
             allocation.performance_metrics = metrics;
         }
     }
-    
+
     /// 记录使用历史
     pub fn record_usage_history(&mut self, tenant_id: Uuid, usage: ResourceUsage) {
-        self.usage_history.entry(tenant_id).or_insert_with(Vec::new).push(usage);
-        
+        self.usage_history
+            .entry(tenant_id)
+            .or_insert_with(Vec::new)
+            .push(usage);
+
         // 限制历史记录数量
         if let Some(history) = self.usage_history.get_mut(&tenant_id) {
             if history.len() > 1000 {
@@ -440,7 +441,7 @@ impl OptimizationEngine {
             history_window: Duration::from_secs(7 * 24 * 60 * 60), // 7天
         }
     }
-    
+
     /// 添加优化规则
     pub fn add_rule(&mut self, rule: OptimizationRule) {
         self.rules.push(rule);
@@ -455,14 +456,19 @@ impl ResourceManager for IntelligentResourceManager {
         resource_request: ResourceRequest,
     ) -> BillingResult<ResourceAllocation> {
         // 检查资源池可用性
-        let pool = self.resource_pools.get(&resource_request.resource_type)
-            .ok_or_else(|| BillingError::ResourceAllocationFailed(
-                format!("Resource type not available: {}", resource_request.resource_type)
-            ))?;
+        let pool = self
+            .resource_pools
+            .get(&resource_request.resource_type)
+            .ok_or_else(|| {
+                BillingError::ResourceAllocationFailed(format!(
+                    "Resource type not available: {}",
+                    resource_request.resource_type
+                ))
+            })?;
 
         if pool.available_capacity < resource_request.quantity {
             return Err(BillingError::ResourceAllocationFailed(
-                "Insufficient resource capacity".to_string()
+                "Insufficient resource capacity".to_string(),
             ));
         }
 
@@ -513,11 +519,14 @@ impl ResourceManager for IntelligentResourceManager {
         // 在实际实现中，这里会扩容资源
         if let Some(allocation) = self.allocations.get(allocation_id) {
             let mut scaled_allocation = allocation.clone();
-            scaled_allocation.allocated_quantity = (allocation.allocated_quantity as f64 * scale_factor) as u64;
+            scaled_allocation.allocated_quantity =
+                (allocation.allocated_quantity as f64 * scale_factor) as u64;
             scaled_allocation.status = AllocationStatus::Scaling;
             Ok(scaled_allocation)
         } else {
-            Err(BillingError::ResourceAllocationFailed("Allocation not found".to_string()))
+            Err(BillingError::ResourceAllocationFailed(
+                "Allocation not found".to_string(),
+            ))
         }
     }
 
@@ -529,11 +538,14 @@ impl ResourceManager for IntelligentResourceManager {
         // 在实际实现中，这里会缩容资源
         if let Some(allocation) = self.allocations.get(allocation_id) {
             let mut scaled_allocation = allocation.clone();
-            scaled_allocation.allocated_quantity = (allocation.allocated_quantity as f64 * scale_factor) as u64;
+            scaled_allocation.allocated_quantity =
+                (allocation.allocated_quantity as f64 * scale_factor) as u64;
             scaled_allocation.status = AllocationStatus::Scaling;
             Ok(scaled_allocation)
         } else {
-            Err(BillingError::ResourceAllocationFailed("Allocation not found".to_string()))
+            Err(BillingError::ResourceAllocationFailed(
+                "Allocation not found".to_string(),
+            ))
         }
     }
 
@@ -544,8 +556,9 @@ impl ResourceManager for IntelligentResourceManager {
         if let Some(allocation_ids) = self.tenant_allocations.get(tenant_id) {
             for allocation_id in allocation_ids {
                 if let Some(allocation) = self.allocations.get(allocation_id) {
-                    let entry = usage_map.entry(allocation.resource_type.clone()).or_insert_with(|| {
-                        ResourceUsage {
+                    let entry = usage_map
+                        .entry(allocation.resource_type.clone())
+                        .or_insert_with(|| ResourceUsage {
                             resource_type: allocation.resource_type.clone(),
                             total_allocated: 0,
                             current_usage: 0,
@@ -554,12 +567,12 @@ impl ResourceManager for IntelligentResourceManager {
                             total_cost: 0.0,
                             cost_efficiency: 0.0,
                             measured_at: SystemTime::now(),
-                        }
-                    });
+                        });
 
                     entry.total_allocated += allocation.allocated_quantity;
-                    entry.current_usage += (allocation.allocated_quantity as f64 *
-                        allocation.performance_metrics.cpu_utilization / 100.0) as u64;
+                    entry.current_usage += (allocation.allocated_quantity as f64
+                        * allocation.performance_metrics.cpu_utilization
+                        / 100.0) as u64;
                     entry.active_allocations += 1;
                     entry.total_cost += allocation.cost_info.total_cost;
                 }
@@ -584,7 +597,10 @@ impl ResourceManager for IntelligentResourceManager {
         Ok(usage_map.into_values().collect())
     }
 
-    async fn optimize_resources(&self, tenant_id: &Uuid) -> BillingResult<Vec<ResourceOptimization>> {
+    async fn optimize_resources(
+        &self,
+        tenant_id: &Uuid,
+    ) -> BillingResult<Vec<ResourceOptimization>> {
         let mut optimizations = Vec::new();
 
         // 获取租户的资源使用情况
@@ -615,7 +631,10 @@ impl ResourceManager for IntelligentResourceManager {
                     expected_savings: usage.total_cost * 0.4,
                     performance_impact: PerformanceImpact::SlightDegradation,
                     implementation_difficulty: OptimizationDifficulty::Easy,
-                    description: format!("资源使用率较低({:.1}%)，建议缩容以节省成本", usage.utilization_rate * 100.0),
+                    description: format!(
+                        "资源使用率较低({:.1}%)，建议缩容以节省成本",
+                        usage.utilization_rate * 100.0
+                    ),
                     priority: 7,
                 });
             }
@@ -644,7 +663,10 @@ impl ResourceManager for IntelligentResourceManager {
                     expected_savings: 0.0,
                     performance_impact: PerformanceImpact::SignificantImprovement,
                     implementation_difficulty: OptimizationDifficulty::Medium,
-                    description: format!("资源使用率较高({:.1}%)，建议扩容以提升性能", usage.utilization_rate * 100.0),
+                    description: format!(
+                        "资源使用率较高({:.1}%)，建议扩容以提升性能",
+                        usage.utilization_rate * 100.0
+                    ),
                     priority: 8,
                 });
             }
@@ -676,10 +698,8 @@ impl ResourceManager for IntelligentResourceManager {
                 for hour in 0..window_hours {
                     let timestamp = SystemTime::now() + Duration::from_secs(hour * 3600);
                     let demand = current_demand + (hour as u64 * 10); // 简单增长模型
-                    let confidence_interval = (
-                        (demand as f64 * 0.8) as u64,
-                        (demand as f64 * 1.2) as u64,
-                    );
+                    let confidence_interval =
+                        ((demand as f64 * 0.8) as u64, (demand as f64 * 1.2) as u64);
 
                     predicted_demand.push(DemandDataPoint {
                         timestamp,
@@ -689,20 +709,25 @@ impl ResourceManager for IntelligentResourceManager {
                 }
 
                 let peak_demand = predicted_demand.iter().map(|p| p.demand).max().unwrap_or(0);
-                let average_demand = predicted_demand.iter().map(|p| p.demand).sum::<u64>() as f64 / predicted_demand.len() as f64;
+                let average_demand = predicted_demand.iter().map(|p| p.demand).sum::<u64>() as f64
+                    / predicted_demand.len() as f64;
 
-                predictions_by_resource.insert(usage.resource_type.clone(), ResourceDemandForecast {
-                    resource_type: usage.resource_type.clone(),
-                    predicted_demand,
-                    peak_demand,
-                    average_demand,
-                    predicted_cost: average_demand * 0.1, // 假设单位成本
-                    recommended_pre_allocation: (peak_demand as f64 * 1.1) as u64, // 预留10%缓冲
-                });
+                predictions_by_resource.insert(
+                    usage.resource_type.clone(),
+                    ResourceDemandForecast {
+                        resource_type: usage.resource_type.clone(),
+                        predicted_demand,
+                        peak_demand,
+                        average_demand,
+                        predicted_cost: average_demand * 0.1, // 假设单位成本
+                        recommended_pre_allocation: (peak_demand as f64 * 1.1) as u64, // 预留10%缓冲
+                    },
+                );
             }
         }
 
-        let total_cost_forecast = predictions_by_resource.values()
+        let total_cost_forecast = predictions_by_resource
+            .values()
             .map(|p| p.predicted_cost)
             .sum();
 

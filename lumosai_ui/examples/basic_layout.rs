@@ -10,7 +10,7 @@ use web_pages::base_layout::BaseLayout;
 fn main() {
     // This would typically be used in a web application context
     println!("LumosAI UI Basic Layout Example");
-    
+
     // Example of how the layout would be structured
     let layout_html = render_basic_layout();
     println!("Generated HTML length: {} characters", layout_html.len());
@@ -29,7 +29,7 @@ fn BasicApp() -> Element {
             ],
             section_class: "p-6 bg-base-100".to_string(),
             js_href: "/js/app.js".to_string(),
-            
+
             // Header content
             header: rsx! {
                 div {
@@ -53,12 +53,12 @@ fn BasicApp() -> Element {
                     }
                 }
             },
-            
+
             // Sidebar navigation
             sidebar: rsx! {
                 nav {
                     class: "space-y-2",
-                    
+
                     // Dashboard
                     a {
                         href: "/dashboard",
@@ -66,7 +66,7 @@ fn BasicApp() -> Element {
                         span { "🏠" }
                         span { "Dashboard" }
                     }
-                    
+
                     // Assistants
                     a {
                         href: "/assistants",
@@ -74,7 +74,7 @@ fn BasicApp() -> Element {
                         span { "🤖" }
                         span { "Assistants" }
                     }
-                    
+
                     // Console
                     a {
                         href: "/console",
@@ -82,7 +82,7 @@ fn BasicApp() -> Element {
                         span { "💬" }
                         span { "Console" }
                     }
-                    
+
                     // Workflows
                     a {
                         href: "/workflows",
@@ -90,7 +90,7 @@ fn BasicApp() -> Element {
                         span { "🔄" }
                         span { "Workflows" }
                     }
-                    
+
                     // Datasets
                     a {
                         href: "/datasets",
@@ -98,7 +98,7 @@ fn BasicApp() -> Element {
                         span { "📊" }
                         span { "Datasets" }
                     }
-                    
+
                     // Models
                     a {
                         href: "/models",
@@ -108,7 +108,7 @@ fn BasicApp() -> Element {
                     }
                 }
             },
-            
+
             // Sidebar header
             sidebar_header: rsx! {
                 div {
@@ -126,7 +126,7 @@ fn BasicApp() -> Element {
                     }
                 }
             },
-            
+
             // Sidebar footer
             sidebar_footer: rsx! {
                 div {
@@ -149,7 +149,7 @@ fn BasicApp() -> Element {
             // Main content area (children)
             div {
                 class: "space-y-6",
-                
+
                 // Welcome section
                 Card {
                     class: "bg-gradient-to-r from-primary to-secondary text-primary-content",
@@ -172,11 +172,11 @@ fn BasicApp() -> Element {
                         }
                     }
                 }
-                
+
                 // Quick actions
                 div {
                     class: "grid grid-cols-1 md:grid-cols-3 gap-6",
-                    
+
                     Card {
                         class: "hover:shadow-lg transition-shadow",
                         div {
@@ -200,7 +200,7 @@ fn BasicApp() -> Element {
                             }
                         }
                     }
-                    
+
                     Card {
                         class: "hover:shadow-lg transition-shadow",
                         div {
@@ -224,7 +224,7 @@ fn BasicApp() -> Element {
                             }
                         }
                     }
-                    
+
                     Card {
                         class: "hover:shadow-lg transition-shadow",
                         div {

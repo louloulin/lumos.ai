@@ -26,11 +26,11 @@ cargo run --bin lumosai-web-server --features fullstack
 */
 
 use dioxus::prelude::*;
-use web_pages::base_layout::BaseLayout;
-use web_pages::console::enhanced_console::{EnhancedAssistantConsole, SinglePrompt, Capability};
-use web_pages::types::{Rbac, Visibility};
 use web_pages::app_layout::SideBar;
+use web_pages::base_layout::BaseLayout;
+use web_pages::console::enhanced_console::{Capability, EnhancedAssistantConsole, SinglePrompt};
 use web_pages::console::PendingChatState;
+use web_pages::types::{Rbac, Visibility};
 
 #[cfg(feature = "fullstack")]
 use dioxus_fullstack::prelude::*;
@@ -40,13 +40,13 @@ use std::net::Ipv4Addr;
 // AI功能模块
 mod ai_client;
 #[cfg(any(feature = "server", feature = "fullstack"))]
-mod streaming;
-#[cfg(any(feature = "server", feature = "fullstack"))]
 mod api_server;
 mod database;
-mod tools;
 #[cfg(any(feature = "server", feature = "fullstack"))]
 mod file_handler;
+#[cfg(any(feature = "server", feature = "fullstack"))]
+mod streaming;
+mod tools;
 
 #[cfg(any(feature = "server", feature = "fullstack"))]
 use ai_client::AIClient;
@@ -76,7 +76,11 @@ fn main() {
         launch_fullstack();
     }
 
-    #[cfg(all(not(feature = "desktop"), not(feature = "fullstack"), not(feature = "server")))]
+    #[cfg(all(
+        not(feature = "desktop"),
+        not(feature = "fullstack"),
+        not(feature = "server")
+    ))]
     {
         println!("🌐 Launching LumosAI Web Application...");
         launch_web();
@@ -94,8 +98,7 @@ fn launch_fullstack() {
     println!("📱 Open http://localhost:8080 in your browser");
 
     // For fullstack mode, we use dioxus LaunchBuilder
-    dioxus::LaunchBuilder::new()
-        .launch(App);
+    dioxus::LaunchBuilder::new().launch(App);
 }
 
 #[cfg(all(not(feature = "desktop"), not(feature = "fullstack")))]
@@ -344,7 +347,12 @@ fn DashboardContent() -> Element {
 }
 
 #[component]
-fn StatsCard(title: &'static str, value: &'static str, icon: &'static str, color: &'static str) -> Element {
+fn StatsCard(
+    title: &'static str,
+    value: &'static str,
+    icon: &'static str,
+    color: &'static str,
+) -> Element {
     let bg_color = match color {
         "blue" => "bg-blue-500",
         "green" => "bg-green-500",
@@ -376,7 +384,12 @@ fn StatsCard(title: &'static str, value: &'static str, icon: &'static str, color
 }
 
 #[component]
-fn ActivityItem(icon: &'static str, title: &'static str, description: &'static str, time: &'static str) -> Element {
+fn ActivityItem(
+    icon: &'static str,
+    title: &'static str,
+    description: &'static str,
+    time: &'static str,
+) -> Element {
     rsx! {
         div {
             class: "flex items-center space-x-3 p-3 hover:bg-base-200 rounded-lg transition-colors",
@@ -426,11 +439,9 @@ fn Console() -> Element {
         model_name: Some("gpt-4".to_string()),
     };
 
-    let capabilities = vec![
-        Capability {
-            name: "Text Generation".to_string(),
-        }
-    ];
+    let capabilities = vec![Capability {
+        name: "Text Generation".to_string(),
+    }];
 
     rsx! {
         div {
@@ -511,16 +522,12 @@ fn open_browser(url: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open")
-            .arg(url)
-            .spawn()?;
+        std::process::Command::new("open").arg(url).spawn()?;
     }
 
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open")
-            .arg(url)
-            .spawn()?;
+        std::process::Command::new("xdg-open").arg(url).spawn()?;
     }
 
     Ok(())

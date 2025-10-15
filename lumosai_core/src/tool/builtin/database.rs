@@ -1,10 +1,10 @@
 //! 数据库工具集
-//! 
+//!
 //! 提供SQL执行、MongoDB、Redis、Elasticsearch等数据库客户端
 
-use crate::tool::{ToolSchema, ParameterSchema, FunctionTool};
 use crate::error::Result;
-use serde_json::{Value, json};
+use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
+use serde_json::{json, Value};
 
 /// SQL执行工具
 pub fn sql_executor() -> FunctionTool {
@@ -56,23 +56,30 @@ pub fn sql_executor() -> FunctionTool {
         "执行SQL查询，支持多种数据库类型",
         schema,
         |params| {
-            let _connection_string = params.get("connection_string")
+            let _connection_string = params
+                .get("connection_string")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| crate::error::Error::Tool("Missing connection_string parameter".to_string()))?;
-            
-            let query = params.get("query")
+                .ok_or_else(|| {
+                    crate::error::Error::Tool("Missing connection_string parameter".to_string())
+                })?;
+
+            let query = params
+                .get("query")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| crate::error::Error::Tool("Missing query parameter".to_string()))?;
-            
-            let database_type = params.get("database_type")
+
+            let database_type = params
+                .get("database_type")
                 .and_then(|v| v.as_str())
                 .unwrap_or("postgresql");
-            
-            let timeout_seconds = params.get("timeout_seconds")
+
+            let timeout_seconds = params
+                .get("timeout_seconds")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(30);
-            
-            let _max_rows = params.get("max_rows")
+
+            let _max_rows = params
+                .get("max_rows")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(1000);
 
@@ -106,17 +113,17 @@ pub fn sql_executor() -> FunctionTool {
                     ]);
                     result["row_count"] = json!(3);
                     result["columns"] = json!(["id", "name", "email"]);
-                },
+                }
                 "INSERT" => {
                     result["affected_rows"] = json!(1);
                     result["last_insert_id"] = json!(4);
-                },
+                }
                 "UPDATE" => {
                     result["affected_rows"] = json!(2);
-                },
+                }
                 "DELETE" => {
                     result["affected_rows"] = json!(1);
-                },
+                }
                 _ => {
                     result["message"] = json!("Query executed successfully");
                 }
@@ -185,22 +192,34 @@ pub fn mongodb_client() -> FunctionTool {
         "MongoDB数据库操作客户端",
         schema,
         |params| {
-            let _connection_string = params.get("connection_string")
+            let _connection_string = params
+                .get("connection_string")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| crate::error::Error::Tool("Missing connection_string parameter".to_string()))?;
-            
-            let database = params.get("database")
+                .ok_or_else(|| {
+                    crate::error::Error::Tool("Missing connection_string parameter".to_string())
+                })?;
+
+            let database = params
+                .get("database")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| crate::error::Error::Tool("Missing database parameter".to_string()))?;
-            
-            let collection = params.get("collection")
+                .ok_or_else(|| {
+                    crate::error::Error::Tool("Missing database parameter".to_string())
+                })?;
+
+            let collection = params
+                .get("collection")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| crate::error::Error::Tool("Missing collection parameter".to_string()))?;
-            
-            let operation = params.get("operation")
+                .ok_or_else(|| {
+                    crate::error::Error::Tool("Missing collection parameter".to_string())
+                })?;
+
+            let operation = params
+                .get("operation")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| crate::error::Error::Tool("Missing operation parameter".to_string()))?;
-            
+                .ok_or_else(|| {
+                    crate::error::Error::Tool("Missing operation parameter".to_string())
+                })?;
+
             let query = params.get("query").cloned();
             let options = params.get("options").cloned();
 
@@ -221,26 +240,26 @@ pub fn mongodb_client() -> FunctionTool {
                         {"_id": "507f1f77bcf86cd799439013", "name": "Charlie", "age": 35}
                     ]);
                     result["count"] = json!(3);
-                },
+                }
                 "insert" => {
                     result["inserted_id"] = json!("507f1f77bcf86cd799439014");
                     result["acknowledged"] = json!(true);
-                },
+                }
                 "update" => {
                     result["matched_count"] = json!(2);
                     result["modified_count"] = json!(2);
                     result["acknowledged"] = json!(true);
-                },
+                }
                 "delete" => {
                     result["deleted_count"] = json!(1);
                     result["acknowledged"] = json!(true);
-                },
+                }
                 "aggregate" => {
                     result["results"] = json!([
                         {"_id": "group1", "count": 5, "avg_age": 28.5},
                         {"_id": "group2", "count": 3, "avg_age": 32.0}
                     ]);
-                },
+                }
                 _ => {
                     result["message"] = json!("Operation completed successfully");
                 }
@@ -260,8 +279,5 @@ pub fn mongodb_client() -> FunctionTool {
 
 /// 获取所有数据库工具
 pub fn all_database_tools() -> Vec<FunctionTool> {
-    vec![
-        sql_executor(),
-        mongodb_client(),
-    ]
+    vec![sql_executor(), mongodb_client()]
 }

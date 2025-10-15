@@ -13,13 +13,13 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
-use crate::types::{Rbac, BionicToolDefinition};
-use crate::console::{ChatWithChunks, PendingChatState};
-use crate::console::console_stream::ConsoleStream;
 use crate::console::chat_input::ChatInput;
+use crate::console::console_stream::ConsoleStream;
 use crate::console::tools_modal::ToolsModal;
+use crate::console::{ChatWithChunks, PendingChatState};
+use crate::types::{BionicToolDefinition, Rbac};
+use dioxus::prelude::*;
 // use crate::console::history_drawer::HistoryDrawer;
 // use crate::console::model_popup::ModelPopup;
 

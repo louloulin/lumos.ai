@@ -14,8 +14,8 @@
 #[cfg(test)]
 mod tests {
     use super::*;
-    use web_pages::console::*;
     use chrono::Utc;
+    use web_pages::console::*;
 
     #[test]
     fn test_chat_message_creation() {
@@ -85,10 +85,10 @@ mod tests {
     fn test_generate_message_id() {
         let id1 = generate_message_id();
         let id2 = generate_message_id();
-        
+
         // IDs should be different
         assert_ne!(id1, id2);
-        
+
         // IDs should be positive
         assert!(id1 > 0);
         assert!(id2 > 0);

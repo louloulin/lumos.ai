@@ -2,18 +2,15 @@
 //!
 //! 提供简单易用的多Agent协作功能。
 
-use crate::{Result, Error, agent::SimpleAgent};
+use crate::{agent::SimpleAgent, Error, Result};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use serde::{Serialize, Deserialize};
 
 // 重导出核心类型
 pub use lumosai_core::agent::orchestration::{
-    OrchestrationPattern,
-    CollaborationTask as CoreCollaborationTask,
-    AgentOrchestrator as CoreAgentOrchestrator,
-    BasicOrchestrator as CoreBasicOrchestrator,
-    AgentExecutionState,
-    VotingStrategy,
+    AgentExecutionState, AgentOrchestrator as CoreAgentOrchestrator,
+    BasicOrchestrator as CoreBasicOrchestrator, CollaborationTask as CoreCollaborationTask,
+    OrchestrationPattern, VotingStrategy,
 };
 
 pub use lumosai_core::agent::events::EventBus;
@@ -45,16 +42,16 @@ pub struct OrchestrationResult {
 }
 
 /// 创建协作任务构建器
-/// 
+///
 /// # 示例
 /// ```rust,no_run
 /// use lumosai::prelude::*;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     let agent1 = lumosai::agent::simple("gpt-4", "You are a researcher").await?;
 ///     let agent2 = lumosai::agent::simple("gpt-4", "You are a writer").await?;
-///     
+///
 ///     let task = lumosai::orchestration::task()
 ///         .name("Research and Write")
 ///         .description("Research a topic and write about it")
@@ -62,7 +59,7 @@ pub struct OrchestrationResult {
 ///         .pattern(Pattern::Sequential)
 ///         .input(serde_json::json!({"topic": "AI in healthcare"}))
 ///         .build();
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -71,25 +68,25 @@ pub fn task() -> TaskBuilder {
 }
 
 /// 执行协作任务
-/// 
+///
 /// # 示例
 /// ```rust,no_run
 /// use lumosai::prelude::*;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     let agent1 = lumosai::agent::simple("gpt-4", "You are a researcher").await?;
 ///     let agent2 = lumosai::agent::simple("gpt-4", "You are a writer").await?;
-///     
+///
 ///     let task = lumosai::orchestration::task()
 ///         .name("Research and Write")
 ///         .agents(vec![agent1, agent2])
 ///         .pattern(Pattern::Sequential)
 ///         .build();
-///     
+///
 ///     let result = lumosai::orchestration::execute(task).await?;
 ///     println!("Task completed: {:?}", result);
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -104,30 +101,42 @@ pub async fn execute(task: CollaborationTask) -> Result<OrchestrationResult> {
         OrchestrationPattern::Sequential => {
             for (i, agent) in task.agents.iter().enumerate() {
                 let agent_id = format!("agent_{}", i);
-                let result = format!("Agent {} ({}) processed the task sequentially",
-                                   agent.name(), agent_id);
+                let result = format!(
+                    "Agent {} ({}) processed the task sequentially",
+                    agent.name(),
+                    agent_id
+                );
                 results.insert(agent_id, serde_json::Value::String(result));
             }
         }
         OrchestrationPattern::Parallel => {
             for (i, agent) in task.agents.iter().enumerate() {
                 let agent_id = format!("agent_{}", i);
-                let result = format!("Agent {} ({}) processed the task in parallel",
-                                   agent.name(), agent_id);
+                let result = format!(
+                    "Agent {} ({}) processed the task in parallel",
+                    agent.name(),
+                    agent_id
+                );
                 results.insert(agent_id, serde_json::Value::String(result));
             }
         }
         OrchestrationPattern::Pipeline => {
             for (i, agent) in task.agents.iter().enumerate() {
                 let agent_id = format!("agent_{}", i);
-                let result = format!("Agent {} ({}) processed the task in pipeline stage {}",
-                                   agent.name(), agent_id, i);
+                let result = format!(
+                    "Agent {} ({}) processed the task in pipeline stage {}",
+                    agent.name(),
+                    agent_id,
+                    i
+                );
                 results.insert(agent_id, serde_json::Value::String(result));
             }
         }
         _ => {
             // 简化实现：其他模式暂不支持
-            return Err(Error::Agent("Unsupported orchestration pattern".to_string()));
+            return Err(Error::Agent(
+                "Unsupported orchestration pattern".to_string(),
+            ));
         }
     }
 
@@ -142,24 +151,24 @@ pub async fn execute(task: CollaborationTask) -> Result<OrchestrationResult> {
 }
 
 /// 创建简单的顺序执行任务
-/// 
+///
 /// # 示例
 /// ```rust,no_run
 /// use lumosai::prelude::*;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     let agents = vec![
 ///         lumosai::agent::simple("gpt-4", "You are a researcher").await?,
 ///         lumosai::agent::simple("gpt-4", "You are a writer").await?,
 ///     ];
-///     
+///
 ///     let result = lumosai::orchestration::sequential(
 ///         "Research and Write",
 ///         agents,
 ///         serde_json::json!({"topic": "AI"})
 ///     ).await?;
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -174,29 +183,29 @@ pub async fn sequential(
         .pattern(OrchestrationPattern::Sequential)
         .input(input)
         .build();
-    
+
     execute(task).await
 }
 
 /// 创建简单的并行执行任务
-/// 
+///
 /// # 示例
 /// ```rust,no_run
 /// use lumosai::prelude::*;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 ///     let agents = vec![
 ///         lumosai::agent::simple("gpt-4", "You are an analyst").await?,
 ///         lumosai::agent::simple("gpt-4", "You are a critic").await?,
 ///     ];
-///     
+///
 ///     let result = lumosai::orchestration::parallel(
 ///         "Analyze and Critique",
 ///         agents,
 ///         serde_json::json!({"content": "Some content to analyze"})
 ///     ).await?;
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -211,7 +220,7 @@ pub async fn parallel(
         .pattern(OrchestrationPattern::Parallel)
         .input(input)
         .build();
-    
+
     execute(task).await
 }
 
@@ -236,54 +245,58 @@ impl TaskBuilder {
             timeout: None,
         }
     }
-    
+
     /// 设置任务名称
     pub fn name(mut self, name: &str) -> Self {
         self.name = Some(name.to_string());
         self
     }
-    
+
     /// 设置任务描述
     pub fn description(mut self, description: &str) -> Self {
         self.description = Some(description.to_string());
         self
     }
-    
+
     /// 设置参与的Agent
     pub fn agents(mut self, agents: Vec<SimpleAgent>) -> Self {
         self.agents = agents;
         self
     }
-    
+
     /// 添加单个Agent
     pub fn agent(mut self, agent: SimpleAgent) -> Self {
         self.agents.push(agent);
         self
     }
-    
+
     /// 设置编排模式
     pub fn pattern(mut self, pattern: OrchestrationPattern) -> Self {
         self.pattern = Some(pattern);
         self
     }
-    
+
     /// 设置输入数据
     pub fn input(mut self, input: serde_json::Value) -> Self {
         self.input = Some(input);
         self
     }
-    
+
     /// 设置超时时间（秒）
     pub fn timeout(mut self, timeout: u64) -> Self {
         self.timeout = Some(timeout);
         self
     }
-    
+
     /// 构建协作任务
     pub fn build(self) -> CollaborationTask {
         CollaborationTask {
-            name: self.name.unwrap_or_else(|| "Collaboration Task".to_string()),
-            description: self.description.unwrap_or_else(|| "A collaboration task".to_string()),
+            name: self
+                .name
+                .unwrap_or_else(|| "Collaboration Task".to_string()),
+            description: self
+                .description
+                .unwrap_or_else(|| "A collaboration task".to_string()),
             agents: self.agents,
             pattern: self.pattern.unwrap_or(OrchestrationPattern::Sequential),
             input: self.input.unwrap_or(serde_json::json!({})),
@@ -301,7 +314,7 @@ impl Default for TaskBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_task_builder() {
         let task = task()
@@ -310,12 +323,12 @@ mod tests {
             .pattern(OrchestrationPattern::Sequential)
             .input(serde_json::json!({"test": "data"}))
             .build();
-        
+
         assert_eq!(task.name, "Test Task");
         assert_eq!(task.description, "A test collaboration task");
         assert!(matches!(task.pattern, OrchestrationPattern::Sequential));
     }
-    
+
     #[test]
     fn test_orchestration_result_serialization() {
         let result = OrchestrationResult {
@@ -324,8 +337,9 @@ mod tests {
             execution_time_ms: 1000,
             status: "completed".to_string(),
         };
-        
+
         let json = serde_json::to_string(&result).expect("Failed to serialize");
-        let _deserialized: OrchestrationResult = serde_json::from_str(&json).expect("Failed to deserialize");
+        let _deserialized: OrchestrationResult =
+            serde_json::from_str(&json).expect("Failed to deserialize");
     }
 }

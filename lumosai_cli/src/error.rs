@@ -10,40 +10,40 @@ pub type CliResult<T> = Result<T, CliError>;
 pub enum CliError {
     /// 输入/输出错误
     Io(io::Error),
-    
+
     /// JSON解析错误
     JsonParse(serde_json::Error),
-    
+
     /// 模板错误
     TemplateNotFound(String),
-    
+
     /// 模板配置未找到
     TemplateConfigNotFound(String),
-    
+
     /// 工具链错误
     ToolchainError(String),
-    
+
     /// 用户交互错误
     Interaction(String),
-    
+
     /// 命令取消
     Canceled(String),
-    
+
     /// 路径未找到
     PathNotFound(String, String),
-    
+
     /// 依赖项未找到
     DependencyMissing(String, String),
-    
+
     /// 服务器错误
     ServerError(String),
-    
+
     /// 内部错误
     Internal(String),
-    
+
     /// 操作失败
     Failed(String, Option<Box<dyn std::error::Error + Send + Sync>>),
-    
+
     /// 其他错误
     Other(String),
 }
@@ -54,64 +54,64 @@ impl CliError {
         let path_display = path.as_ref().display().to_string();
         CliError::Other(format!("I/O错误: {} (路径: {})", error, path_display))
     }
-    
+
     /// 创建IO错误，自定义消息
     pub fn io(message: &str, error: io::Error) -> Self {
         CliError::Other(format!("{}: {}", message, error))
     }
-    
+
     /// 创建IO错误，自定义消息 (String版本)
     pub fn io_string(message: String, error: io::Error) -> Self {
         CliError::Other(format!("{}: {}", message, error))
     }
-    
+
     /// 创建模板未找到错误
     pub fn template_not_found(template_name: &str) -> Self {
         CliError::TemplateNotFound(template_name.to_string())
     }
-    
+
     /// 创建模板配置未找到错误
     pub fn template_config_not_found<P: AsRef<Path>>(path: P) -> Self {
         let path_display = path.as_ref().display().to_string();
         CliError::TemplateConfigNotFound(path_display)
     }
-    
+
     /// 创建模板解析错误
     pub fn template_parse_error(error: serde_json::Error) -> Self {
         CliError::JsonParse(error)
     }
-    
+
     /// 创建工具链错误
     pub fn toolchain_error(message: &str) -> Self {
         CliError::ToolchainError(message.to_string())
     }
-    
+
     /// 创建取消错误
     pub fn canceled(message: &str) -> Self {
         CliError::Canceled(message.to_string())
     }
-    
+
     /// 创建路径未找到错误
     pub fn path_not_found<P: AsRef<Path>>(path: P, message: impl ToString) -> Self {
         let path_display = path.as_ref().display().to_string();
         CliError::PathNotFound(path_display, message.to_string())
     }
-    
+
     /// 创建依赖项未找到错误
     pub fn dependency(dependency: &str, message: &str) -> Self {
         CliError::DependencyMissing(dependency.to_string(), message.to_string())
     }
-    
+
     /// 创建服务器错误
     pub fn server(message: &str) -> Self {
         CliError::ServerError(message.to_string())
     }
-    
+
     /// 创建内部错误
     pub fn internal(message: &str) -> Self {
         CliError::Internal(message.to_string())
     }
-    
+
     /// 创建操作失败错误
     pub fn failed<E>(message: &str, error: Option<E>) -> Self
     where
@@ -120,22 +120,22 @@ impl CliError {
         let boxed_error = error.map(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
         CliError::Failed(message.to_string(), boxed_error)
     }
-    
+
     /// 创建无效输入错误
     pub fn invalid_input(message: &str) -> Self {
         CliError::Other(format!("无效输入: {}", message))
     }
-    
+
     /// 创建无效输入错误 (接受String)
     pub fn invalid_input_string(message: String) -> Self {
         CliError::Other(format!("无效输入: {}", message))
     }
-    
+
     /// 创建其他错误
     pub fn other(message: String) -> Self {
         CliError::Other(message)
     }
-    
+
     /// 创建失败错误 (接受String消息)
     pub fn failed_string<E>(message: String, error: Option<E>) -> Self
     where
@@ -209,4 +209,4 @@ impl From<reqwest::Error> for CliError {
     fn from(err: reqwest::Error) -> Self {
         CliError::Other(format!("HTTP请求错误: {}", err))
     }
-} 
+}

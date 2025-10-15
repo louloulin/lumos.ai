@@ -1,29 +1,29 @@
 //! Enhanced error handling for CLI operations
-//! 
+//!
 //! This module provides user-friendly error messages and debugging tools
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 use thiserror::Error;
-use serde::{Deserialize, Serialize};
 
 /// Enhanced CLI errors with helpful suggestions
 #[derive(Debug, Error)]
 pub enum LumosCliError {
     #[error("🤖 Agent '{name}' not found\n💡 Available agents: {available:?}\n🔧 Try: lumos list agents")]
-    AgentNotFound { 
-        name: String, 
-        available: Vec<String> 
+    AgentNotFound {
+        name: String,
+        available: Vec<String>,
     },
-    
+
     #[error("🔧 Tool '{tool}' execution failed\n❌ Error: {cause}\n💡 Suggestion: {suggestion}\n📚 Docs: {docs_url}")]
-    ToolExecutionFailed { 
-        tool: String, 
-        cause: String, 
+    ToolExecutionFailed {
+        tool: String,
+        cause: String,
         suggestion: String,
-        docs_url: String 
+        docs_url: String,
     },
-    
+
     #[error("⚙️ Configuration error in {section}\n❌ Issue: {issue}\n✅ Expected: {expected}\n🔧 Fix: {fix_command}")]
     ConfigurationError {
         section: String,
@@ -99,23 +99,23 @@ pub struct EnhancedError {
 impl fmt::Display for EnhancedError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", self.error)?;
-        
+
         if !self.suggestions.is_empty() {
             writeln!(f, "\n🔧 Additional suggestions:")?;
             for suggestion in &self.suggestions {
                 writeln!(f, "  • {}", suggestion)?;
             }
         }
-        
+
         if !self.related_docs.is_empty() {
             writeln!(f, "\n📚 Related documentation:")?;
             for doc in &self.related_docs {
                 writeln!(f, "  • {}", doc)?;
             }
         }
-        
+
         writeln!(f, "\n🐛 For more help, run: lumos help debug")?;
-        
+
         Ok(())
     }
 }
@@ -152,7 +152,7 @@ impl ErrorHandler {
     /// Collect error context
     fn collect_error_context(&self, command: &str) -> ErrorContext {
         let mut environment = HashMap::new();
-        
+
         // Collect relevant environment variables
         if let Ok(path) = std::env::var("PATH") {
             environment.insert("PATH".to_string(), path);
@@ -268,19 +268,25 @@ impl ErrorHandler {
     /// Print error with enhanced formatting
     pub fn print_error(&self, enhanced_error: &EnhancedError) {
         eprintln!("{}", enhanced_error);
-        
+
         if self.debug_mode {
             eprintln!("\n🐛 Debug Information:");
             eprintln!("  Command: {}", enhanced_error.context.command);
-            eprintln!("  Working Directory: {}", enhanced_error.context.working_directory);
+            eprintln!(
+                "  Working Directory: {}",
+                enhanced_error.context.working_directory
+            );
             eprintln!("  Timestamp: {}", enhanced_error.context.timestamp);
-            
+
             if let Some(ref project_info) = enhanced_error.context.project_info {
                 eprintln!("  Project: {} v{}", project_info.name, project_info.version);
                 eprintln!("  Tools: {}", project_info.tools_count);
             }
-            
-            eprintln!("  System: {} {}", enhanced_error.context.system_info.os, enhanced_error.context.system_info.arch);
+
+            eprintln!(
+                "  System: {} {}",
+                enhanced_error.context.system_info.os, enhanced_error.context.system_info.arch
+            );
         }
     }
 }
@@ -292,15 +298,15 @@ impl LumosCliError {
     }
 
     pub fn network_error(message: impl Into<String>) -> Self {
-        Self::NetworkError { 
-            message: message.into() 
+        Self::NetworkError {
+            message: message.into(),
         }
     }
 
     pub fn tool_execution_failed(
-        tool: impl Into<String>, 
+        tool: impl Into<String>,
         cause: impl Into<String>,
-        suggestion: impl Into<String>
+        suggestion: impl Into<String>,
     ) -> Self {
         Self::ToolExecutionFailed {
             tool: tool.into(),
@@ -314,7 +320,7 @@ impl LumosCliError {
         section: impl Into<String>,
         issue: impl Into<String>,
         expected: impl Into<String>,
-        fix_command: impl Into<String>
+        fix_command: impl Into<String>,
     ) -> Self {
         Self::ConfigurationError {
             section: section.into(),

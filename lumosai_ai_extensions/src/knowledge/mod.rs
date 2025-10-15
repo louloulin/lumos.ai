@@ -45,7 +45,7 @@ impl KnowledgeGraph {
     pub async fn new(config: KnowledgeConfig) -> Result<Self> {
         Ok(Self { config })
     }
-    
+
     pub async fn query(&self, query: KnowledgeQuery) -> Result<KnowledgeResult> {
         // 简化的知识图谱查询实现
         Ok(KnowledgeResult {

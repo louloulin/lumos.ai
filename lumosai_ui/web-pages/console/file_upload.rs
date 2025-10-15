@@ -32,10 +32,10 @@ pub fn FileUpload(
         div {
             class: "modal modal-open",
             id: "file-upload-modal",
-            
+
             div {
                 class: "modal-box max-w-4xl",
-                
+
                 // 模态框头部
                 div {
                     class: "flex items-center justify-between mb-6",
@@ -48,15 +48,15 @@ pub fn FileUpload(
                         "✕"
                     }
                 }
-                
+
                 // 上传区域
                 div {
                     class: "border-2 border-dashed border-base-300 rounded-lg p-8 mb-6 hover:border-primary transition-colors",
                     class: if is_uploading { "pointer-events-none opacity-50" } else { "cursor-pointer" },
-                    
+
                     div {
                         class: "text-center",
-                        
+
                         // 上传图标
                         div {
                             class: "text-6xl mb-4",
@@ -66,7 +66,7 @@ pub fn FileUpload(
                                 "📁"
                             }
                         }
-                        
+
                         // 上传提示
                         if is_uploading {
                             div {
@@ -96,7 +96,7 @@ pub fn FileUpload(
                                     class: "text-base-content/60 mb-4",
                                     "支持多种文件格式，最大50MB"
                                 }
-                                
+
                                 input {
                                     r#type: "file",
                                     multiple: true,
@@ -104,7 +104,7 @@ pub fn FileUpload(
                                     id: "file-input",
                                     accept: ".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png,.csv,.xlsx"
                                 }
-                                
+
                                 button {
                                     class: "btn btn-primary gap-2",
                                     onclick: move |_| {
@@ -117,21 +117,21 @@ pub fn FileUpload(
                         }
                     }
                 }
-                
+
                 // 支持的文件类型
                 SupportedFileTypes {}
-                
+
                 // 已选择的文件列表
                 if !selected_files.is_empty() {
                     SelectedFilesList {
                         files: selected_files.clone()
                     }
                 }
-                
+
                 // 操作按钮
                 div {
                     class: "modal-action",
-                    
+
                     button {
                         class: "btn btn-ghost",
                         disabled: is_uploading,
@@ -153,7 +153,7 @@ pub fn FileUpload(
                         "预览"
                     }
                 }
-                
+
                 // 文件预览
                 if show_preview && !selected_files.is_empty() {
                     FilePreview {
@@ -171,16 +171,16 @@ fn SupportedFileTypes() -> Element {
     rsx! {
         div {
             class: "alert alert-info mb-6",
-            
+
             div {
                 h5 {
                     class: "font-semibold mb-3",
                     "📋 支持的文件类型"
                 }
-                
+
                 div {
                     class: "grid grid-cols-1 md:grid-cols-3 gap-4 text-sm",
-                    
+
                     div {
                         h6 {
                             class: "font-medium mb-2",
@@ -193,7 +193,7 @@ fn SupportedFileTypes() -> Element {
                             li { ".csv, .xlsx, .tsv" }
                         }
                     }
-                    
+
                     div {
                         h6 {
                             class: "font-medium mb-2",
@@ -206,7 +206,7 @@ fn SupportedFileTypes() -> Element {
                             li { ".webp, .svg" }
                         }
                     }
-                    
+
                     div {
                         h6 {
                             class: "font-medium mb-2",
@@ -220,7 +220,7 @@ fn SupportedFileTypes() -> Element {
                         }
                     }
                 }
-                
+
                 div {
                     class: "mt-4 p-3 bg-warning/10 rounded-lg",
                     p {
@@ -235,25 +235,23 @@ fn SupportedFileTypes() -> Element {
 
 /// 已选择文件列表组件
 #[component]
-fn SelectedFilesList(
-    files: Vec<String>,
-) -> Element {
+fn SelectedFilesList(files: Vec<String>) -> Element {
     rsx! {
         div {
             class: "mb-6",
-            
+
             h5 {
                 class: "font-semibold mb-3",
                 "📎 已选择的文件 ({files.len()})"
             }
-            
+
             div {
                 class: "space-y-2 max-h-40 overflow-y-auto",
-                
+
                 for (_index, file) in files.iter().enumerate() {
                     div {
                         class: "flex items-center justify-between p-3 bg-base-200 rounded-lg",
-                        
+
                         div {
                             class: "flex items-center space-x-3",
                             span {
@@ -271,7 +269,7 @@ fn SelectedFilesList(
                                 }
                             }
                         }
-                        
+
                         button {
                             class: "btn btn-ghost btn-xs text-error",
                             "🗑️"
@@ -289,29 +287,29 @@ fn FilePreview(files: Vec<String>) -> Element {
     rsx! {
         div {
             class: "mt-6 p-4 bg-base-200 rounded-lg",
-            
+
             h5 {
                 class: "font-semibold mb-3",
                 "👁️ 文件预览"
             }
-            
+
             div {
                 class: "grid grid-cols-2 md:grid-cols-4 gap-4",
-                
+
                 for file in &files {
                     div {
                         class: "p-3 bg-base-100 rounded-lg text-center",
-                        
+
                         div {
                             class: "text-4xl mb-2",
                             "{get_file_icon(file)}"
                         }
-                        
+
                         p {
                             class: "text-xs font-medium truncate",
                             "{file}"
                         }
-                        
+
                         p {
                             class: "text-xs text-base-content/60",
                             "{get_file_type(file)}"
@@ -335,7 +333,7 @@ fn get_file_icon(filename: &str) -> &'static str {
         "zip" | "rar" => "📦",
         "mp3" | "wav" => "🎵",
         "mp4" | "avi" => "🎬",
-        _ => "📁"
+        _ => "📁",
     }
 }
 
@@ -356,7 +354,7 @@ fn get_file_type(filename: &str) -> &'static str {
         "jpg" | "jpeg" | "png" | "gif" => "图片文件",
         "csv" => "CSV表格",
         "xlsx" => "Excel表格",
-        _ => "未知类型"
+        _ => "未知类型",
     }
 }
 

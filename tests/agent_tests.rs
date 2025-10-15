@@ -1,28 +1,28 @@
+use lumosai_core::agent::trait_def::Agent;
+use lumosai_core::agent::types::AgentGenerateOptions;
+use lumosai_core::agent::{AgentConfig, BasicAgent};
+use lumosai_core::llm::{Message, MockLlmProvider, Role};
+use lumosai_core::prelude::*;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::time::timeout;
-use lumosai_core::agent::{BasicAgent, AgentConfig};
-use lumosai_core::agent::trait_def::Agent;
-use lumosai_core::agent::types::AgentGenerateOptions;
-use lumosai_core::llm::{MockLlmProvider, Message, Role};
-use lumosai_core::prelude::*;
 
 mod common;
-use common::{TestUtils, TestAssertions};
+use common::{TestAssertions, TestUtils};
 
 /// Agent创建和配置测试
 #[tokio::test]
 async fn test_agent_builder_validation() {
     // 测试AgentBuilder的参数验证
     let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
-    
+
     // 测试有效配置
     let config = AgentConfig {
         name: "test-agent".to_string(),
         instructions: "You are a test agent".to_string(),
         ..Default::default()
     };
-    
+
     let agent = BasicAgent::new(config, llm.clone());
     // BasicAgent::new 返回 BasicAgent，不是 Result
 
@@ -41,22 +41,17 @@ async fn test_agent_builder_validation() {
 async fn test_agent_with_invalid_model() {
     // 测试无效模型配置的错误处理
     let llm = Arc::new(MockLlmProvider::new(vec![])); // 空响应
-    
+
     let config = AgentConfig {
         name: "test-agent".to_string(),
         instructions: "Test agent".to_string(),
         ..Default::default()
     };
-    
+
     let agent = BasicAgent::new(config, llm);
 
     // 测试空响应的处理
-    let messages = vec![Message::new(
-        Role::User,
-        "Hello".to_string(),
-        None,
-        None
-    )];
+    let messages = vec![Message::new(Role::User, "Hello".to_string(), None, None)];
     let options = AgentGenerateOptions::default();
     let result = agent.generate(&messages, &options).await;
     // 应该优雅地处理空响应
@@ -66,8 +61,10 @@ async fn test_agent_with_invalid_model() {
 #[tokio::test]
 async fn test_agent_memory_configuration() {
     // 测试不同内存配置的Agent创建
-    let llm = Arc::new(MockLlmProvider::new(vec!["Memory test response".to_string()]));
-    
+    let llm = Arc::new(MockLlmProvider::new(vec![
+        "Memory test response".to_string()
+    ]));
+
     // 测试带内存配置的Agent
     let config = AgentConfig {
         name: "memory-agent".to_string(),
@@ -82,7 +79,7 @@ async fn test_agent_memory_configuration() {
         Role::User,
         "Remember this: important data".to_string(),
         None,
-        None
+        None,
     )];
     let options = AgentGenerateOptions::default();
     let response = agent.generate(&messages, &options).await;
@@ -92,19 +89,21 @@ async fn test_agent_memory_configuration() {
 #[tokio::test]
 async fn test_agent_concurrent_creation() {
     // 测试并发创建Agent的线程安全性
-    let tasks: Vec<_> = (0..10).map(|i| {
-        tokio::spawn(async move {
-            let agent_name = format!("concurrent-agent-{}", i);
-            TestUtils::create_test_agent(&agent_name).await
+    let tasks: Vec<_> = (0..10)
+        .map(|i| {
+            tokio::spawn(async move {
+                let agent_name = format!("concurrent-agent-{}", i);
+                TestUtils::create_test_agent(&agent_name).await
+            })
         })
-    }).collect();
-    
+        .collect();
+
     let mut results = Vec::new();
     for task in tasks {
         let result = task.await.unwrap();
         results.push(result);
     }
-    
+
     // 验证所有Agent都成功创建
     assert_eq!(results.len(), 10);
     for result in results {
@@ -121,7 +120,7 @@ async fn test_agent_simple_generation() {
         Role::User,
         "Hello, how are you?".to_string(),
         None,
-        None
+        None,
     )];
     let options = AgentGenerateOptions::default();
     let response = agent.generate(&messages, &options).await;
@@ -140,14 +139,16 @@ async fn test_agent_multiple_generations() {
         "Second response".to_string(),
         "Third response".to_string(),
     ];
-    
-    let agent = TestUtils::create_test_agent_with_responses("multi-gen", responses.clone()).await.unwrap();
+
+    let agent = TestUtils::create_test_agent_with_responses("multi-gen", responses.clone())
+        .await
+        .unwrap();
 
     let messages = vec![Message::new(
         Role::User,
         "Test message".to_string(),
         None,
-        None
+        None,
     )];
     let options = AgentGenerateOptions::default();
 
@@ -161,20 +162,21 @@ async fn test_agent_multiple_generations() {
 async fn test_agent_timeout_handling() {
     // 测试超时处理
     let agent = TestUtils::create_test_agent("timeout-test").await.unwrap();
-    
+
     // 设置较短的超时时间
     let messages = vec![Message::new(
         Role::User,
         "This should complete quickly".to_string(),
         None,
-        None
+        None,
     )];
     let options = AgentGenerateOptions::default();
 
     let result = timeout(
         Duration::from_millis(1000),
-        agent.generate(&messages, &options)
-    ).await;
+        agent.generate(&messages, &options),
+    )
+    .await;
 
     // 应该在超时时间内完成
     assert!(result.is_ok());
@@ -184,23 +186,25 @@ async fn test_agent_timeout_handling() {
 async fn test_agent_concurrent_requests() {
     // 测试并发请求处理
     let agent = Arc::new(TestUtils::create_test_agent("concurrent").await.unwrap());
-    
-    let tasks: Vec<_> = (0..5).map(|i| {
-        let agent_clone = agent.clone();
-        tokio::spawn(async move {
-            let messages = vec![Message::new(
-                Role::User,
-                format!("Concurrent message {}", i),
-                None,
-                None
-            )];
-            let options = AgentGenerateOptions::default();
-            agent_clone.generate(&messages, &options).await
+
+    let tasks: Vec<_> = (0..5)
+        .map(|i| {
+            let agent_clone = agent.clone();
+            tokio::spawn(async move {
+                let messages = vec![Message::new(
+                    Role::User,
+                    format!("Concurrent message {}", i),
+                    None,
+                    None,
+                )];
+                let options = AgentGenerateOptions::default();
+                agent_clone.generate(&messages, &options).await
+            })
         })
-    }).collect();
-    
+        .collect();
+
     let results = futures::future::join_all(tasks).await;
-    
+
     // 验证所有并发请求都成功处理
     for result in results {
         let response = result.unwrap();
@@ -217,7 +221,7 @@ async fn test_agent_performance_baseline() {
         Role::User,
         "Performance test message".to_string(),
         None,
-        None
+        None,
     )];
     let options = AgentGenerateOptions::default();
 
@@ -240,20 +244,20 @@ async fn test_agent_error_recovery() {
         instructions: "Test error recovery".to_string(),
         ..Default::default()
     };
-    
+
     let agent = BasicAgent::new(config, llm);
 
     let messages1 = vec![Message::new(
         Role::User,
         "First attempt".to_string(),
         None,
-        None
+        None,
     )];
     let messages2 = vec![Message::new(
         Role::User,
         "Second attempt".to_string(),
         None,
-        None
+        None,
     )];
     let options = AgentGenerateOptions::default();
 
@@ -274,12 +278,7 @@ async fn test_agent_large_input_handling() {
     let agent = TestUtils::create_test_agent("large-input").await.unwrap();
 
     let large_input = "Large input content ".repeat(100);
-    let messages = vec![Message::new(
-        Role::User,
-        large_input,
-        None,
-        None
-    )];
+    let messages = vec![Message::new(Role::User, large_input, None, None)];
     let options = AgentGenerateOptions::default();
     let response = agent.generate(&messages, &options).await;
 

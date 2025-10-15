@@ -1,12 +1,12 @@
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use quote::quote;
+use std::str::FromStr;
+use syn::spanned::Spanned;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, Expr, Ident, ItemFn, LitStr, Token
+    parse_macro_input, Expr, Ident, ItemFn, LitStr, Token,
 };
-use syn::spanned::Spanned;
-use proc_macro2::Span;
-use std::str::FromStr;
 
 use crate::parser::{parse_tool_macro, ToolDef};
 
@@ -20,34 +20,46 @@ impl Parse for ToolAttributes {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
         let _ = syn::parenthesized!(content in input);
-        
+
         let mut name = None;
         let mut description = None;
-        
+
         while !content.is_empty() {
             let key: Ident = content.parse()?;
             let _: Token![:] = content.parse()?;
-            
+
             match key.to_string().as_str() {
                 "name" => {
                     name = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "description" => {
                     description = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
-                _ => return Err(syn::Error::new(key.span(), "Unknown attribute in tool definition")),
+                }
+                _ => {
+                    return Err(syn::Error::new(
+                        key.span(),
+                        "Unknown attribute in tool definition",
+                    ))
+                }
             }
         }
-        
-        let name = name.ok_or_else(|| syn::Error::new(content.span(), "Missing 'name' attribute in tool definition"))?;
-        let description = description.ok_or_else(|| syn::Error::new(content.span(), "Missing 'description' attribute in tool definition"))?;
-        
-        Ok(ToolAttributes {
-            name,
-            description,
-        })
+
+        let name = name.ok_or_else(|| {
+            syn::Error::new(
+                content.span(),
+                "Missing 'name' attribute in tool definition",
+            )
+        })?;
+        let description = description.ok_or_else(|| {
+            syn::Error::new(
+                content.span(),
+                "Missing 'description' attribute in tool definition",
+            )
+        })?;
+
+        Ok(ToolAttributes { name, description })
     }
 }
 
@@ -63,47 +75,74 @@ impl Parse for ParameterAttributes {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
         let _ = syn::parenthesized!(content in input);
-        
+
         let mut name = None;
         let mut description = None;
         let mut type_ = None;
         let mut required = None;
-        
+
         while !content.is_empty() {
             let key: Ident = content.parse()?;
             let _: Token![:] = content.parse()?;
-            
+
             match key.to_string().as_str() {
                 "name" => {
                     name = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "description" => {
                     description = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "r#type" | "type" => {
                     type_ = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "required" => {
                     let expr: Expr = content.parse()?;
-                    if let Expr::Lit(syn::ExprLit { lit: syn::Lit::Bool(b), .. }) = expr {
+                    if let Expr::Lit(syn::ExprLit {
+                        lit: syn::Lit::Bool(b),
+                        ..
+                    }) = expr
+                    {
                         required = Some(b.value);
                     } else {
-                        return Err(syn::Error::new(expr.span(), "Expected boolean literal for 'required' attribute"));
+                        return Err(syn::Error::new(
+                            expr.span(),
+                            "Expected boolean literal for 'required' attribute",
+                        ));
                     }
                     let _: Option<Token![,]> = content.parse()?;
-                },
-                _ => return Err(syn::Error::new(key.span(), "Unknown attribute in parameter definition")),
+                }
+                _ => {
+                    return Err(syn::Error::new(
+                        key.span(),
+                        "Unknown attribute in parameter definition",
+                    ))
+                }
             }
         }
-        
-        let name = name.ok_or_else(|| syn::Error::new(content.span(), "Missing 'name' attribute in parameter definition"))?;
-        let description = description.ok_or_else(|| syn::Error::new(content.span(), "Missing 'description' attribute in parameter definition"))?;
-        let type_ = type_.ok_or_else(|| syn::Error::new(content.span(), "Missing 'type' attribute in parameter definition"))?;
+
+        let name = name.ok_or_else(|| {
+            syn::Error::new(
+                content.span(),
+                "Missing 'name' attribute in parameter definition",
+            )
+        })?;
+        let description = description.ok_or_else(|| {
+            syn::Error::new(
+                content.span(),
+                "Missing 'description' attribute in parameter definition",
+            )
+        })?;
+        let type_ = type_.ok_or_else(|| {
+            syn::Error::new(
+                content.span(),
+                "Missing 'type' attribute in parameter definition",
+            )
+        })?;
         let required = required.unwrap_or(false);
-        
+
         Ok(ParameterAttributes {
             name,
             description,
@@ -123,37 +162,49 @@ impl Parse for ToolExecuteArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
         let _ = syn::braced!(content in input);
-        
+
         let mut tool = None;
         let mut params = None;
-        
+
         while !content.is_empty() {
             let key: Ident = content.parse()?;
             let _: Token![:] = content.parse()?;
-            
+
             match key.to_string().as_str() {
                 "tool" => {
                     tool = Some(content.parse()?);
                     let _: Option<Token![,]> = content.parse()?;
-                },
+                }
                 "params" => {
                     let _params_str: LitStr; // 标记为未使用
                     let inner_content;
                     let _ = syn::braced!(inner_content in content);
-                    
+
                     // 直接创建一个表达式
                     let inner_content_str = inner_content.to_string();
-                    params = Some(Expr::Verbatim(proc_macro2::TokenStream::from_str(&format!("{{{}}}", inner_content_str)).unwrap()));
-                    
+                    params = Some(Expr::Verbatim(
+                        proc_macro2::TokenStream::from_str(&format!("{{{}}}", inner_content_str))
+                            .unwrap(),
+                    ));
+
                     let _: Option<Token![,]> = content.parse()?;
-                },
-                _ => return Err(syn::Error::new_spanned(&key, "Unknown key in tool execution, expected 'tool' or 'params'")),
+                }
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        &key,
+                        "Unknown key in tool execution, expected 'tool' or 'params'",
+                    ))
+                }
             }
         }
-        
-        let tool = tool.ok_or_else(|| syn::Error::new(Span::call_site(), "Missing 'tool' in tool execution"))?;
-        let params = params.ok_or_else(|| syn::Error::new(Span::call_site(), "Missing 'params' in tool execution"))?;
-        
+
+        let tool = tool.ok_or_else(|| {
+            syn::Error::new(Span::call_site(), "Missing 'tool' in tool execution")
+        })?;
+        let params = params.ok_or_else(|| {
+            syn::Error::new(Span::call_site(), "Missing 'params' in tool execution")
+        })?;
+
         Ok(ToolExecuteArgs { tool, params })
     }
 }
@@ -161,31 +212,34 @@ impl Parse for ToolExecuteArgs {
 pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemFn);
     let attrs = parse_macro_input!(attr as ToolAttributes);
-    
+
     let fn_name = &input.sig.ident;
     let fn_params = &input.sig.inputs;
     let fn_body = &input.block;
     let _fn_output = &input.sig.output; // 标记为未使用
-    
+
     let tool_name = attrs.name.value();
     let tool_description = attrs.description.value();
-    
+
     // Extract parameter metadata from attributes
     let mut parameters = Vec::new();
     for param in fn_params.iter() {
         if let syn::FnArg::Typed(pat_type) = param {
             if let syn::Pat::Ident(pat_ident) = &*pat_type.pat {
                 let _param_name = &pat_ident.ident; // 标记为未使用
-                
+
                 // Find parameter attributes
                 for attr in &pat_ident.attrs {
                     if attr.path().is_ident("parameter") {
-                        let param_attr = syn::parse2::<ParameterAttributes>(attr.meta.require_list().unwrap().tokens.clone()).unwrap();
+                        let param_attr = syn::parse2::<ParameterAttributes>(
+                            attr.meta.require_list().unwrap().tokens.clone(),
+                        )
+                        .unwrap();
                         let name = param_attr.name.value();
                         let description = param_attr.description.value();
                         let type_ = param_attr.type_.value();
                         let required = param_attr.required;
-                        
+
                         let param_schema = quote! {
                             ParameterSchema {
                                 name: #name.to_string(),
@@ -202,7 +256,7 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         }
     }
-    
+
     // Generate the ToolSchema
     let schema_def = quote! {
         ToolSchema {
@@ -211,7 +265,7 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
             ]
         }
     };
-    
+
     // Generate the FunctionTool implementation
     let expanded = quote! {
         pub fn #fn_name() -> Box<dyn Tool> {
@@ -226,7 +280,7 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
             ))
         }
     };
-    
+
     TokenStream::from(expanded)
 }
 
@@ -242,7 +296,8 @@ pub fn tool_nom_macro(input: TokenStream) -> TokenStream {
             let error_msg = format!("Failed to parse tool macro: {}", e);
             return quote! {
                 compile_error!(#error_msg);
-            }.into();
+            }
+            .into();
         }
     };
 
@@ -263,28 +318,33 @@ fn generate_tool_code(tool_def: ToolDef) -> TokenStream {
             let error_msg = format!("Invalid handler expression: {}", e);
             return quote! {
                 compile_error!(#error_msg);
-            }.into();
+            }
+            .into();
         }
     };
 
     // 生成参数schema
-    let parameters: Vec<proc_macro2::TokenStream> = tool_def.parameters.iter().map(|param| {
-        let name = &param.name;
-        let description = &param.description;
-        let param_type = &param.param_type;
-        let required = param.required;
+    let parameters: Vec<proc_macro2::TokenStream> = tool_def
+        .parameters
+        .iter()
+        .map(|param| {
+            let name = &param.name;
+            let description = &param.description;
+            let param_type = &param.param_type;
+            let required = param.required;
 
-        quote! {
-            ParameterSchema {
-                name: #name.to_string(),
-                description: #description.to_string(),
-                r#type: #param_type.to_string(),
-                required: #required,
-                properties: None,
-                default: None,
+            quote! {
+                ParameterSchema {
+                    name: #name.to_string(),
+                    description: #description.to_string(),
+                    r#type: #param_type.to_string(),
+                    required: #required,
+                    properties: None,
+                    default: None,
+                }
             }
-        }
-    }).collect();
+        })
+        .collect();
 
     let expanded = quote! {
         pub fn #handler_tokens() -> Box<dyn Tool> {

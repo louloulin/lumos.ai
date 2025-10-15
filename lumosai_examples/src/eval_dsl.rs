@@ -1,10 +1,10 @@
-use lumosai_core::Result;
-use lumosai_core::agent::{Agent, create_basic_agent};
-use lumosai_core::llm::MockLlmProvider;
-use lumosai_evals::{Metric, MetricResult};
 use async_trait::async_trait;
-use std::sync::Arc;
+use lumosai_core::agent::{create_basic_agent, Agent};
+use lumosai_core::llm::MockLlmProvider;
+use lumosai_core::Result;
+use lumosai_evals::{Metric, MetricResult};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 struct AccuracyMetric;
 
@@ -20,11 +20,7 @@ impl Metric for AccuracyMetric {
 
     async fn measure(&self, input: &str, output: &str) -> lumosai_evals::Result<MetricResult> {
         // 简单示例：检查响应中是否包含期望的关键字
-        let score = if output.contains(input) {
-            1.0
-        } else {
-            0.0
-        };
+        let score = if output.contains(input) { 1.0 } else { 0.0 };
 
         Ok(MetricResult {
             score,
@@ -78,7 +74,8 @@ impl Metric for CompletenessMetric {
     async fn measure(&self, input: &str, output: &str) -> lumosai_evals::Result<MetricResult> {
         // 简单示例：检查响应是否包含所有期望的关键字
         let keywords = input.split(',').collect::<Vec<_>>();
-        let matched = keywords.iter()
+        let matched = keywords
+            .iter()
             .filter(|&keyword| output.contains(keyword.trim()))
             .count();
         let score = matched as f64 / keywords.len() as f64;
@@ -104,7 +101,7 @@ async fn main() -> Result<()> {
     let agent = create_basic_agent(
         "test_agent".to_string(),
         "你是一个Rust专家".to_string(),
-        llm_provider
+        llm_provider,
     );
 
     // 手动创建评估指标
@@ -136,11 +133,21 @@ async fn main() -> Result<()> {
         };
 
         // 评估各个指标
-        let accuracy_result = accuracy_metric.measure(expected, response).await.map_err(|e| lumosai_core::Error::InvalidInput(e.to_string()))?;
-        let relevance_result = relevance_metric.measure(expected, response).await.map_err(|e| lumosai_core::Error::InvalidInput(e.to_string()))?;
-        let completeness_result = completeness_metric.measure(expected, response).await.map_err(|e| lumosai_core::Error::InvalidInput(e.to_string()))?;
+        let accuracy_result = accuracy_metric
+            .measure(expected, response)
+            .await
+            .map_err(|e| lumosai_core::Error::InvalidInput(e.to_string()))?;
+        let relevance_result = relevance_metric
+            .measure(expected, response)
+            .await
+            .map_err(|e| lumosai_core::Error::InvalidInput(e.to_string()))?;
+        let completeness_result = completeness_metric
+            .measure(expected, response)
+            .await
+            .map_err(|e| lumosai_core::Error::InvalidInput(e.to_string()))?;
 
-        let case_score = (accuracy_result.score + relevance_result.score + completeness_result.score) / 3.0;
+        let case_score =
+            (accuracy_result.score + relevance_result.score + completeness_result.score) / 3.0;
         total_score += case_score;
         test_count += 1;
 
@@ -155,7 +162,10 @@ async fn main() -> Result<()> {
 
     println!("\n评估完成！");
     println!("总体得分: {:.2}", overall_score);
-    println!("通过阈值: {}", if overall_score >= 0.7 { "是" } else { "否" });
+    println!(
+        "通过阈值: {}",
+        if overall_score >= 0.7 { "是" } else { "否" }
+    );
 
     // 展示评估框架的概念
     println!("\n评估框架概念演示:");

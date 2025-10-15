@@ -3,12 +3,12 @@
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
-use tokio::io::AsyncRead;
 use std::sync::Arc;
+use tokio::io::AsyncRead;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::Result;
-use crate::logger::{Logger, Component};
+use crate::logger::{Component, Logger};
 use crate::telemetry::TelemetrySink;
 
 /// 语音事件类型
@@ -118,7 +118,11 @@ pub trait VoiceSender: Send + Sync {
 #[async_trait]
 pub trait VoiceListenerExt: VoiceListener {
     /// 将语音转换为文本 (泛型方法版本)
-    async fn listen_impl(&self, audio: impl AsyncRead + Send + Unpin + 'static, options: &ListenOptions) -> Result<String>;
+    async fn listen_impl(
+        &self,
+        audio: impl AsyncRead + Send + Unpin + 'static,
+        options: &ListenOptions,
+    ) -> Result<String>;
 }
 
 /// 语音发送接口扩展 (不对象安全)
@@ -139,22 +143,26 @@ pub trait VoiceEventHandlerExt: Send + Sync {
 pub trait VoiceProvider: Base + Send + Sync {
     /// 连接语音服务
     async fn connect(&self) -> Result<()>;
-    
+
     /// 关闭语音服务连接
     async fn close(&self) -> Result<()>;
-    
+
     /// 文本转语音
-    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>>;
-    
+    async fn speak(
+        &self,
+        text: &str,
+        options: &VoiceOptions,
+    ) -> Result<BoxStream<'_, Result<Vec<u8>>>>;
+
     /// 语音转文本
     async fn listen(&self, audio: Vec<u8>, options: &ListenOptions) -> Result<String>;
-    
+
     /// 发送音频数据 (用于实时交互)
     async fn send(&self, audio: Vec<u8>) -> Result<()>;
-    
+
     /// 获取语音监听器
     fn as_listener(&self) -> Option<&dyn VoiceListener>;
-    
+
     /// 获取语音发送器
     fn as_sender(&self) -> Option<&dyn VoiceSender>;
 }
@@ -171,13 +179,16 @@ pub struct CompositeVoice {
 
 impl CompositeVoice {
     /// 创建新的复合语音提供者
-    pub fn new(speak_provider: Arc<dyn VoiceProvider>, listen_provider: Arc<dyn VoiceProvider>) -> Self {
+    pub fn new(
+        speak_provider: Arc<dyn VoiceProvider>,
+        listen_provider: Arc<dyn VoiceProvider>,
+    ) -> Self {
         let component_config = ComponentConfig {
             name: Some("CompositeVoice".to_string()),
             component: Component::Voice,
             log_level: None,
         };
-        
+
         Self {
             base: BaseComponent::new(component_config),
             speak_provider,
@@ -193,29 +204,33 @@ impl VoiceProvider for CompositeVoice {
         self.listen_provider.connect().await?;
         Ok(())
     }
-    
+
     async fn close(&self) -> Result<()> {
         let _ = self.speak_provider.close().await;
         let _ = self.listen_provider.close().await;
         Ok(())
     }
-    
-    async fn speak(&self, text: &str, options: &VoiceOptions) -> Result<BoxStream<'_, Result<Vec<u8>>>> {
+
+    async fn speak(
+        &self,
+        text: &str,
+        options: &VoiceOptions,
+    ) -> Result<BoxStream<'_, Result<Vec<u8>>>> {
         self.speak_provider.speak(text, options).await
     }
-    
+
     async fn listen(&self, audio: Vec<u8>, options: &ListenOptions) -> Result<String> {
         self.listen_provider.listen(audio, options).await
     }
-    
+
     async fn send(&self, audio: Vec<u8>) -> Result<()> {
         self.listen_provider.send(audio).await
     }
-    
+
     fn as_listener(&self) -> Option<&dyn VoiceListener> {
         self.listen_provider.as_listener()
     }
-    
+
     fn as_sender(&self) -> Option<&dyn VoiceSender> {
         self.listen_provider.as_sender()
     }
@@ -225,23 +240,23 @@ impl Base for CompositeVoice {
     fn name(&self) -> Option<&str> {
         self.base.name()
     }
-    
+
     fn component(&self) -> Component {
         self.base.component()
     }
-    
+
     fn logger(&self) -> Arc<dyn Logger> {
         self.base.logger()
     }
-    
+
     fn set_logger(&mut self, logger: Arc<dyn Logger>) {
         self.base.set_logger(logger);
     }
-    
+
     fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
         self.base.telemetry()
     }
-    
+
     fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
@@ -260,4 +275,4 @@ pub async fn get_audio_data(audio: impl AsyncRead + Send + Unpin + 'static) -> R
     let mut reader = tokio::io::BufReader::new(audio);
     reader.read_to_end(&mut buffer).await?;
     Ok(buffer)
-} 
+}

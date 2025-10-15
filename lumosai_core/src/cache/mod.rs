@@ -1,11 +1,11 @@
+use crate::error::{Error, Result};
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
-use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
-use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
-use crate::error::{Error, Result};
 
 /// 缓存条目
 #[derive(Debug, Clone)]
@@ -65,22 +65,22 @@ pub struct AdvancedCache<T> {
 pub trait Cache<T>: Send + Sync {
     /// 获取缓存值
     async fn get(&self, key: &str) -> Option<T>;
-    
+
     /// 设置缓存值
     async fn set(&self, key: &str, value: T, ttl: Option<Duration>) -> Result<()>;
-    
+
     /// 删除缓存值
     async fn remove(&self, key: &str) -> bool;
-    
+
     /// 清空缓存
     async fn clear(&self) -> Result<()>;
-    
+
     /// 获取缓存大小
     async fn size(&self) -> usize;
-    
+
     /// 检查键是否存在
     async fn contains(&self, key: &str) -> bool;
-    
+
     /// 获取缓存指标
     async fn metrics(&self) -> CacheMetrics;
 }
@@ -94,29 +94,29 @@ impl<T: Clone + Send + Sync + 'static> AdvancedCache<T> {
             metrics: Arc::new(RwLock::new(CacheMetrics::default())),
             access_order: Arc::new(RwLock::new(Vec::new())),
         };
-        
+
         // 启动清理任务
         cache.start_cleanup_task();
-        
+
         cache
     }
-    
+
     /// 启动清理任务
     fn start_cleanup_task(&self) {
         let data = self.data.clone();
         let metrics = self.metrics.clone();
         let interval = self.config.cleanup_interval;
-        
+
         tokio::spawn(async move {
             let mut interval_timer = tokio::time::interval(interval);
-            
+
             loop {
                 interval_timer.tick().await;
-                
+
                 if let Ok(mut cache) = data.write() {
                     let now = SystemTime::now();
                     let mut to_remove = Vec::new();
-                    
+
                     for (key, entry) in cache.iter() {
                         if let Some(ttl) = entry.ttl {
                             if let Ok(elapsed) = now.duration_since(entry.created_at) {
@@ -126,7 +126,7 @@ impl<T: Clone + Send + Sync + 'static> AdvancedCache<T> {
                             }
                         }
                     }
-                    
+
                     for key in to_remove {
                         cache.remove(&key);
                         if let Ok(mut m) = metrics.write() {
@@ -138,16 +138,18 @@ impl<T: Clone + Send + Sync + 'static> AdvancedCache<T> {
             }
         });
     }
-    
+
     /// 应用驱逐策略
     fn apply_eviction_policy(&self) -> Result<()> {
-        let mut data = self.data.write()
+        let mut data = self
+            .data
+            .write()
             .map_err(|e| Error::Lock(format!("Failed to lock cache data: {}", e)))?;
-        
+
         if data.len() <= self.config.max_size {
             return Ok(());
         }
-        
+
         let keys_to_remove = match self.config.eviction_policy {
             CacheEvictionPolicy::LRU => self.get_lru_keys(&data)?,
             CacheEvictionPolicy::LFU => self.get_lfu_keys(&data)?,
@@ -158,53 +160,63 @@ impl<T: Clone + Send + Sync + 'static> AdvancedCache<T> {
                 self.get_lru_keys(&data)?
             }
         };
-        
+
         for key in keys_to_remove {
             data.remove(&key);
             if let Ok(mut metrics) = self.metrics.write() {
                 metrics.evictions += 1;
             }
         }
-        
+
         if let Ok(mut metrics) = self.metrics.write() {
             metrics.size = data.len();
         }
-        
+
         Ok(())
     }
-    
+
     /// 获取LRU键
     fn get_lru_keys(&self, data: &HashMap<String, CacheEntry<T>>) -> Result<Vec<String>> {
-        let access_order = self.access_order.read()
+        let access_order = self
+            .access_order
+            .read()
             .map_err(|e| Error::Lock(format!("Failed to lock access order: {}", e)))?;
-        
+
         let remove_count = data.len() - self.config.max_size + 1;
         Ok(access_order.iter().take(remove_count).cloned().collect())
     }
-    
+
     /// 获取LFU键
     fn get_lfu_keys(&self, data: &HashMap<String, CacheEntry<T>>) -> Result<Vec<String>> {
         let mut entries: Vec<_> = data.iter().collect();
         entries.sort_by_key(|(_, entry)| entry.access_count);
-        
+
         let remove_count = data.len() - self.config.max_size + 1;
-        Ok(entries.iter().take(remove_count).map(|(k, _)| (*k).clone()).collect())
+        Ok(entries
+            .iter()
+            .take(remove_count)
+            .map(|(k, _)| (*k).clone())
+            .collect())
     }
-    
+
     /// 获取FIFO键
     fn get_fifo_keys(&self, data: &HashMap<String, CacheEntry<T>>) -> Result<Vec<String>> {
         let mut entries: Vec<_> = data.iter().collect();
         entries.sort_by_key(|(_, entry)| entry.created_at);
-        
+
         let remove_count = data.len() - self.config.max_size + 1;
-        Ok(entries.iter().take(remove_count).map(|(k, _)| (*k).clone()).collect())
+        Ok(entries
+            .iter()
+            .take(remove_count)
+            .map(|(k, _)| (*k).clone())
+            .collect())
     }
-    
+
     /// 获取TTL键
     fn get_ttl_keys(&self, data: &HashMap<String, CacheEntry<T>>) -> Result<Vec<String>> {
         let now = SystemTime::now();
         let mut expired_keys = Vec::new();
-        
+
         for (key, entry) in data.iter() {
             if let Some(ttl) = entry.ttl {
                 if let Ok(elapsed) = now.duration_since(entry.created_at) {
@@ -214,7 +226,7 @@ impl<T: Clone + Send + Sync + 'static> AdvancedCache<T> {
                 }
             }
         }
-        
+
         if expired_keys.len() >= data.len() - self.config.max_size + 1 {
             Ok(expired_keys)
         } else {
@@ -222,20 +234,22 @@ impl<T: Clone + Send + Sync + 'static> AdvancedCache<T> {
             self.get_lru_keys(data)
         }
     }
-    
+
     /// 更新访问顺序
     fn update_access_order(&self, key: &str) -> Result<()> {
-        let mut access_order = self.access_order.write()
+        let mut access_order = self
+            .access_order
+            .write()
             .map_err(|e| Error::Lock(format!("Failed to lock access order: {}", e)))?;
-        
+
         // 移除旧位置
         access_order.retain(|k| k != key);
         // 添加到末尾
         access_order.push(key.to_string());
-        
+
         Ok(())
     }
-    
+
     /// 计算缓存键的哈希值
     pub fn hash_key(key: &str) -> String {
         let mut hasher = DefaultHasher::new();
@@ -248,7 +262,7 @@ impl<T: Clone + Send + Sync + 'static> AdvancedCache<T> {
 impl<T: Clone + Send + Sync + 'static> Cache<T> for AdvancedCache<T> {
     async fn get(&self, key: &str) -> Option<T> {
         let now = SystemTime::now();
-        
+
         // 读取缓存
         if let Ok(mut data) = self.data.write() {
             if let Some(entry) = data.get_mut(key) {
@@ -266,35 +280,35 @@ impl<T: Clone + Send + Sync + 'static> Cache<T> for AdvancedCache<T> {
                         }
                     }
                 }
-                
+
                 // 更新访问信息
                 entry.last_accessed = now;
                 entry.access_count += 1;
-                
+
                 // 更新指标
                 if let Ok(mut metrics) = self.metrics.write() {
                     metrics.hits += 1;
                 }
-                
+
                 // 更新访问顺序
                 let _ = self.update_access_order(key);
-                
+
                 return Some(entry.value.clone());
             }
         }
-        
+
         // 缓存未命中
         if let Ok(mut metrics) = self.metrics.write() {
             metrics.misses += 1;
         }
-        
+
         None
     }
-    
+
     async fn set(&self, key: &str, value: T, ttl: Option<Duration>) -> Result<()> {
         let now = SystemTime::now();
         let effective_ttl = ttl.or(self.config.default_ttl);
-        
+
         let entry = CacheEntry {
             value,
             created_at: now,
@@ -302,66 +316,70 @@ impl<T: Clone + Send + Sync + 'static> Cache<T> for AdvancedCache<T> {
             access_count: 1,
             ttl: effective_ttl,
         };
-        
+
         // 写入缓存
         {
-            let mut data = self.data.write()
+            let mut data = self
+                .data
+                .write()
                 .map_err(|e| Error::Lock(format!("Failed to lock cache data: {}", e)))?;
-            
+
             data.insert(key.to_string(), entry);
-            
+
             if let Ok(mut metrics) = self.metrics.write() {
                 metrics.size = data.len();
             }
         }
-        
+
         // 更新访问顺序
         self.update_access_order(key)?;
-        
+
         // 应用驱逐策略
         self.apply_eviction_policy()?;
-        
+
         Ok(())
     }
-    
+
     async fn remove(&self, key: &str) -> bool {
         if let Ok(mut data) = self.data.write() {
             let removed = data.remove(key).is_some();
-            
+
             if removed {
                 if let Ok(mut metrics) = self.metrics.write() {
                     metrics.size = data.len();
                 }
-                
+
                 // 从访问顺序中移除
                 if let Ok(mut access_order) = self.access_order.write() {
                     access_order.retain(|k| k != key);
                 }
             }
-            
+
             removed
         } else {
             false
         }
     }
-    
+
     async fn clear(&self) -> Result<()> {
-        let mut data = self.data.write()
+        let mut data = self
+            .data
+            .write()
             .map_err(|e| Error::Lock(format!("Failed to lock cache data: {}", e)))?;
-        
+
         data.clear();
-        
+
         if let Ok(mut metrics) = self.metrics.write() {
             metrics.size = 0;
         }
-        
+
         if let Ok(mut access_order) = self.access_order.write() {
             access_order.clear();
         }
-        
+
         Ok(())
     }
-    
+
     async fn size(&self) -> usize {
         if let Ok(data) = self.data.read() {
             data.len()
@@ -369,7 +387,7 @@ impl<T: Clone + Send + Sync + 'static> Cache<T> for AdvancedCache<T> {
             0
         }
     }
-    
+
     async fn contains(&self, key: &str) -> bool {
         if let Ok(data) = self.data.read() {
             data.contains_key(key)
@@ -377,7 +395,7 @@ impl<T: Clone + Send + Sync + 'static> Cache<T> for AdvancedCache<T> {
             false
         }
     }
-    
+
     async fn metrics(&self) -> CacheMetrics {
         if let Ok(metrics) = self.metrics.read() {
             metrics.clone()
@@ -404,13 +422,13 @@ impl Default for CacheConfig {
 pub trait DistributedCache<T>: Cache<T> {
     /// 同步缓存到其他节点
     async fn sync_to_nodes(&self, key: &str, value: &T) -> Result<()>;
-    
+
     /// 从其他节点获取缓存
     async fn fetch_from_nodes(&self, key: &str) -> Option<T>;
-    
+
     /// 使缓存失效
     async fn invalidate(&self, key: &str) -> Result<()>;
-    
+
     /// 批量操作
     async fn batch_set(&self, items: Vec<(String, T, Option<Duration>)>) -> Result<()>;
     async fn batch_get(&self, keys: Vec<String>) -> Result<HashMap<String, T>>;
@@ -427,7 +445,7 @@ impl CacheManager {
             caches: HashMap::new(),
         }
     }
-    
+
     /// 注册缓存
     pub fn register_cache<T: Clone + Send + Sync + 'static>(
         &mut self,
@@ -436,17 +454,20 @@ impl CacheManager {
     ) {
         self.caches.insert(name.to_string(), Box::new(cache));
     }
-    
+
     /// 获取缓存
-    pub fn get_cache<T: Clone + Send + Sync + 'static>(&self, name: &str) -> Option<&AdvancedCache<T>> {
+    pub fn get_cache<T: Clone + Send + Sync + 'static>(
+        &self,
+        name: &str,
+    ) -> Option<&AdvancedCache<T>> {
         self.caches.get(name)?.downcast_ref()
     }
-    
+
     /// 列出所有缓存
     pub fn list_caches(&self) -> Vec<String> {
         self.caches.keys().cloned().collect()
     }
-    
+
     /// 清空所有缓存
     pub async fn clear_all(&self) -> Result<()> {
         // 注意：这里需要类型擦除，实际实现会更复杂

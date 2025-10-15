@@ -1,6 +1,9 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input, Expr, Ident, LitStr, Token,
+};
 
 /// 简化的Agent定义结构 - 使用syn直接解析
 struct SimpleAgentDef {
@@ -25,13 +28,13 @@ impl Parse for SimpleAgentDef {
             match key.to_string().as_str() {
                 "name" => {
                     name = Some(input.parse::<LitStr>()?);
-                },
+                }
                 "instructions" => {
                     instructions = Some(input.parse::<LitStr>()?);
-                },
+                }
                 "provider" => {
                     provider = Some(input.parse::<Expr>()?);
-                },
+                }
                 "tools" => {
                     // 解析工具数组 [tool1, tool2, ...]
                     let tools_content;
@@ -45,9 +48,12 @@ impl Parse for SimpleAgentDef {
                             let _: Token![,] = tools_content.parse()?;
                         }
                     }
-                },
+                }
                 _ => {
-                    return Err(syn::Error::new(key.span(), format!("Unknown field '{}' in agent definition", key)));
+                    return Err(syn::Error::new(
+                        key.span(),
+                        format!("Unknown field '{}' in agent definition", key),
+                    ));
                 }
             }
 
@@ -59,8 +65,10 @@ impl Parse for SimpleAgentDef {
 
         // 验证必需字段
         let name = name.ok_or_else(|| syn::Error::new(input.span(), "Missing 'name' field"))?;
-        let instructions = instructions.ok_or_else(|| syn::Error::new(input.span(), "Missing 'instructions' field"))?;
-        let provider = provider.ok_or_else(|| syn::Error::new(input.span(), "Missing 'provider' field"))?;
+        let instructions = instructions
+            .ok_or_else(|| syn::Error::new(input.span(), "Missing 'instructions' field"))?;
+        let provider =
+            provider.ok_or_else(|| syn::Error::new(input.span(), "Missing 'provider' field"))?;
 
         Ok(SimpleAgentDef {
             name,

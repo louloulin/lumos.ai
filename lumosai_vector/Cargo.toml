@@ -13,7 +13,6 @@ lumosai-vector-core = { path = "core" }
 lumosai-vector-memory = { path = "memory", optional = true }
 lumosai-vector-qdrant = { path = "qdrant", optional = true }
 lumosai-vector-weaviate = { path = "weaviate", optional = true }
-lumosai-vector-postgres = { path = "postgres", optional = true }
 lumosai-vector-fastembed = { path = "fastembed", optional = true }
 lumosai-vector-lancedb = { path = "lancedb", optional = true }
 lumosai-vector-milvus = { path = "milvus", optional = true }
@@ -23,11 +22,10 @@ default = ["memory"]
 memory = ["lumosai-vector-memory"]
 qdrant = ["lumosai-vector-qdrant"]
 weaviate = ["lumosai-vector-weaviate"]
-postgres = ["lumosai-vector-postgres"]
 fastembed = ["lumosai-vector-fastembed"]
 lancedb = ["lumosai-vector-lancedb"]
 milvus = ["lumosai-vector-milvus"]
-all = ["memory", "qdrant", "weaviate", "postgres", "fastembed", "lancedb", "milvus"]
+all = ["memory", "qdrant", "weaviate", "fastembed", "lancedb", "milvus"]
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }

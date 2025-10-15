@@ -1,5 +1,5 @@
 //! Telemetry and monitoring system for lumosai agents
-//! 
+//!
 //! This module provides comprehensive telemetry capabilities including:
 //! - Metrics collection for agent execution, tool calls, and memory operations
 //! - Execution tracing with detailed step tracking
@@ -9,21 +9,21 @@
 #![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
 #![allow(unexpected_cfgs, unused_assignments)]
 
-pub mod metrics;
-pub mod trace;
-pub mod collectors;
-pub mod otel;
+pub mod alert_engine;
 pub mod alerts;
 pub mod analyzer;
-pub mod alert_engine;
+pub mod collectors;
+pub mod metrics;
+pub mod otel;
 pub mod performance_monitor;
+pub mod trace;
 
 // 企业级监控扩展模块
-pub mod enterprise;
-pub mod compliance_monitor;
-pub mod business_metrics;
 pub mod anomaly_detection;
+pub mod business_metrics;
 pub mod capacity_planning;
+pub mod compliance_monitor;
+pub mod enterprise;
 pub mod sla_monitoring;
 
 #[cfg(test)]
@@ -38,50 +38,46 @@ pub mod tests;
 
 // Re-export core types for convenience
 pub use metrics::{
-    AgentMetrics, ToolMetrics, MemoryMetrics, TokenUsage, MetricValue, ExecutionContext,
-    MetricsCollector, MetricsSummary, AgentPerformance, ResourceUsage, TimeRange
+    AgentMetrics, AgentPerformance, ExecutionContext, MemoryMetrics, MetricValue, MetricsCollector,
+    MetricsSummary, ResourceUsage, TimeRange, TokenUsage, ToolMetrics,
 };
 
-pub use trace::{
-    ExecutionTrace, TraceStep, StepType, TraceCollector, TraceBuilder, TraceStats
-};
+pub use trace::{ExecutionTrace, StepType, TraceBuilder, TraceCollector, TraceStats, TraceStep};
 
-pub use collectors::{
-    InMemoryMetricsCollector, FileSystemMetricsCollector
-};
+pub use collectors::{FileSystemMetricsCollector, InMemoryMetricsCollector};
 
 pub use otel::{
-    OtelConfig, OtelMetricsCollector, HttpOtlpExporter, OtelSpan, OtelMetric,
-    OtelExporter, SpanStatus, SpanKind, AttributeValue, SpanEvent, MetricType,
-    DataPoint, DataPointValue, HistogramBucket
+    AttributeValue, DataPoint, DataPointValue, HistogramBucket, HttpOtlpExporter, MetricType,
+    OtelConfig, OtelExporter, OtelMetric, OtelMetricsCollector, OtelSpan, SpanEvent, SpanKind,
+    SpanStatus,
 };
 
 pub use alerts::{
-    AlertManager, AlertRule, AlertEvent, AlertSeverity, AlertStatus, AlertCondition,
-    AlertChannel, AlertChannelType, InMemoryAlertManager, DiagnosisInfo,
-    AutoFixSuggestion, ComparisonOperator
+    AlertChannel, AlertChannelType, AlertCondition, AlertEvent, AlertManager, AlertRule,
+    AlertSeverity, AlertStatus, AutoFixSuggestion, ComparisonOperator, DiagnosisInfo,
+    InMemoryAlertManager,
 };
 
 pub use analyzer::{
-    PerformanceAnalyzer, PerformanceAnalysis, PerformanceTrend, BottleneckType,
-    AnomalyType, OptimizationRecommendation, RecommendationType, DifficultyLevel,
-    PerformancePrediction, PredictionModel, IntelligentPerformanceAnalyzer
+    AnomalyType, BottleneckType, DifficultyLevel, IntelligentPerformanceAnalyzer,
+    OptimizationRecommendation, PerformanceAnalysis, PerformanceAnalyzer, PerformancePrediction,
+    PerformanceTrend, PredictionModel, RecommendationType,
 };
 
 pub use alert_engine::{
-    SmartAlertEngine, AlertEngineConfig, EscalationConfig, AutomationConfig,
-    AutomationAction, AutomationActionType, AlertContext, AlertActionResult,
-    ActionStatus, AlertStatistics, AutomationExecutor, DefaultAutomationExecutor
+    ActionStatus, AlertActionResult, AlertContext, AlertEngineConfig, AlertStatistics,
+    AutomationAction, AutomationActionType, AutomationConfig, AutomationExecutor,
+    DefaultAutomationExecutor, EscalationConfig, SmartAlertEngine,
 };
 
 pub use performance_monitor::{
-    EnterprisePerformanceMonitor, PerformanceMonitorConfig, PerformanceThresholds,
-    PredictionConfig, AutoOptimizationConfig, OptimizationStrategy,
-    RealTimePerformanceMetrics, ResponseTimeMetrics, ThroughputMetrics,
-    ResourceUsageMetrics, ErrorMetrics, PerformanceTrend as MonitorPerformanceTrend,
-    PerformancePrediction as MonitorPerformancePrediction,
-    PerformanceOptimizationSuggestion, DifficultyLevel as MonitorDifficultyLevel, RiskLevel,
-    PerformanceSummaryReport, MonitoringStatistics
+    AutoOptimizationConfig, DifficultyLevel as MonitorDifficultyLevel,
+    EnterprisePerformanceMonitor, ErrorMetrics, MonitoringStatistics, OptimizationStrategy,
+    PerformanceMonitorConfig, PerformanceOptimizationSuggestion,
+    PerformancePrediction as MonitorPerformancePrediction, PerformanceSummaryReport,
+    PerformanceThresholds, PerformanceTrend as MonitorPerformanceTrend, PredictionConfig,
+    RealTimePerformanceMetrics, ResourceUsageMetrics, ResponseTimeMetrics, RiskLevel,
+    ThroughputMetrics,
 };
 
 /// Basic event type for legacy support
@@ -94,4 +90,4 @@ pub struct Event {
 /// Telemetry sink trait for legacy support
 pub trait TelemetrySink: Send + Sync {
     fn record_event(&self, event: Event);
-} 
+}

@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
-use crate::types::{Rbac, Capability};
-use crate::types::{SinglePrompt, BionicToolDefinition};
+use crate::types::{BionicToolDefinition, SinglePrompt};
+use crate::types::{Capability, Rbac};
 use dioxus::prelude::*;
 
 use crate::console::empty_stream::EmptyStream;

@@ -1,9 +1,9 @@
 //! Embedding generation for RAG systems
-//! 
+//!
 //! This module provides functionality for converting text into vector representations.
 
-mod provider;
 pub mod openai;
+mod provider;
 
-pub use provider::{EmbeddingProvider, utils};
-pub use openai::OpenAIEmbeddingProvider; 
+pub use openai::OpenAIEmbeddingProvider;
+pub use provider::{utils, EmbeddingProvider};

@@ -1,32 +1,32 @@
 //! Enterprise-grade Authentication and Authorization System
-//! 
+//!
 //! This module provides comprehensive authentication and authorization capabilities
 //! for Lumos.ai, including JWT/OAuth2 support, RBAC (Role-Based Access Control),
 //! API key management, and multi-tenant security.
-//! 
+//!
 //! # Features
-//! 
+//!
 //! - **JWT Authentication**: Secure token-based authentication
 //! - **OAuth2 Integration**: Support for external identity providers
 //! - **RBAC System**: Fine-grained role and permission management
 //! - **API Key Management**: Secure API key generation and validation
 //! - **Multi-tenant Support**: Tenant isolation and resource management
 //! - **Session Management**: Secure session handling and lifecycle
-//! 
+//!
 //! # Example
-//! 
+//!
 //! ```rust
 //! use lumosai_core::auth::{AuthManager, JWTConfig, RBACManager};
-//! 
+//!
 //! // Initialize authentication manager
 //! let auth_config = JWTConfig::new("your-secret-key");
 //! let auth_manager = AuthManager::new(auth_config);
-//! 
+//!
 //! // Create user and assign roles
 //! let user = auth_manager.create_user("user@example.com", "password").await?;
 //! let rbac = RBACManager::new();
 //! rbac.assign_role(&user.id, "agent_developer").await?;
-//! 
+//!
 //! // Validate permissions
 //! let has_permission = rbac.check_permission(&user.id, "agents:create").await?;
 //! ```
@@ -34,19 +34,19 @@
 #![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
 #![allow(unexpected_cfgs, unused_assignments)]
 
+pub mod api_keys;
 pub mod jwt;
+pub mod multi_tenant;
 pub mod oauth2;
 pub mod rbac;
-pub mod api_keys;
 pub mod session;
-pub mod multi_tenant;
 
 #[cfg(test)]
 mod integration_tests;
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -55,31 +55,31 @@ use uuid::Uuid;
 pub enum AuthError {
     #[error("Invalid credentials")]
     InvalidCredentials,
-    
+
     #[error("Token expired")]
     TokenExpired,
-    
+
     #[error("Invalid token: {0}")]
     InvalidToken(String),
-    
+
     #[error("Permission denied: {0}")]
     PermissionDenied(String),
-    
+
     #[error("User not found: {0}")]
     UserNotFound(String),
-    
+
     #[error("Role not found: {0}")]
     RoleNotFound(String),
-    
+
     #[error("Tenant not found: {0}")]
     TenantNotFound(String),
-    
+
     #[error("API key invalid or expired")]
     InvalidApiKey,
-    
+
     #[error("Session expired")]
     SessionExpired,
-    
+
     #[error("Authentication error: {0}")]
     Other(String),
 }
@@ -139,12 +139,12 @@ impl User {
     pub fn has_permission(&self, permission: &str) -> bool {
         self.permissions.contains(&permission.to_string())
     }
-    
+
     /// Check if user has a specific role
     pub fn has_role(&self, role: &str) -> bool {
         self.roles.contains(&role.to_string())
     }
-    
+
     /// Update last login time
     pub fn update_last_login(&mut self) {
         self.last_login = Some(SystemTime::now());
@@ -223,7 +223,7 @@ impl AuthManager {
         } else {
             None
         };
-        
+
         Self {
             config,
             jwt_manager,
@@ -233,7 +233,7 @@ impl AuthManager {
             tenant_manager,
         }
     }
-    
+
     /// Authenticate user with email and password
     pub async fn authenticate(&self, email: &str, password: &str) -> AuthResult<AuthToken> {
         // TODO: Implement password verification
@@ -255,19 +255,25 @@ impl AuthManager {
         let user = User::with_id(user_id, email.to_string(), None);
         self.jwt_manager.generate_token(&user).await
     }
-    
+
     /// Validate authentication token
     pub async fn validate_token(&self, token: &str) -> AuthResult<User> {
         self.jwt_manager.validate_token(token).await
     }
-    
+
     /// Create a new user
-    pub async fn create_user(&self, email: &str, password: &str, tenant_id: Option<Uuid>) -> AuthResult<User> {
+    pub async fn create_user(
+        &self,
+        email: &str,
+        password: &str,
+        tenant_id: Option<Uuid>,
+    ) -> AuthResult<User> {
         // TODO: Implement user creation with password hashing
 
         // For testing consistency, use a fixed UUID for test@example.com
         let mut user = if email == "test@example.com" {
-            let fixed_user_id = uuid::Uuid::parse_str("d2fa337c-d9f3-45b4-8a71-e6a4bd675c2d").unwrap();
+            let fixed_user_id =
+                uuid::Uuid::parse_str("d2fa337c-d9f3-45b4-8a71-e6a4bd675c2d").unwrap();
             User::with_id(fixed_user_id, email.to_string(), tenant_id)
         } else {
             User::new(email.to_string(), tenant_id)
@@ -279,11 +285,20 @@ impl AuthManager {
 
         Ok(user)
     }
-    
+
     /// Generate API key for user (placeholder implementation)
-    pub async fn generate_api_key(&self, user_id: Uuid, name: &str, _scopes: Vec<String>) -> AuthResult<String> {
+    pub async fn generate_api_key(
+        &self,
+        user_id: Uuid,
+        name: &str,
+        _scopes: Vec<String>,
+    ) -> AuthResult<String> {
         // In a real implementation, this would use a mutable reference or interior mutability
-        Ok(format!("lum_{}_{}", user_id.to_string().replace('-', "")[..8].to_string(), name))
+        Ok(format!(
+            "lum_{}_{}",
+            user_id.to_string().replace('-', "")[..8].to_string(),
+            name
+        ))
     }
 
     /// Validate API key (placeholder implementation)
@@ -296,8 +311,10 @@ impl AuthManager {
                 let user_id_prefix = parts[1];
                 // For test consistency, if the prefix matches our test user, return the fixed UUID
                 if user_id_prefix == "d2fa337c" {
-                    let fixed_user_id = uuid::Uuid::parse_str("d2fa337c-d9f3-45b4-8a71-e6a4bd675c2d").unwrap();
-                    let mut user = User::with_id(fixed_user_id, "test@example.com".to_string(), None);
+                    let fixed_user_id =
+                        uuid::Uuid::parse_str("d2fa337c-d9f3-45b4-8a71-e6a4bd675c2d").unwrap();
+                    let mut user =
+                        User::with_id(fixed_user_id, "test@example.com".to_string(), None);
                     user.permissions.push("agents:read".to_string());
                     Ok(user)
                 } else {
@@ -346,8 +363,13 @@ impl AuthManager {
             // For test consistency, check if this is our test user's session
             let test_user_id_str = "d2fa337cd9f345b48a71e6a4bd675c2d"; // UUID without dashes
             if user_id_str == test_user_id_str {
-                let fixed_user_id = uuid::Uuid::parse_str("d2fa337c-d9f3-45b4-8a71-e6a4bd675c2d").unwrap();
-                Ok(User::with_id(fixed_user_id, "test@example.com".to_string(), None))
+                let fixed_user_id =
+                    uuid::Uuid::parse_str("d2fa337c-d9f3-45b4-8a71-e6a4bd675c2d").unwrap();
+                Ok(User::with_id(
+                    fixed_user_id,
+                    "test@example.com".to_string(),
+                    None,
+                ))
             } else {
                 // For other sessions, create a generic user
                 Ok(User::new("session-user@example.com".to_string(), None))
@@ -356,7 +378,7 @@ impl AuthManager {
             Err(AuthError::SessionExpired)
         }
     }
-    
+
     /// Logout user (invalidate session/token)
     pub async fn logout(&self, token: &str) -> AuthResult<()> {
         // TODO: Implement token blacklisting
@@ -364,37 +386,35 @@ impl AuthManager {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_auth_manager_creation() {
         let config = AuthConfig::default();
         let auth_manager = AuthManager::new(config);
-        
+
         // Test that manager is created successfully
         assert!(!auth_manager.config.jwt_secret.is_empty());
     }
-    
+
     #[tokio::test]
     async fn test_user_creation() {
         let user = User::new("test@example.com".to_string(), None);
-        
+
         assert_eq!(user.email, "test@example.com");
         assert!(user.is_active);
         assert!(user.roles.is_empty());
         assert!(user.permissions.is_empty());
     }
-    
+
     #[tokio::test]
     async fn test_user_permissions() {
         let mut user = User::new("test@example.com".to_string(), None);
         user.permissions.push("agents:create".to_string());
         user.roles.push("developer".to_string());
-        
+
         assert!(user.has_permission("agents:create"));
         assert!(!user.has_permission("admin:delete"));
         assert!(user.has_role("developer"));

@@ -3,8 +3,10 @@ use super::actions_section::ActionsSection;
 use super::connections_section::ConnectionsSection;
 use super::integration_header::IntegrationHeader;
 use crate::app_layout::{Layout, SideBar};
+use crate::types::{
+    ApiKeyConnection, BionicOpenAPI, BionicToolDefinition, Integration, Oauth2Connection, Rbac,
+};
 use daisy_rsx::*;
-use crate::types::{Rbac, ApiKeyConnection, Integration, Oauth2Connection, BionicOpenAPI, BionicToolDefinition};
 use dioxus::prelude::*;
 
 pub fn view(

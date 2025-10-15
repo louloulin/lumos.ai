@@ -19,7 +19,7 @@ pub enum StorageConfig {
         /// Maximum number of vectors
         max_vectors: Option<usize>,
     },
-    
+
     /// SQLite storage configuration
     Sqlite {
         /// Database file path (":memory:" for in-memory)
@@ -31,7 +31,7 @@ pub enum StorageConfig {
         /// Synchronous mode
         synchronous: SqliteSynchronous,
     },
-    
+
     /// Qdrant storage configuration
     Qdrant {
         /// Qdrant server URL
@@ -45,7 +45,7 @@ pub enum StorageConfig {
         /// Enable TLS
         tls: bool,
     },
-    
+
     /// MongoDB storage configuration
     MongoDB {
         /// MongoDB connection string
@@ -57,7 +57,7 @@ pub enum StorageConfig {
         /// Connection timeout
         timeout: Option<Duration>,
     },
-    
+
     /// Custom storage configuration
     Custom {
         /// Backend name
@@ -102,7 +102,7 @@ pub enum EmbeddingConfig {
         /// Max retries
         max_retries: u32,
     },
-    
+
     /// Ollama embedding configuration
     Ollama {
         /// Ollama server URL
@@ -112,7 +112,7 @@ pub enum EmbeddingConfig {
         /// Request timeout
         timeout: Option<Duration>,
     },
-    
+
     /// Local model configuration
     Local {
         /// Model path or identifier
@@ -122,7 +122,7 @@ pub enum EmbeddingConfig {
         /// Model options
         options: HashMap<String, MetadataValue>,
     },
-    
+
     /// Custom embedding configuration
     Custom {
         /// Provider name
@@ -235,7 +235,7 @@ impl VectorSystemConfig {
             options: HashMap::new(),
         }
     }
-    
+
     /// Create a new configuration with SQLite storage
     pub fn sqlite(database_path: impl Into<String>) -> Self {
         Self {
@@ -250,7 +250,7 @@ impl VectorSystemConfig {
             options: HashMap::new(),
         }
     }
-    
+
     /// Create a new configuration with Qdrant storage
     pub fn qdrant(url: impl Into<String>, collection: impl Into<String>) -> Self {
         Self {
@@ -266,19 +266,19 @@ impl VectorSystemConfig {
             options: HashMap::new(),
         }
     }
-    
+
     /// Set the embedding configuration
     pub fn with_embedding(mut self, embedding: EmbeddingConfig) -> Self {
         self.embedding = Some(embedding);
         self
     }
-    
+
     /// Set the search configuration
     pub fn with_search_config(mut self, search: SearchConfig) -> Self {
         self.search = search;
         self
     }
-    
+
     /// Add a system option
     pub fn with_option(mut self, key: impl Into<String>, value: impl Into<MetadataValue>) -> Self {
         self.options.insert(key.into(), value.into());
@@ -301,7 +301,7 @@ impl StorageConfigBuilder {
             },
         }
     }
-    
+
     /// Create a SQLite storage builder
     pub fn sqlite(database_path: impl Into<String>) -> Self {
         Self {
@@ -313,7 +313,7 @@ impl StorageConfigBuilder {
             },
         }
     }
-    
+
     /// Create a Qdrant storage builder
     pub fn qdrant(url: impl Into<String>, collection: impl Into<String>) -> Self {
         Self {
@@ -326,23 +326,31 @@ impl StorageConfigBuilder {
             },
         }
     }
-    
+
     /// Set initial capacity for memory storage
     pub fn with_initial_capacity(mut self, capacity: usize) -> Self {
-        if let StorageConfig::Memory { ref mut initial_capacity, .. } = self.config {
+        if let StorageConfig::Memory {
+            ref mut initial_capacity,
+            ..
+        } = self.config
+        {
             *initial_capacity = Some(capacity);
         }
         self
     }
-    
+
     /// Set API key for Qdrant
     pub fn with_api_key(mut self, api_key: impl Into<String>) -> Self {
-        if let StorageConfig::Qdrant { api_key: ref mut key, .. } = self.config {
+        if let StorageConfig::Qdrant {
+            api_key: ref mut key,
+            ..
+        } = self.config
+        {
             *key = Some(api_key.into());
         }
         self
     }
-    
+
     /// Enable TLS for Qdrant
     pub fn with_tls(mut self, enable: bool) -> Self {
         if let StorageConfig::Qdrant { ref mut tls, .. } = self.config {
@@ -350,7 +358,7 @@ impl StorageConfigBuilder {
         }
         self
     }
-    
+
     /// Build the configuration
     pub fn build(self) -> StorageConfig {
         self.config

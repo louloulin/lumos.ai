@@ -16,7 +16,7 @@ fn test_config_builder() {
         .enable_compression(true)
         .build()
         .unwrap();
-    
+
     assert_eq!(config.uri, "./test");
     assert_eq!(config.performance.batch_size, 500);
     assert!(config.performance.enable_compression);

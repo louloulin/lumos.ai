@@ -1,7 +1,7 @@
 //! Milvus configuration module
 
-use std::time::Duration;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 use crate::error::{MilvusError, MilvusResult};
 
@@ -10,22 +10,22 @@ use crate::error::{MilvusError, MilvusResult};
 pub struct MilvusConfig {
     /// Milvus endpoint URL
     pub endpoint: String,
-    
+
     /// Database name
     pub database: String,
-    
+
     /// Connection timeout
     pub timeout: Duration,
-    
+
     /// Authentication configuration
     pub auth: Option<AuthConfig>,
-    
+
     /// Index configuration
     pub index_config: IndexConfiguration,
-    
+
     /// Performance tuning options
     pub performance: PerformanceConfig,
-    
+
     /// Collection configuration
     pub collection_config: CollectionConfig,
 }
@@ -35,10 +35,10 @@ pub struct MilvusConfig {
 pub struct AuthConfig {
     /// Username
     pub username: String,
-    
+
     /// Password
     pub password: String,
-    
+
     /// Token (for token-based authentication)
     pub token: Option<String>,
 }
@@ -48,13 +48,13 @@ pub struct AuthConfig {
 pub struct IndexConfiguration {
     /// Default index type for new collections
     pub default_index_type: IndexType,
-    
+
     /// Index parameters
     pub index_params: IndexParams,
-    
+
     /// Auto-create indexes for new collections
     pub auto_create_index: bool,
-    
+
     /// Index build threshold (minimum number of entities before building index)
     pub build_threshold: usize,
 }
@@ -64,22 +64,22 @@ pub struct IndexConfiguration {
 pub enum IndexType {
     /// FLAT index (brute force)
     FLAT,
-    
+
     /// IVF_FLAT index
     IVF_FLAT,
-    
+
     /// IVF_SQ8 index (scalar quantization)
     IVF_SQ8,
-    
+
     /// IVF_PQ index (product quantization)
     IVF_PQ,
-    
+
     /// HNSW index
     HNSW,
-    
+
     /// ANNOY index
     ANNOY,
-    
+
     /// AUTOINDEX (let Milvus choose)
     AUTOINDEX,
 }
@@ -89,25 +89,25 @@ pub enum IndexType {
 pub struct IndexParams {
     /// Number of clusters for IVF index
     pub nlist: Option<usize>,
-    
+
     /// Number of sub-quantizers for PQ
     pub m: Option<usize>,
-    
+
     /// Number of bits per sub-quantizer
     pub nbits: Option<usize>,
-    
+
     /// HNSW M parameter (number of connections)
     pub hnsw_m: Option<usize>,
-    
+
     /// HNSW ef_construction parameter
     pub ef_construction: Option<usize>,
-    
+
     /// ANNOY number of trees
     pub n_trees: Option<usize>,
-    
+
     /// Search parameter ef for HNSW
     pub ef: Option<usize>,
-    
+
     /// Search parameter nprobe for IVF
     pub nprobe: Option<usize>,
 }
@@ -117,16 +117,16 @@ pub struct IndexParams {
 pub struct PerformanceConfig {
     /// Batch size for bulk operations
     pub batch_size: usize,
-    
+
     /// Number of parallel requests
     pub max_parallel_requests: usize,
-    
+
     /// Request timeout
     pub request_timeout: Duration,
-    
+
     /// Retry configuration
     pub retry_config: RetryConfig,
-    
+
     /// Connection pool size
     pub connection_pool_size: usize,
 }
@@ -136,13 +136,13 @@ pub struct PerformanceConfig {
 pub struct RetryConfig {
     /// Maximum number of retries
     pub max_retries: usize,
-    
+
     /// Initial retry delay
     pub initial_delay: Duration,
-    
+
     /// Maximum retry delay
     pub max_delay: Duration,
-    
+
     /// Backoff multiplier
     pub backoff_multiplier: f64,
 }
@@ -152,13 +152,13 @@ pub struct RetryConfig {
 pub struct CollectionConfig {
     /// Default consistency level
     pub consistency_level: ConsistencyLevel,
-    
+
     /// Shards number for new collections
     pub shards_num: usize,
-    
+
     /// Replica number
     pub replica_number: usize,
-    
+
     /// Resource groups
     pub resource_groups: Vec<String>,
 }
@@ -168,13 +168,13 @@ pub struct CollectionConfig {
 pub enum ConsistencyLevel {
     /// Strong consistency
     Strong,
-    
+
     /// Session consistency
     Session,
-    
+
     /// Bounded staleness
     Bounded,
-    
+
     /// Eventually consistent
     Eventually,
 }
@@ -261,13 +261,13 @@ impl MilvusConfig {
             ..Default::default()
         }
     }
-    
+
     /// Set the database name
     pub fn with_database(mut self, database: &str) -> Self {
         self.database = database.to_string();
         self
     }
-    
+
     /// Set authentication credentials
     pub fn with_auth(mut self, username: &str, password: &str) -> Self {
         self.auth = Some(AuthConfig {
@@ -277,7 +277,7 @@ impl MilvusConfig {
         });
         self
     }
-    
+
     /// Set authentication token
     pub fn with_token(mut self, token: &str) -> Self {
         if let Some(ref mut auth) = self.auth {
@@ -291,53 +291,63 @@ impl MilvusConfig {
         }
         self
     }
-    
+
     /// Set connection timeout
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
     }
-    
+
     /// Set default index type
     pub fn with_default_index_type(mut self, index_type: IndexType) -> Self {
         self.index_config.default_index_type = index_type;
         self
     }
-    
+
     /// Set batch size
     pub fn with_batch_size(mut self, batch_size: usize) -> Self {
         self.performance.batch_size = batch_size;
         self
     }
-    
+
     /// Set consistency level
     pub fn with_consistency_level(mut self, level: ConsistencyLevel) -> Self {
         self.collection_config.consistency_level = level;
         self
     }
-    
+
     /// Validate the configuration
     pub fn validate(&self) -> MilvusResult<()> {
         if self.endpoint.is_empty() {
-            return Err(MilvusError::InvalidConfiguration("Endpoint cannot be empty".to_string()));
+            return Err(MilvusError::InvalidConfiguration(
+                "Endpoint cannot be empty".to_string(),
+            ));
         }
-        
+
         if self.database.is_empty() {
-            return Err(MilvusError::InvalidConfiguration("Database name cannot be empty".to_string()));
+            return Err(MilvusError::InvalidConfiguration(
+                "Database name cannot be empty".to_string(),
+            ));
         }
-        
+
         if self.timeout.as_secs() == 0 {
-            return Err(MilvusError::InvalidConfiguration("Timeout must be greater than 0".to_string()));
+            return Err(MilvusError::InvalidConfiguration(
+                "Timeout must be greater than 0".to_string(),
+            ));
         }
-        
+
         if self.performance.batch_size == 0 {
-            return Err(MilvusError::InvalidConfiguration("Batch size must be greater than 0".to_string()));
+            return Err(MilvusError::InvalidConfiguration(
+                "Batch size must be greater than 0".to_string(),
+            ));
         }
-        
+
         if self.collection_config.shards_num == 0 {
-            return Err(MilvusError::InvalidConfiguration("Shards number must be greater than 0".to_string()));
+            return Err(MilvusError::InvalidConfiguration(
+                "Shards number must be greater than 0".to_string(),
+            ));
         }
-        
+
         Ok(())
     }
 }
@@ -354,13 +364,13 @@ impl MilvusConfigBuilder {
             config: MilvusConfig::new(endpoint),
         }
     }
-    
+
     /// Set the database name
     pub fn database(mut self, database: &str) -> Self {
         self.config.database = database.to_string();
         self
     }
-    
+
     /// Set authentication credentials
     pub fn auth(mut self, username: &str, password: &str) -> Self {
         self.config.auth = Some(AuthConfig {
@@ -370,7 +380,7 @@ impl MilvusConfigBuilder {
         });
         self
     }
-    
+
     /// Set authentication token
     pub fn token(mut self, token: &str) -> Self {
         if let Some(ref mut auth) = self.config.auth {
@@ -384,43 +394,43 @@ impl MilvusConfigBuilder {
         }
         self
     }
-    
+
     /// Set connection timeout
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.config.timeout = timeout;
         self
     }
-    
+
     /// Set default index type
     pub fn default_index_type(mut self, index_type: IndexType) -> Self {
         self.config.index_config.default_index_type = index_type;
         self
     }
-    
+
     /// Set batch size
     pub fn batch_size(mut self, batch_size: usize) -> Self {
         self.config.performance.batch_size = batch_size;
         self
     }
-    
+
     /// Set consistency level
     pub fn consistency_level(mut self, level: ConsistencyLevel) -> Self {
         self.config.collection_config.consistency_level = level;
         self
     }
-    
+
     /// Set shards number
     pub fn shards_num(mut self, shards_num: usize) -> Self {
         self.config.collection_config.shards_num = shards_num;
         self
     }
-    
+
     /// Set replica number
     pub fn replica_number(mut self, replica_number: usize) -> Self {
         self.config.collection_config.replica_number = replica_number;
         self
     }
-    
+
     /// Build the configuration
     pub fn build(self) -> MilvusResult<MilvusConfig> {
         self.config.validate()?;
@@ -437,7 +447,7 @@ impl Default for MilvusConfigBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_config() {
         let config = MilvusConfig::default();
@@ -445,7 +455,7 @@ mod tests {
         assert_eq!(config.database, "default");
         assert_eq!(config.performance.batch_size, 1000);
     }
-    
+
     #[test]
     fn test_config_builder() {
         let config = MilvusConfigBuilder::new("http://localhost:19530")
@@ -455,22 +465,25 @@ mod tests {
             .consistency_level(ConsistencyLevel::Strong)
             .build()
             .unwrap();
-        
+
         assert_eq!(config.endpoint, "http://localhost:19530");
         assert_eq!(config.database, "test_db");
         assert_eq!(config.performance.batch_size, 500);
-        assert!(matches!(config.collection_config.consistency_level, ConsistencyLevel::Strong));
+        assert!(matches!(
+            config.collection_config.consistency_level,
+            ConsistencyLevel::Strong
+        ));
         assert!(config.auth.is_some());
     }
-    
+
     #[test]
     fn test_config_validation() {
         let mut config = MilvusConfig::default();
         assert!(config.validate().is_ok());
-        
+
         config.endpoint = "".to_string();
         assert!(config.validate().is_err());
-        
+
         config.endpoint = "http://localhost:19530".to_string();
         config.performance.batch_size = 0;
         assert!(config.validate().is_err());

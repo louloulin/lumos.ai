@@ -32,7 +32,7 @@ impl Role {
             _ => Role::Custom(role_str),
         }
     }
-    
+
     /// Convert Role to its string representation
     pub fn as_str(&self) -> &str {
         match self {
@@ -104,7 +104,12 @@ pub struct Message {
 
 impl Message {
     /// Create a new message
-    pub fn new(role: Role, content: String, metadata: Option<HashMap<String, serde_json::Value>>, name: Option<String>) -> Self {
+    pub fn new(
+        role: Role,
+        content: String,
+        metadata: Option<HashMap<String, serde_json::Value>>,
+        name: Option<String>,
+    ) -> Self {
         Self {
             role,
             content,
@@ -112,13 +117,13 @@ impl Message {
             name,
         }
     }
-    
+
     /// Create a new message with a name
     pub fn with_name(mut self, name: &str) -> Self {
         self.name = Some(name.to_string());
         self
     }
-    
+
     /// Add metadata to the message
     pub fn with_metadata(mut self, key: &str, value: serde_json::Value) -> Self {
         let metadata = self.metadata.get_or_insert_with(HashMap::new);
@@ -163,39 +168,43 @@ impl LlmOptions {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Set temperature
     pub fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = Some(temperature);
         self
     }
-    
+
     /// Set maximum token count
     pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.max_tokens = Some(max_tokens);
         self
     }
-    
+
     /// Set whether to stream the output
     pub fn with_stream(mut self, stream: bool) -> Self {
         self.stream = stream;
         self
     }
-    
+
     /// Set stop sequences
     pub fn with_stop(mut self, stop: Vec<String>) -> Self {
         self.stop = Some(stop);
         self
     }
-    
+
     /// Set model name
     pub fn with_model(mut self, model: impl Into<String>) -> Self {
         self.model = Some(model.into());
         self
     }
-    
+
     /// Add extra options
-    pub fn with_extra(mut self, key: impl Into<String>, value: impl Into<serde_json::Value>) -> Self {
+    pub fn with_extra(
+        mut self,
+        key: impl Into<String>,
+        value: impl Into<serde_json::Value>,
+    ) -> Self {
         self.extra.insert(key.into(), value.into());
         self
     }
@@ -239,4 +248,4 @@ pub fn tool_message(content: &str) -> Message {
         metadata: None,
         name: None,
     }
-} 
+}

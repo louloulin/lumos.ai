@@ -1,8 +1,8 @@
 //! 核心通用类型
 
-use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 /// 通用ID生成函数
@@ -26,4 +26,4 @@ impl<T> CoreType for T where T: serde::Serialize + serde::de::DeserializeOwned +
 pub type Id = String;
 
 /// 通用时间戳类型
-pub use chrono::{DateTime, Utc}; 
+pub use chrono::{DateTime, Utc};

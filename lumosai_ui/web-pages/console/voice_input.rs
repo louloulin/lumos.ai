@@ -17,10 +17,7 @@ use dioxus::prelude::*;
 
 /// 语音输入按钮组件
 #[component]
-pub fn VoiceInputButton(
-    is_locked: bool,
-    on_voice_result: EventHandler<String>,
-) -> Element {
+pub fn VoiceInputButton(is_locked: bool, on_voice_result: EventHandler<String>) -> Element {
     // 简化实现，移除use_signal依赖
     let is_recording = false;
     let recording_duration = 0;
@@ -30,7 +27,7 @@ pub fn VoiceInputButton(
     rsx! {
         div {
             class: "relative",
-            
+
             // 主录音按钮
             button {
                 class: if is_recording {
@@ -47,7 +44,7 @@ pub fn VoiceInputButton(
                     "🎤"
                 }
             }
-            
+
             // 录音状态指示器
             if is_recording {
                 VoiceRecordingIndicator {
@@ -62,22 +59,18 @@ pub fn VoiceInputButton(
 
 /// 语音录制指示器组件
 #[component]
-fn VoiceRecordingIndicator(
-    duration: i32,
-    audio_level: f64,
-    recognition_text: String,
-) -> Element {
+fn VoiceRecordingIndicator(duration: i32, audio_level: f64, recognition_text: String) -> Element {
     rsx! {
         div {
             class: "absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-50",
-            
+
             div {
                 class: "bg-base-100 border border-base-300 rounded-lg shadow-lg p-4 min-w-80",
-                
+
                 // 录音头部
                 div {
                     class: "flex items-center justify-between mb-3",
-                    
+
                     div {
                         class: "flex items-center space-x-2",
                         span {
@@ -89,13 +82,13 @@ fn VoiceRecordingIndicator(
                             "正在录音..."
                         }
                     }
-                    
+
                     div {
                         class: "text-xs text-base-content/60",
                         "{format_duration(duration)}"
                     }
                 }
-                
+
                 // 音量指示器
                 div {
                     class: "mb-3",
@@ -111,7 +104,7 @@ fn VoiceRecordingIndicator(
                         }
                     }
                 }
-                
+
                 // 实时识别文本
                 if !recognition_text.is_empty() {
                     div {
@@ -126,7 +119,7 @@ fn VoiceRecordingIndicator(
                         }
                     }
                 }
-                
+
                 // 操作提示
                 div {
                     class: "text-xs text-base-content/60 text-center",
@@ -153,10 +146,10 @@ pub fn VoiceInputModal(
     rsx! {
         div {
             class: "modal modal-open",
-            
+
             div {
                 class: "modal-box max-w-2xl",
-                
+
                 // 模态框头部
                 div {
                     class: "flex items-center justify-between mb-6",
@@ -170,7 +163,7 @@ pub fn VoiceInputModal(
                         "✕"
                     }
                 }
-                
+
                 // 语言选择
                 div {
                     class: "mb-6",
@@ -184,7 +177,7 @@ pub fn VoiceInputModal(
                     select {
                         class: "select select-bordered w-full",
                         value: selected_language.clone(),
-                        
+
                         option { value: "zh-CN", "中文 (简体)" }
                         option { value: "zh-TW", "中文 (繁体)" }
                         option { value: "en-US", "English (US)" }
@@ -193,11 +186,11 @@ pub fn VoiceInputModal(
                         option { value: "ko-KR", "한국어" }
                     }
                 }
-                
+
                 // 录音区域
                 div {
                     class: "text-center mb-6",
-                    
+
                     // 录音按钮
                     button {
                         class: if is_recording {
@@ -215,7 +208,7 @@ pub fn VoiceInputModal(
                             }
                         }
                     }
-                    
+
                     // 状态文本
                     div {
                         class: "mt-4",
@@ -232,7 +225,7 @@ pub fn VoiceInputModal(
                         }
                     }
                 }
-                
+
                 // 音量指示器
                 if is_recording {
                     div {
@@ -250,7 +243,7 @@ pub fn VoiceInputModal(
                         }
                     }
                 }
-                
+
                 // 识别结果
                 div {
                     class: "mb-6",
@@ -267,17 +260,17 @@ pub fn VoiceInputModal(
                         value: recognition_text.clone()
                     }
                 }
-                
+
                 // 操作按钮
                 div {
                     class: "modal-action",
-                    
+
                     button {
                         class: "btn btn-ghost",
                         onclick: move |_| on_close.call(()),
                         "取消"
                     }
-                    
+
                     button {
                         class: "btn btn-ghost",
                         "清空"
@@ -289,7 +282,7 @@ pub fn VoiceInputModal(
                         "使用文本"
                     }
                 }
-                
+
                 // 使用提示
                 div {
                     class: "mt-4 p-3 bg-info/10 rounded-lg",

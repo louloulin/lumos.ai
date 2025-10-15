@@ -130,13 +130,13 @@ pub mod prelude {
 /// Utility functions for working with vector storage
 pub mod utils {
     use crate::prelude::*;
-    
+
     /// Create a memory storage instance with default configuration
     #[cfg(feature = "memory")]
     pub async fn create_memory_storage() -> Result<crate::memory::MemoryVectorStorage> {
         crate::memory::MemoryVectorStorage::new().await
     }
-    
+
     /// Create a Qdrant storage instance
     #[cfg(feature = "qdrant")]
     pub async fn create_qdrant_storage(url: &str) -> Result<crate::qdrant::QdrantVectorStorage> {
@@ -145,16 +145,20 @@ pub mod utils {
 
     /// Create a Weaviate storage instance
     #[cfg(feature = "weaviate")]
-    pub async fn create_weaviate_storage(url: &str) -> Result<crate::weaviate::WeaviateVectorStorage> {
+    pub async fn create_weaviate_storage(
+        url: &str,
+    ) -> Result<crate::weaviate::WeaviateVectorStorage> {
         crate::weaviate::WeaviateVectorStorage::new(url).await
     }
 
     /// Create a PostgreSQL storage instance
     #[cfg(feature = "postgres")]
-    pub async fn create_postgres_storage(database_url: &str) -> Result<crate::postgres::PostgresVectorStorage> {
+    pub async fn create_postgres_storage(
+        database_url: &str,
+    ) -> Result<crate::postgres::PostgresVectorStorage> {
         crate::postgres::PostgresVectorStorage::new(database_url).await
     }
-    
+
     /// Auto-detect and create the best available storage backend
     /// Returns a memory storage instance as the default implementation
     #[cfg(feature = "memory")]
@@ -208,7 +212,9 @@ pub mod utils {
 
         #[cfg(not(feature = "memory"))]
         {
-            Err(VectorError::NotSupported("No storage backends available".to_string()))
+            Err(VectorError::NotSupported(
+                "No storage backends available".to_string(),
+            ))
         }
     }
 }
@@ -216,32 +222,30 @@ pub mod utils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_memory_storage_integration() {
         let storage = utils::create_memory_storage().await.unwrap();
-        
+
         // Create index
-        let config = IndexConfig::new("test", 3)
-            .with_metric(SimilarityMetric::Cosine);
+        let config = IndexConfig::new("test", 3).with_metric(SimilarityMetric::Cosine);
         storage.create_index(config).await.unwrap();
-        
+
         // Insert document
         let doc = Document::new("test1", "test content")
             .with_embedding(vec![1.0, 0.0, 0.0])
             .with_metadata("category", "test");
-        
+
         storage.upsert_documents("test", vec![doc]).await.unwrap();
-        
+
         // Search
-        let request = SearchRequest::new("test", vec![1.0, 0.0, 0.0])
-            .with_top_k(1);
+        let request = SearchRequest::new("test", vec![1.0, 0.0, 0.0]).with_top_k(1);
         let results = storage.search(request).await.unwrap();
-        
+
         assert_eq!(results.results.len(), 1);
         assert_eq!(results.results[0].id, "test1");
     }
-    
+
     #[tokio::test]
     #[cfg(feature = "memory")]
     async fn test_auto_storage_creation() {

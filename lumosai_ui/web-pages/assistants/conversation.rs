@@ -3,11 +3,11 @@
 use super::assistant_console::AssistantConsole;
 use crate::app_layout::SideBar;
 use crate::console::{ChatWithChunks, PendingChatState};
+use crate::types::{BionicToolDefinition, Capability, Rbac, SinglePrompt};
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, Capability, SinglePrompt, BionicToolDefinition};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(
     team_id: i32,

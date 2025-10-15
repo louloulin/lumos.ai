@@ -8,7 +8,7 @@ use url::Url;
 pub struct ClientCapabilities {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub streaming: Option<bool>,
-    
+
     #[serde(skip_serializing_if = "HashMap::is_empty", default)]
     pub extensions: HashMap<String, serde_json::Value>,
 }
@@ -18,10 +18,10 @@ pub struct ClientCapabilities {
 pub struct StdioServerParameters {
     /// Command to execute
     pub command: String,
-    
+
     /// Command arguments
     pub args: Vec<String>,
-    
+
     /// Environment variables
     pub env: HashMap<String, String>,
 }
@@ -31,7 +31,7 @@ pub struct StdioServerParameters {
 pub struct SSEServerParameters {
     /// URL of the SSE endpoint
     pub url: Url,
-    
+
     /// Request initialization parameters
     pub request_init: Option<HashMap<String, String>>,
 }

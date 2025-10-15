@@ -1,11 +1,11 @@
 //! OpenAI Function Calling support for Lumosai
-//! 
+//!
 //! This module provides types and utilities for OpenAI's function calling feature,
-//! allowing LLM providers to natively call functions instead of relying on 
+//! allowing LLM providers to natively call functions instead of relying on
 //! regex-based parsing.
 
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, Map};
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 
 use crate::error::{Error, Result};
@@ -16,7 +16,7 @@ use crate::tool::Tool;
 pub struct FunctionDefinition {
     /// The name of the function
     pub name: String,
-    /// A description of what the function does  
+    /// A description of what the function does
     pub description: Option<String>,
     /// JSON Schema defining the function's parameters
     pub parameters: Value,
@@ -35,34 +35,38 @@ impl FunctionDefinition {
     /// Create a function definition from a tool
     pub fn from_tool(tool: &dyn Tool) -> Self {
         let schema = tool.schema();
-        
+
         // Convert tool schema to OpenAI function parameters format
         let mut properties = Map::new();
         let mut required = Vec::new();
-        
+
         for param in &schema.parameters {
             let mut param_schema = Map::new();
             param_schema.insert("type".to_string(), Value::String(param.r#type.clone()));
-            param_schema.insert("description".to_string(), Value::String(param.description.clone()));
-            
+            param_schema.insert(
+                "description".to_string(),
+                Value::String(param.description.clone()),
+            );
+
             if let Some(default) = &param.default {
                 param_schema.insert("default".to_string(), default.clone());
             }
-            
+
             if param.required {
                 required.push(param.name.clone());
             }
-            
+
             properties.insert(param.name.clone(), Value::Object(param_schema));
         }
-        
+
         let mut parameters = Map::new();
         parameters.insert("type".to_string(), Value::String("object".to_string()));
         parameters.insert("properties".to_string(), Value::Object(properties));
-        parameters.insert("required".to_string(), Value::Array(
-            required.into_iter().map(Value::String).collect()
-        ));
-        
+        parameters.insert(
+            "required".to_string(),
+            Value::Array(required.into_iter().map(Value::String).collect()),
+        );
+
         Self {
             name: tool.id().to_string(),
             description: Some(tool.description().to_string()),
@@ -103,18 +107,17 @@ impl FunctionCall {
 
     /// Parse the arguments as JSON
     pub fn parse_arguments(&self) -> Result<Value> {
-        serde_json::from_str(&self.arguments)
-            .map_err(|e| Error::Json(e))
+        serde_json::from_str(&self.arguments).map_err(|e| Error::Json(e))
     }
 
     /// Parse the arguments into a HashMap
     pub fn parse_arguments_as_map(&self) -> Result<HashMap<String, Value>> {
         let value = self.parse_arguments()?;
         match value {
-            Value::Object(map) => {
-                Ok(map.into_iter().collect())
-            },
-            _ => Err(Error::InvalidInput("Function arguments must be a JSON object".to_string()))
+            Value::Object(map) => Ok(map.into_iter().collect()),
+            _ => Err(Error::InvalidInput(
+                "Function arguments must be a JSON object".to_string(),
+            )),
         }
     }
 
@@ -130,7 +133,7 @@ impl FunctionCall {
         // Parse and validate arguments against the schema
         let args = self.parse_arguments()?;
         validate_against_schema(&args, &definition.parameters)?;
-        
+
         Ok(())
     }
 
@@ -141,10 +144,12 @@ impl FunctionCall {
     {
         let args = self.parse_arguments()?;
         if let Some(value) = args.get(name) {
-            serde_json::from_value(value.clone())
-                .map_err(|e| Error::Json(e))
+            serde_json::from_value(value.clone()).map_err(|e| Error::Json(e))
         } else {
-            Err(Error::InvalidInput(format!("Parameter '{}' not found", name)))
+            Err(Error::InvalidInput(format!(
+                "Parameter '{}' not found",
+                name
+            )))
         }
     }
 
@@ -158,8 +163,9 @@ impl FunctionCall {
             if value.is_null() {
                 Ok(None)
             } else {
-                Ok(Some(serde_json::from_value(value.clone())
-                    .map_err(|e| Error::Json(e))?))
+                Ok(Some(
+                    serde_json::from_value(value.clone()).map_err(|e| Error::Json(e))?,
+                ))
             }
         } else {
             Ok(None)
@@ -233,51 +239,61 @@ pub mod utils {
     use std::collections::HashMap;
 
     /// Convert a collection of tools to function definitions
-    pub fn tools_to_function_definitions(tools: &HashMap<String, Box<dyn Tool>>) -> Vec<FunctionDefinition> {
-        tools.values()
+    pub fn tools_to_function_definitions(
+        tools: &HashMap<String, Box<dyn Tool>>,
+    ) -> Vec<FunctionDefinition> {
+        tools
+            .values()
             .map(|tool| FunctionDefinition::from_tool(tool.as_ref()))
             .collect()
     }
 
     /// Create OpenAI tools format from function definitions
     pub fn function_definitions_to_openai_tools(functions: &[FunctionDefinition]) -> Value {
-        let tools: Vec<Value> = functions.iter().map(|func| {
-            serde_json::json!({
-                "type": "function",
-                "function": {
-                    "name": func.name,
-                    "description": func.description,
-                    "parameters": func.parameters
-                }
+        let tools: Vec<Value> = functions
+            .iter()
+            .map(|func| {
+                serde_json::json!({
+                    "type": "function",
+                    "function": {
+                        "name": func.name,
+                        "description": func.description,
+                        "parameters": func.parameters
+                    }
+                })
             })
-        }).collect();
-        
+            .collect();
+
         Value::Array(tools)
     }
 
     /// Parse OpenAI function calls from response
     pub fn parse_openai_function_calls(response: &Value) -> Result<Vec<FunctionCall>> {
         let mut function_calls = Vec::new();
-        
+
         // Handle different OpenAI response formats
         if let Some(choices) = response.get("choices").and_then(|c| c.as_array()) {
             if let Some(choice) = choices.first() {
                 if let Some(message) = choice.get("message") {
-                    if let Some(tool_calls) = message.get("tool_calls").and_then(|tc| tc.as_array()) {
+                    if let Some(tool_calls) = message.get("tool_calls").and_then(|tc| tc.as_array())
+                    {
                         for tool_call in tool_calls {
                             if let Some(function) = tool_call.get("function") {
-                                let name = function.get("name")
-                                    .and_then(|n| n.as_str())
-                                    .ok_or_else(|| Error::InvalidInput("Missing function name".to_string()))?;
-                                
-                                let arguments = function.get("arguments")
+                                let name =
+                                    function.get("name").and_then(|n| n.as_str()).ok_or_else(
+                                        || Error::InvalidInput("Missing function name".to_string()),
+                                    )?;
+
+                                let arguments = function
+                                    .get("arguments")
                                     .and_then(|a| a.as_str())
                                     .unwrap_or("{}");
-                                
-                                let id = tool_call.get("id")
+
+                                let id = tool_call
+                                    .get("id")
                                     .and_then(|i| i.as_str())
                                     .map(|s| s.to_string());
-                                
+
                                 function_calls.push(FunctionCall {
                                     id,
                                     name: name.to_string(),
@@ -289,7 +305,7 @@ pub mod utils {
                 }
             }
         }
-        
+
         Ok(function_calls)
     }
 
@@ -301,7 +317,7 @@ pub mod utils {
                 if !value.is_object() {
                     return Err(Error::InvalidInput("Expected object type".to_string()));
                 }
-                
+
                 // Check required fields
                 if let Some(required) = schema.get("required").and_then(|r| r.as_array()) {
                     let obj = value.as_object().unwrap();
@@ -309,13 +325,14 @@ pub mod utils {
                         if let Some(field_name) = req.as_str() {
                             if !obj.contains_key(field_name) {
                                 return Err(Error::InvalidInput(format!(
-                                    "Required field '{}' is missing", field_name
+                                    "Required field '{}' is missing",
+                                    field_name
                                 )));
                             }
                         }
                     }
                 }
-                
+
                 // Validate properties
                 if let Some(properties) = schema.get("properties").and_then(|p| p.as_object()) {
                     let obj = value.as_object().unwrap();
@@ -325,41 +342,40 @@ pub mod utils {
                         }
                     }
                 }
-            },
+            }
             Some("string") => {
                 if !value.is_string() {
                     return Err(Error::InvalidInput("Expected string type".to_string()));
                 }
-            },
+            }
             Some("number") => {
                 if !value.is_number() {
                     return Err(Error::InvalidInput("Expected number type".to_string()));
                 }
-            },
+            }
             Some("integer") => {
                 if !value.is_i64() && !value.is_u64() {
                     return Err(Error::InvalidInput("Expected integer type".to_string()));
                 }
-            },
+            }
             Some("boolean") => {
                 if !value.is_boolean() {
                     return Err(Error::InvalidInput("Expected boolean type".to_string()));
                 }
-            },
+            }
             Some("array") => {
                 if !value.is_array() {
                     return Err(Error::InvalidInput("Expected array type".to_string()));
                 }
-            },
+            }
             _ => {
                 // Unknown or no type specified - allow anything
             }
         }
-        
+
         Ok(())
     }
-    
-    }
+}
 
 // Make validation function available at module level
 pub use utils::validate_against_schema;
@@ -405,7 +421,10 @@ mod tests {
 
         let parsed = func_call.parse_arguments().unwrap();
         assert_eq!(parsed["param1"], Value::String("value1".to_string()));
-        assert_eq!(parsed["param2"], Value::Number(serde_json::Number::from(42)));
+        assert_eq!(
+            parsed["param2"],
+            Value::Number(serde_json::Number::from(42))
+        );
 
         let parsed_map = func_call.parse_arguments_as_map().unwrap();
         assert_eq!(parsed_map.len(), 2);
@@ -425,7 +444,10 @@ mod tests {
         assert_eq!(result.name, "test_function");
         assert!(result.success);
         assert!(result.error.is_none());
-        assert_eq!(result.result["result"], Value::String("success".to_string()));
+        assert_eq!(
+            result.result["result"],
+            Value::String("success".to_string())
+        );
     }
 
     #[test]

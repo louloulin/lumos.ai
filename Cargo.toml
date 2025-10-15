@@ -7,7 +7,7 @@ members = [
     "lumosai_cli",
     # 暂时排除有编译问题的包
     # "lumosai_evals",
-    # "lumosai_network",
+    "lumosai_network",
     # "lumos_macro",
     # "lumosai_mcp",
     # "lumosai_derive",
@@ -28,7 +28,6 @@ exclude = [
     # 暂时排除其他复杂包
     "lumosai_cli",
     "lumosai_evals",
-    "lumosai_network",
     "lumos_macro",
     "lumosai_mcp",
     "lumosai_derive",

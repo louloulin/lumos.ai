@@ -10,6 +10,7 @@ license = "MIT"
 # 仅保留核心依赖
 lumosai_core = { path = "../lumosai_core" }
 lumosai_rag = { path = "../lumosai_rag" }
+lumosai_network = { path = "../lumosai_network" }
 # 暂时移除其他依赖
 # lumosai_derive = { path = "../lumosai_derive" }
 # lumosai_rag = { path = "../lumosai_rag", optional = true }
@@ -120,3 +121,7 @@ path = "src/rag_basic_demo.rs"
 [[example]]
 name = "cli_basic_demo"
 path = "src/cli_basic_demo.rs"
+
+[[example]]
+name = "network_basic_demo"
+path = "src/network_basic_demo.rs"

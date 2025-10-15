@@ -2262,6 +2262,19 @@ dependencies = [
 
 [[package]]
 name = "dashmap"
+version = "5.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
+dependencies = [
+ "cfg-if",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
+]
+
+[[package]]
+name = "dashmap"
 version = "6.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
@@ -2378,7 +2391,7 @@ checksum = "6f27987bc22b810939e8dfecc55571e9d50355d6ea8ec1c47af8383a76a6d0e1"
 dependencies = [
  "arrow",
  "async-trait",
- "dashmap",
+ "dashmap 6.1.0",
  "datafusion-common 45.0.0",
  "datafusion-execution 45.0.0",
  "datafusion-expr 45.0.0",
@@ -2399,7 +2412,7 @@ checksum = "998a6549e6ee4ee3980e05590b2960446a56b343ea30199ef38acd0e0b9036e2"
 dependencies = [
  "arrow",
  "async-trait",
- "dashmap",
+ "dashmap 6.1.0",
  "datafusion-common 46.0.1",
  "datafusion-execution 46.0.1",
  "datafusion-expr 46.0.1",
@@ -2547,7 +2560,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88b491c012cdf8e051053426013429a76f74ee3c2db68496c79c323ca1084d27"
 dependencies = [
  "arrow",
- "dashmap",
+ "dashmap 6.1.0",
  "datafusion-common 45.0.0",
  "datafusion-expr 45.0.0",
  "futures",
@@ -2566,7 +2579,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0938f9e5b6bc5782be4111cdfb70c02b7b5451bf34fd57e4de062a7f7c4e31f1"
 dependencies = [
  "arrow",
- "dashmap",
+ "dashmap 6.1.0",
  "datafusion-common 46.0.1",
  "datafusion-expr 46.0.1",
  "futures",
@@ -2983,7 +2996,7 @@ dependencies = [
  "itertools 0.14.0",
  "log",
  "paste",
- "petgraph",
+ "petgraph 0.7.1",
 ]
 
 [[package]]
@@ -3005,7 +3018,7 @@ dependencies = [
  "itertools 0.14.0",
  "log",
  "paste",
- "petgraph",
+ "petgraph 0.7.1",
 ]
 
 [[package]]
@@ -3685,6 +3698,12 @@ name = "find-msvc-tools"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ced73b1dacfc750a6db6c0a0c3a3853c8b41997e2e2c563dc90804ae6867959"
+
+[[package]]
+name = "fixedbitset"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
 name = "fixedbitset"
@@ -4914,7 +4933,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "chrono",
- "dashmap",
+ "dashmap 6.1.0",
  "datafusion 45.0.0",
  "datafusion-expr 45.0.0",
  "datafusion-functions 45.0.0",
@@ -4975,7 +4994,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "chrono",
- "dashmap",
+ "dashmap 6.1.0",
  "datafusion 46.0.1",
  "datafusion-expr 46.0.1",
  "datafusion-functions 46.0.1",
@@ -6214,6 +6233,7 @@ dependencies = [
  "chrono",
  "futures",
  "lumosai_core",
+ "lumosai_network",
  "lumosai_rag",
  "regex",
  "reqwest 0.11.27",
@@ -6221,6 +6241,26 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "lumosai_network"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "dashmap 5.5.3",
+ "futures",
+ "log",
+ "lumosai_core",
+ "parking_lot",
+ "petgraph 0.6.5",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
  "tracing",
  "uuid",
 ]
@@ -7035,11 +7075,21 @@ checksum = "df202b0b0f5b8e389955afd5f27b007b00fb948162953f1db9c70d2c7e3157d7"
 
 [[package]]
 name = "petgraph"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4c5cc86750666a3ed20bdaf5ca2a0344f9c67674cae0515bec2da16fbaa47db"
+dependencies = [
+ "fixedbitset 0.4.2",
+ "indexmap 2.11.4",
+]
+
+[[package]]
+name = "petgraph"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3672b37090dbd86368a4145bc067582552b29c27377cad4e0a306c97f9bd7772"
 dependencies = [
- "fixedbitset",
+ "fixedbitset 0.5.7",
  "indexmap 2.11.4",
 ]
 
@@ -7268,7 +7318,7 @@ dependencies = [
  "log",
  "multimap",
  "once_cell",
- "petgraph",
+ "petgraph 0.7.1",
  "prettyplease",
  "prost",
  "prost-types",

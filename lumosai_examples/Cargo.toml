@@ -11,6 +11,7 @@ license = "MIT"
 lumosai_core = { path = "../lumosai_core" }
 lumosai_rag = { path = "../lumosai_rag" }
 lumosai_network = { path = "../lumosai_network" }
+lumosai_mcp = { path = "../lumosai_mcp" }
 # 暂时移除其他依赖
 # lumosai_derive = { path = "../lumosai_derive" }
 # lumosai_rag = { path = "../lumosai_rag", optional = true }
@@ -125,3 +126,7 @@ path = "src/cli_basic_demo.rs"
 [[example]]
 name = "network_basic_demo"
 path = "src/network_basic_demo.rs"
+
+[[example]]
+name = "mcp_basic_demo"
+path = "src/mcp_basic_demo.rs"

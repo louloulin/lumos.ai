@@ -9,7 +9,7 @@ members = [
     # "lumosai_evals",
     "lumosai_network",
     # "lumos_macro",
-    # "lumosai_mcp",
+    "lumosai_mcp",
     # "lumosai_derive",
     # "lumosai_bindings",
     # "lumosai_ui",
@@ -26,7 +26,6 @@ exclude = [
     "lumosai_ui",
     "lumosai_ui/web-server",
     # 暂时排除其他复杂包
-    "lumosai_cli",
     "lumosai_evals",
     "lumos_macro",
     "lumosai_mcp",

@@ -777,6 +777,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-sse"
+version = "5.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e6fa871e4334a622afd6bb2f611635e8083a6f5e2936c0f90f37c7ef9856298"
+dependencies = [
+ "async-channel",
+ "futures-lite",
+ "http-types",
+ "log",
+ "memchr",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6233,6 +6247,7 @@ dependencies = [
  "chrono",
  "futures",
  "lumosai_core",
+ "lumosai_mcp",
  "lumosai_network",
  "lumosai_rag",
  "regex",
@@ -6242,6 +6257,34 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "lumosai_mcp"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "async-sse",
+ "async-stream",
+ "async-trait",
+ "eventsource-stream",
+ "futures",
+ "indexmap 2.11.4",
+ "lumosai_core",
+ "mockall",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-process-stream",
+ "tokio-stream",
+ "tokio-test",
+ "tokio-util",
+ "tracing",
+ "url",
  "uuid",
 ]
 
@@ -9396,6 +9439,19 @@ checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
 dependencies = [
  "native-tls",
  "tokio",
+]
+
+[[package]]
+name = "tokio-process-stream"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0e450910f9b9b6ec970e872eb4b4264e4294e25b4d1e087a78d26ab86b67790"
+dependencies = [
+ "futures",
+ "pin-project-lite",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
 ]
 
 [[package]]

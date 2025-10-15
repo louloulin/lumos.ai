@@ -747,7 +747,30 @@ workflow.wait_for_human("approval", json!({
   - 编译成功，CLI 工具正常运行
   - 创建了 cli_basic_demo 示例演示 CLI 功能
   - CLI 工具显示版本信息：Lumosai CLI v0.2.0
-- [ ] **重新启用 `lumosai_network`** - 可能合并到 core
+- [x] **重新启用 `lumosai_network`** ✅ **已完成 2025-01-15**
+  - **完成说明**：
+    - ✅ 成功集成到 workspace，版本统一到 0.2.0
+    - ✅ 创建 `network_basic_demo.rs` 完整演示
+    - ✅ 实现服务发现、消息路由、网络拓扑、Agent 协作功能
+    - ✅ 修复 Result 类型冲突和错误处理问题
+    - ✅ 演示运行成功，展示完整网络通信能力
+    - ✅ 支持多 Agent 协作工作流
+- [x] **重新启用 `lumosai_mcp`** ✅ **已完成 2025-01-15**
+  - **完成说明**：
+    - ✅ 成功集成到 workspace，版本统一到 0.2.0
+    - ✅ 整个 workspace 编译成功（7个包）
+    - ✅ 创建完整的 MCP 功能演示 `mcp_basic_demo.rs`
+    - ✅ 演示 4 个核心功能：配置、客户端、增强管理器、工具适配
+  - **技术实现**：
+    - 使用正确的 MCP API 结构（ServerDefinition, ServerConfig, ConnectionConfig）
+    - 实现 EnhancedMCPManager 配置和使用
+    - 创建 Tool 和 ToolDefinition 示例
+    - 支持 Stdio 和 SSE 传输协议
+  - **测试结果**：`cargo run --package lumosai_examples --example mcp_basic_demo` 成功运行
+  - **解决的问题**：
+    - 修复了模块导入错误，使用正确的公开 API
+    - 修复了结构体字段不匹配问题
+    - 实现了完整的 MCP 协议演示
 
 ##### 🔧 **API 重设计**
 - [ ] 重新设计统一 API

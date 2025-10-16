@@ -33,6 +33,10 @@ pub enum Error {
     #[error("Memory error: {0}")]
     Memory(String),
 
+    /// Cloud deployment errors
+    #[error("Cloud error: {0}")]
+    Cloud(String),
+
     /// Storage errors
     #[error("Storage error: {0}")]
     Storage(String),

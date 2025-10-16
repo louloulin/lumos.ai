@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use chrono;
 use serde_json::Value;
 use std::collections::HashMap;
+use crate::compat::{Component, LogLevel};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
@@ -34,7 +35,7 @@ impl SemanticMemory {
     /// 创建新的语义搜索内存
     pub fn new(config: &MemoryConfig, llm: Arc<dyn LlmProvider>) -> Result<Self> {
         // 直接创建MemoryVectorStorage实例而非通过函数获取Box<dyn VectorStorage>
-        let vector_storage = crate::vector::MemoryVectorStorage::new(1536, None);
+        let vector_storage = crate::vector::MemoryVectorStorage::new(1536);
         let vector_storage = Arc::new(vector_storage);
 
         let namespace = config
@@ -395,7 +396,7 @@ mod tests {
     #[tokio::test]
     async fn test_semantic_memory_store() {
         // 创建配置
-        let config = create_test_config("test_store", None);
+        let config = create_test_config("test_store");
 
         // 创建Mock LLM，提供1536维的嵌入向量
         let mock_llm = Arc::new(MockLlmProvider::new_with_sequential_embeddings(
@@ -489,7 +490,7 @@ mod tests {
     #[tokio::test]
     async fn test_semantic_memory_stats() {
         // 创建配置
-        let config = create_test_config("test_stats", None);
+        let config = create_test_config("test_stats");
 
         // 创建Mock LLM
         let mock_llm = Arc::new(MockLlmProvider::new_with_sequential_embeddings(

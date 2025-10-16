@@ -224,17 +224,17 @@ mod tests {
     #[test]
     fn test_provider_creation_functions() {
         // Test that all provider creation functions work
-        let _openai = openai("test".to_string(), None);
-        let _anthropic = anthropic("test".to_string(), None);
-        let _claude = claude("test".to_string(), None);
-        let _deepseek = deepseek("test".to_string(), None);
-        let _qwen = qwen("test".to_string(), None);
+        let _openai = openai("test".to_string());
+        let _anthropic = anthropic("test".to_string());
+        let _claude = claude("test".to_string());
+        let _deepseek = deepseek("test".to_string());
+        let _qwen = qwen("test".to_string());
         let _cohere = cohere("test".to_string(), "model".to_string());
         let _gemini = gemini("test".to_string(), "model".to_string());
         let _ollama = ollama_local("model".to_string());
         let _together = together("test".to_string(), "model".to_string());
-        let _zhipu = zhipu("test".to_string(), None);
-        let _baidu = baidu("test".to_string(), "secret".to_string(), None);
+        let _zhipu = zhipu("test".to_string());
+        let _baidu = baidu("test".to_string(), "secret".to_string());
     }
 
     #[test]

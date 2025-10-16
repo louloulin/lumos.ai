@@ -112,7 +112,7 @@ impl BasicAgent {
                 )) as Arc<dyn crate::memory::WorkingMemory>
             });
 
-            let basic_memory = crate::memory::BasicMemory::new(working_memory_arc, None);
+            let basic_memory = crate::memory::BasicMemory::new("basic_memory".to_string(), working_memory_arc);
             Some(Arc::new(basic_memory) as Arc<dyn crate::memory::Memory>)
         } else {
             None
@@ -237,13 +237,11 @@ impl BasicAgent {
 
         if use_function_calling {
             self.logger().debug(
-                "Using function calling mode - omitting tool format from system message",
-                None,
+                "Using function calling mode - omitting tool format from system message"
             );
         } else if has_tools {
             self.logger().debug(
-                "Using legacy regex mode - including tool format in system message",
-                None,
+                "Using legacy regex mode - including tool format in system message"
             );
         }
 
@@ -304,8 +302,7 @@ impl BasicAgent {
                                 &format!(
                                     "Function call '{}' validated successfully",
                                     func_call.name
-                                ),
-                                None,
+                                )
                             );
                         }
                         Err(e) => {
@@ -313,8 +310,7 @@ impl BasicAgent {
                                 &format!(
                                     "Function call '{}' failed validation: {}",
                                     func_call.name, e
-                                ),
-                                None,
+                                )
                             );
                             // Still add the call but log the validation failure
                             tool_calls.push(ToolCall {
@@ -330,8 +326,7 @@ impl BasicAgent {
                 }
                 Err(e) => {
                     self.logger().warn(
-                        &format!("Failed to parse function call arguments: {}", e),
-                        None,
+                        &format!("Failed to parse function call arguments: {}", e)
                     );
                 }
             }
@@ -358,11 +353,11 @@ async fn call_llm_with_monitoring(
         let mut llm_step = TraceStep::new(step_name.to_string(), TraceStepType::LlmCall);
         llm_step
             .metadata
-            .insert("messages_count".to_string(), Value::from(messages.len()));
+            .insert("messages_count".to_string(), messages.len().to_string());
         if let Some(model) = &options.model {
             llm_step
                 .metadata
-                .insert("model".to_string(), Value::from(model.clone()));
+                .insert("model".to_string(), model.clone());
         }
         let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
     }
@@ -386,11 +381,11 @@ async fn call_llm_with_monitoring(
         );
         completion_step.metadata.insert(
             "execution_time_ms".to_string(),
-            Value::from(execution_time.as_millis() as u64),
+            (execution_time.as_millis() as u64).to_string(),
         );
         completion_step
             .metadata
-            .insert("response_length".to_string(), Value::from(response.len()));
+            .insert("response_length".to_string(), response.len().to_string());
         let _ = trace_collector
             .add_trace_step(trace_id, completion_step)
             .await;
@@ -438,8 +433,7 @@ impl Agent for BasicAgent {
     fn set_instructions(&mut self, instructions: String) {
         self.instructions = instructions;
         self.logger().debug(
-            &format!("Instructions updated for agent '{}'", self.name),
-            None,
+            &format!("Instructions updated for agent '{}'", self.name)
         );
     }
 
@@ -489,8 +483,7 @@ impl Agent for BasicAgent {
 
         tools.insert(tool_name.clone(), tool);
         self.logger().debug(
-            &format!("Tool '{}' added to agent '{}'", tool_name, self.name),
-            None,
+            &format!("Tool '{}' added to agent '{}'", tool_name, self.name)
         );
 
         Ok(())
@@ -592,7 +585,7 @@ impl Agent for BasicAgent {
                     }
                     Err(e) => {
                         self.logger()
-                            .warn(&format!("Failed to parse JSON code block: {}", e), None);
+                            .warn(&format!("Failed to parse JSON code block: {}", e));
                     }
                 }
             }
@@ -626,7 +619,7 @@ impl Agent for BasicAgent {
                 }
                 Err(e) => {
                     self.logger()
-                        .warn(&format!("Failed to parse tool parameters: {}", e), None);
+                        .warn(&format!("Failed to parse tool parameters: {}", e));
                 }
             }
         }
@@ -927,12 +920,12 @@ impl Agent for BasicAgent {
             {
                 Ok(id) => {
                     self.logger()
-                        .debug(&format!("Started execution trace: {}", id), None);
+                        .debug(&format!("Started execution trace: {}", id));
                     Some(id)
                 }
                 Err(e) => {
                     self.logger()
-                        .warn(&format!("Failed to start trace: {}", e), None);
+                        .warn(&format!("Failed to start trace: {}", e));
                     None
                 }
             }
@@ -1699,7 +1692,7 @@ impl Agent for BasicAgent {
             if let Some(metrics_collector) = &self.metrics_collector {
                 if let Err(e) = metrics_collector.record_agent_execution(metrics).await {
                     self.logger()
-                        .warn(&format!("Failed to record agent metrics: {}", e), None);
+                        .warn(&format!("Failed to record agent metrics: {}", e));
                 }
             }
         }
@@ -1745,10 +1738,10 @@ impl Agent for BasicAgent {
                 .await
             {
                 self.logger()
-                    .warn(&format!("Failed to end trace: {}", e), None);
+                    .warn(&format!("Failed to end trace: {}", e));
             } else {
                 self.logger()
-                    .debug(&format!("Completed execution trace: {}", trace_id), None);
+                    .debug(&format!("Completed execution trace: {}", trace_id));
             }
         }
 
@@ -2081,8 +2074,7 @@ impl BasicAgent {
             None => {
                 // Gracefully handle uninitialized memory by returning None
                 self.logger().warn(
-                    "Working memory not initialized, returning None for key",
-                    None,
+                    "Working memory not initialized, returning None for key"
                 );
                 Ok(None)
             }
@@ -2095,7 +2087,7 @@ impl BasicAgent {
             None => {
                 // Log warning but don't fail - graceful degradation
                 self.logger()
-                    .warn("Working memory not initialized, cannot set value", None);
+                    .warn("Working memory not initialized, cannot set value");
                 Err(Error::Memory("Working memory not initialized. Please initialize working memory before setting values.".to_string()))
             }
         }
@@ -2147,8 +2139,7 @@ impl BasicAgent {
             &format!(
                 "Starting enhanced streaming generation (run_id: {})",
                 run_id
-            ),
-            None,
+            )
         );
 
         // Generate complete response first

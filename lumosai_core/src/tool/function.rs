@@ -3,6 +3,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::compat::Component;
 
 use super::context::ToolExecutionContext;
 use super::schema::{ToolExecutionOptions, ToolSchema};

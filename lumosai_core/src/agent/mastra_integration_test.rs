@@ -71,7 +71,7 @@ mod tests {
             context.get_variable("session_id"),
             Some(&serde_json::Value::String("abc".to_string()))
         );
-        assert_eq!(context.get_variable("nonexistent"), None);
+        assert_eq!(context.get_variable("nonexistent"));
 
         // Test metadata setting and getting
         context.set_metadata("thread_id".to_string(), "thread_123".to_string());
@@ -79,7 +79,7 @@ mod tests {
 
         assert_eq!(context.get_metadata("thread_id"), Some("thread_123"));
         assert_eq!(context.get_metadata("agent_name"), Some("test_agent"));
-        assert_eq!(context.get_metadata("nonexistent"), None);
+        assert_eq!(context.get_metadata("nonexistent"));
     }
 
     #[tokio::test]

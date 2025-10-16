@@ -22,7 +22,7 @@ mod tests {
     // 测试消息结构
     #[test]
     fn test_message_creation() {
-        let message = Message::new(Role::User, "Hello".to_string(), None, None);
+        let message = Message::new(Role::User, "Hello".to_string(), None);
 
         assert_eq!(message.role, Role::User);
         assert_eq!(message.content, "Hello");
@@ -51,7 +51,7 @@ mod tests {
     #[tokio::test]
     async fn test_deepseek_embedding_error() {
         // DeepSeek没有嵌入API，所以这应该返回一个错误
-        let provider = DeepSeekProvider::new("fake-api-key".to_string(), None);
+        let provider = DeepSeekProvider::new("fake-api-key".to_string());
 
         // 调用嵌入方法
         let result = provider.get_embedding("Hello").await;

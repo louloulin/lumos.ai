@@ -17,7 +17,7 @@ use uuid::Uuid;
 use crate::agent::trait_def::Agent;
 use crate::agent::types::{AgentGenerateOptions, AgentStep, ToolCall, ToolResult};
 use crate::llm::Message;
-// use crate::compat::TraceCollector;
+use crate::compat::TraceCollector;
 
 /// Events emitted during streaming agent execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -238,13 +238,10 @@ impl<T: Agent> StreamingAgent<T> {
             );
             metadata.insert("streaming_mode".to_string(), serde_json::Value::Bool(true));
 
-            match trace_collector
-                .start_trace("agent_streaming_execution".to_string(), metadata)
-                .await
-            {
-                Ok(trace_id) => Some(trace_id),
-                Err(_) => None,
-            }
+            let trace_id = trace_collector
+                .start_trace("agent_streaming_execution")
+                .await;
+            Some(trace_id)
         } else {
             None
         }

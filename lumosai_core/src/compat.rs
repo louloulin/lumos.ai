@@ -15,6 +15,27 @@ pub enum Component {
     Workflow,
     Storage,
     Vector,
+    Llm,
+}
+
+impl Default for Component {
+    fn default() -> Self {
+        Component::Agent
+    }
+}
+
+impl std::fmt::Display for Component {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Component::Agent => write!(f, "Agent"),
+            Component::Tool => write!(f, "Tool"),
+            Component::Memory => write!(f, "Memory"),
+            Component::Workflow => write!(f, "Workflow"),
+            Component::Storage => write!(f, "Storage"),
+            Component::Vector => write!(f, "Vector"),
+            Component::Llm => write!(f, "Llm"),
+        }
+    }
 }
 
 /// 临时的日志级别枚举
@@ -24,6 +45,12 @@ pub enum LogLevel {
     Info,
     Warn,
     Error,
+}
+
+impl Default for LogLevel {
+    fn default() -> Self {
+        LogLevel::Info
+    }
 }
 
 /// 临时的日志器 trait
@@ -47,7 +74,8 @@ pub trait Logger: Send + Sync {
 /// 临时的遥测 trait
 #[async_trait]
 pub trait TelemetrySink: Send + Sync {
-    async fn send_event(&self, event: serde_json::Value);
+    async fn send_event(&self, event: Event);
+    fn record_event(&self, event: serde_json::Value);
 }
 
 /// 临时的存储 trait
@@ -69,12 +97,14 @@ pub trait Storage: Send + Sync {
 #[async_trait]
 pub trait MetricsCollector: Send + Sync {
     async fn record_metric(&self, name: &str, value: f64);
+    async fn record_memory_operation(&self, metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// 临时的追踪收集器 trait
 #[async_trait]
 pub trait TraceCollector: Send + Sync {
     async fn start_trace(&self, name: &str) -> String;
+    async fn add_trace_step(&self, trace_id: &str, step: TraceStep) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     async fn end_trace(&self, trace_id: &str);
 }
 
@@ -153,6 +183,14 @@ pub struct MemoryMetrics {
     pub operation: String,
     pub execution_time_ms: u64,
     pub success: bool,
+    pub operation_type: String,
+    pub key: String,
+    pub data_size_bytes: usize,
+    pub timestamp: std::time::SystemTime,
+    pub total_entries: usize,
+    pub memory_usage: usize,
+    pub cache_hits: u64,
+    pub cache_misses: u64,
 }
 
 // 新增缺失的类型定义
@@ -204,6 +242,7 @@ pub struct AgentMetrics {
     pub failed_calls: u64,
     pub avg_response_time: f64,
     pub token_usage: TelemetryTokenUsage,
+    pub execution_time_ms: u64,
 }
 
 impl AgentMetrics {
@@ -231,6 +270,8 @@ pub struct TelemetryTokenUsage {
     pub total_tokens: u32,
 }
 
+
+
 #[derive(Debug, Clone)]
 pub struct ExecutionContext {
     pub session_id: String,
@@ -244,6 +285,7 @@ pub struct Event {
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub event_type: String,
     pub data: serde_json::Value,
+    pub name: String,
 }
 
 // 云适配器相关类型（临时）
@@ -261,23 +303,32 @@ pub struct DeploymentConfig {
     pub replicas: u32,
     pub resources: ResourceConfig,
     pub network: NetworkConfig,
+    pub version: String,
+    pub environment: std::collections::HashMap<String, String>,
+    pub storage: Option<String>,
+    pub autoscaling: Option<bool>,
+    pub health_check: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceConfig {
-    pub cpu: String,
+    pub cpu: f64,
     pub memory: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkConfig {
     pub ports: Vec<PortMapping>,
+    pub public: bool,
+    pub domain: Option<String>,
+    pub ssl: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PortMapping {
     pub container_port: u16,
-    pub host_port: u16,
+    pub host_port: Option<u16>,
+    pub protocol: String,
 }
 
 // 云适配器实现（临时）

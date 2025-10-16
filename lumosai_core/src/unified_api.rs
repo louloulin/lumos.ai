@@ -275,12 +275,11 @@ pub mod cloud {
             name: app_name.to_string(),
             version: "1.0.0".to_string(),
             image: image.to_string(),
+            replicas: 1,
             environment: std::collections::HashMap::new(),
             resources: ResourceConfig {
                 cpu: 1.0,
-                memory: 1024,
-                storage: None,
-                gpu: None,
+                memory: "1024Mi".to_string(),
             },
             network: NetworkConfig {
                 ports: vec![PortMapping {
@@ -297,8 +296,8 @@ pub mod cloud {
             health_check: None,
         };
 
-        let result = adapter.deploy_application(&config).await?;
-        Ok(result.deployment_id)
+        let result = adapter.deploy(&config).await.map_err(|e| crate::error::Error::Cloud(e.to_string()))?;
+        Ok(result)
     }
 }
 

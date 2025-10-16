@@ -345,7 +345,7 @@ mod tests {
             context.get_variable("age"),
             Some(&Value::Number(serde_json::Number::from(25)))
         );
-        assert_eq!(context.get_variable("unknown"), None);
+        assert_eq!(context.get_variable("unknown"));
     }
 
     #[test]

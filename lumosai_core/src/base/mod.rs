@@ -73,7 +73,7 @@ impl BaseComponent {
         Self {
             name: Some(name.clone()),
             component,
-            logger: create_logger(name, component, log_level),
+            logger: create_logger(&name, component, log_level),
             telemetry: None,
         }
     }
@@ -84,7 +84,7 @@ impl BaseComponent {
         Self {
             name: Some(name.clone()),
             component,
-            logger: create_logger(name, component, LogLevel::Info),
+            logger: create_logger(&name, component, LogLevel::Info),
             telemetry: None,
         }
     }
@@ -110,8 +110,7 @@ impl Base for BaseComponent {
                 &format!(
                     "Logger updated [component={}] [name={}]",
                     self.component, name
-                ),
-                None,
+                )
             );
         }
     }
@@ -127,8 +126,7 @@ impl Base for BaseComponent {
                 &format!(
                     "Telemetry updated [component={}] [name={}]",
                     self.component, name
-                ),
-                None,
+                )
             );
         }
     }

@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
+use crate::compat::{VoiceProvider, VoiceOptions, ListenOptions};
 use std::collections::HashMap;
 use std::sync::Arc;
 

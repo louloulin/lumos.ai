@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use crate::compat::Component;
 
 use crate::agent::{trait_def::Agent, AgentConfig};
 use crate::base::{Base, BaseComponent, ComponentConfig};
@@ -134,7 +135,7 @@ impl EnhancedApp {
 
         self.base
             .logger()
-            .info(&format!("LLM provider '{}' added", name), None);
+            .info(&format!("LLM provider '{}' added", name));
         Ok(())
     }
 
@@ -155,7 +156,7 @@ impl EnhancedApp {
 
         self.base
             .logger()
-            .info(&format!("Agent '{}' added", name), None);
+            .info(&format!("Agent '{}' added", name));
         Ok(())
     }
 
@@ -200,7 +201,7 @@ impl EnhancedApp {
     /// Set memory manager
     pub fn set_memory(&mut self, memory: Arc<dyn Memory>) {
         self.memory = Some(memory);
-        self.base.logger().info("Memory manager set", None);
+        self.base.logger().info("Memory manager set");
     }
 
     /// Get memory manager
@@ -211,7 +212,7 @@ impl EnhancedApp {
     /// Set vector storage
     pub fn set_vector_storage(&mut self, storage: Arc<dyn VectorStorage>) {
         self.vector_storage = Some(storage);
-        self.base.logger().info("Vector storage set", None);
+        self.base.logger().info("Vector storage set");
     }
 
     /// Get vector storage
@@ -278,25 +279,24 @@ impl EnhancedApp {
     /// Start application
     pub async fn start(&self) -> Result<()> {
         self.base.logger().info(
-            &format!("Starting application '{}'", self.config.name),
-            None,
+            &format!("Starting application '{}'", self.config.name)
         );
 
         // Here you can add startup logic, such as initializing connections, warming up models, etc.
 
         self.base
             .logger()
-            .info("Application started successfully", None);
+            .info("Application started successfully");
         Ok(())
     }
 
     /// Stop application
     pub async fn stop(&self) -> Result<()> {
-        self.base.logger().info("Stopping application", None);
+        self.base.logger().info("Stopping application");
 
         // Here you can add cleanup logic
 
-        self.base.logger().info("Application stopped", None);
+        self.base.logger().info("Application stopped");
         Ok(())
     }
 }

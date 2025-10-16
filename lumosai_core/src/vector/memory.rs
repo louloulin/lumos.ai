@@ -408,7 +408,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_vector_operations() {
-        let storage = MemoryVectorStorage::new(3, None);
+        let storage = MemoryVectorStorage::new(3);
 
         // 在测试开始时确保清理可能存在的旧索引
         if let Ok(indexes) = storage.list_indexes().await {
@@ -473,7 +473,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_similarity_metrics() {
-        let storage = MemoryVectorStorage::new(3, None);
+        let storage = MemoryVectorStorage::new(3);
         let test_vectors = vec![
             vec![1.0, 0.0, 0.0], // Vector A
             vec![0.0, 1.0, 0.0], // Vector B

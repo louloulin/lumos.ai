@@ -637,7 +637,7 @@ mod tests {
 
     #[test]
     fn test_zhipu_provider_creation() {
-        let provider = ZhipuProvider::new("test-key".to_string(), None);
+        let provider = ZhipuProvider::new("test-key".to_string());
         assert_eq!(provider.model, "glm-4");
         assert_eq!(provider.base_url, "https://open.bigmodel.cn/api/paas/v4");
     }
@@ -660,13 +660,13 @@ mod tests {
 
     #[test]
     fn test_supports_function_calling() {
-        let provider = ZhipuProvider::new("test-key".to_string(), None);
+        let provider = ZhipuProvider::new("test-key".to_string());
         assert!(provider.supports_function_calling());
     }
 
     #[test]
     fn test_provider_name() {
-        let provider = ZhipuProvider::new("test-key".to_string(), None);
+        let provider = ZhipuProvider::new("test-key".to_string());
         assert_eq!(provider.name(), "zhipu");
     }
 }

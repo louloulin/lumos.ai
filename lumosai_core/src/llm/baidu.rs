@@ -653,7 +653,7 @@ mod tests {
 
     #[test]
     fn test_baidu_provider_creation() {
-        let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string(), None);
+        let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string());
         assert_eq!(provider.model, "ernie-bot");
         assert_eq!(provider.base_url, "https://aip.baidubce.com");
     }
@@ -681,19 +681,19 @@ mod tests {
 
     #[test]
     fn test_supports_function_calling() {
-        let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string(), None);
+        let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string());
         assert!(provider.supports_function_calling());
     }
 
     #[test]
     fn test_provider_name() {
-        let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string(), None);
+        let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string());
         assert_eq!(provider.name(), "baidu");
     }
 
     #[test]
     fn test_get_model_endpoint() {
-        let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string(), None);
+        let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string());
 
         assert_eq!(
             provider.get_model_endpoint("ernie-bot"),

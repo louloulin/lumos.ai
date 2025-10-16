@@ -336,7 +336,7 @@ mod tests {
         assert_eq!(config_error.category, ErrorCategory::Configuration);
         assert!(config_error.context.contains_key("config_file"));
 
-        let tool_error = helpers::tool_error("calculator", "Division by zero", None);
+        let tool_error = helpers::tool_error("calculator", "Division by zero");
         assert_eq!(tool_error.category, ErrorCategory::Tool);
         assert!(tool_error.context.contains_key("tool_name"));
     }

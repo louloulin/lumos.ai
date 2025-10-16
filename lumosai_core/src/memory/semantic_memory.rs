@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use crate::compat::{Component, LogLevel, MetricsCollector, MemoryMetrics};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
@@ -414,21 +415,23 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
     ) {
         if let Some(collector) = &self.metrics_collector {
             let metrics = MemoryMetrics {
-                operation_type: operation_type.to_string(),
+                operation: operation_type.to_string(),
                 execution_time_ms,
                 success,
-                key,
-                data_size_bytes,
-                timestamp: SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_millis() as u64,
+                operation_type: operation_type.to_string(),
+                key: key.unwrap_or_default(),
+                data_size_bytes: data_size_bytes.unwrap_or(0),
+                timestamp: SystemTime::now(),
+                total_entries: 0,
+                memory_usage: 0,
+                cache_hits: 0,
+                cache_misses: 0,
             };
 
             if let Err(e) = collector.record_memory_operation(metrics).await {
                 // 记录日志但不影响主要操作
                 let logger = self.logger();
-                logger.error(&format!("Failed to record memory metrics: {}", e), None);
+                logger.error(&format!("Failed to record memory metrics: {}", e));
             }
         }
     }

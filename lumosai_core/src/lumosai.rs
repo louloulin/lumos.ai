@@ -54,9 +54,9 @@ impl Lumosai {
             create_noop_logger()
         } else {
             create_logger(
-                config.name.clone().unwrap_or_else(|| "Lumosai".to_string()),
+                &config.name.as_ref().unwrap_or(&"Lumosai".to_string()),
                 Component::Llm,
-                config.log_level.unwrap_or(LogLevel::Info),
+                config.log_level.clone().unwrap_or(LogLevel::Info),
             )
         };
 

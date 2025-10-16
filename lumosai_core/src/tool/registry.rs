@@ -151,8 +151,7 @@ impl ToolRegistry {
         }
 
         self.base.logger().info(
-            &format!("Tool '{}' registered successfully", tool_name),
-            None,
+            &format!("Tool '{}' registered successfully", tool_name)
         );
         Ok(())
     }
@@ -216,8 +215,7 @@ impl ToolRegistry {
         }
 
         self.base.logger().info(
-            &format!("Tool '{}' unregistered successfully", tool_name),
-            None,
+            &format!("Tool '{}' unregistered successfully", tool_name)
         );
         Ok(())
     }

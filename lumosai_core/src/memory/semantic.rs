@@ -35,7 +35,7 @@ impl SemanticMemory {
     /// 创建新的语义搜索内存
     pub fn new(config: &MemoryConfig, llm: Arc<dyn LlmProvider>) -> Result<Self> {
         // 直接创建MemoryVectorStorage实例而非通过函数获取Box<dyn VectorStorage>
-        let vector_storage = crate::vector::MemoryVectorStorage::new(1536);
+        let vector_storage = crate::vector::MemoryVectorStorage::new(1536, None);
         let vector_storage = Arc::new(vector_storage);
 
         let namespace = config

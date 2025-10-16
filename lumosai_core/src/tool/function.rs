@@ -121,9 +121,7 @@ impl Tool for FunctionTool {
             &format!(
                 "Executing function tool [id={}] [thread_id={:?}]",
                 self.id, context.thread_id
-            ),
-            None,
-        );
+            ));
 
         // Check if abort is requested
         if context.is_abort_requested() {

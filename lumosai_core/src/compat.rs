@@ -98,6 +98,8 @@ pub trait Storage: Send + Sync {
 pub trait MetricsCollector: Send + Sync {
     async fn record_metric(&self, name: &str, value: f64);
     async fn record_memory_operation(&self, metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn record_tool_execution(&self, metrics: ToolMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn record_agent_execution(&self, metrics: AgentMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// 临时的追踪收集器 trait
@@ -175,6 +177,10 @@ pub struct ToolMetrics {
     pub execution_time_ms: u64,
     pub success: bool,
     pub error_message: Option<String>,
+    pub error: Option<String>,
+    pub input_size_bytes: usize,
+    pub output_size_bytes: usize,
+    pub timestamp: u64,
 }
 
 /// 内存指标（临时）
@@ -208,7 +214,12 @@ pub struct TraceStep {
     pub step_type: TraceStepType,
     pub start_time: std::time::Instant,
     pub end_time: Option<std::time::Instant>,
-    pub metadata: std::collections::HashMap<String, String>,
+    pub metadata: std::collections::HashMap<String, serde_json::Value>,
+    pub input: Option<serde_json::Value>,
+    pub output: Option<serde_json::Value>,
+    pub success: bool,
+    pub duration_ms: u64,
+    pub error: Option<String>,
 }
 
 impl TraceStep {
@@ -219,6 +230,11 @@ impl TraceStep {
             start_time: std::time::Instant::now(),
             end_time: None,
             metadata: std::collections::HashMap::new(),
+            input: None,
+            output: None,
+            success: false,
+            duration_ms: 0,
+            error: None,
         }
     }
 
@@ -243,6 +259,7 @@ pub struct AgentMetrics {
     pub avg_response_time: f64,
     pub token_usage: TelemetryTokenUsage,
     pub execution_time_ms: u64,
+    pub tool_calls_count: usize,
 }
 
 impl AgentMetrics {
@@ -252,6 +269,7 @@ impl AgentMetrics {
         failed_calls: u64,
         avg_response_time: f64,
         token_usage: TelemetryTokenUsage,
+        execution_time_ms: u64,
     ) -> Self {
         Self {
             total_calls,
@@ -259,7 +277,29 @@ impl AgentMetrics {
             failed_calls,
             avg_response_time,
             token_usage,
+            execution_time_ms,
+            tool_calls_count: 0,
         }
+    }
+
+    pub fn record_error(&mut self) {
+        self.failed_calls += 1;
+    }
+
+    pub fn end_timing(&mut self, _duration: std::time::Duration) {
+        // 临时实现
+    }
+
+    pub fn set_token_usage(&mut self, token_usage: TelemetryTokenUsage) {
+        self.token_usage = token_usage;
+    }
+
+    pub fn set_success(&mut self, _success: bool) {
+        // 临时实现
+    }
+
+    pub fn add_custom_metric(&mut self, _key: String, _value: MetricValue) {
+        // 临时实现
     }
 }
 
@@ -272,10 +312,15 @@ pub struct TelemetryTokenUsage {
 
 
 
+
+
 #[derive(Debug, Clone)]
 pub struct ExecutionContext {
     pub session_id: String,
     pub user_id: Option<String>,
+    pub request_id: Option<String>,
+    pub environment: String,
+    pub version: Option<String>,
     pub metadata: std::collections::HashMap<String, String>,
 }
 

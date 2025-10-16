@@ -112,7 +112,7 @@ impl BasicAgent {
                 )) as Arc<dyn crate::memory::WorkingMemory>
             });
 
-            let basic_memory = crate::memory::BasicMemory::new("basic_memory".to_string(), working_memory_arc);
+            let basic_memory = crate::memory::BasicMemory::new(working_memory_arc, None);
             Some(Arc::new(basic_memory) as Arc<dyn crate::memory::Memory>)
         } else {
             None
@@ -353,11 +353,11 @@ async fn call_llm_with_monitoring(
         let mut llm_step = TraceStep::new(step_name.to_string(), TraceStepType::LlmCall);
         llm_step
             .metadata
-            .insert("messages_count".to_string(), messages.len().to_string());
+            .insert("messages_count".to_string(), serde_json::Value::Number(serde_json::Number::from(messages.len())));
         if let Some(model) = &options.model {
             llm_step
                 .metadata
-                .insert("model".to_string(), model.clone());
+                .insert("model".to_string(), serde_json::Value::String(model.clone()));
         }
         let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
     }
@@ -381,11 +381,11 @@ async fn call_llm_with_monitoring(
         );
         completion_step.metadata.insert(
             "execution_time_ms".to_string(),
-            (execution_time.as_millis() as u64).to_string(),
+            serde_json::Value::Number(serde_json::Number::from(execution_time.as_millis() as u64)),
         );
         completion_step
             .metadata
-            .insert("response_length".to_string(), response.len().to_string());
+            .insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.len())));
         let _ = trace_collector
             .add_trace_step(trace_id, completion_step)
             .await;
@@ -507,8 +507,7 @@ impl Agent for BasicAgent {
 
         tools.remove(tool_name);
         self.logger().debug(
-            &format!("Tool '{}' removed from agent '{}'", tool_name, self.name),
-            None,
+            &format!("Tool '{}' removed from agent '{}'", tool_name, self.name)
         );
 
         Ok(())
@@ -528,9 +527,7 @@ impl Agent for BasicAgent {
         // Check if we're using function calling - if so, log warning and return empty
         if self.enable_function_calling && self.llm.supports_function_calling() {
             self.logger().warn(
-                "parse_tool_calls called despite function calling being enabled",
-                None,
-            );
+                "parse_tool_calls called despite function calling being enabled");
             return Ok(Vec::new());
         }
 
@@ -592,8 +589,7 @@ impl Agent for BasicAgent {
 
             if !tool_calls.is_empty() {
                 self.logger().info(
-                    &format!("Parsed {} tool calls from code blocks", tool_calls.len()),
-                    None,
+                    &format!("Parsed {} tool calls from code blocks", tool_calls.len())
                 );
                 return Ok(tool_calls);
             }
@@ -711,8 +707,7 @@ impl Agent for BasicAgent {
                 &format!(
                     "Parsed {} tool calls using enhanced parsing methods",
                     tool_calls.len()
-                ),
-                None,
+                )
             );
         }
 
@@ -779,6 +774,7 @@ impl Agent for BasicAgent {
                 tool_name: tool_call.name.clone(),
                 execution_time_ms: execution_time.as_millis() as u64,
                 success,
+                error_message: error.clone(),
                 error,
                 input_size_bytes: input_size,
                 output_size_bytes: output_size,
@@ -848,8 +844,7 @@ impl Agent for BasicAgent {
             &format!(
                 "generate_with_memory called with thread_id: {:?}",
                 thread_id
-            ),
-            None,
+            )
         );
         self.generate(messages, options).await
     }
@@ -876,18 +871,23 @@ impl Agent for BasicAgent {
 
         // Create execution context for telemetry
         let execution_context = ExecutionContext {
-            session_id: options.thread_id.clone(),
+            session_id: options.thread_id.clone().unwrap_or_default(),
             user_id: options.resource_id.clone(),
             request_id: Some(run_id.clone()),
             environment: std::env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string()),
             version: Some(env!("CARGO_PKG_VERSION").to_string()),
+            metadata: std::collections::HashMap::new(),
         };
 
         // Initialize agent metrics
         let mut agent_metrics = if self.metrics_collector.is_some() {
             Some(AgentMetrics::new(
-                self.name.clone(),
-                execution_context.clone(),
+                1, // total_calls
+                0, // successful_calls
+                0, // failed_calls
+                0.0, // avg_response_time
+                crate::compat::TelemetryTokenUsage::default(), // token_usage
+                0, // execution_time_ms
             ))
         } else {
             None
@@ -895,40 +895,12 @@ impl Agent for BasicAgent {
 
         // Start execution trace
         let trace_id = if let Some(trace_collector) = &self.trace_collector {
-            match trace_collector
-                .start_trace(format!("agent_{}", self.name), {
-                    let mut trace_metadata = HashMap::new();
-                    trace_metadata.insert(
-                        "run_id".to_string(),
-                        serde_json::Value::String(run_id.clone()),
-                    );
-                    trace_metadata.insert(
-                        "agent_name".to_string(),
-                        serde_json::Value::String(self.name.clone()),
-                    );
-                    trace_metadata.insert(
-                        "max_steps".to_string(),
-                        serde_json::Value::Number(serde_json::Number::from(max_steps)),
-                    );
-                    trace_metadata.insert(
-                        "message_count".to_string(),
-                        serde_json::Value::Number(serde_json::Number::from(messages.len())),
-                    );
-                    trace_metadata
-                })
-                .await
-            {
-                Ok(id) => {
-                    self.logger()
-                        .debug(&format!("Started execution trace: {}", id));
-                    Some(id)
-                }
-                Err(e) => {
-                    self.logger()
-                        .warn(&format!("Failed to start trace: {}", e));
-                    None
-                }
-            }
+            let id = trace_collector
+                .start_trace(&format!("agent_{}", self.name))
+                .await;
+            self.logger()
+                .debug(&format!("Started execution trace: {}", id));
+            Some(id)
         } else {
             None
         };
@@ -959,8 +931,7 @@ impl Agent for BasicAgent {
             &format!(
                 "Starting generation for agent '{}' (run_id: {})",
                 self.name, run_id
-            ),
-            None,
+            )
         );
 
         // Create initial step
@@ -990,9 +961,7 @@ impl Agent for BasicAgent {
                 .unwrap_or(true);
 
         self.logger().info(
-            &format!("Using function calling mode: {}", use_function_calling),
-            None,
-        );
+            &format!("Using function calling mode: {}", use_function_calling));
 
         // Record function calling mode in trace
         if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
@@ -1021,9 +990,7 @@ impl Agent for BasicAgent {
             let step_start_time = std::time::Instant::now();
 
             self.logger().debug(
-                &format!("Starting step {} of {}", current_step, max_steps),
-                None,
-            );
+                &format!("Starting step {} of {}", current_step, max_steps));
 
             // Record step start in trace
             if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
@@ -1123,8 +1090,7 @@ impl Agent for BasicAgent {
                         }
 
                         self.logger().info(
-                            &format!("Executing {} function calls", tool_calls.len()),
-                            None,
+                            &format!("Executing {} function calls", tool_calls.len())
                         );
 
                         for call in &tool_calls {
@@ -1134,8 +1100,7 @@ impl Agent for BasicAgent {
                                     call.name,
                                     serde_json::to_string_pretty(&call.arguments)
                                         .unwrap_or_else(|_| "{}".to_string())
-                                ),
-                                None,
+                                )
                             );
 
                             let tool_start_time = std::time::Instant::now();
@@ -1147,9 +1112,7 @@ impl Agent for BasicAgent {
                                         &format!(
                                             "Function call '{}' completed in {:?}",
                                             call.name, execution_time
-                                        ),
-                                        None,
-                                    );
+                                        ));
 
                                     // Record successful tool metrics
                                     if let Some(metrics_collector) = &self.metrics_collector {
@@ -1157,6 +1120,7 @@ impl Agent for BasicAgent {
                                             tool_name: call.name.clone(),
                                             execution_time_ms: execution_time.as_millis() as u64,
                                             success: true,
+                                            error_message: None,
                                             error: None,
                                             input_size_bytes: serde_json::to_string(
                                                 &call.arguments,
@@ -1243,9 +1207,7 @@ impl Agent for BasicAgent {
                                         &format!(
                                             "Function call '{}' failed after {:?}: {}",
                                             call.name, execution_time, e
-                                        ),
-                                        None,
-                                    );
+                                        ));
 
                                     // Record failed tool metrics
                                     if let Some(metrics_collector) = &self.metrics_collector {
@@ -1253,6 +1215,7 @@ impl Agent for BasicAgent {
                                             tool_name: call.name.clone(),
                                             execution_time_ms: execution_time.as_millis() as u64,
                                             success: false,
+                                            error_message: Some(e.to_string()),
                                             error: Some(e.to_string()),
                                             input_size_bytes: serde_json::to_string(
                                                 &call.arguments,
@@ -1463,6 +1426,7 @@ impl Agent for BasicAgent {
                                         tool_name: call.name.clone(),
                                         execution_time_ms: execution_time.as_millis() as u64,
                                         success: true,
+                                            error_message: None,
                                         error: None,
                                         input_size_bytes: serde_json::to_string(&call.arguments)
                                             .unwrap_or_default()
@@ -1530,9 +1494,7 @@ impl Agent for BasicAgent {
                                     &format!(
                                         "Function call '{}' failed after {:?}: {}",
                                         call.name, execution_time, e
-                                    ),
-                                    None,
-                                );
+                                    ));
 
                                 // Record failed legacy tool metrics
                                 if let Some(metrics_collector) = &self.metrics_collector {
@@ -1540,6 +1502,7 @@ impl Agent for BasicAgent {
                                         tool_name: call.name.clone(),
                                         execution_time_ms: execution_time.as_millis() as u64,
                                         success: false,
+                                            error_message: Some(e.to_string()),
                                         error: Some(e.to_string()),
                                         input_size_bytes: serde_json::to_string(&call.arguments)
                                             .unwrap_or_default()
@@ -1670,7 +1633,7 @@ impl Agent for BasicAgent {
 
         // Finalize agent metrics
         if let Some(mut metrics) = agent_metrics {
-            metrics.end_timing();
+            metrics.end_timing(std::time::Duration::from_millis(0));
             metrics.set_token_usage(total_tokens.clone());
             metrics.set_success(total_errors == 0);
 
@@ -1733,16 +1696,9 @@ impl Agent for BasicAgent {
                 .await;
 
             // End the trace
-            if let Err(e) = trace_collector
-                .end_trace(&trace_id, total_errors == 0)
-                .await
-            {
-                self.logger()
-                    .warn(&format!("Failed to end trace: {}", e));
-            } else {
-                self.logger()
-                    .debug(&format!("Completed execution trace: {}", trace_id));
-            }
+            trace_collector.end_trace(&trace_id).await;
+            self.logger()
+                .debug(&format!("Completed execution trace: {}", trace_id));
         }
 
         // Create final step
@@ -1766,9 +1722,7 @@ impl Agent for BasicAgent {
             &format!(
                 "Agent '{}' completed execution in {}ms with {} steps, {} tool calls, {} errors",
                 self.name, total_execution_time, current_step, total_tool_calls, total_errors
-            ),
-            None,
-        );
+            ));
 
         Ok(AgentGenerateResult {
             response: final_response,
@@ -1801,8 +1755,7 @@ impl Agent for BasicAgent {
             &format!(
                 "Starting enhanced streaming generation (run_id: {})",
                 run_id
-            ),
-            None,
+            )
         );
 
         // Use legacy streaming mode for now

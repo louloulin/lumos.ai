@@ -3,7 +3,7 @@
 //! 提供简化的API接口，让开发者能够快速上手LumosAI。
 //! 这个模块参考了Rig和Mastra的设计理念，提供了简洁直观的API。
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use std::sync::Arc;
 // use crate::agent::{AgentTrait, BasicAgent, AgentConfig};
 
@@ -229,19 +229,19 @@ pub mod cloud {
 
     /// 创建AWS适配器
     pub fn aws() -> Result<Box<dyn CloudAdapter>> {
-        let adapter = AwsAdapter::from_env()?;
+        let adapter = AwsAdapter::from_env().map_err(|e| Error::Cloud(e.to_string()))?;
         Ok(Box::new(adapter))
     }
 
     /// 创建Azure适配器
     pub fn azure() -> Result<Box<dyn CloudAdapter>> {
-        let adapter = AzureAdapter::from_env()?;
+        let adapter = AzureAdapter::from_env().map_err(|e| Error::Cloud(e.to_string()))?;
         Ok(Box::new(adapter))
     }
 
     /// 创建GCP适配器
     pub fn gcp() -> Result<Box<dyn CloudAdapter>> {
-        let adapter = GcpAdapter::from_env()?;
+        let adapter = GcpAdapter::from_env().map_err(|e| Error::Cloud(e.to_string()))?;
         Ok(Box::new(adapter))
     }
 

@@ -42,10 +42,13 @@ pub trait Base: Send + Sync {
     fn record_event(&self, event_name: &str, data: Metadata) {
         if let Some(telemetry) = self.telemetry() {
             let event = Event {
+                id: uuid::Uuid::new_v4().to_string(),
+                timestamp: chrono::Utc::now(),
+                event_type: "telemetry".to_string(),
                 name: event_name.to_string(),
                 data: serde_json::to_value(data).unwrap_or_default(),
             };
-            telemetry.record_event(event);
+            telemetry.record_event(serde_json::to_value(event).unwrap_or_default());
         }
     }
 }
@@ -72,7 +75,7 @@ impl BaseComponent {
 
         Self {
             name: Some(name.clone()),
-            component,
+            component: component.clone(),
             logger: create_logger(&name, component, log_level),
             telemetry: None,
         }
@@ -83,7 +86,7 @@ impl BaseComponent {
         let name = name.into();
         Self {
             name: Some(name.clone()),
-            component,
+            component: component.clone(),
             logger: create_logger(&name, component, LogLevel::Info),
             telemetry: None,
         }
@@ -96,7 +99,7 @@ impl Base for BaseComponent {
     }
 
     fn component(&self) -> Component {
-        self.component
+        self.component.clone()
     }
 
     fn logger(&self) -> Arc<dyn Logger> {

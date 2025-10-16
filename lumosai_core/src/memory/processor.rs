@@ -107,8 +107,7 @@ impl MemoryProcessor for MessageLimitProcessor {
                 messages.len(),
                 limited_messages.len(),
                 self.max_messages
-            ),
-            None,
+            )
         );
 
         Ok(limited_messages)
@@ -183,8 +182,7 @@ impl MemoryProcessor for RoleFilterProcessor {
                 original_count,
                 filtered_messages.len(),
                 self.allowed_roles
-            ),
-            None,
+            )
         );
 
         Ok(filtered_messages)
@@ -266,8 +264,7 @@ impl MemoryProcessor for DeduplicationProcessor {
                 "Deduplicated messages from {} to {}",
                 original_count,
                 deduplicated_messages.len()
-            ),
-            None,
+            )
         );
 
         Ok(deduplicated_messages)

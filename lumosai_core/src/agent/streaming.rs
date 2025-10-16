@@ -223,7 +223,7 @@ impl<T: Agent> StreamingAgent<T> {
 
             // End trace
             if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                let _ = trace_collector.end_trace(&trace_id, true).await;
+                trace_collector.end_trace(&trace_id).await;
             }
         })
     }

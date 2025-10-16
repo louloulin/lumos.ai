@@ -44,7 +44,7 @@ impl Default for SchemaFormat {
 }
 
 /// Schema for a tool
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ToolSchema {
     /// Parameters for the tool
     pub parameters: Vec<ParameterSchema>,

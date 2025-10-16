@@ -1,11 +1,11 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use quote::quote;
+use quote::{format_ident, quote};
 use std::str::FromStr;
 use syn::spanned::Spanned;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, Expr, FnArg, Ident, ItemFn, LitStr, PatType, Token, Type,
+    parse_macro_input, Expr, FnArg, Ident, ItemFn, LitStr, Pat, PatType, Token, Type,
 };
 
 use crate::parser::{parse_tool_macro, ToolDef};
@@ -387,4 +387,399 @@ pub fn lumos_execute_tool(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
+}
+
+/// 新的改进版 #[tool] 宏实现
+///
+/// 这个宏可以应用到函数上，自动生成 Tool trait 实现
+///
+/// # 示例
+///
+/// ```rust
+/// #[tool(name = "calculator", description = "执行数学计算")]
+/// async fn calculate(expression: String, precision: Option<u32>) -> Result<f64> {
+///     // 实现计算逻辑
+/// }
+/// ```
+pub fn tool_attribute_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
+    // 解析属性
+    let config = if attr.is_empty() {
+        ToolConfig::default()
+    } else {
+        match syn::parse::<ToolConfig>(attr) {
+            Ok(config) => config,
+            Err(e) => {
+                let error_msg = e.to_string();
+                return quote! {
+                    compile_error!(#error_msg);
+                }.into();
+            }
+        }
+    };
+
+    // 解析函数
+    let fn_item = match syn::parse::<ItemFn>(item) {
+        Ok(fn_item) => fn_item,
+        Err(e) => {
+            let error_msg = e.to_string();
+            return quote! {
+                compile_error!(#error_msg);
+            }.into();
+        }
+    };
+
+    // 提取参数信息
+    let params = match extract_parameters(&fn_item) {
+        Ok(params) => params,
+        Err(e) => {
+            let error_msg = e.to_string();
+            return quote! {
+                compile_error!(#error_msg);
+            }.into();
+        }
+    };
+
+    // 生成工具实现
+    match generate_tool_impl(config, fn_item, params) {
+        Ok(tokens) => tokens.into(),
+        Err(e) => {
+            let error_msg = e.to_string();
+            quote! {
+                compile_error!(#error_msg);
+            }.into()
+        }
+    }
+}
+
+/// 工具配置结构体
+#[derive(Debug, Clone)]
+pub struct ToolConfig {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub validate_params: bool,
+    pub validate_output: bool,
+}
+
+impl Default for ToolConfig {
+    fn default() -> Self {
+        Self {
+            name: None,
+            description: None,
+            category: None,
+            validate_params: true,
+            validate_output: false,
+        }
+    }
+}
+
+impl Parse for ToolConfig {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut config = ToolConfig::default();
+
+        while !input.is_empty() {
+            let key: Ident = input.parse()?;
+            let _: Token![=] = input.parse()?;
+
+            match key.to_string().as_str() {
+                "name" => {
+                    let name: LitStr = input.parse()?;
+                    config.name = Some(name.value());
+                }
+                "description" => {
+                    let desc: LitStr = input.parse()?;
+                    config.description = Some(desc.value());
+                }
+                "category" => {
+                    let cat: LitStr = input.parse()?;
+                    config.category = Some(cat.value());
+                }
+                "validate_params" => {
+                    let val: syn::LitBool = input.parse()?;
+                    config.validate_params = val.value;
+                }
+                "validate_output" => {
+                    let val: syn::LitBool = input.parse()?;
+                    config.validate_output = val.value;
+                }
+                _ => {
+                    return Err(syn::Error::new(
+                        key.span(),
+                        format!("Unknown tool attribute: {}", key),
+                    ));
+                }
+            }
+
+            let _: Option<Token![,]> = input.parse()?;
+        }
+
+        Ok(config)
+    }
+}
+
+/// 参数信息
+#[derive(Debug, Clone)]
+pub struct ParameterInfo {
+    pub name: String,
+    pub rust_type: Type,
+    pub description: Option<String>,
+    pub required: bool,
+}
+
+/// 从函数签名提取参数信息
+pub fn extract_parameters(fn_item: &ItemFn) -> syn::Result<Vec<ParameterInfo>> {
+    let mut params = Vec::new();
+
+    for input in &fn_item.sig.inputs {
+        match input {
+            FnArg::Typed(PatType { pat, ty, .. }) => {
+                if let Pat::Ident(pat_ident) = pat.as_ref() {
+                    let name = pat_ident.ident.to_string();
+
+                    let (rust_type, required) = analyze_type(ty);
+                    let description = extract_param_description(&fn_item.attrs, &name);
+
+                    params.push(ParameterInfo {
+                        name,
+                        rust_type,
+                        description,
+                        required,
+                    });
+                }
+            }
+            FnArg::Receiver(_) => {
+                return Err(syn::Error::new_spanned(
+                    input,
+                    "Tool functions cannot have self parameters",
+                ));
+            }
+        }
+    }
+
+    Ok(params)
+}
+
+/// 分析类型，判断是否为 Option 类型
+fn analyze_type(ty: &Type) -> (Type, bool) {
+    if let Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.last() {
+            if segment.ident == "Option" {
+                if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
+                        return (inner_type.clone(), false);
+                    }
+                }
+            }
+        }
+    }
+    (ty.clone(), true)
+}
+
+/// 从属性中提取参数描述
+fn extract_param_description(attrs: &[syn::Attribute], param_name: &str) -> Option<String> {
+    for attr in attrs {
+        if attr.path().is_ident("doc") {
+            if let Ok(meta) = attr.meta.require_name_value() {
+                if let syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(lit_str),
+                    ..
+                }) = &meta.value
+                {
+                    let doc = lit_str.value().trim().to_string();
+                    if doc.to_lowercase().contains(&param_name.to_lowercase()) {
+                        return Some(doc);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// 将 Rust 类型转换为 JSON Schema 类型字符串
+pub fn rust_type_to_json_type(ty: &Type) -> String {
+    match ty {
+        Type::Path(type_path) => {
+            if let Some(segment) = type_path.path.segments.last() {
+                match segment.ident.to_string().as_str() {
+                    "String" | "str" => "string".to_string(),
+                    "i8" | "i16" | "i32" | "i64" | "i128" | "isize"
+                    | "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => "integer".to_string(),
+                    "f32" | "f64" => "number".to_string(),
+                    "bool" => "boolean".to_string(),
+                    "Vec" => "array".to_string(),
+                    _ => "string".to_string(),
+                }
+            } else {
+                "string".to_string()
+            }
+        }
+        _ => "string".to_string(),
+    }
+}
+
+/// 生成工具实现代码
+pub fn generate_tool_impl(
+    config: ToolConfig,
+    fn_item: ItemFn,
+    params: Vec<ParameterInfo>,
+) -> syn::Result<proc_macro2::TokenStream> {
+    let fn_name = &fn_item.sig.ident;
+    let tool_name = config.name.unwrap_or_else(|| fn_name.to_string());
+    let tool_description = config.description.unwrap_or_else(|| {
+        format!("Tool generated from function {}", fn_name)
+    });
+
+    let tool_struct_name = format_ident!("{}Tool",
+        fn_name.to_string().chars()
+            .enumerate()
+            .map(|(i, c)| if i == 0 { c.to_uppercase().collect::<String>() } else { c.to_string() })
+            .collect::<String>()
+    );
+
+    // 生成参数 schema
+    let param_schemas: Vec<proc_macro2::TokenStream> = params.iter().map(|param| {
+        let name = &param.name;
+        let description = param.description.as_deref().unwrap_or("Parameter");
+        let json_type = rust_type_to_json_type(&param.rust_type);
+        let required = param.required;
+
+        quote! {
+            lumosai_core::tool::ParameterSchema {
+                name: #name.to_string(),
+                description: #description.to_string(),
+                r#type: #json_type.to_string(),
+                required: #required,
+                properties: None,
+                default: None,
+            }
+        }
+    }).collect();
+
+    // 生成参数提取代码
+    let param_extractions: Vec<proc_macro2::TokenStream> = params.iter().map(|param| {
+        let param_name = format_ident!("{}", param.name);
+        let param_key = &param.name;
+        let rust_type = &param.rust_type;
+
+        if param.required {
+            quote! {
+                let #param_name: #rust_type = params.get(#param_key)
+                    .ok_or_else(|| lumosai_core::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
+                    .as_str()
+                    .ok_or_else(|| lumosai_core::error::Error::Tool(format!("Parameter {} must be a string", #param_key)))?
+                    .parse()
+                    .map_err(|_| lumosai_core::error::Error::Tool(format!("Failed to parse parameter: {}", #param_key)))?;
+            }
+        } else {
+            quote! {
+                let #param_name: Option<#rust_type> = params.get(#param_key)
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.parse().ok())
+                    .flatten();
+            }
+        }
+    }).collect();
+
+    let param_names: Vec<proc_macro2::Ident> = params.iter().map(|p| format_ident!("{}", p.name)).collect();
+    let tool_fn_name = format_ident!("{}_tool", fn_name);
+
+    // 检查函数是否是异步的
+    let is_async = fn_item.sig.asyncness.is_some();
+    let call_expr = if is_async {
+        quote! { #fn_name(#(#param_names),*).await }
+    } else {
+        quote! { #fn_name(#(#param_names),*) }
+    };
+
+    Ok(quote! {
+        #fn_item
+
+        #[derive(Debug, Clone)]
+        pub struct #tool_struct_name {
+            base: lumosai_core::base::BaseComponent,
+        }
+
+        impl #tool_struct_name {
+            pub fn new() -> Self {
+                Self {
+                    base: lumosai_core::base::BaseComponent::new_with_name(
+                        #tool_name,
+                        lumosai_core::compat::Component::Tool,
+                    ),
+                }
+            }
+        }
+
+        impl lumosai_core::base::Base for #tool_struct_name {
+            fn name(&self) -> Option<&str> {
+                self.base.name()
+            }
+
+            fn component(&self) -> lumosai_core::compat::Component {
+                self.base.component()
+            }
+
+            fn logger(&self) -> std::sync::Arc<dyn lumosai_core::compat::Logger> {
+                self.base.logger()
+            }
+
+            fn set_logger(&mut self, logger: std::sync::Arc<dyn lumosai_core::compat::Logger>) {
+                self.base.set_logger(logger);
+            }
+
+            fn telemetry(&self) -> Option<std::sync::Arc<dyn lumosai_core::compat::TelemetrySink>> {
+                self.base.telemetry()
+            }
+
+            fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn lumosai_core::compat::TelemetrySink>) {
+                self.base.set_telemetry(telemetry);
+            }
+        }
+
+        #[async_trait::async_trait]
+        impl lumosai_core::tool::Tool for #tool_struct_name {
+            fn id(&self) -> &str {
+                #tool_name
+            }
+
+            fn description(&self) -> &str {
+                #tool_description
+            }
+
+            fn schema(&self) -> lumosai_core::tool::ToolSchema {
+                lumosai_core::tool::ToolSchema {
+                    parameters: vec![
+                        #(#param_schemas),*
+                    ],
+                    ..Default::default()
+                }
+            }
+
+            async fn execute(
+                &self,
+                params: serde_json::Value,
+                _context: lumosai_core::tool::ToolExecutionContext,
+                _options: &lumosai_core::tool::ToolExecutionOptions,
+            ) -> lumosai_core::error::Result<serde_json::Value> {
+                let params = params.as_object()
+                    .ok_or_else(|| lumosai_core::error::Error::Tool("Parameters must be a JSON object".to_string()))?;
+
+                #(#param_extractions)*
+
+                let result = #call_expr?;
+
+                Ok(serde_json::to_value(result)
+                    .map_err(|e| lumosai_core::error::Error::Tool(format!("Failed to serialize result: {}", e)))?)
+            }
+
+            fn clone_box(&self) -> Box<dyn lumosai_core::tool::Tool> {
+                Box::new(self.clone())
+            }
+        }
+
+        pub fn #tool_fn_name() -> Box<dyn lumosai_core::tool::Tool> {
+            Box::new(#tool_struct_name::new())
+        }
+    })
 }

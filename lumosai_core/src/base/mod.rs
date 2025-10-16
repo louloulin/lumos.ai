@@ -93,6 +93,17 @@ impl BaseComponent {
     }
 }
 
+impl std::fmt::Debug for BaseComponent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BaseComponent")
+            .field("name", &self.name)
+            .field("component", &self.component)
+            .field("logger", &"<Logger>")
+            .field("telemetry", &self.telemetry.as_ref().map(|_| "<TelemetrySink>"))
+            .finish()
+    }
+}
+
 impl Base for BaseComponent {
     fn name(&self) -> Option<&str> {
         self.name.as_deref()

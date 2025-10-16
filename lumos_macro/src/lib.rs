@@ -60,7 +60,7 @@ mod workflow;
 /// ```
 #[proc_macro_attribute]
 pub fn tool(attr: TokenStream, item: TokenStream) -> TokenStream {
-    tool_macro::tool_macro(attr, item)
+    tool_macro::tool_attribute_macro(attr, item)
 }
 
 struct ToolAttributes {

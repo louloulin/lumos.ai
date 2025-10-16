@@ -185,7 +185,7 @@ lumosai-vector-core = { path = "lumosai_vector/core" }
 # lumosai_rag = { path = "lumosai_rag" }
 # lumosai_network = { path = "lumosai_network" }
 # lumosai_ui = { path = "lumosai_ui", optional = true }
-# lumos_macro = { path = "lumos_macro", optional = true }
+lumos_macro = { path = "lumos_macro" }
 redis = { workspace = true }
 
 tokio = { workspace = true }

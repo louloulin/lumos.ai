@@ -7421,6 +7421,7 @@ dependencies = [
  "chrono",
  "criterion",
  "futures",
+ "lumos_macro",
  "lumosai-vector-core",
  "lumosai_core",
  "lumosai_vector",

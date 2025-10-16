@@ -831,15 +831,67 @@ workflow.wait_for_human("approval", json!({
     - ✅ 评估了 3 个 AI 问答案例
     - ✅ 平均评估分数：0.933（优秀 A 级）
     - ✅ 生成详细的评估报告和分数统计
+- [x] **重新启用 `lumosai_derive`** ✅ **已完成 2025-01-16**
+  - **完成时间**: 2025-01-16
+  - **具体实现**:
+    - 成功将 `lumosai_derive` 添加到 workspace members
+    - 更新版本号从 0.1.1 到 0.2.0 保持一致性
+    - 从 exclude 列表中移除
+    - 在 lumosai_examples 中添加依赖
+    - 创建并运行 `derive_basic_demo.rs` 示例验证功能
+  - **测试结果**:
+    - ✅ 编译成功：`cargo check --workspace` 通过，无错误
+    - ✅ 功能验证：derive_basic_demo 示例正常运行
+    - ✅ 宏功能：FunctionSchema 派生宏正常工作
+  - **技术细节**:
+    - 实现了 Calculator 结构体的 FunctionSchema 自动生成
+    - 支持基本算术运算（加减乘除）
+    - 包含错误处理（除零检查、无效操作）
+    - 当前 workspace 包含 10 个包
 
-##### 🔧 **API 重设计**
-- [ ] 重新设计统一 API
-- [ ] 完善 prelude 模块
-- [ ] 优化 Builder 模式
+##### 🔧 **API 重设计** ✅ **已完成**
+- [x] 重新设计统一 API
+- [x] 完善 prelude 模块
+- [x] 优化 Builder 模式
+
+**完成记录** (2025-01-16):
+- **重新设计统一 API**:
+  - 将主要创建方法从 `Agent::quick()` 改为 `Agent::new()`
+  - 保留 `Agent::quick()` 作为向后兼容
+  - 维持 `Agent::builder()` 用于高级配置
+- **完善 prelude 模块**:
+  - 重新组织文档，使用中文描述和清晰分类
+  - 简化工具导出，按功能分类（数学计算、文件处理、网络工具、系统工具）
+  - 移除重复的便利函数（excel_reader, directory_lister 等）
+  - 简化 LLM 提供商导出，移除 `_with_key` 和 `_builder` 变体
+  - 添加专业化 Agent 创建函数：`web_agent()`, `file_agent()`, `data_agent()`
+- **优化 Builder 模式**:
+  - 保持现有 AgentBuilder 功能
+  - 通过专业化函数提供预配置的 Builder 实例
+- **创建统一 API 演示**:
+  - 创建 `unified_api_demo.rs` 示例展示新的统一 API
+  - 修复 Message API 使用问题（使用 `user_message()` 而非 `Message::user()`）
+  - 示例成功编译和运行，展示了所有新的 API 功能
+- **测试结果**: 所有示例编译通过，功能正常运行
 
 ##### 🧪 **示例扩展**
 - [x] **RAG 基础功能演示** ✅ **已完成**
-- [ ] 创建更多实用示例
+- [x] **创建更多实用示例** ✅ **已完成 (2025-01-16)**
+
+**完成记录** (2025-01-16):
+- **创建的示例**:
+  - `multi_agent_collaboration.rs` - 多 Agent 协作示例，展示研究员、分析师、写作者、审核者协作完成复杂任务
+  - `workflow_automation.rs` - 工作流自动化示例，展示智能任务调度、执行和质量控制
+  - `realtime_data_processing.rs` - 实时数据处理示例，展示数据流处理、异常检测和智能报警
+  - `intelligent_customer_service.rs` - 智能客服系统示例，展示意图分类、情感分析和个性化回复
+- **示例特性**:
+  - 展示实际应用场景和完整的业务流程
+  - 完整的中文文档和注释
+  - 结构化的代码组织和错误处理
+  - 详细的输出统计和性能监控
+  - 使用新的统一 API (`quick_agent`, `data_agent` 等)
+- **测试结果**: 所有示例编译通过，功能正常运行
+- **API 验证**: 验证了新的 prelude 模块和简化 API 的实用性
 
 #### **阶段 3：开发者体验（2-3 周）**
 - 改进文档和示例

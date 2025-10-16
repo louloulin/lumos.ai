@@ -5,19 +5,19 @@
 
 use super::AgentBuilder;
 
-/// Simplified Agent struct for plan4.md API
+/// 统一的 Agent API - 简化的 Agent 创建接口
 ///
-/// This provides the clean API interface as specified in the plan:
+/// 提供清晰直观的 Agent 创建方式，遵循"简洁优于复杂"的设计原则：
 /// ```rust
-/// let agent = Agent::quick("assistant", "你是一个AI助手")
-///     .model(deepseek("deepseek-chat"))
-///     .tools([web_search(), calculator()])
+/// let agent = Agent::new("assistant", "你是一个AI助手")
+///     .model(openai("gpt-4")?)
+///     .tools(vec![web_search(), calculator()])
 ///     .build()?;
 /// ```
 pub struct Agent;
 
 impl Agent {
-    /// Create a quick agent with minimal configuration (plan4.md API)
+    /// 创建 Agent（推荐使用的主要方法）
     ///
     /// # Example
     ///
@@ -28,19 +28,19 @@ impl Agent {
     ///
     /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
     ///
-    /// let agent = Agent::quick("assistant", "You are a helpful assistant")
+    /// let agent = Agent::new("assistant", "你是一个AI助手")
     ///     .model(llm)
     ///     .build()
     ///     .expect("Failed to create agent");
     /// ```
-    pub fn quick(name: &str, instructions: &str) -> AgentBuilder {
+    pub fn new(name: &str, instructions: &str) -> AgentBuilder {
         AgentBuilder::new()
             .name(name)
             .instructions(instructions)
             .enable_smart_defaults()
     }
 
-    /// Create an agent with the full builder pattern (plan4.md API)
+    /// 使用完整的构建器模式（高级用法）
     ///
     /// # Example
     ///
@@ -61,6 +61,11 @@ impl Agent {
     /// ```
     pub fn builder() -> AgentBuilder {
         AgentBuilder::new()
+    }
+
+    /// 快速创建（向后兼容）
+    pub fn quick(name: &str, instructions: &str) -> AgentBuilder {
+        Self::new(name, instructions)
     }
 }
 

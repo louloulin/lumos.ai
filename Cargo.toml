@@ -9,7 +9,8 @@ members = [
     "lumosai_network",
     "lumos_macro",
     "lumosai_mcp",
-    # "lumosai_derive",
+    "lumosai_derive",
+    # "lumosai_enterprise",  # 暂时移除企业级功能
     # "lumosai_bindings",
     # "lumosai_ui",
     # "lumosai_ui/web-server",
@@ -20,12 +21,10 @@ members = [
 exclude = [
     "lumosai_vector/postgres",
     "lumosai_marketplace",
-    "lumosai_enterprise",
     # 暂时排除 UI 相关包（有 LabelRole 错误）
     "lumosai_ui",
     "lumosai_ui/web-server",
     # 暂时排除其他复杂包
-    "lumosai_derive",
     "lumosai_bindings"
 ]
 resolver = "2"

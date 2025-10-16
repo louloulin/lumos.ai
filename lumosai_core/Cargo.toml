@@ -28,9 +28,9 @@ demos = []
 qdrant = ["lumosai_vector/qdrant"]
 postgres = ["lumosai_vector"]
 weaviate = ["lumosai_vector/weaviate"]
-# SQLite features
-sqlite = ["rusqlite"]
-vector_sqlite = ["rusqlite"]
+# SQLite features (temporarily disabled)
+# sqlite = ["rusqlite"]
+# vector_sqlite = ["rusqlite"]
 
 [dependencies]
 tokio = { workspace = true }
@@ -46,7 +46,7 @@ tracing = { workspace = true }
 reqwest = { workspace = true }
 uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-rusqlite = { version = "0.37", optional = true }
+# rusqlite = { version = "0.37", optional = true }
 float-cmp = "0.9"
 sys-info = "0.9"
 regex = "1.10.2"

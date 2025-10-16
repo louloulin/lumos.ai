@@ -14,8 +14,8 @@ lumosai_network = { path = "../lumosai_network" }
 lumosai_mcp = { path = "../lumosai_mcp" }
 lumos_macro = { path = "../lumos_macro" }
 lumosai_evals = { path = "../lumosai_evals" }
+lumosai_derive = { path = "../lumosai_derive" }
 # 暂时移除其他依赖
-# lumosai_derive = { path = "../lumosai_derive" }
 # lumosai_rag = { path = "../lumosai_rag", optional = true }
 # lumosai_evals = { path = "../lumosai_evals", optional = true }
 # lumosai_mcp = { path = "../lumosai_mcp" }

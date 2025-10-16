@@ -1,6 +1,6 @@
 [package]
 name = "lumosai_enterprise"
-version = "0.1.4"
+version = "0.2.0"
 edition = "2021"
 description = "Lumos.ai企业级功能扩展模块 - 监控、安全、合规、多租户"
 license = "MIT"
@@ -18,11 +18,11 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 
 # Database and storage
-sqlx = { workspace = true, features = ["sqlite", "postgres", "chrono", "uuid"] }
+sqlx = { workspace = true, default-features = false, features = ["postgres", "chrono", "uuid", "runtime-tokio-rustls"] }
 redis = { workspace = true }
 
 # Web framework
-axum = { version = "0.7", features = ["macros", "multipart"] }
+axum = { workspace = true, features = ["macros", "multipart"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
@@ -58,7 +58,7 @@ anyhow = "1.0"
 futures = "0.3"
 
 # HTTP client
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { workspace = true, features = ["json"] }
 
 # Compression and serialization
 flate2 = "1.0"
@@ -80,8 +80,7 @@ mockall = "0.12"
 wiremock = "0.5"
 
 [features]
-default = ["sqlite", "prometheus", "jaeger"]
-sqlite = ["sqlx/sqlite"]
+default = ["postgres", "prometheus", "jaeger"]
 postgres = ["sqlx/postgres"]
 mysql = ["sqlx/mysql"]
 prometheus = ["opentelemetry-prometheus", "dep:prometheus"]

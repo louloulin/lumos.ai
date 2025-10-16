@@ -1,19 +1,19 @@
 #!/usr/bin/env cargo
 //! # 工作流自动化示例
-//! 
+//!
 //! 本示例展示如何使用 LumosAI 创建智能工作流，
 //! 自动化处理复杂的业务流程。
-//! 
+//!
 //! ## 功能特性
 //! - 智能任务调度和执行
 //! - 条件分支和决策逻辑
 //! - 错误处理和重试机制
 //! - 实时状态监控和报告
 
-use lumosai_core::prelude::*;
-use lumosai_core::llm::types::user_message;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::BasicAgent;
+use lumosai_core::llm::types::user_message;
+use lumosai_core::prelude::*;
 use serde_json::json;
 use std::time::{Duration, Instant};
 
@@ -73,8 +73,9 @@ impl IntelligentWorkflow {
             1. 分析任务依赖关系和执行顺序
             2. 做出智能调度决策
             3. 处理异常情况和错误恢复
-            4. 优化工作流执行效率"
-        ).build()?;
+            4. 优化工作流执行效率",
+        )
+        .build()?;
 
         // 创建处理器 Agent
         let processor = data_agent(
@@ -83,8 +84,9 @@ impl IntelligentWorkflow {
             1. 执行各种数据处理任务
             2. 转换和清洗数据
             3. 生成处理报告
-            4. 确保数据质量和一致性"
-        ).build()?;
+            4. 确保数据质量和一致性",
+        )
+        .build()?;
 
         // 创建验证器 Agent
         let validator = quick_agent(
@@ -93,8 +95,9 @@ impl IntelligentWorkflow {
             1. 验证任务执行结果
             2. 检查数据质量和完整性
             3. 识别潜在问题和风险
-            4. 提供改进建议"
-        ).build()?;
+            4. 提供改进建议",
+        )
+        .build()?;
 
         println!("✅ 工作流引擎初始化完成！");
         println!("   🎯 协调器 - 智能调度和决策");
@@ -130,20 +133,28 @@ impl IntelligentWorkflow {
     async fn execute_workflow(&mut self, workflow_id: &str) -> Result<WorkflowResult> {
         println!("\n🚀 开始执行工作流: {}", workflow_id);
         let start_time = Instant::now();
-        
+
         // 阶段 1: 智能调度规划
         self.plan_execution().await?;
-        
+
         // 阶段 2: 执行任务
         self.execute_tasks().await?;
-        
+
         // 阶段 3: 验证结果
         self.validate_results().await?;
-        
+
         // 计算执行统计
         let total_duration = start_time.elapsed();
-        let completed_tasks = self.tasks.iter().filter(|t| t.status == TaskStatus::Completed).count();
-        let failed_tasks = self.tasks.iter().filter(|t| t.status == TaskStatus::Failed).count();
+        let completed_tasks = self
+            .tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::Completed)
+            .count();
+        let failed_tasks = self
+            .tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::Failed)
+            .count();
         let success_rate = completed_tasks as f32 / self.tasks.len() as f32;
 
         let result = WorkflowResult {
@@ -168,7 +179,7 @@ impl IntelligentWorkflow {
     /// 阶段 1: 智能调度规划
     async fn plan_execution(&mut self) -> Result<()> {
         println!("\n📋 阶段 1: 智能调度规划...");
-        
+
         let planning_prompt = format!(
             "请分析以下工作流任务并制定执行计划：
 
@@ -182,7 +193,8 @@ impl IntelligentWorkflow {
             4. 风险评估和预防措施
 
             请提供详细的执行计划。",
-            self.tasks.iter()
+            self.tasks
+                .iter()
                 .map(|t| format!("- {}: {}", t.id, t.description))
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -192,22 +204,26 @@ impl IntelligentWorkflow {
         let options = AgentGenerateOptions::default();
         let response = self.coordinator.generate(&messages, &options).await?;
 
-        self.execution_log.push(format!("📋 执行计划: {}", response.response));
+        self.execution_log
+            .push(format!("📋 执行计划: {}", response.response));
         println!("✅ 调度规划完成！");
-        
+
         Ok(())
     }
 
     /// 阶段 2: 执行任务
     async fn execute_tasks(&mut self) -> Result<()> {
         println!("\n⚙️  阶段 2: 执行工作流任务...");
-        
+
         for i in 0..self.tasks.len() {
             let task_start = Instant::now();
             self.tasks[i].status = TaskStatus::Running;
-            
-            println!("   🔄 执行任务: {} - {}", self.tasks[i].id, self.tasks[i].name);
-            
+
+            println!(
+                "   🔄 执行任务: {} - {}",
+                self.tasks[i].id, self.tasks[i].name
+            );
+
             // 模拟任务执行
             match self.execute_single_task(i).await {
                 Ok(output) => {
@@ -221,13 +237,13 @@ impl IntelligentWorkflow {
                     self.tasks[i].error = Some(e.to_string());
                     self.tasks[i].duration = Some(task_start.elapsed());
                     println!("   ❌ 任务失败: {} - {}", self.tasks[i].id, e);
-                    
+
                     // 智能错误处理
                     self.handle_task_failure(i).await?;
                 }
             }
         }
-        
+
         println!("✅ 所有任务执行完成！");
         Ok(())
     }
@@ -235,7 +251,7 @@ impl IntelligentWorkflow {
     /// 执行单个任务
     async fn execute_single_task(&self, task_index: usize) -> Result<serde_json::Value> {
         let task = &self.tasks[task_index];
-        
+
         let execution_prompt = format!(
             "请执行以下数据处理任务：
 
@@ -245,10 +261,7 @@ impl IntelligentWorkflow {
             输入数据: {}
 
             请处理数据并返回结果。确保输出格式正确且数据完整。",
-            task.id,
-            task.name,
-            task.description,
-            task.input
+            task.id, task.name, task.description, task.input
         );
 
         let messages = vec![user_message(&execution_prompt)];
@@ -290,7 +303,7 @@ impl IntelligentWorkflow {
                 "status": "completed",
                 "message": format!("任务 {} 执行成功", task.id),
                 "timestamp": chrono::Utc::now().to_rfc3339()
-            })
+            }),
         };
 
         Ok(output)
@@ -299,7 +312,7 @@ impl IntelligentWorkflow {
     /// 处理任务失败
     async fn handle_task_failure(&mut self, task_index: usize) -> Result<()> {
         let task = &self.tasks[task_index];
-        
+
         let error_prompt = format!(
             "任务执行失败，请分析原因并提供解决方案：
 
@@ -322,22 +335,27 @@ impl IntelligentWorkflow {
         let options = AgentGenerateOptions::default();
         let response = self.coordinator.generate(&messages, &options).await?;
 
-        self.execution_log.push(format!("❌ 错误处理: 任务 {} - {}", task.id, response.response));
-        
+        self.execution_log.push(format!(
+            "❌ 错误处理: 任务 {} - {}",
+            task.id, response.response
+        ));
+
         // 简单的重试逻辑（在实际应用中可以更复杂）
         if task.id.contains("critical") {
             println!("   🔄 关键任务失败，尝试恢复...");
             // 这里可以实现重试逻辑
         }
-        
+
         Ok(())
     }
 
     /// 阶段 3: 验证结果
     async fn validate_results(&mut self) -> Result<()> {
         println!("\n🔍 阶段 3: 验证执行结果...");
-        
-        let completed_tasks: Vec<_> = self.tasks.iter()
+
+        let completed_tasks: Vec<_> = self
+            .tasks
+            .iter()
             .filter(|t| t.status == TaskStatus::Completed)
             .collect();
 
@@ -357,7 +375,8 @@ impl IntelligentWorkflow {
             4. 潜在问题和改进建议",
             completed_tasks.len(),
             self.tasks.len(),
-            completed_tasks.iter()
+            completed_tasks
+                .iter()
                 .map(|t| format!("- {}: {:?}", t.id, t.output))
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -367,9 +386,10 @@ impl IntelligentWorkflow {
         let options = AgentGenerateOptions::default();
         let response = self.validator.generate(&messages, &options).await?;
 
-        self.execution_log.push(format!("🔍 质量验证: {}", response.response));
+        self.execution_log
+            .push(format!("🔍 质量验证: {}", response.response));
         println!("✅ 结果验证完成！");
-        
+
         Ok(())
     }
 
@@ -380,9 +400,12 @@ impl IntelligentWorkflow {
         println!("   📝 总任务数: {}", result.total_tasks);
         println!("   ✅ 完成任务: {}", result.completed_tasks);
         println!("   ❌ 失败任务: {}", result.failed_tasks);
-        println!("   ⏱️  执行时间: {:.2} 秒", result.total_duration.as_secs_f32());
+        println!(
+            "   ⏱️  执行时间: {:.2} 秒",
+            result.total_duration.as_secs_f32()
+        );
         println!("   📈 成功率: {:.1}%", result.success_rate * 100.0);
-        
+
         println!("\n📋 任务详情:");
         for task in &self.tasks {
             let status_icon = match task.status {
@@ -392,10 +415,14 @@ impl IntelligentWorkflow {
                 TaskStatus::Pending => "⏳",
                 TaskStatus::Skipped => "⏭️",
             };
-            let duration = task.duration
+            let duration = task
+                .duration
                 .map(|d| format!("{:.2}s", d.as_secs_f32()))
                 .unwrap_or_else(|| "N/A".to_string());
-            println!("   {} {} - {} ({})", status_icon, task.id, task.name, duration);
+            println!(
+                "   {} {} - {} ({})",
+                status_icon, task.id, task.name, duration
+            );
         }
     }
 }
@@ -404,52 +431,54 @@ impl IntelligentWorkflow {
 async fn main() -> Result<()> {
     println!("🤖 LumosAI 工作流自动化示例");
     println!("================================");
-    
+
     // 创建工作流引擎
     let mut workflow = IntelligentWorkflow::new().await?;
-    
+
     // 添加示例任务
     workflow.add_task(
         "data_collection",
         "数据收集",
         "从多个数据源收集原始数据",
-        json!({"sources": ["database", "api", "files"], "filters": {"date_range": "2024-01"}})
+        json!({"sources": ["database", "api", "files"], "filters": {"date_range": "2024-01"}}),
     );
-    
+
     workflow.add_task(
         "data_cleaning",
         "数据清洗",
         "清洗和预处理收集的数据",
-        json!({"operations": ["remove_duplicates", "fix_formats", "validate_fields"]})
+        json!({"operations": ["remove_duplicates", "fix_formats", "validate_fields"]}),
     );
-    
+
     workflow.add_task(
         "data_analysis",
         "数据分析",
         "对清洗后的数据进行统计分析",
-        json!({"analysis_type": "descriptive", "metrics": ["mean", "median", "std_dev"]})
+        json!({"analysis_type": "descriptive", "metrics": ["mean", "median", "std_dev"]}),
     );
-    
+
     workflow.add_task(
         "report_generation",
         "报告生成",
         "基于分析结果生成执行报告",
-        json!({"format": "pdf", "sections": ["summary", "details", "recommendations"]})
+        json!({"format": "pdf", "sections": ["summary", "details", "recommendations"]}),
     );
-    
+
     // 执行工作流
-    let result = workflow.execute_workflow("data_processing_workflow_001").await?;
-    
+    let result = workflow
+        .execute_workflow("data_processing_workflow_001")
+        .await?;
+
     // 显示执行统计
     workflow.show_execution_stats(&result);
-    
+
     // 显示最终输出
     println!("\n📄 最终输出:");
     println!("{}", serde_json::to_string_pretty(&result.final_output)?);
-    
+
     println!("\n🎉 工作流自动化示例运行完成！");
     println!("💡 这个示例展示了如何使用 LumosAI 创建智能工作流引擎，");
     println!("   实现任务的自动调度、执行、监控和质量控制。");
-    
+
     Ok(())
 }

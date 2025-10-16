@@ -110,7 +110,9 @@ async fn main() -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔌 MCP DSL Example (Temporarily Disabled)");
-    println!("This example depends on lumosai_mcp which is excluded from the simplified workspace.");
+    println!(
+        "This example depends on lumosai_mcp which is excluded from the simplified workspace."
+    );
     println!("It will be re-enabled in a future version.");
     Ok(())
 }

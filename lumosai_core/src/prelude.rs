@@ -66,27 +66,27 @@ pub use crate::agent::{Agent, AgentBuilder};
 pub use crate::tool::builtin::{
     // 数学和计算工具
     create_calculator_tool,
-    create_statistics_tool,
-
-    // 文件和数据处理工具
-    create_file_reader_tool,
-    create_file_writer_tool,
     create_csv_parser_tool,
-    create_json_parser_tool,
     create_data_transformer_tool,
-
-    // 网络和 Web 工具
-    create_http_request_tool,
-    create_web_scraper_tool,
-    create_json_api_tool,
-    create_url_validator_tool,
 
     // 系统工具
     create_datetime_tool,
     create_directory_lister_tool,
     create_file_info_tool,
+    // 文件和数据处理工具
+    create_file_reader_tool,
+    create_file_writer_tool,
     create_hash_generator_tool,
+    // 网络和 Web 工具
+    create_http_request_tool,
+    create_json_api_tool,
+    create_json_parser_tool,
+    create_statistics_tool,
+
+    create_url_validator_tool,
+
     create_uuid_generator_tool,
+    create_web_scraper_tool,
 };
 
 // ============================================================================
@@ -148,8 +148,7 @@ pub fn uuid_generator() -> Box<dyn crate::tool::Tool> {
 
 /// LLM 提供商便利函数
 pub use crate::agent::convenience::{
-    anthropic, deepseek, openai, qwen,
-    LlmProviderExt, ModelBuilder,
+    anthropic, deepseek, openai, qwen, LlmProviderExt, ModelBuilder,
 };
 
 // ============================================================================
@@ -161,13 +160,12 @@ pub use crate::memory::{WorkingMemory, WorkingMemoryContent};
 
 /// 向量存储
 pub use crate::vector::{
-    create_vector_storage, VectorStorage, VectorStorageConfig,
-    QueryResult, SimilarityMetric,
+    create_vector_storage, QueryResult, SimilarityMetric, VectorStorage, VectorStorageConfig,
 };
 
+pub use crate::agent::{AgentGenerateResult, AgentStep};
 /// 消息和配置类型
 pub use crate::llm::{Message, Role};
-pub use crate::agent::{AgentGenerateResult, AgentStep};
 
 // ============================================================================
 // Agent 便利创建函数 - 统一的 Agent 创建接口
@@ -215,7 +213,12 @@ pub fn data_agent(name: &str, instructions: &str) -> AgentBuilder {
     AgentBuilder::new()
         .name(name)
         .instructions(instructions)
-        .tools(vec![json_parser(), csv_parser(), calculator(), statistics()])
+        .tools(vec![
+            json_parser(),
+            csv_parser(),
+            calculator(),
+            statistics(),
+        ])
         .enable_smart_defaults()
 }
 

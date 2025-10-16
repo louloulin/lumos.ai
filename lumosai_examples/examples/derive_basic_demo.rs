@@ -2,7 +2,7 @@ use lumosai_derive::FunctionSchema;
 use serde_json::Value;
 
 /// 演示 lumosai_derive 宏的基本功能
-/// 
+///
 /// 这个示例展示了如何使用 #[derive(FunctionSchema)] 宏
 /// 自动为函数生成 JSON Schema
 
@@ -17,12 +17,12 @@ impl Calculator {
     }
 
     /// 执行数学计算
-    /// 
+    ///
     /// # 参数
     /// - operation: 要执行的数学运算（add, subtract, multiply, divide）
     /// - a: 第一个数字
     /// - b: 第二个数字
-    /// 
+    ///
     /// # 返回值
     /// 计算结果
     fn calculate(&self, operation: String, a: f64, b: f64) -> Result<f64, String> {
@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 演示基本计算功能
     println!("\n📊 基础计算演示:");
-    
+
     let operations = vec![
         ("add", 10.0, 5.0),
         ("subtract", 10.0, 3.0),
@@ -87,7 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔧 Derive 宏功能演示:");
     println!("  Calculator 结构体已成功使用 #[derive(FunctionSchema)] 宏");
     println!("  宏会自动生成 JSON Schema 相关的代码");
-    
+
     // 显示结构体信息
     println!("  - 精度设置: {} 位小数", calculator.precision);
     println!("  - 支持的运算: add, subtract, multiply, divide");

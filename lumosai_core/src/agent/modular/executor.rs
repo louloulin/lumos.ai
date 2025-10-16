@@ -9,7 +9,7 @@ use crate::agent::{AgentConfig, LlmOptions, Message, ToolCallResult};
 use crate::error::Result;
 use crate::llm::{LlmProvider, LlmResponse, StreamingResponse};
 use crate::memory::MemoryManager;
-use crate::telemetry::TelemetryCollector;
+// use crate::compat::TelemetryCollector;
 use crate::tools::{ToolContext, ToolRegistry};
 use futures::StreamExt;
 use std::sync::Arc;

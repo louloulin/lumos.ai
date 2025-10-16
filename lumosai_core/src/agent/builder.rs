@@ -35,23 +35,23 @@ impl Base for ToolWrapper {
         self.0.name()
     }
 
-    fn component(&self) -> crate::logger::Component {
+    fn component(&self) -> crate::compat::Component {
         self.0.component()
     }
 
-    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+    fn logger(&self) -> std::sync::Arc<dyn crate::compat::Logger> {
         self.0.logger()
     }
 
-    fn set_logger(&mut self, _logger: std::sync::Arc<dyn crate::logger::Logger>) {
+    fn set_logger(&mut self, _logger: std::sync::Arc<dyn crate::compat::Logger>) {
         // Cannot modify Arc content, so we ignore this
     }
 
-    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::compat::TelemetrySink>> {
         self.0.telemetry()
     }
 
-    fn set_telemetry(&mut self, _telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+    fn set_telemetry(&mut self, _telemetry: std::sync::Arc<dyn crate::compat::TelemetrySink>) {
         // Cannot modify Arc content, so we ignore this
     }
 }

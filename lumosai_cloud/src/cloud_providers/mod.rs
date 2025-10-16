@@ -2,8 +2,8 @@
 //!
 //! 支持AWS、Azure、GCP等主流云平台
 
-use async_trait::async_trait;
 use crate::{DeploymentConfig, DeploymentResult, Result};
+use async_trait::async_trait;
 
 /// 云提供商接口
 #[async_trait]

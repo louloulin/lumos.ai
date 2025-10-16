@@ -4,14 +4,15 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
+use crate::compat::{LogLevel, Logger, TelemetrySink, Storage, Component, create_logger, create_noop_logger};
 
 use crate::agent::trait_def::Agent;
 use crate::base::Base;
 use crate::error::{Error, Result};
-use crate::logger::{create_logger, create_noop_logger, Component, LogLevel, Logger};
+// use crate::compat::{create_logger, create_noop_logger, Component, LogLevel, Logger};
 use crate::memory::Memory;
-use crate::storage::Storage;
-use crate::telemetry::TelemetrySink;
+// use crate::compat::Storage;
+// use crate::compat::TelemetrySink;
 use crate::vector::VectorStorage;
 use crate::workflow::basic::Workflow;
 

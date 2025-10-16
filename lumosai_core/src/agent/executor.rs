@@ -26,15 +26,13 @@ use crate::llm::function_calling_utils;
 use crate::llm::{
     FunctionDefinition, LlmOptions, LlmProvider, Message, Role, ToolChoice as LlmToolChoice,
 };
-use crate::logger::{Component, Logger};
+use crate::compat::{
+    Component, Logger, TelemetrySink, MetricsCollector, TraceCollector, VoiceProvider,
+    AgentMetrics, ExecutionContext, MetricValue, TraceStep, TraceStepType, TelemetryTokenUsage
+};
 use crate::memory::Memory;
 use crate::memory::{create_working_memory, WorkingMemory};
-use crate::telemetry::{
-    AgentMetrics, ExecutionContext, MetricsCollector, StepType as TraceStepType, TelemetrySink,
-    TokenUsage as TelemetryTokenUsage, TraceCollector, TraceStep,
-};
 use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
-use crate::voice::VoiceProvider;
 
 /// Basic agent implementation
 #[allow(dead_code, clippy::borrowed_box)]
@@ -784,7 +782,7 @@ impl Agent for BasicAgent {
                 Err(e) => (0, false, Some(e.to_string())),
             };
 
-            let tool_metrics = crate::telemetry::ToolMetrics {
+            let tool_metrics = crate::compat::ToolMetrics {
                 tool_name: tool_call.name.clone(),
                 execution_time_ms: execution_time.as_millis() as u64,
                 success,
@@ -1162,7 +1160,7 @@ impl Agent for BasicAgent {
 
                                     // Record successful tool metrics
                                     if let Some(metrics_collector) = &self.metrics_collector {
-                                        let tool_metrics = crate::telemetry::ToolMetrics {
+                                        let tool_metrics = crate::compat::ToolMetrics {
                                             tool_name: call.name.clone(),
                                             execution_time_ms: execution_time.as_millis() as u64,
                                             success: true,
@@ -1258,7 +1256,7 @@ impl Agent for BasicAgent {
 
                                     // Record failed tool metrics
                                     if let Some(metrics_collector) = &self.metrics_collector {
-                                        let tool_metrics = crate::telemetry::ToolMetrics {
+                                        let tool_metrics = crate::compat::ToolMetrics {
                                             tool_name: call.name.clone(),
                                             execution_time_ms: execution_time.as_millis() as u64,
                                             success: false,
@@ -1468,7 +1466,7 @@ impl Agent for BasicAgent {
 
                                 // Record successful legacy tool metrics
                                 if let Some(metrics_collector) = &self.metrics_collector {
-                                    let tool_metrics = crate::telemetry::ToolMetrics {
+                                    let tool_metrics = crate::compat::ToolMetrics {
                                         tool_name: call.name.clone(),
                                         execution_time_ms: execution_time.as_millis() as u64,
                                         success: true,
@@ -1545,7 +1543,7 @@ impl Agent for BasicAgent {
 
                                 // Record failed legacy tool metrics
                                 if let Some(metrics_collector) = &self.metrics_collector {
-                                    let tool_metrics = crate::telemetry::ToolMetrics {
+                                    let tool_metrics = crate::compat::ToolMetrics {
                                         tool_name: call.name.clone(),
                                         execution_time_ms: execution_time.as_millis() as u64,
                                         success: false,
@@ -1686,15 +1684,15 @@ impl Agent for BasicAgent {
             // Add custom metrics
             metrics.add_custom_metric(
                 "total_steps".to_string(),
-                crate::telemetry::MetricValue::Integer(current_step as i64),
+                crate::compat::MetricValue::Integer(current_step as i64),
             );
             metrics.add_custom_metric(
                 "function_calling_mode".to_string(),
-                crate::telemetry::MetricValue::Boolean(use_function_calling),
+                crate::compat::MetricValue::Boolean(use_function_calling),
             );
             metrics.add_custom_metric(
                 "response_length".to_string(),
-                crate::telemetry::MetricValue::Integer(final_response.len() as i64),
+                crate::compat::MetricValue::Integer(final_response.len() as i64),
             );
 
             // Record the agent execution metrics

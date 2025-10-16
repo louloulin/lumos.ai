@@ -3,27 +3,27 @@
 //! 提供完整的云原生部署解决方案，包括Kubernetes集成、Docker容器化、
 //! 云平台部署和边缘计算支持
 
-pub mod kubernetes;
-pub mod docker;
-pub mod cloud_providers;
-pub mod monitoring;
 pub mod autoscaling;
+pub mod cloud_providers;
+pub mod docker;
+pub mod error;
+pub mod kubernetes;
+pub mod monitoring;
 pub mod networking;
 pub mod security;
 pub mod storage;
-pub mod error;
 
 // 重新导出核心类型
+pub use crate::autoscaling::*;
+pub use crate::cloud_providers::*;
+pub use crate::docker::*;
 pub use crate::error::*;
 pub use crate::kubernetes::*;
-pub use crate::docker::*;
-pub use crate::cloud_providers::*;
 pub use crate::monitoring::*;
-pub use crate::autoscaling::*;
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// 云原生部署管理器
 pub struct CloudNativeManager {
@@ -109,25 +109,16 @@ pub enum TargetEnvironment {
         namespace: String,
     },
     /// Docker容器
-    Docker {
-        registry: String,
-        tag: String,
-    },
+    Docker { registry: String, tag: String },
     /// AWS云平台
-    AWS {
-        region: String,
-        account_id: String,
-    },
+    AWS { region: String, account_id: String },
     /// Azure云平台
     Azure {
         subscription_id: String,
         resource_group: String,
     },
     /// GCP云平台
-    GCP {
-        project_id: String,
-        zone: String,
-    },
+    GCP { project_id: String, zone: String },
     /// 边缘设备
     Edge {
         device_type: String,
@@ -635,27 +626,13 @@ impl CloudNativeManager {
     /// 部署Agent到云环境
     pub async fn deploy(&mut self, config: DeploymentConfig) -> Result<DeploymentResult> {
         match &config.target_environment {
-            TargetEnvironment::Kubernetes { .. } => {
-                self.deploy_to_kubernetes(config).await
-            }
-            TargetEnvironment::Docker { .. } => {
-                self.deploy_to_docker(config).await
-            }
-            TargetEnvironment::AWS { .. } => {
-                self.deploy_to_aws(config).await
-            }
-            TargetEnvironment::Azure { .. } => {
-                self.deploy_to_azure(config).await
-            }
-            TargetEnvironment::GCP { .. } => {
-                self.deploy_to_gcp(config).await
-            }
-            TargetEnvironment::Edge { .. } => {
-                self.deploy_to_edge(config).await
-            }
-            TargetEnvironment::Local => {
-                self.deploy_locally(config).await
-            }
+            TargetEnvironment::Kubernetes { .. } => self.deploy_to_kubernetes(config).await,
+            TargetEnvironment::Docker { .. } => self.deploy_to_docker(config).await,
+            TargetEnvironment::AWS { .. } => self.deploy_to_aws(config).await,
+            TargetEnvironment::Azure { .. } => self.deploy_to_azure(config).await,
+            TargetEnvironment::GCP { .. } => self.deploy_to_gcp(config).await,
+            TargetEnvironment::Edge { .. } => self.deploy_to_edge(config).await,
+            TargetEnvironment::Local => self.deploy_locally(config).await,
         }
     }
 

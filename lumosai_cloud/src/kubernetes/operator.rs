@@ -1,7 +1,7 @@
 //! Kubernetes Operator实现
 
+use crate::{CloudError, Result};
 use kube::Client;
-use crate::{Result, CloudError};
 
 pub struct LumosOperator {
     client: Client,

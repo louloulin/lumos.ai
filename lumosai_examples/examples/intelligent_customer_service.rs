@@ -1,19 +1,19 @@
 #!/usr/bin/env cargo
 //! # 智能客服系统示例
-//! 
+//!
 //! 本示例展示如何使用 LumosAI 构建智能客服系统，
 //! 提供多轮对话、问题分类、知识库查询等功能。
-//! 
+//!
 //! ## 功能特性
 //! - 智能意图识别和分类
 //! - 多轮对话管理
 //! - 知识库查询和推荐
 //! - 情感分析和个性化响应
 
-use lumosai_core::prelude::*;
-use lumosai_core::llm::types::user_message;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::BasicAgent;
+use lumosai_core::llm::types::user_message;
+use lumosai_core::prelude::*;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -94,8 +94,9 @@ impl IntelligentCustomerService {
             1. 分析客户查询的意图和类型
             2. 识别查询的紧急程度
             3. 分析客户的情感状态
-            4. 提供分类建议和处理优先级"
-        ).build()?;
+            4. 提供分类建议和处理优先级",
+        )
+        .build()?;
 
         // 创建智能回复器 Agent
         let responder = quick_agent(
@@ -104,8 +105,9 @@ impl IntelligentCustomerService {
             1. 提供准确、友好的客户服务
             2. 根据客户情感调整回复风格
             3. 查询知识库提供准确信息
-            4. 引导客户解决问题"
-        ).build()?;
+            4. 引导客户解决问题",
+        )
+        .build()?;
 
         // 创建对话分析器 Agent
         let analyzer = quick_agent(
@@ -114,26 +116,36 @@ impl IntelligentCustomerService {
             1. 分析对话质量和客户满意度
             2. 识别服务改进机会
             3. 评估问题解决效果
-            4. 提供服务优化建议"
-        ).build()?;
+            4. 提供服务优化建议",
+        )
+        .build()?;
 
         // 初始化知识库
         let knowledge_base = Self::initialize_knowledge_base();
 
         // 初始化回复模板
         let mut response_templates = HashMap::new();
-        response_templates.insert(QueryType::ProductInquiry, vec![
-            "感谢您对我们产品的关注！我很乐意为您介绍相关信息。".to_string(),
-            "让我为您查找最新的产品信息...".to_string(),
-        ]);
-        response_templates.insert(QueryType::TechnicalSupport, vec![
-            "我理解您遇到的技术问题，让我来帮助您解决。".to_string(),
-            "请详细描述您遇到的问题，我会为您提供解决方案。".to_string(),
-        ]);
-        response_templates.insert(QueryType::Billing, vec![
-            "关于账单问题，我会仔细为您核查。".to_string(),
-            "让我查看您的账户信息，为您解答账单相关问题。".to_string(),
-        ]);
+        response_templates.insert(
+            QueryType::ProductInquiry,
+            vec![
+                "感谢您对我们产品的关注！我很乐意为您介绍相关信息。".to_string(),
+                "让我为您查找最新的产品信息...".to_string(),
+            ],
+        );
+        response_templates.insert(
+            QueryType::TechnicalSupport,
+            vec![
+                "我理解您遇到的技术问题，让我来帮助您解决。".to_string(),
+                "请详细描述您遇到的问题，我会为您提供解决方案。".to_string(),
+            ],
+        );
+        response_templates.insert(
+            QueryType::Billing,
+            vec![
+                "关于账单问题，我会仔细为您核查。".to_string(),
+                "让我查看您的账户信息，为您解答账单相关问题。".to_string(),
+            ],
+        );
 
         println!("✅ 智能客服系统初始化完成！");
         println!("   🎯 意图分类器 - 智能意图识别");
@@ -157,7 +169,8 @@ impl IntelligentCustomerService {
             KnowledgeItem {
                 id: "kb001".to_string(),
                 title: "产品功能介绍".to_string(),
-                content: "我们的产品提供AI驱动的智能分析功能，支持实时数据处理和自动化工作流。".to_string(),
+                content: "我们的产品提供AI驱动的智能分析功能，支持实时数据处理和自动化工作流。"
+                    .to_string(),
                 category: "产品信息".to_string(),
                 tags: vec!["功能".to_string(), "AI".to_string(), "分析".to_string()],
                 relevance_score: 0.0,
@@ -173,7 +186,9 @@ impl IntelligentCustomerService {
             KnowledgeItem {
                 id: "kb003".to_string(),
                 title: "技术支持流程".to_string(),
-                content: "遇到技术问题时，请先检查网络连接，然后重启应用。如问题持续，请联系技术支持。".to_string(),
+                content:
+                    "遇到技术问题时，请先检查网络连接，然后重启应用。如问题持续，请联系技术支持。"
+                        .to_string(),
                 category: "技术支持".to_string(),
                 tags: vec!["技术".to_string(), "支持".to_string(), "流程".to_string()],
                 relevance_score: 0.0,
@@ -181,7 +196,8 @@ impl IntelligentCustomerService {
             KnowledgeItem {
                 id: "kb004".to_string(),
                 title: "退款政策".to_string(),
-                content: "我们提供30天无理由退款服务。请在购买后30天内联系客服申请退款。".to_string(),
+                content: "我们提供30天无理由退款服务。请在购买后30天内联系客服申请退款。"
+                    .to_string(),
                 category: "售后服务".to_string(),
                 tags: vec!["退款".to_string(), "政策".to_string(), "售后".to_string()],
                 relevance_score: 0.0,
@@ -212,7 +228,10 @@ impl IntelligentCustomerService {
             ],
             preferences: {
                 let mut prefs = HashMap::new();
-                prefs.insert("communication_style".to_string(), "professional".to_string());
+                prefs.insert(
+                    "communication_style".to_string(),
+                    "professional".to_string(),
+                );
                 prefs.insert("preferred_language".to_string(), "chinese".to_string());
                 prefs
             },
@@ -239,25 +258,36 @@ impl IntelligentCustomerService {
     }
 
     /// 处理客户查询
-    async fn handle_customer_query(&mut self, customer: &CustomerProfile, query: &str) -> Result<()> {
+    async fn handle_customer_query(
+        &mut self,
+        customer: &CustomerProfile,
+        query: &str,
+    ) -> Result<()> {
         println!("👤 客户 ({}): {}", customer.name, query);
 
         // 步骤 1: 意图分类和情感分析
         let (query_type, mood) = self.classify_query_and_mood(query).await?;
-        
+
         // 步骤 2: 知识库查询
         let relevant_knowledge = self.search_knowledge_base(query, &query_type).await?;
-        
+
         // 步骤 3: 生成个性化回复
-        let response = self.generate_personalized_response(
-            customer, query, &query_type, &mood, &relevant_knowledge
-        ).await?;
-        
+        let response = self
+            .generate_personalized_response(
+                customer,
+                query,
+                &query_type,
+                &mood,
+                &relevant_knowledge,
+            )
+            .await?;
+
         // 步骤 4: 记录对话
-        self.record_conversation(customer, query, &response, &query_type, &mood).await?;
+        self.record_conversation(customer, query, &response, &query_type, &mood)
+            .await?;
 
         println!("🤖 客服: {}", response);
-        
+
         Ok(())
     }
 
@@ -310,7 +340,11 @@ impl IntelligentCustomerService {
     }
 
     /// 搜索知识库
-    async fn search_knowledge_base(&mut self, query: &str, query_type: &QueryType) -> Result<Vec<KnowledgeItem>> {
+    async fn search_knowledge_base(
+        &mut self,
+        query: &str,
+        query_type: &QueryType,
+    ) -> Result<Vec<KnowledgeItem>> {
         // 简单的关键词匹配（实际应用中会使用向量搜索）
         let mut relevant_items = Vec::new();
 
@@ -349,7 +383,10 @@ impl IntelligentCustomerService {
 
         println!("   📚 找到相关知识: {} 条", relevant_items.len());
         for item in &relevant_items {
-            println!("     - {} (相关性: {:.2})", item.title, item.relevance_score);
+            println!(
+                "     - {} (相关性: {:.2})",
+                item.title, item.relevance_score
+            );
         }
 
         Ok(relevant_items)
@@ -367,7 +404,8 @@ impl IntelligentCustomerService {
         let knowledge_context = if knowledge.is_empty() {
             "暂无相关知识库信息".to_string()
         } else {
-            knowledge.iter()
+            knowledge
+                .iter()
                 .map(|item| format!("- {}: {}", item.title, item.content))
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -429,9 +467,11 @@ impl IntelligentCustomerService {
         mood: &CustomerMood,
     ) -> Result<()> {
         let session_id = format!("session_{}", customer.id);
-        
-        let session = self.active_sessions.entry(session_id.clone()).or_insert_with(|| {
-            ConversationSession {
+
+        let session = self
+            .active_sessions
+            .entry(session_id.clone())
+            .or_insert_with(|| ConversationSession {
                 session_id: session_id.clone(),
                 customer: customer.clone(),
                 messages: Vec::new(),
@@ -439,9 +479,11 @@ impl IntelligentCustomerService {
                 mood: CustomerMood::Neutral,
                 satisfaction_score: None,
                 resolved: false,
-                start_time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
-            }
-        });
+                start_time: SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+            });
 
         session.messages.push(format!("客户: {}", query));
         session.messages.push(format!("客服: {}", response));
@@ -463,9 +505,12 @@ impl IntelligentCustomerService {
 
         let total_sessions = self.active_sessions.len();
         let resolved_sessions = self.active_sessions.values().filter(|s| s.resolved).count();
-        let avg_satisfaction = self.active_sessions.values()
+        let avg_satisfaction = self
+            .active_sessions
+            .values()
             .filter_map(|s| s.satisfaction_score)
-            .sum::<f32>() / self.active_sessions.len() as f32;
+            .sum::<f32>()
+            / self.active_sessions.len() as f32;
 
         let analysis_prompt = format!(
             "请分析以下客服对话数据：
@@ -488,9 +533,12 @@ impl IntelligentCustomerService {
             resolved_sessions,
             (resolved_sessions as f32 / total_sessions as f32) * 100.0,
             avg_satisfaction,
-            self.active_sessions.values()
-                .map(|s| format!("会话{}: {:?} - {:?} - 已解决: {}", 
-                    s.session_id, s.query_type, s.mood, s.resolved))
+            self.active_sessions
+                .values()
+                .map(|s| format!(
+                    "会话{}: {:?} - {:?} - 已解决: {}",
+                    s.session_id, s.query_type, s.mood, s.resolved
+                ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
@@ -508,7 +556,7 @@ impl IntelligentCustomerService {
         println!("\n📊 客服系统统计:");
         println!("   💬 活跃会话: {}", self.active_sessions.len());
         println!("   📚 知识库条目: {}", self.knowledge_base.len());
-        
+
         let resolved_count = self.active_sessions.values().filter(|s| s.resolved).count();
         let resolution_rate = if !self.active_sessions.is_empty() {
             (resolved_count as f32 / self.active_sessions.len() as f32) * 100.0
@@ -518,9 +566,11 @@ impl IntelligentCustomerService {
         println!("   ✅ 问题解决率: {:.1}%", resolution_rate);
 
         let avg_satisfaction = if !self.active_sessions.is_empty() {
-            self.active_sessions.values()
+            self.active_sessions
+                .values()
                 .filter_map(|s| s.satisfaction_score)
-                .sum::<f32>() / self.active_sessions.len() as f32
+                .sum::<f32>()
+                / self.active_sessions.len() as f32
         } else {
             0.0
         };
@@ -547,19 +597,19 @@ impl IntelligentCustomerService {
 async fn main() -> Result<()> {
     println!("🤖 LumosAI 智能客服系统示例");
     println!("================================");
-    
+
     // 创建智能客服系统
     let mut customer_service = IntelligentCustomerService::new().await?;
-    
+
     // 开始客服对话演示
     customer_service.start_customer_service_demo().await?;
-    
+
     // 显示服务统计
     customer_service.show_service_stats();
-    
+
     println!("\n🎉 智能客服系统示例运行完成！");
     println!("💡 这个示例展示了如何使用 LumosAI 构建智能客服系统，");
     println!("   实现意图识别、情感分析、知识库查询和个性化回复。");
-    
+
     Ok(())
 }

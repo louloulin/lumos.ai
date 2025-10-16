@@ -1,7 +1,7 @@
 use lumosai_core::prelude::*;
-use lumosai_core::{LlmProvider, Message, agent::types::AgentGenerateOptions, Role};
-use std::sync::Arc;
+use lumosai_core::{agent::types::AgentGenerateOptions, LlmProvider, Message, Role};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// RAG 基础功能演示
 ///
@@ -30,7 +30,10 @@ async fn main() -> Result<()> {
     let mut all_chunks = Vec::new();
     for (_doc_id, content) in documents.iter().enumerate() {
         // 简单按句号分割
-        let sentences: Vec<&str> = content.split('。').filter(|s| !s.trim().is_empty()).collect();
+        let sentences: Vec<&str> = content
+            .split('。')
+            .filter(|s| !s.trim().is_empty())
+            .collect();
         for (_chunk_id, sentence) in sentences.iter().enumerate() {
             if !sentence.trim().is_empty() {
                 all_chunks.push(format!("{}。", sentence.trim()));
@@ -38,14 +41,16 @@ async fn main() -> Result<()> {
         }
     }
     println!("📝 总共分成 {} 个文档块", all_chunks.len());
-    
+
     // 3. 创建向量存储
     let vector_storage = memory_vector_storage(384, Some(1000))?;
     println!("💾 创建内存向量存储 (维度: 384)");
 
     // 4. 创建索引并存储文档
     println!("🔍 开始创建索引并存储文档...");
-    vector_storage.create_index("rag_documents", 384, None).await?;
+    vector_storage
+        .create_index("rag_documents", 384, None)
+        .await?;
 
     // 为所有文档块生成嵌入
     let mut vectors = Vec::new();
@@ -59,7 +64,10 @@ async fn main() -> Result<()> {
         ids.push(format!("chunk_{}", i));
 
         let mut metadata = HashMap::new();
-        metadata.insert("content".to_string(), serde_json::Value::String(chunk.clone()));
+        metadata.insert(
+            "content".to_string(),
+            serde_json::Value::String(chunk.clone()),
+        );
         metadata_list.push(metadata);
 
         if (i + 1) % 5 == 0 {
@@ -68,12 +76,9 @@ async fn main() -> Result<()> {
     }
 
     // 批量存储到向量数据库
-    let stored_ids = vector_storage.upsert(
-        "rag_documents",
-        vectors,
-        Some(ids),
-        Some(metadata_list)
-    ).await?;
+    let stored_ids = vector_storage
+        .upsert("rag_documents", vectors, Some(ids), Some(metadata_list))
+        .await?;
     println!("✅ 完成存储 {} 个文档块", stored_ids.len());
 
     // 5. 测试检索功能
@@ -91,33 +96,32 @@ async fn main() -> Result<()> {
         let query_embedding = generate_mock_embedding(query, 384);
 
         // 执行向量搜索
-        let search_results = vector_storage.query(
-            "rag_documents",
-            query_embedding,
-            3,
-            None,
-            false
-        ).await?;
+        let search_results = vector_storage
+            .query("rag_documents", query_embedding, 3, None, false)
+            .await?;
 
         for (i, result) in search_results.iter().enumerate() {
             let default_content = "无内容".to_string();
             let chunk_text = all_chunks.get(i).unwrap_or(&default_content);
-            println!("  {}. [相似度: {:.3}] {}",
+            println!(
+                "  {}. [相似度: {:.3}] {}",
                 i + 1,
                 result.score,
                 chunk_text.chars().take(100).collect::<String>() + "..."
             );
         }
     }
-    
+
     // 6. 创建 RAG Agent
     println!("\n🤖 创建 RAG Agent 进行问答:");
     let llm = MockLlmProvider::new("基于提供的文档内容，深度学习是机器学习的一个子集，使用多层神经网络来模拟人脑的工作方式。它在图像识别、语音识别、自然语言处理等领域取得了突破性进展。主要应用领域包括：1. 计算机视觉（图像识别、目标检测）；2. 自然语言处理（机器翻译、文本生成）；3. 语音识别和合成；4. 推荐系统；5. 医疗诊断；6. 自动驾驶等。");
 
-    let rag_agent = quick_agent("rag_assistant",
-        "你是一个专业的AI助手，能够基于提供的文档内容回答问题。")
-        .model(Arc::new(llm))
-        .build()?;
+    let rag_agent = quick_agent(
+        "rag_assistant",
+        "你是一个专业的AI助手，能够基于提供的文档内容回答问题。",
+    )
+    .model(Arc::new(llm))
+    .build()?;
 
     // 7. RAG 问答演示
     let question = "请解释一下什么是深度学习，以及它的主要应用领域？";
@@ -125,17 +129,14 @@ async fn main() -> Result<()> {
 
     // 检索相关文档
     let query_embedding = generate_mock_embedding(question, 384);
-    let search_results = vector_storage.query(
-        "rag_documents",
-        query_embedding,
-        3,
-        None,
-        false
-    ).await?;
+    let search_results = vector_storage
+        .query("rag_documents", query_embedding, 3, None, false)
+        .await?;
 
     // 构建上下文
     let default_content = "无内容".to_string();
-    let context = search_results.iter()
+    let context = search_results
+        .iter()
         .enumerate()
         .map(|(i, result)| {
             if let Some(metadata) = &result.metadata {
@@ -167,7 +168,7 @@ async fn main() -> Result<()> {
     let options = AgentGenerateOptions::default();
     let response = rag_agent.generate(&messages, &options).await?;
     println!("回答: {}", response.response);
-    
+
     println!("\n✨ RAG 基础功能演示完成！");
     Ok(())
 }
@@ -202,8 +203,6 @@ fn generate_mock_embedding(text: &str, dimension: usize) -> Vec<f32> {
     embedding
 }
 
-
-
 /// Mock LLM 提供者
 struct MockLlmProvider {
     response: String,
@@ -223,11 +222,19 @@ impl LlmProvider for MockLlmProvider {
         "MockLLM"
     }
 
-    async fn generate(&self, _prompt: &str, _options: &lumosai_core::llm::LlmOptions) -> lumosai_core::Result<String> {
+    async fn generate(
+        &self,
+        _prompt: &str,
+        _options: &lumosai_core::llm::LlmOptions,
+    ) -> lumosai_core::Result<String> {
         Ok(self.response.clone())
     }
 
-    async fn generate_with_messages(&self, _messages: &[Message], _options: &lumosai_core::llm::LlmOptions) -> lumosai_core::Result<String> {
+    async fn generate_with_messages(
+        &self,
+        _messages: &[Message],
+        _options: &lumosai_core::llm::LlmOptions,
+    ) -> lumosai_core::Result<String> {
         Ok(self.response.clone())
     }
 

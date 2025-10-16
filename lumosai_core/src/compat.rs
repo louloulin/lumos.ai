@@ -1,0 +1,349 @@
+//! 兼容性模块 - 为迁移期间提供临时的类型定义
+//! 这些类型将在 v2.0 重构完成后被移除
+
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::collections::HashMap;
+
+/// 临时的组件类型枚举
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Component {
+    Agent,
+    Tool,
+    Memory,
+    Workflow,
+    Storage,
+    Vector,
+}
+
+/// 临时的日志级别枚举
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LogLevel {
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+/// 临时的日志器 trait
+#[async_trait]
+pub trait Logger: Send + Sync {
+    fn log(&self, level: LogLevel, message: &str);
+    fn debug(&self, message: &str) {
+        self.log(LogLevel::Debug, message);
+    }
+    fn info(&self, message: &str) {
+        self.log(LogLevel::Info, message);
+    }
+    fn warn(&self, message: &str) {
+        self.log(LogLevel::Warn, message);
+    }
+    fn error(&self, message: &str) {
+        self.log(LogLevel::Error, message);
+    }
+}
+
+/// 临时的遥测 trait
+#[async_trait]
+pub trait TelemetrySink: Send + Sync {
+    async fn send_event(&self, event: serde_json::Value);
+}
+
+/// 临时的存储 trait
+#[async_trait]
+pub trait Storage: Send + Sync {
+    async fn get(
+        &self,
+        key: &str,
+    ) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn set(
+        &self,
+        key: &str,
+        value: Vec<u8>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn delete(&self, key: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+}
+
+/// 临时的指标收集器 trait
+#[async_trait]
+pub trait MetricsCollector: Send + Sync {
+    async fn record_metric(&self, name: &str, value: f64);
+}
+
+/// 临时的追踪收集器 trait
+#[async_trait]
+pub trait TraceCollector: Send + Sync {
+    async fn start_trace(&self, name: &str) -> String;
+    async fn end_trace(&self, trace_id: &str);
+}
+
+/// 简单的日志器实现
+pub struct SimpleLogger {
+    name: String,
+}
+
+impl SimpleLogger {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+        }
+    }
+}
+
+#[async_trait]
+impl Logger for SimpleLogger {
+    fn log(&self, level: LogLevel, message: &str) {
+        println!("[{}] {:?}: {}", self.name, level, message);
+    }
+}
+
+/// 创建简单日志器的便捷函数
+pub fn create_logger(name: &str, _component: Component, _level: LogLevel) -> Arc<dyn Logger> {
+    Arc::new(SimpleLogger::new(name))
+}
+
+/// 创建空日志器的便捷函数
+pub fn create_noop_logger() -> Arc<dyn Logger> {
+    Arc::new(SimpleLogger::new("noop"))
+}
+
+/// 语音选项（临时）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoiceOptions {
+    pub voice: String,
+    pub speed: f32,
+    pub pitch: f32,
+}
+
+/// 听取选项（临时）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListenOptions {
+    pub language: String,
+    pub timeout: u64,
+}
+
+/// 语音提供者 trait（临时）
+#[async_trait]
+pub trait VoiceProvider: Send + Sync {
+    async fn speak(
+        &self,
+        text: &str,
+        options: &VoiceOptions,
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn listen(
+        &self,
+        audio: &[u8],
+        options: &ListenOptions,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+/// 工具指标（临时）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolMetrics {
+    pub tool_name: String,
+    pub execution_time_ms: u64,
+    pub success: bool,
+    pub error_message: Option<String>,
+}
+
+/// 内存指标（临时）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryMetrics {
+    pub operation: String,
+    pub execution_time_ms: u64,
+    pub success: bool,
+}
+
+// 新增缺失的类型定义
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MetricValue {
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
+    String(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct TraceStep {
+    pub name: String,
+    pub step_type: TraceStepType,
+    pub start_time: std::time::Instant,
+    pub end_time: Option<std::time::Instant>,
+    pub metadata: std::collections::HashMap<String, String>,
+}
+
+impl TraceStep {
+    pub fn new(name: String, step_type: TraceStepType) -> Self {
+        Self {
+            name,
+            step_type,
+            start_time: std::time::Instant::now(),
+            end_time: None,
+            metadata: std::collections::HashMap::new(),
+        }
+    }
+
+    pub fn finish(&mut self) {
+        self.end_time = Some(std::time::Instant::now());
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum TraceStepType {
+    LlmCall,
+    ToolCall,
+    DataProcessing,
+    MemoryAccess,
+}
+
+#[derive(Debug, Clone)]
+pub struct AgentMetrics {
+    pub total_calls: u64,
+    pub successful_calls: u64,
+    pub failed_calls: u64,
+    pub avg_response_time: f64,
+    pub token_usage: TelemetryTokenUsage,
+}
+
+impl AgentMetrics {
+    pub fn new(
+        total_calls: u64,
+        successful_calls: u64,
+        failed_calls: u64,
+        avg_response_time: f64,
+        token_usage: TelemetryTokenUsage,
+    ) -> Self {
+        Self {
+            total_calls,
+            successful_calls,
+            failed_calls,
+            avg_response_time,
+            token_usage,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TelemetryTokenUsage {
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+    pub total_tokens: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExecutionContext {
+    pub session_id: String,
+    pub user_id: Option<String>,
+    pub metadata: std::collections::HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Event {
+    pub id: String,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub event_type: String,
+    pub data: serde_json::Value,
+}
+
+// 云适配器相关类型（临时）
+#[async_trait]
+pub trait CloudAdapter: Send + Sync {
+    async fn deploy(&self, config: &DeploymentConfig) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    async fn status(&self, deployment_id: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    async fn logs(&self, deployment_id: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeploymentConfig {
+    pub name: String,
+    pub image: String,
+    pub replicas: u32,
+    pub resources: ResourceConfig,
+    pub network: NetworkConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceConfig {
+    pub cpu: String,
+    pub memory: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkConfig {
+    pub ports: Vec<PortMapping>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortMapping {
+    pub container_port: u16,
+    pub host_port: u16,
+}
+
+// 云适配器实现（临时）
+pub struct AwsAdapter;
+pub struct AzureAdapter;
+pub struct GcpAdapter;
+
+impl AwsAdapter {
+    pub fn from_env() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(Self)
+    }
+}
+
+impl AzureAdapter {
+    pub fn from_env() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(Self)
+    }
+}
+
+impl GcpAdapter {
+    pub fn from_env() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(Self)
+    }
+}
+
+#[async_trait]
+impl CloudAdapter for AwsAdapter {
+    async fn deploy(&self, _config: &DeploymentConfig) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        Ok("aws-deployment-id".to_string())
+    }
+
+    async fn status(&self, _deployment_id: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        Ok("running".to_string())
+    }
+
+    async fn logs(&self, _deployment_id: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(vec!["log line 1".to_string()])
+    }
+}
+
+#[async_trait]
+impl CloudAdapter for AzureAdapter {
+    async fn deploy(&self, _config: &DeploymentConfig) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        Ok("azure-deployment-id".to_string())
+    }
+
+    async fn status(&self, _deployment_id: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        Ok("running".to_string())
+    }
+
+    async fn logs(&self, _deployment_id: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(vec!["log line 1".to_string()])
+    }
+}
+
+#[async_trait]
+impl CloudAdapter for GcpAdapter {
+    async fn deploy(&self, _config: &DeploymentConfig) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        Ok("gcp-deployment-id".to_string())
+    }
+
+    async fn status(&self, _deployment_id: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        Ok("running".to_string())
+    }
+
+    async fn logs(&self, _deployment_id: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(vec!["log line 1".to_string()])
+    }
+}

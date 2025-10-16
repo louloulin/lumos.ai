@@ -8,8 +8,8 @@ use std::sync::{Arc, RwLock};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
-use crate::logger::Component;
-use crate::telemetry::metrics::{MemoryMetrics, MetricsCollector};
+// use crate::compat::Component;
+// use crate::compat::metrics::{MemoryMetrics, MetricsCollector};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// 工作内存配置
@@ -404,19 +404,19 @@ impl Base for BasicWorkingMemory {
         self.base.component()
     }
 
-    fn logger(&self) -> Arc<dyn crate::logger::Logger> {
+    fn logger(&self) -> Arc<dyn crate::compat::Logger> {
         self.base.logger()
     }
 
-    fn set_logger(&mut self, logger: Arc<dyn crate::logger::Logger>) {
+    fn set_logger(&mut self, logger: Arc<dyn crate::compat::Logger>) {
         self.base.set_logger(logger);
     }
 
-    fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
+    fn telemetry(&self) -> Option<Arc<dyn crate::compat::TelemetrySink>> {
         self.base.telemetry()
     }
 
-    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
+    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::compat::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
 }

@@ -46,7 +46,9 @@ pub type PostgresStorage = lumosai_vector::postgres::PostgresVectorStorage;
 /// ```
 pub async fn memory() -> Result<VectorStorage> {
     // Temporarily disabled - lumosai_vector package excluded
-    Err(Error::VectorStore("Memory storage temporarily disabled".to_string()))
+    Err(Error::VectorStore(
+        "Memory storage temporarily disabled".to_string(),
+    ))
 }
 
 /// 一行代码创建Qdrant向量存储

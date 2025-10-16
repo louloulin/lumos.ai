@@ -2,18 +2,20 @@
 //!
 //! 提供完整的Kubernetes集成，包括Operator、CRD、Helm Charts等
 
-pub mod operator;
 pub mod crd;
 pub mod helm;
+pub mod operator;
 pub mod resources;
 
-use kube::{Client, Api};
-use k8s_openapi::api::apps::v1::Deployment;
-use k8s_openapi::api::core::v1::{Service, ConfigMap, Secret};
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use crate::{DeploymentConfig, DeploymentResult, DeploymentStatus, ResourceInfo, Result, CloudError};
+use crate::{
+    CloudError, DeploymentConfig, DeploymentResult, DeploymentStatus, ResourceInfo, Result,
+};
 use chrono::Utc;
+use k8s_openapi::api::apps::v1::Deployment;
+use k8s_openapi::api::core::v1::{ConfigMap, Secret, Service};
+use kube::{Api, Client};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Kubernetes管理器
 pub struct KubernetesManager {
@@ -244,7 +246,8 @@ pub struct AgentCondition {
 impl KubernetesManager {
     /// 创建新的Kubernetes管理器
     pub async fn new(namespace: Option<String>) -> Result<Self> {
-        let client = Client::try_default().await
+        let client = Client::try_default()
+            .await
             .map_err(|e| CloudError::KubernetesConnection(e.to_string()))?;
 
         let default_namespace = namespace.unwrap_or_else(|| "default".to_string());
@@ -270,7 +273,9 @@ impl KubernetesManager {
 
     /// 部署Agent
     pub async fn deploy_agent(&self, config: DeploymentConfig) -> Result<DeploymentResult> {
-        let namespace = if let crate::TargetEnvironment::Kubernetes { namespace, .. } = &config.target_environment {
+        let namespace = if let crate::TargetEnvironment::Kubernetes { namespace, .. } =
+            &config.target_environment
+        {
             namespace.clone()
         } else {
             self.default_namespace.clone()
@@ -282,7 +287,9 @@ impl KubernetesManager {
         // 应用CRD到集群
         let agent_api: Api<LumosAgent> = Api::namespaced(self.client.clone(), &namespace);
 
-        let result = agent_api.create(&Default::default(), &agent_crd).await
+        let result = agent_api
+            .create(&Default::default(), &agent_crd)
+            .await
             .map_err(|e| CloudError::KubernetesDeployment(e.to_string()))?;
 
         // 等待部署完成
@@ -296,14 +303,12 @@ impl KubernetesManager {
             status: DeploymentStatus::Succeeded,
             deployed_at: Utc::now(),
             endpoints,
-            resources: vec![
-                ResourceInfo {
-                    resource_type: "LumosAgent".to_string(),
-                    name: config.name.clone(),
-                    status: "Running".to_string(),
-                    created_at: Utc::now(),
-                }
-            ],
+            resources: vec![ResourceInfo {
+                resource_type: "LumosAgent".to_string(),
+                name: config.name.clone(),
+                status: "Running".to_string(),
+                created_at: Utc::now(),
+            }],
             logs: vec!["Agent deployed successfully".to_string()],
         })
     }
@@ -315,7 +320,10 @@ impl KubernetesManager {
         labels.insert("version".to_string(), "v1".to_string());
 
         let mut annotations = HashMap::new();
-        annotations.insert("lumos.ai/managed-by".to_string(), "lumos-operator".to_string());
+        annotations.insert(
+            "lumos.ai/managed-by".to_string(),
+            "lumos-operator".to_string(),
+        );
 
         Ok(LumosAgent {
             api_version: "lumosai.io/v1".to_string(),
@@ -328,10 +336,16 @@ impl KubernetesManager {
             },
             spec: AgentSpec {
                 replicas: config.agent_config.replicas,
-                model: config.agent_config.models.first()
+                model: config
+                    .agent_config
+                    .models
+                    .first()
                     .map(|m| m.name.clone())
                     .unwrap_or_else(|| "default".to_string()),
-                tools: config.agent_config.tools.iter()
+                tools: config
+                    .agent_config
+                    .tools
+                    .iter()
                     .map(|t| t.name.clone())
                     .collect(),
                 resources: KubernetesResources {
@@ -364,12 +378,17 @@ impl KubernetesManager {
                         crate::ServiceType::LoadBalancer => "LoadBalancer".to_string(),
                         crate::ServiceType::ExternalName => "ExternalName".to_string(),
                     },
-                    ports: config.networking.ports.iter().map(|p| ServicePort {
-                        name: p.name.clone(),
-                        port: p.port,
-                        target_port: p.target_port,
-                        protocol: p.protocol.clone(),
-                    }).collect(),
+                    ports: config
+                        .networking
+                        .ports
+                        .iter()
+                        .map(|p| ServicePort {
+                            name: p.name.clone(),
+                            port: p.port,
+                            target_port: p.target_port,
+                            protocol: p.protocol.clone(),
+                        })
+                        .collect(),
                     selector: {
                         let mut selector = HashMap::new();
                         selector.insert("app".to_string(), "lumos-agent".to_string());
@@ -377,22 +396,24 @@ impl KubernetesManager {
                         selector
                     },
                 }),
-                ingress: config.networking.ingress.as_ref().map(|ingress| {
-                    IngressSpec {
+                ingress: config
+                    .networking
+                    .ingress
+                    .as_ref()
+                    .map(|ingress| IngressSpec {
                         host: ingress.host.clone(),
-                        path: ingress.paths.first()
+                        path: ingress
+                            .paths
+                            .first()
                             .map(|p| p.path.clone())
                             .unwrap_or_else(|| "/".to_string()),
                         backend_service: config.name.clone(),
-                        backend_port: ingress.paths.first()
-                            .map(|p| p.backend_port)
-                            .unwrap_or(80),
+                        backend_port: ingress.paths.first().map(|p| p.backend_port).unwrap_or(80),
                         tls: ingress.tls.as_ref().map(|tls| TlsSpec {
                             secret_name: tls.secret_name.clone(),
                             hosts: tls.hosts.clone(),
                         }),
-                    }
-                }),
+                    }),
             },
             status: None,
         })
@@ -439,7 +460,9 @@ impl KubernetesManager {
     pub async fn delete_agent(&self, namespace: &str, name: &str) -> Result<()> {
         let agent_api: Api<LumosAgent> = Api::namespaced(self.client.clone(), namespace);
 
-        agent_api.delete(name, &Default::default()).await
+        agent_api
+            .delete(name, &Default::default())
+            .await
             .map_err(|e| CloudError::KubernetesDeployment(e.to_string()))?;
 
         Ok(())
@@ -450,14 +473,20 @@ impl KubernetesManager {
         let ns = namespace.unwrap_or(&self.default_namespace);
         let agent_api: Api<LumosAgent> = Api::namespaced(self.client.clone(), ns);
 
-        let agents = agent_api.list(&Default::default()).await
+        let agents = agent_api
+            .list(&Default::default())
+            .await
             .map_err(|e| CloudError::KubernetesConnection(e.to_string()))?;
 
         Ok(agents.items)
     }
 
     /// 获取Agent状态
-    pub async fn get_agent_status(&self, namespace: &str, name: &str) -> Result<Option<AgentStatus>> {
+    pub async fn get_agent_status(
+        &self,
+        namespace: &str,
+        name: &str,
+    ) -> Result<Option<AgentStatus>> {
         let agent_api: Api<LumosAgent> = Api::namespaced(self.client.clone(), namespace);
 
         match agent_api.get(name).await {

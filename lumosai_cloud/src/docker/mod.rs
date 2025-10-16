@@ -2,14 +2,16 @@
 //!
 //! 提供Docker容器化和部署功能
 
-use bollard::{Docker, API_DEFAULT_VERSION};
-use bollard::container::{CreateContainerOptions, Config, StartContainerOptions};
+use crate::{
+    CloudError, DeploymentConfig, DeploymentResult, DeploymentStatus, ResourceInfo, Result,
+};
+use bollard::container::{Config, CreateContainerOptions, StartContainerOptions};
 use bollard::image::CreateImageOptions;
 use bollard::models::{ContainerCreateResponse, HostConfig, PortBinding};
-use std::collections::HashMap;
-use futures::stream::StreamExt;
-use crate::{DeploymentConfig, DeploymentResult, DeploymentStatus, ResourceInfo, Result, CloudError};
+use bollard::{Docker, API_DEFAULT_VERSION};
 use chrono::Utc;
+use futures::stream::StreamExt;
+use std::collections::HashMap;
 
 /// Docker管理器
 pub struct DockerManager {
@@ -24,7 +26,9 @@ impl DockerManager {
             .map_err(|e| CloudError::DockerConnection(e.to_string()))?;
 
         // 测试连接
-        client.ping().await
+        client
+            .ping()
+            .await
             .map_err(|e| CloudError::DockerConnection(e.to_string()))?;
 
         Ok(Self { client })
@@ -44,7 +48,10 @@ impl DockerManager {
         self.start_container(&container_id).await?;
 
         // 获取容器信息
-        let container_info = self.client.inspect_container(&container_id, None).await
+        let container_info = self
+            .client
+            .inspect_container(&container_id, None)
+            .await
             .map_err(|e| CloudError::DockerDeployment(e.to_string()))?;
 
         // 构建端点列表
@@ -68,14 +75,12 @@ impl DockerManager {
             status: DeploymentStatus::Running,
             deployed_at: Utc::now(),
             endpoints,
-            resources: vec![
-                ResourceInfo {
-                    resource_type: "Container".to_string(),
-                    name: container_id,
-                    status: "Running".to_string(),
-                    created_at: Utc::now(),
-                }
-            ],
+            resources: vec![ResourceInfo {
+                resource_type: "Container".to_string(),
+                name: container_id,
+                status: "Running".to_string(),
+                created_at: Utc::now(),
+            }],
             logs: vec!["Container deployed successfully".to_string()],
         })
     }
@@ -100,7 +105,11 @@ impl DockerManager {
     }
 
     /// 创建容器
-    async fn create_container(&self, config: &DeploymentConfig, image_name: &str) -> Result<String> {
+    async fn create_container(
+        &self,
+        config: &DeploymentConfig,
+        image_name: &str,
+    ) -> Result<String> {
         let mut env_vars = Vec::new();
         for (key, value) in &config.agent_config.environment {
             env_vars.push(format!("{}={}", key, value));
@@ -142,7 +151,8 @@ impl DockerManager {
             platform: None,
         };
 
-        let response: ContainerCreateResponse = self.client
+        let response: ContainerCreateResponse = self
+            .client
             .create_container(Some(options), container_config)
             .await
             .map_err(|e| CloudError::DockerDeployment(e.to_string()))?;
@@ -165,15 +175,21 @@ impl DockerManager {
         let memory_str = memory_str.to_lowercase();
 
         if memory_str.ends_with("gi") {
-            let value = memory_str.trim_end_matches("gi").parse::<f64>()
+            let value = memory_str
+                .trim_end_matches("gi")
+                .parse::<f64>()
                 .map_err(|_| CloudError::Configuration("Invalid memory format".to_string()))?;
             Ok((value * 1024.0 * 1024.0 * 1024.0) as i64)
         } else if memory_str.ends_with("mi") {
-            let value = memory_str.trim_end_matches("mi").parse::<f64>()
+            let value = memory_str
+                .trim_end_matches("mi")
+                .parse::<f64>()
                 .map_err(|_| CloudError::Configuration("Invalid memory format".to_string()))?;
             Ok((value * 1024.0 * 1024.0) as i64)
         } else {
-            Err(CloudError::Configuration("Unsupported memory format".to_string()))
+            Err(CloudError::Configuration(
+                "Unsupported memory format".to_string(),
+            ))
         }
     }
 
@@ -182,11 +198,14 @@ impl DockerManager {
         let cpu_str = cpu_str.to_lowercase();
 
         if cpu_str.ends_with("m") {
-            let value = cpu_str.trim_end_matches("m").parse::<f64>()
+            let value = cpu_str
+                .trim_end_matches("m")
+                .parse::<f64>()
                 .map_err(|_| CloudError::Configuration("Invalid CPU format".to_string()))?;
             Ok((value * 1_000_000.0) as i64) // 转换为纳秒
         } else {
-            let value = cpu_str.parse::<f64>()
+            let value = cpu_str
+                .parse::<f64>()
                 .map_err(|_| CloudError::Configuration("Invalid CPU format".to_string()))?;
             Ok((value * 1_000_000_000.0) as i64) // 转换为纳秒
         }

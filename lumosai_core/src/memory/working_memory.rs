@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
-use crate::logger::{Component, LogLevel};
+// use crate::compat::{Component, LogLevel};
 use crate::memory::{WorkingMemoryConfig, Memory, MessageRange};
 use crate::llm::{Message, LlmProvider, LlmOptions, Role};
 
@@ -163,19 +163,19 @@ impl<P: LlmProvider> Base for WorkingMemory<P> {
         self.base.component()
     }
 
-    fn logger(&self) -> Arc<dyn crate::logger::Logger> {
+    fn logger(&self) -> Arc<dyn crate::compat::Logger> {
         self.base.logger()
     }
 
-    fn set_logger(&mut self, logger: Arc<dyn crate::logger::Logger>) {
+    fn set_logger(&mut self, logger: Arc<dyn crate::compat::Logger>) {
         self.base.set_logger(logger);
     }
 
-    fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
+    fn telemetry(&self) -> Option<Arc<dyn crate::compat::TelemetrySink>> {
         self.base.telemetry()
     }
 
-    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
+    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::compat::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
 }

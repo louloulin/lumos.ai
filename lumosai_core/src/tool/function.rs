@@ -9,7 +9,7 @@ use super::schema::{ToolExecutionOptions, ToolSchema};
 use super::tool::Tool;
 use crate::base::{Base, BaseComponent};
 use crate::error::Result;
-use crate::logger::Component;
+// use crate::compat::Component;
 
 /// A simple tool that executes a function
 pub struct FunctionTool {
@@ -74,19 +74,19 @@ impl Base for FunctionTool {
         self.base.component()
     }
 
-    fn logger(&self) -> Arc<dyn crate::logger::Logger> {
+    fn logger(&self) -> Arc<dyn crate::compat::Logger> {
         self.base.logger()
     }
 
-    fn set_logger(&mut self, logger: Arc<dyn crate::logger::Logger>) {
+    fn set_logger(&mut self, logger: Arc<dyn crate::compat::Logger>) {
         self.base.set_logger(logger);
     }
 
-    fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
+    fn telemetry(&self) -> Option<Arc<dyn crate::compat::TelemetrySink>> {
         self.base.telemetry()
     }
 
-    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
+    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::compat::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
 }

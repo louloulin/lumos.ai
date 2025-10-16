@@ -118,7 +118,10 @@ async fn test_parameter_validation() -> Result<()> {
 
     match serde_json::from_value::<CalculatorParams>(valid_calc_json) {
         Ok(_) => println!("✓ Valid calculator arguments passed JSON deserialization"),
-        Err(e) => println!("✗ Valid calculator arguments failed JSON deserialization: {}", e),
+        Err(e) => println!(
+            "✗ Valid calculator arguments failed JSON deserialization: {}",
+            e
+        ),
     }
 
     // Invalid parameters (missing required field)

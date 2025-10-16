@@ -63,8 +63,6 @@ pub fn tool(attr: TokenStream, item: TokenStream) -> TokenStream {
     tool_macro::tool_macro(attr, item)
 }
 
-
-
 struct ToolAttributes {
     name: LitStr,
     description: LitStr,

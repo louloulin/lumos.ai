@@ -2,10 +2,8 @@ use std::collections::HashMap;
 use tokio::time::{sleep, Duration};
 
 use lumosai_mcp::{
-    MCPConfiguration, ServerDefinition,
-    EnhancedMCPManager, ManagerConfig,
-    Tool, ToolDefinition,
-    ServerConfig, ServerType, ConnectionConfig,
+    ConnectionConfig, EnhancedMCPManager, MCPConfiguration, ManagerConfig, ServerConfig,
+    ServerDefinition, ServerType, Tool, ToolDefinition,
 };
 
 /// MCP 基础功能演示
@@ -37,7 +35,11 @@ async fn demo_mcp_configuration() -> std::result::Result<(), Box<dyn std::error:
     // 创建服务器定义
     let server_def = ServerDefinition::Stdio {
         command: "node".to_string(),
-        args: vec!["server.js".to_string(), "--port".to_string(), "3000".to_string()],
+        args: vec![
+            "server.js".to_string(),
+            "--port".to_string(),
+            "3000".to_string(),
+        ],
         env: Some({
             let mut env = HashMap::new();
             env.insert("NODE_ENV".to_string(), "development".to_string());
@@ -129,7 +131,11 @@ async fn demo_enhanced_mcp_manager() -> std::result::Result<(), Box<dyn std::err
             env: HashMap::new(),
             working_dir: None,
         },
-        capabilities: vec!["tools".to_string(), "resources".to_string(), "logging".to_string()],
+        capabilities: vec![
+            "tools".to_string(),
+            "resources".to_string(),
+            "logging".to_string(),
+        ],
         tags: vec!["enhanced".to_string(), "production".to_string()],
         enabled: true,
         priority: 10,

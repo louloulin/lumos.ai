@@ -211,7 +211,9 @@ impl CloudError {
                 category: ErrorCategory::Infrastructure,
                 severity: ErrorSeverity::High,
                 retryable: true,
-                documentation_url: Some("https://docs.lumosai.com/deployment/kubernetes".to_string()),
+                documentation_url: Some(
+                    "https://docs.lumosai.com/deployment/kubernetes".to_string(),
+                ),
             },
             Self::KubernetesDeployment(msg) => ErrorContext {
                 error_code: "KUBERNETES_DEPLOYMENT".to_string(),
@@ -225,7 +227,9 @@ impl CloudError {
                 category: ErrorCategory::Deployment,
                 severity: ErrorSeverity::High,
                 retryable: true,
-                documentation_url: Some("https://docs.lumosai.com/troubleshooting/kubernetes".to_string()),
+                documentation_url: Some(
+                    "https://docs.lumosai.com/troubleshooting/kubernetes".to_string(),
+                ),
             },
             Self::DockerConnection(msg) => ErrorContext {
                 error_code: "DOCKER_CONNECTION".to_string(),
@@ -253,9 +257,14 @@ impl CloudError {
                 category: ErrorCategory::Configuration,
                 severity: ErrorSeverity::Medium,
                 retryable: false,
-                documentation_url: Some("https://docs.lumosai.com/configuration/deployment".to_string()),
+                documentation_url: Some(
+                    "https://docs.lumosai.com/configuration/deployment".to_string(),
+                ),
             },
-            Self::ResourceNotFound { resource_type, name } => ErrorContext {
+            Self::ResourceNotFound {
+                resource_type,
+                name,
+            } => ErrorContext {
                 error_code: "RESOURCE_NOT_FOUND".to_string(),
                 message: format!("资源 {} '{}' 未找到", resource_type, name),
                 details: None,
@@ -281,7 +290,9 @@ impl CloudError {
                 category: ErrorCategory::Deployment,
                 severity: ErrorSeverity::High,
                 retryable: true,
-                documentation_url: Some("https://docs.lumosai.com/troubleshooting/timeouts".to_string()),
+                documentation_url: Some(
+                    "https://docs.lumosai.com/troubleshooting/timeouts".to_string(),
+                ),
             },
             Self::InsufficientResources(msg) => ErrorContext {
                 error_code: "INSUFFICIENT_RESOURCES".to_string(),
@@ -356,14 +367,14 @@ impl CloudError {
     pub fn is_retryable(&self) -> bool {
         matches!(
             self,
-            Self::KubernetesConnection(_) |
-            Self::DockerConnection(_) |
-            Self::Network(_) |
-            Self::DeploymentTimeout { .. } |
-            Self::InsufficientResources(_) |
-            Self::HealthCheckFailed(_) |
-            Self::ReadinessProbe(_) |
-            Self::LivenessProbe(_)
+            Self::KubernetesConnection(_)
+                | Self::DockerConnection(_)
+                | Self::Network(_)
+                | Self::DeploymentTimeout { .. }
+                | Self::InsufficientResources(_)
+                | Self::HealthCheckFailed(_)
+                | Self::ReadinessProbe(_)
+                | Self::LivenessProbe(_)
         )
     }
 }

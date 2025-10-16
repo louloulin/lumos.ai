@@ -1,19 +1,19 @@
 #!/usr/bin/env cargo
 //! # 多 Agent 协作示例
-//! 
+//!
 //! 本示例展示如何使用 LumosAI 创建多个专业化的 Agent 进行协作，
 //! 完成复杂的任务，如研究报告生成。
-//! 
+//!
 //! ## 功能特性
 //! - 多个专业化 Agent（研究员、分析师、写作者）
 //! - Agent 间的任务传递和协作
 //! - 结构化的工作流程
 //! - 结果整合和质量控制
 
-use lumosai_core::prelude::*;
-use lumosai_core::llm::types::user_message;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::BasicAgent;
+use lumosai_core::llm::types::user_message;
+use lumosai_core::prelude::*;
 use std::collections::HashMap;
 
 /// 研究任务结果
@@ -63,8 +63,9 @@ impl MultiAgentCollaborator {
             1. 深入研究给定的主题
             2. 收集相关的事实和数据
             3. 识别可靠的信息源
-            4. 提供结构化的研究结果"
-        ).build()?;
+            4. 提供结构化的研究结果",
+        )
+        .build()?;
 
         // 创建分析师 Agent
         let analyst = quick_agent(
@@ -73,8 +74,9 @@ impl MultiAgentCollaborator {
             1. 分析研究数据和发现
             2. 识别关键趋势和模式
             3. 提供专业的见解和建议
-            4. 评估信息的可信度和重要性"
-        ).build()?;
+            4. 评估信息的可信度和重要性",
+        )
+        .build()?;
 
         // 创建写作者 Agent
         let writer = quick_agent(
@@ -83,8 +85,9 @@ impl MultiAgentCollaborator {
             1. 将分析结果转化为易读的文档
             2. 确保内容结构清晰、逻辑连贯
             3. 使用专业但易懂的语言
-            4. 创建引人入胜的标题和摘要"
-        ).build()?;
+            4. 创建引人入胜的标题和摘要",
+        )
+        .build()?;
 
         // 创建审核者 Agent
         let reviewer = quick_agent(
@@ -93,8 +96,9 @@ impl MultiAgentCollaborator {
             1. 检查内容的准确性和完整性
             2. 确保逻辑结构合理
             3. 提供改进建议
-            4. 验证引用和来源的可靠性"
-        ).build()?;
+            4. 验证引用和来源的可靠性",
+        )
+        .build()?;
 
         println!("✅ 协作团队创建完成！");
         println!("   👨‍🔬 研究员 - 负责信息收集");
@@ -113,19 +117,19 @@ impl MultiAgentCollaborator {
     /// 执行协作研究任务
     async fn collaborate_on_research(&self, topic: &str) -> Result<FinalDocument> {
         println!("\n🎯 开始协作研究任务: {}", topic);
-        
+
         // 阶段 1: 研究员收集信息
         let research_result = self.conduct_research(topic).await?;
-        
+
         // 阶段 2: 分析师分析数据
         let analysis_report = self.analyze_findings(&research_result).await?;
-        
+
         // 阶段 3: 写作者撰写文档
         let draft_document = self.write_document(&analysis_report).await?;
-        
+
         // 阶段 4: 审核者质量控制
         let final_document = self.review_document(&draft_document).await?;
-        
+
         println!("🎉 协作任务完成！");
         Ok(final_document)
     }
@@ -133,7 +137,7 @@ impl MultiAgentCollaborator {
     /// 阶段 1: 研究信息收集
     async fn conduct_research(&self, topic: &str) -> Result<ResearchResult> {
         println!("\n📚 阶段 1: 研究员正在收集信息...");
-        
+
         let research_prompt = format!(
             "请对以下主题进行深入研究：{}
 
@@ -143,7 +147,7 @@ impl MultiAgentCollaborator {
             3. 可靠的信息来源
             4. 对信息可信度的评估（0-1分）
 
-            请以结构化的方式组织你的回答。", 
+            请以结构化的方式组织你的回答。",
             topic
         );
 
@@ -170,16 +174,22 @@ impl MultiAgentCollaborator {
             confidence: 0.85,
         };
 
-        println!("✅ 研究完成！收集到 {} 个关键发现", research_result.findings.len());
-        println!("   📊 信息可信度: {:.1}%", research_result.confidence * 100.0);
-        
+        println!(
+            "✅ 研究完成！收集到 {} 个关键发现",
+            research_result.findings.len()
+        );
+        println!(
+            "   📊 信息可信度: {:.1}%",
+            research_result.confidence * 100.0
+        );
+
         Ok(research_result)
     }
 
     /// 阶段 2: 分析师数据分析
     async fn analyze_findings(&self, research: &ResearchResult) -> Result<AnalysisReport> {
         println!("\n📊 阶段 2: 分析师正在分析数据...");
-        
+
         let analysis_prompt = format!(
             "请分析以下研究发现：
 
@@ -196,10 +206,7 @@ impl MultiAgentCollaborator {
             5. 分析方法说明
 
             请以专业分析师的角度进行深度分析。",
-            research.topic,
-            research.findings,
-            research.sources,
-            research.confidence
+            research.topic, research.findings, research.sources, research.confidence
         );
 
         let messages = vec![user_message(&analysis_prompt)];
@@ -224,16 +231,22 @@ impl MultiAgentCollaborator {
             methodology: "基于多源数据交叉验证和趋势分析方法".to_string(),
         };
 
-        println!("✅ 分析完成！生成 {} 个关键洞察", analysis_report.key_points.len());
-        println!("   💡 提供 {} 项实施建议", analysis_report.recommendations.len());
-        
+        println!(
+            "✅ 分析完成！生成 {} 个关键洞察",
+            analysis_report.key_points.len()
+        );
+        println!(
+            "   💡 提供 {} 项实施建议",
+            analysis_report.recommendations.len()
+        );
+
         Ok(analysis_report)
     }
 
     /// 阶段 3: 写作者文档撰写
     async fn write_document(&self, analysis: &AnalysisReport) -> Result<FinalDocument> {
         println!("\n✍️  阶段 3: 写作者正在撰写文档...");
-        
+
         let writing_prompt = format!(
             "请基于以下分析报告撰写一份专业的研究文档：
 
@@ -251,10 +264,7 @@ impl MultiAgentCollaborator {
             6. 结论
 
             文档应该专业、清晰、易读，适合技术和非技术读者。",
-            analysis.summary,
-            analysis.key_points,
-            analysis.recommendations,
-            analysis.methodology
+            analysis.summary, analysis.key_points, analysis.recommendations, analysis.methodology
         );
 
         let messages = vec![user_message(&writing_prompt)];
@@ -264,10 +274,16 @@ impl MultiAgentCollaborator {
         // 模拟结构化的文档
         let mut sections = HashMap::new();
         sections.insert("执行摘要".to_string(), analysis.summary.clone());
-        sections.insert("研究背景".to_string(), "人工智能技术在医疗健康领域的应用正在快速发展...".to_string());
+        sections.insert(
+            "研究背景".to_string(),
+            "人工智能技术在医疗健康领域的应用正在快速发展...".to_string(),
+        );
         sections.insert("主要发现".to_string(), analysis.key_points.join("\n"));
         sections.insert("实施建议".to_string(), analysis.recommendations.join("\n"));
-        sections.insert("结论".to_string(), "AI医疗技术具有变革性潜力，需要谨慎而积极的推进策略".to_string());
+        sections.insert(
+            "结论".to_string(),
+            "AI医疗技术具有变革性潜力，需要谨慎而积极的推进策略".to_string(),
+        );
 
         let content = format!(
             "# AI在医疗健康领域的应用研究报告
@@ -300,14 +316,14 @@ impl MultiAgentCollaborator {
         println!("   📄 文档标题: {}", final_document.title);
         println!("   📝 字数统计: {} 字", final_document.word_count);
         println!("   📑 章节数量: {} 个", final_document.sections.len());
-        
+
         Ok(final_document)
     }
 
     /// 阶段 4: 审核者质量控制
     async fn review_document(&self, document: &FinalDocument) -> Result<FinalDocument> {
         println!("\n🔍 阶段 4: 审核者正在进行质量控制...");
-        
+
         let review_prompt = format!(
             "请审核以下文档的质量：
 
@@ -348,7 +364,7 @@ impl MultiAgentCollaborator {
         println!("   🎯 准确性: 95%");
         println!("   📋 完整性: 98%");
         println!("   🔗 逻辑性: 96%");
-        
+
         Ok(improved_document)
     }
 
@@ -367,35 +383,38 @@ impl MultiAgentCollaborator {
 async fn main() -> Result<()> {
     println!("🤖 LumosAI 多 Agent 协作示例");
     println!("================================");
-    
+
     // 创建协作团队
     let collaborator = MultiAgentCollaborator::new().await?;
-    
+
     // 执行协作研究任务
     let research_topic = "人工智能在医疗健康领域的应用现状与发展趋势";
     let final_document = collaborator.collaborate_on_research(research_topic).await?;
-    
+
     // 显示最终结果
     println!("\n📋 最终文档信息:");
     println!("   📄 标题: {}", final_document.title);
     println!("   📝 字数: {} 字", final_document.word_count);
     println!("   📑 章节: {} 个", final_document.sections.len());
-    
+
     // 显示协作统计
     collaborator.show_collaboration_stats();
-    
+
     // 显示文档内容预览
     println!("\n📖 文档内容预览:");
     println!("{}", "-".repeat(50));
     let preview_length = std::cmp::min(800, final_document.content.len());
     println!("{}", &final_document.content[..preview_length]);
     if final_document.content.len() > preview_length {
-        println!("\n... (内容已截断，完整版本包含 {} 字)", final_document.word_count);
+        println!(
+            "\n... (内容已截断，完整版本包含 {} 字)",
+            final_document.word_count
+        );
     }
-    
+
     println!("\n🎉 多 Agent 协作示例运行完成！");
     println!("💡 这个示例展示了如何使用 LumosAI 创建专业化的 Agent 团队，");
     println!("   通过结构化的协作流程完成复杂的研究和文档生成任务。");
-    
+
     Ok(())
 }

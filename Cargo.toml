@@ -1,20 +1,35 @@
 [workspace]
 members = [
+    # 核心包
     "lumosai_core",
     "lumosai_examples",
+
+    # 服务层包
     "lumosai_vector",
     "lumosai_rag",
     "lumosai_cli",
     "lumosai_evals",
     "lumosai_network",
-    "lumos_macro",
     "lumosai_mcp",
+
+    # 基础设施层包
+    "lumosai_auth",
+    "lumosai_enterprise",
+    "lumosai_cloud",
+    "lumosai_security",
+    "lumosai_telemetry",
+
+    # 扩展包
+    "lumosai_voice",
+    "lumosai_bindings",
+
+    # 工具包
+    "lumos_macro",
     "lumosai_derive",
-    # "lumosai_enterprise",  # 暂时移除企业级功能
-    # "lumosai_bindings",
+
+    # 暂时排除的包
     # "lumosai_ui",
     # "lumosai_ui/web-server",
-    # "lumosai_cloud",
     # "lumosai_ai_extensions"
 ]
 # 排除有问题的包

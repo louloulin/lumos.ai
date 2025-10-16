@@ -8,8 +8,9 @@
 
 use lumosai_core::prelude::*;
 use lumosai_network::{
+    router::DefaultMessageRouter,
+    topology::{GraphTopology, NetworkTopology, TopologyType},
     AgentCapability, AgentId, AgentStatus, AgentType, Message, MessageType,
-    router::DefaultMessageRouter, topology::{GraphTopology, NetworkTopology, TopologyType},
 };
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
@@ -50,15 +51,21 @@ async fn demo_service_discovery() -> std::result::Result<(), Box<dyn std::error:
 
     // 创建几个 Agent 类型和能力的示例
     let agents = vec![
-        ("chat-agent", AgentType::Regular, vec![
-            AgentCapability::new("text_generation", "生成文本内容"),
-        ]),
-        ("code-agent", AgentType::Worker, vec![
-            AgentCapability::new("code_generation", "生成代码"),
-        ]),
-        ("data-agent", AgentType::Coordinator, vec![
-            AgentCapability::new("data_analysis", "数据分析"),
-        ]),
+        (
+            "chat-agent",
+            AgentType::Regular,
+            vec![AgentCapability::new("text_generation", "生成文本内容")],
+        ),
+        (
+            "code-agent",
+            AgentType::Worker,
+            vec![AgentCapability::new("code_generation", "生成代码")],
+        ),
+        (
+            "data-agent",
+            AgentType::Coordinator,
+            vec![AgentCapability::new("data_analysis", "数据分析")],
+        ),
     ];
 
     println!("  📊 模拟注册 {} 个 Agent:", agents.len());
@@ -66,7 +73,10 @@ async fn demo_service_discovery() -> std::result::Result<(), Box<dyn std::error:
         let _agent_id = AgentId::from_str(*name);
         println!("  ✅ 注册 Agent: {} (类型: {})", name, agent_type);
         for capability in capabilities {
-            println!("    - 能力: {} - {}", capability.name, capability.description);
+            println!(
+                "    - 能力: {} - {}",
+                capability.name, capability.description
+            );
         }
     }
 
@@ -79,10 +89,9 @@ async fn demo_service_discovery() -> std::result::Result<(), Box<dyn std::error:
 
     // 模拟按能力查询
     println!("  🔍 模拟查询具有代码生成能力的 Agent...");
-    let code_agents: Vec<_> = agents.iter()
-        .filter(|(_, _, capabilities)| {
-            capabilities.iter().any(|cap| cap.name == "code_generation")
-        })
+    let code_agents: Vec<_> = agents
+        .iter()
+        .filter(|(_, _, capabilities)| capabilities.iter().any(|cap| cap.name == "code_generation"))
         .collect();
     println!("  📊 找到 {} 个代码 Agent:", code_agents.len());
     for (name, _, _) in code_agents {
@@ -93,7 +102,9 @@ async fn demo_service_discovery() -> std::result::Result<(), Box<dyn std::error:
 }
 
 /// 演示消息路由功能
-async fn demo_message_routing(_router: Arc<DefaultMessageRouter>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+async fn demo_message_routing(
+    _router: Arc<DefaultMessageRouter>,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("  📋 使用消息路由器...");
 
     // 创建测试消息
@@ -114,9 +125,15 @@ async fn demo_message_routing(_router: Arc<DefaultMessageRouter>) -> std::result
 
     // 模拟路由消息
     for message in messages {
-        println!("  📤 路由消息: {} -> {:?}",
-                message.sender.as_str(),
-                message.receivers.iter().map(|r| r.as_str()).collect::<Vec<_>>());
+        println!(
+            "  📤 路由消息: {} -> {:?}",
+            message.sender.as_str(),
+            message
+                .receivers
+                .iter()
+                .map(|r| r.as_str())
+                .collect::<Vec<_>>()
+        );
         // 注意：这里只是演示，实际使用需要先注册 Agent
         // router.route(message).await?;
     }
@@ -138,21 +155,38 @@ async fn demo_network_topology() -> std::result::Result<(), Box<dyn std::error::
     ];
 
     for node in &nodes {
-        topology.add_node(node.clone(), None).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+        topology
+            .add_node(node.clone(), None)
+            .await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
         println!("  ✅ 添加节点: {}", node.as_str());
     }
 
     // 添加连接
-    topology.add_edge(&nodes[0], &nodes[1], None).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-    topology.add_edge(&nodes[1], &nodes[2], None).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-    topology.add_edge(&nodes[2], &nodes[0], None).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+    topology
+        .add_edge(&nodes[0], &nodes[1], None)
+        .await
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+    topology
+        .add_edge(&nodes[1], &nodes[2], None)
+        .await
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+    topology
+        .add_edge(&nodes[2], &nodes[0], None)
+        .await
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
     println!("  ✅ 添加网络连接");
 
     // 查询邻居
-    let neighbors = topology.get_neighbors(&nodes[0]).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-    println!("  📊 节点 {} 的邻居: {:?}",
-            nodes[0].as_str(),
-            neighbors.iter().map(|n| n.as_str()).collect::<Vec<_>>());
+    let neighbors = topology
+        .get_neighbors(&nodes[0])
+        .await
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+    println!(
+        "  📊 节点 {} 的邻居: {:?}",
+        nodes[0].as_str(),
+        neighbors.iter().map(|n| n.as_str()).collect::<Vec<_>>()
+    );
 
     Ok(())
 }

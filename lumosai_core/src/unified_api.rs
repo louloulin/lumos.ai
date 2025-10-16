@@ -225,7 +225,7 @@ pub mod agent {
 /// 云服务便利函数
 pub mod cloud {
     use super::*;
-    use crate::cloud::*;
+    use crate::compat::{CloudAdapter, AwsAdapter, AzureAdapter, GcpAdapter, DeploymentConfig, ResourceConfig, NetworkConfig, PortMapping};
 
     /// 创建AWS适配器
     pub fn aws() -> Result<Box<dyn CloudAdapter>> {
@@ -266,7 +266,7 @@ pub mod cloud {
     /// 快速部署应用
     pub async fn deploy(app_name: &str, image: &str, provider: Option<&str>) -> Result<String> {
         let adapter = if let Some(p) = provider {
-            crate::cloud::create_adapter(p)?
+            cloud::auto()?
         } else {
             auto()?
         };
@@ -276,14 +276,14 @@ pub mod cloud {
             version: "1.0.0".to_string(),
             image: image.to_string(),
             environment: std::collections::HashMap::new(),
-            resources: crate::cloud::ResourceConfig {
+            resources: ResourceConfig {
                 cpu: 1.0,
                 memory: 1024,
                 storage: None,
                 gpu: None,
             },
-            network: crate::cloud::NetworkConfig {
-                ports: vec![crate::cloud::PortMapping {
+            network: NetworkConfig {
+                ports: vec![PortMapping {
                     container_port: 8080,
                     host_port: None,
                     protocol: "HTTP".to_string(),

@@ -12,8 +12,8 @@ mod tests {
     use std::sync::Arc;
 
     use crate::base::Base;
-    use crate::logger::{Component, Logger};
-    use crate::telemetry::TelemetrySink;
+    // use crate::compat::{Component, Logger};
+    // use crate::compat::TelemetrySink;
     use uuid::Uuid;
 
     // 实现一个简单的Mock代理
@@ -157,11 +157,11 @@ mod tests {
             unimplemented!("Stream with callbacks not implemented for MockAgent")
         }
 
-        fn get_voice(&self) -> Option<Arc<dyn crate::voice::VoiceProvider>> {
+        fn get_voice(&self) -> Option<Arc<dyn crate::compat::VoiceProvider>> {
             None
         }
 
-        fn set_voice(&mut self, _voice: Arc<dyn crate::voice::VoiceProvider>) {
+        fn set_voice(&mut self, _voice: Arc<dyn crate::compat::VoiceProvider>) {
             // Do nothing
         }
     }

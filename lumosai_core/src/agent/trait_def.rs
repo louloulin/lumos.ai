@@ -18,7 +18,7 @@ use crate::llm::{LlmProvider, Message};
 use crate::memory::working::WorkingMemory;
 use crate::memory::Memory;
 use crate::tool::Tool;
-use crate::voice::{ListenOptions, VoiceOptions, VoiceProvider};
+// use crate::compat::{ListenOptions, VoiceOptions, VoiceProvider};
 use crate::workflow::Workflow;
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;

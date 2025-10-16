@@ -90,7 +90,7 @@ where
         Self {
             base: crate::base::BaseComponent::new_with_name(
                 id_str.clone(),
-                crate::logger::Component::Tool,
+                crate::compat::Component::Tool,
             ),
             id: id_str,
             description: description.into(),
@@ -130,23 +130,23 @@ where
         self.base.name()
     }
 
-    fn component(&self) -> crate::logger::Component {
+    fn component(&self) -> crate::compat::Component {
         self.base.component()
     }
 
-    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+    fn logger(&self) -> std::sync::Arc<dyn crate::compat::Logger> {
         self.base.logger()
     }
 
-    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::logger::Logger>) {
+    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::compat::Logger>) {
         self.base.set_logger(logger);
     }
 
-    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::compat::TelemetrySink>> {
         self.base.telemetry()
     }
 
-    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::compat::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
 }

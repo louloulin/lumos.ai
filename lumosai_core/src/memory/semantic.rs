@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
 use crate::llm::{LlmProvider, Message};
-use crate::logger::{Component, LogLevel};
+// use crate::compat::{Component, LogLevel};
 use crate::memory::{Memory, MemoryConfig, MessageRange, SemanticRecallConfig};
 use crate::vector::{Document, FilterCondition, VectorStorage};
 
@@ -332,19 +332,19 @@ impl Base for SemanticMemory {
         self.base.component()
     }
 
-    fn logger(&self) -> Arc<dyn crate::logger::Logger> {
+    fn logger(&self) -> Arc<dyn crate::compat::Logger> {
         self.base.logger()
     }
 
-    fn set_logger(&mut self, logger: Arc<dyn crate::logger::Logger>) {
+    fn set_logger(&mut self, logger: Arc<dyn crate::compat::Logger>) {
         self.base.set_logger(logger);
     }
 
-    fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
+    fn telemetry(&self) -> Option<Arc<dyn crate::compat::TelemetrySink>> {
         self.base.telemetry()
     }
 
-    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
+    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::compat::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
 }

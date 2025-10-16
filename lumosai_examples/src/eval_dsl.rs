@@ -186,7 +186,9 @@ async fn main() -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("📊 Evaluation DSL Example (Temporarily Disabled)");
-    println!("This example depends on lumosai_evals which is excluded from the simplified workspace.");
+    println!(
+        "This example depends on lumosai_evals which is excluded from the simplified workspace."
+    );
     println!("It will be re-enabled in a future version.");
     Ok(())
 }

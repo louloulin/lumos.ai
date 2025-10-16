@@ -143,23 +143,20 @@ impl ConfigValidator {
     /// 验证Agent配置
     pub fn validate_agent_config(&self, config: &AgentConfig) -> Result<()> {
         // 转换为JSON进行验证
-        let config_json = serde_json::to_value(config)
-            .map_err(|e| Error::Validation {
-                field: "config".to_string(),
-                message: format!("Failed to serialize config: {}", e),
-            })?;
+        let config_json = serde_json::to_value(config).map_err(|e| Error::Validation {
+            field: "config".to_string(),
+            message: format!("Failed to serialize config: {}", e),
+        })?;
 
         self.validate_json(&config_json)
     }
 
     /// 验证JSON配置
     pub fn validate_json(&self, config: &Value) -> Result<()> {
-        let config_obj = config
-            .as_object()
-            .ok_or_else(|| Error::Validation {
-                field: "config".to_string(),
-                message: "Configuration must be an object".to_string(),
-            })?;
+        let config_obj = config.as_object().ok_or_else(|| Error::Validation {
+            field: "config".to_string(),
+            message: "Configuration must be an object".to_string(),
+        })?;
 
         // 检查必需字段
         for required_field in &self.required_fields {
@@ -174,11 +171,9 @@ impl ConfigValidator {
         // 应用验证规则
         for (field, value) in config_obj {
             if let Some(rule) = self.validation_rules.get(field) {
-                rule(value).map_err(|e| {
-                    Error::Validation {
-                        field: field.to_string(),
-                        message: format!("Validation failed for field '{}': {}", field, e),
-                    }
+                rule(value).map_err(|e| Error::Validation {
+                    field: field.to_string(),
+                    message: format!("Validation failed for field '{}': {}", field, e),
                 })?;
             }
         }

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use syn::spanned::Spanned;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, Expr, Ident, ItemFn, LitStr, Token, FnArg, PatType, Type,
+    parse_macro_input, Expr, FnArg, Ident, ItemFn, LitStr, PatType, Token, Type,
 };
 
 use crate::parser::{parse_tool_macro, ToolDef};
@@ -44,10 +44,7 @@ impl Parse for ToolAttributes {
         }
 
         let name = name.ok_or_else(|| {
-            syn::Error::new(
-                input.span(),
-                "Missing 'name' attribute in tool definition",
-            )
+            syn::Error::new(input.span(), "Missing 'name' attribute in tool definition")
         })?;
         let description = description.ok_or_else(|| {
             syn::Error::new(
@@ -151,13 +148,19 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
                                 match syn::parse2::<ParameterAttributes>(meta_list.tokens.clone()) {
                                     Ok(attr) => attr,
                                     Err(e) => {
-                                        let error = syn::Error::new(attr.span(), format!("Failed to parse parameter attributes: {}", e));
+                                        let error = syn::Error::new(
+                                            attr.span(),
+                                            format!("Failed to parse parameter attributes: {}", e),
+                                        );
                                         return error.to_compile_error().into();
                                     }
                                 }
                             }
                             _ => {
-                                let error = syn::Error::new(attr.span(), "Parameter attribute must be a list");
+                                let error = syn::Error::new(
+                                    attr.span(),
+                                    "Parameter attribute must be a list",
+                                );
                                 return error.to_compile_error().into();
                             }
                         };
@@ -205,7 +208,7 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
                                 let #param_name: #param_type = serde_json::from_value(
                                     params.get(#name).cloned().unwrap_or(serde_json::Value::Null)
                                 ).map_err(|e| lumosai_core::Error::InvalidInput(format!("Invalid parameter {}: {}", #name, e)))?;
-                            }
+                            },
                         };
                         param_extractions.push(extraction);
                         param_names.push(param_name);
@@ -235,7 +238,9 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Remove parameter attributes from the implementation function
     for param in impl_input.sig.inputs.iter_mut() {
         if let syn::FnArg::Typed(pat_type) = param {
-            pat_type.attrs.retain(|attr| !attr.path().is_ident("parameter"));
+            pat_type
+                .attrs
+                .retain(|attr| !attr.path().is_ident("parameter"));
         }
     }
 

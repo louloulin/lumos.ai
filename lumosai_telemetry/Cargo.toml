@@ -1,0 +1,41 @@
+[package]
+name = "lumosai_telemetry"
+version = "0.2.0"
+edition = "2021"
+authors = ["Lumosai Team <team@lumosai.dev>"]
+description = "LumosAI 遥测和监控模块"
+license = "MIT"
+repository = "https://github.com/louloulin/lumos.ai.git"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai_telemetry"
+keywords = ["ai", "telemetry", "monitoring", "metrics", "tracing"]
+categories = ["development-tools", "web-programming"]
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true, optional = true }
+rand = "0.8"
+
+# OpenTelemetry
+opentelemetry = { version = "0.22", optional = true }
+opentelemetry-otlp = { version = "0.15", optional = true }
+opentelemetry_sdk = { version = "0.22", optional = true }
+tracing-opentelemetry = { version = "0.23", optional = true }
+
+# Metrics
+metrics = { version = "0.22", optional = true }
+metrics-exporter-prometheus = { version = "0.13", optional = true }
+
+[features]
+default = []
+otel = ["opentelemetry", "opentelemetry-otlp", "opentelemetry_sdk", "tracing-opentelemetry"]
+prometheus = ["metrics", "metrics-exporter-prometheus"]
+all = ["otel", "prometheus"]

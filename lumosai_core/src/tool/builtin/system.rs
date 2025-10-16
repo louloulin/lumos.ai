@@ -399,7 +399,7 @@ impl CodeExecutorTool {
         Self {
             base: crate::base::BaseComponent::new_with_name(
                 "code_executor".to_string(),
-                crate::logger::Component::Tool,
+                crate::compat::Component::Tool,
             ),
             id: "code_executor".to_string(),
             description: "Execute code snippets in various languages".to_string(),
@@ -525,23 +525,23 @@ impl Base for CodeExecutorTool {
         self.base.name()
     }
 
-    fn component(&self) -> crate::logger::Component {
+    fn component(&self) -> crate::compat::Component {
         self.base.component()
     }
 
-    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+    fn logger(&self) -> std::sync::Arc<dyn crate::compat::Logger> {
         self.base.logger()
     }
 
-    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::logger::Logger>) {
+    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::compat::Logger>) {
         self.base.set_logger(logger);
     }
 
-    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::compat::TelemetrySink>> {
         self.base.telemetry()
     }
 
-    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::compat::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
 }

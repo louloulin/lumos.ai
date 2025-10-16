@@ -1,19 +1,19 @@
 #!/usr/bin/env cargo
 //! # 实时数据处理示例
-//! 
+//!
 //! 本示例展示如何使用 LumosAI 构建实时数据处理系统，
 //! 处理流式数据并提供智能分析和预警。
-//! 
+//!
 //! ## 功能特性
 //! - 实时数据流处理
 //! - 智能异常检测
 //! - 动态阈值调整
 //! - 实时报警和通知
 
-use lumosai_core::prelude::*;
-use lumosai_core::llm::types::user_message;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::BasicAgent;
+use lumosai_core::llm::types::user_message;
+use lumosai_core::prelude::*;
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::time::sleep;
@@ -80,8 +80,9 @@ impl RealtimeDataProcessor {
             1. 分析实时数据流的趋势和模式
             2. 计算统计指标和关键性能指标
             3. 识别数据中的异常模式
-            4. 提供数据质量评估"
-        ).build()?;
+            4. 提供数据质量评估",
+        )
+        .build()?;
 
         // 创建异常检测器 Agent
         let detector = quick_agent(
@@ -90,8 +91,9 @@ impl RealtimeDataProcessor {
             1. 实时监控数据异常
             2. 评估异常的严重程度
             3. 分析异常的可能原因
-            4. 提供处理建议和预防措施"
-        ).build()?;
+            4. 提供处理建议和预防措施",
+        )
+        .build()?;
 
         // 创建报警器 Agent
         let alerter = quick_agent(
@@ -100,8 +102,9 @@ impl RealtimeDataProcessor {
             1. 根据异常严重程度发送报警
             2. 生成详细的报警信息
             3. 建议紧急响应措施
-            4. 跟踪报警处理状态"
-        ).build()?;
+            4. 跟踪报警处理状态",
+        )
+        .build()?;
 
         // 初始化阈值配置
         let mut thresholds = HashMap::new();
@@ -137,22 +140,22 @@ impl RealtimeDataProcessor {
     /// 开始实时数据处理
     async fn start_processing(&mut self) -> Result<()> {
         println!("\n🔄 开始实时数据处理...");
-        
+
         // 模拟实时数据流处理
         for i in 0..20 {
             // 生成模拟数据
             let data_point = self.generate_sample_data(i).await;
-            
+
             // 处理数据点
             self.process_data_point(data_point).await?;
-            
+
             // 短暂延迟模拟实时处理
             sleep(Duration::from_millis(200)).await;
         }
-        
+
         // 生成最终报告
         self.generate_processing_report().await?;
-        
+
         println!("✅ 实时数据处理完成！");
         Ok(())
     }
@@ -164,7 +167,13 @@ impl RealtimeDataProcessor {
             .unwrap()
             .as_secs();
 
-        let sources = ["server-01", "server-02", "server-03", "database", "api-gateway"];
+        let sources = [
+            "server-01",
+            "server-02",
+            "server-03",
+            "database",
+            "api-gateway",
+        ];
         let source = sources[index % sources.len()].to_string();
 
         // 生成带有一些异常的模拟数据
@@ -202,9 +211,11 @@ impl RealtimeDataProcessor {
     /// 处理单个数据点
     async fn process_data_point(&mut self, data_point: DataPoint) -> Result<()> {
         let process_start = Instant::now();
-        
-        println!("📊 处理数据: {} = {:.2} (来源: {})", 
-                data_point.timestamp, data_point.value, data_point.source);
+
+        println!(
+            "📊 处理数据: {} = {:.2} (来源: {})",
+            data_point.timestamp, data_point.value, data_point.source
+        );
 
         // 添加到缓冲区
         self.data_buffer.push_back(data_point.clone());
@@ -235,7 +246,9 @@ impl RealtimeDataProcessor {
             return Ok(()); // 需要足够的历史数据
         }
 
-        let recent_values: Vec<f64> = self.data_buffer.iter()
+        let recent_values: Vec<f64> = self
+            .data_buffer
+            .iter()
             .rev()
             .take(10)
             .map(|dp| dp.value)
@@ -253,9 +266,7 @@ impl RealtimeDataProcessor {
             2. 变化幅度评估
             3. 是否存在周期性模式
             4. 数据质量评估",
-            data_point.value,
-            data_point.source,
-            recent_values
+            data_point.value, data_point.source, recent_values
         );
 
         let messages = vec![user_message(&analysis_prompt)];
@@ -273,18 +284,22 @@ impl RealtimeDataProcessor {
 
         // 统计异常检测（基于历史数据）
         let is_statistical_anomaly = if self.data_buffer.len() >= 10 {
-            let recent_values: Vec<f64> = self.data_buffer.iter()
+            let recent_values: Vec<f64> = self
+                .data_buffer
+                .iter()
                 .filter(|dp| dp.source == data_point.source)
                 .map(|dp| dp.value)
                 .collect();
 
             if recent_values.len() >= 5 {
                 let mean: f64 = recent_values.iter().sum::<f64>() / recent_values.len() as f64;
-                let variance: f64 = recent_values.iter()
+                let variance: f64 = recent_values
+                    .iter()
                     .map(|v| (v - mean).powi(2))
-                    .sum::<f64>() / recent_values.len() as f64;
+                    .sum::<f64>()
+                    / recent_values.len() as f64;
                 let std_dev = variance.sqrt();
-                
+
                 (data_point.value - mean).abs() > 2.0 * std_dev
             } else {
                 false
@@ -351,9 +366,16 @@ impl RealtimeDataProcessor {
     }
 
     /// 处理异常
-    async fn handle_anomaly(&mut self, data_point: &DataPoint, anomaly: &AnomalyResult) -> Result<()> {
-        println!("🚨 检测到异常: {} - {}", data_point.source, anomaly.description);
-        
+    async fn handle_anomaly(
+        &mut self,
+        data_point: &DataPoint,
+        anomaly: &AnomalyResult,
+    ) -> Result<()> {
+        println!(
+            "🚨 检测到异常: {} - {}",
+            data_point.source, anomaly.description
+        );
+
         // 生成报警
         let alert_prompt = format!(
             "生成异常报警信息：
@@ -412,15 +434,19 @@ impl RealtimeDataProcessor {
     /// 更新处理统计信息
     fn update_processing_stats(&mut self, processing_time: Duration) {
         self.processing_stats.total_processed += 1;
-        
+
         // 计算平均延迟
-        let total_latency = self.processing_stats.average_latency.as_nanos() as f64 * (self.processing_stats.total_processed - 1) as f64
+        let total_latency = self.processing_stats.average_latency.as_nanos() as f64
+            * (self.processing_stats.total_processed - 1) as f64
             + processing_time.as_nanos() as f64;
-        self.processing_stats.average_latency = Duration::from_nanos((total_latency / self.processing_stats.total_processed as f64) as u64);
-        
+        self.processing_stats.average_latency = Duration::from_nanos(
+            (total_latency / self.processing_stats.total_processed as f64) as u64,
+        );
+
         // 计算处理速率
         self.processing_stats.uptime = self.start_time.elapsed();
-        self.processing_stats.processing_rate = self.processing_stats.total_processed as f64 / self.processing_stats.uptime.as_secs_f64();
+        self.processing_stats.processing_rate = self.processing_stats.total_processed as f64
+            / self.processing_stats.uptime.as_secs_f64();
     }
 
     /// 生成处理报告
@@ -453,10 +479,22 @@ impl RealtimeDataProcessor {
             self.processing_stats.processing_rate,
             self.processing_stats.average_latency.as_millis(),
             self.processing_stats.uptime.as_secs_f64(),
-            self.anomaly_history.iter().filter(|a| a.severity == AnomalySeverity::Critical).count(),
-            self.anomaly_history.iter().filter(|a| a.severity == AnomalySeverity::High).count(),
-            self.anomaly_history.iter().filter(|a| a.severity == AnomalySeverity::Medium).count(),
-            self.anomaly_history.iter().filter(|a| a.severity == AnomalySeverity::Low).count()
+            self.anomaly_history
+                .iter()
+                .filter(|a| a.severity == AnomalySeverity::Critical)
+                .count(),
+            self.anomaly_history
+                .iter()
+                .filter(|a| a.severity == AnomalySeverity::High)
+                .count(),
+            self.anomaly_history
+                .iter()
+                .filter(|a| a.severity == AnomalySeverity::Medium)
+                .count(),
+            self.anomaly_history
+                .iter()
+                .filter(|a| a.severity == AnomalySeverity::Low)
+                .count()
         );
 
         let messages = vec![user_message(&report_prompt)];
@@ -470,20 +508,55 @@ impl RealtimeDataProcessor {
     /// 显示处理统计
     fn show_processing_stats(&self) {
         println!("\n📊 实时处理统计:");
-        println!("   📈 总处理数据点: {}", self.processing_stats.total_processed);
-        println!("   🚨 检测异常数: {}", self.processing_stats.anomalies_detected);
-        println!("   ⚡ 处理速率: {:.2} 点/秒", self.processing_stats.processing_rate);
-        println!("   ⏱️  平均延迟: {:.2} ms", self.processing_stats.average_latency.as_millis());
-        println!("   🕐 运行时间: {:.2} 秒", self.processing_stats.uptime.as_secs_f64());
-        println!("   📊 异常率: {:.1}%", 
-                (self.processing_stats.anomalies_detected as f64 / self.processing_stats.total_processed as f64) * 100.0);
+        println!(
+            "   📈 总处理数据点: {}",
+            self.processing_stats.total_processed
+        );
+        println!(
+            "   🚨 检测异常数: {}",
+            self.processing_stats.anomalies_detected
+        );
+        println!(
+            "   ⚡ 处理速率: {:.2} 点/秒",
+            self.processing_stats.processing_rate
+        );
+        println!(
+            "   ⏱️  平均延迟: {:.2} ms",
+            self.processing_stats.average_latency.as_millis()
+        );
+        println!(
+            "   🕐 运行时间: {:.2} 秒",
+            self.processing_stats.uptime.as_secs_f64()
+        );
+        println!(
+            "   📊 异常率: {:.1}%",
+            (self.processing_stats.anomalies_detected as f64
+                / self.processing_stats.total_processed as f64)
+                * 100.0
+        );
 
         if !self.anomaly_history.is_empty() {
             println!("\n🚨 异常分布:");
-            let critical = self.anomaly_history.iter().filter(|a| a.severity == AnomalySeverity::Critical).count();
-            let high = self.anomaly_history.iter().filter(|a| a.severity == AnomalySeverity::High).count();
-            let medium = self.anomaly_history.iter().filter(|a| a.severity == AnomalySeverity::Medium).count();
-            let low = self.anomaly_history.iter().filter(|a| a.severity == AnomalySeverity::Low).count();
+            let critical = self
+                .anomaly_history
+                .iter()
+                .filter(|a| a.severity == AnomalySeverity::Critical)
+                .count();
+            let high = self
+                .anomaly_history
+                .iter()
+                .filter(|a| a.severity == AnomalySeverity::High)
+                .count();
+            let medium = self
+                .anomaly_history
+                .iter()
+                .filter(|a| a.severity == AnomalySeverity::Medium)
+                .count();
+            let low = self
+                .anomaly_history
+                .iter()
+                .filter(|a| a.severity == AnomalySeverity::Low)
+                .count();
 
             println!("   🔴 严重: {} 个", critical);
             println!("   🟠 高级: {} 个", high);
@@ -497,19 +570,19 @@ impl RealtimeDataProcessor {
 async fn main() -> Result<()> {
     println!("🤖 LumosAI 实时数据处理示例");
     println!("================================");
-    
+
     // 创建实时数据处理引擎
     let mut processor = RealtimeDataProcessor::new().await?;
-    
+
     // 开始实时数据处理
     processor.start_processing().await?;
-    
+
     // 显示处理统计
     processor.show_processing_stats();
-    
+
     println!("\n🎉 实时数据处理示例运行完成！");
     println!("💡 这个示例展示了如何使用 LumosAI 构建智能的实时数据处理系统，");
     println!("   实现数据流分析、异常检测、智能报警和性能监控。");
-    
+
     Ok(())
 }

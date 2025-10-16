@@ -1,6 +1,6 @@
 //! 云原生监控模块
 
-use crate::{Result, CloudError};
+use crate::{CloudError, Result};
 
 pub struct CloudMonitoring {}
 

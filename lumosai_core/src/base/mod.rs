@@ -1,10 +1,11 @@
 //! Base module for common functionality shared by components
 
-use crate::logger::{create_logger, Component, LogLevel, Logger};
-use crate::telemetry::{Event, TelemetrySink};
+// use crate::compat::{create_logger, Component, LogLevel, Logger};
+// use crate::compat::{Event, TelemetrySink};
 use crate::types::Metadata;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::compat::{Component, LogLevel, Logger, TelemetrySink, Event, create_logger};
 
 /// Component configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

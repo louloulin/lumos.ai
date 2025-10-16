@@ -1,6 +1,6 @@
 //! 自动扩容模块
 
-use crate::{Result, CloudError};
+use crate::{CloudError, Result};
 
 pub struct AutoScalingManager {}
 

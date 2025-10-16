@@ -8,8 +8,7 @@ use std::sync::Arc;
 use crate::agent::types::RuntimeContext;
 use crate::base::Base;
 use crate::error::Result;
-use crate::logger::{Component, Logger};
-use crate::telemetry::TelemetrySink;
+use crate::compat::{Component, Logger, TelemetrySink};
 
 /// Evaluation metric result
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -17,7 +17,7 @@ use uuid::Uuid;
 use crate::agent::trait_def::Agent;
 use crate::agent::types::{AgentGenerateOptions, AgentStep, ToolCall, ToolResult};
 use crate::llm::Message;
-use crate::telemetry::TraceCollector;
+// use crate::compat::TraceCollector;
 
 /// Events emitted during streaming agent execution
 #[derive(Debug, Clone, Serialize, Deserialize)]

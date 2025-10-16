@@ -1,21 +1,36 @@
-use lumosai_core::prelude::*;
+use lumos_macro::*;
 use lumosai_core::agent::types::AgentGenerateOptions;
-use lumosai_core::llm::types::user_message;
 use lumosai_core::llm::mock::MockLlmProvider;
+use lumosai_core::llm::types::user_message;
+use lumosai_core::prelude::*;
 use lumosai_core::Tool;
-use std::sync::Arc;
-use lumos_macro::*; // 现在启用宏
+use std::sync::Arc; // 现在启用宏
 
 // 演示真实的宏使用
 
 // 1. 使用 #[tool] 宏创建计算器工具
 #[tool(name = "macro_calculator", description = "执行基本的数学运算")]
 fn calculator_tool(
-    #[parameter(name = "operation", description = "数学运算类型 (add, subtract, multiply, divide)", r#type = "string", required = true)]
+    #[parameter(
+        name = "operation",
+        description = "数学运算类型 (add, subtract, multiply, divide)",
+        r#type = "string",
+        required = true
+    )]
     operation: String,
-    #[parameter(name = "a", description = "第一个数字", r#type = "number", required = true)]
+    #[parameter(
+        name = "a",
+        description = "第一个数字",
+        r#type = "number",
+        required = true
+    )]
     a: f64,
-    #[parameter(name = "b", description = "第二个数字", r#type = "number", required = true)]
+    #[parameter(
+        name = "b",
+        description = "第二个数字",
+        r#type = "number",
+        required = true
+    )]
     b: f64,
 ) -> lumosai_core::Result<serde_json::Value> {
     use serde_json::json;
@@ -26,13 +41,18 @@ fn calculator_tool(
         "multiply" => a * b,
         "divide" => {
             if b == 0.0 {
-                return Err(lumosai_core::Error::InvalidInput("除数不能为零".to_string()));
+                return Err(lumosai_core::Error::InvalidInput(
+                    "除数不能为零".to_string(),
+                ));
             }
             a / b
         }
-        _ => return Err(lumosai_core::Error::InvalidInput(
-            format!("不支持的运算类型: {}", operation)
-        )),
+        _ => {
+            return Err(lumosai_core::Error::InvalidInput(format!(
+                "不支持的运算类型: {}",
+                operation
+            )))
+        }
     };
 
     Ok(json!({
@@ -44,7 +64,7 @@ fn calculator_tool(
 
 // 2. 手动创建工具（演示宏应该生成的代码）
 fn create_manual_calculator_tool() -> Box<dyn Tool> {
-    use lumosai_core::tool::{FunctionTool, ParameterSchema, ToolSchema, SchemaFormat};
+    use lumosai_core::tool::{FunctionTool, ParameterSchema, SchemaFormat, ToolSchema};
     use serde_json::json;
 
     let schema = ToolSchema {
@@ -84,17 +104,20 @@ fn create_manual_calculator_tool() -> Box<dyn Tool> {
         "手动创建的计算器工具",
         schema,
         |params| {
-            let operation = params.get("operation")
+            let operation = params
+                .get("operation")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| lumosai_core::Error::InvalidInput("缺少 operation 参数".to_string()))?;
+                .ok_or_else(|| {
+                    lumosai_core::Error::InvalidInput("缺少 operation 参数".to_string())
+                })?;
 
-            let a = params.get("a")
-                .and_then(|v| v.as_f64())
-                .ok_or_else(|| lumosai_core::Error::InvalidInput("缺少或无效的 a 参数".to_string()))?;
+            let a = params.get("a").and_then(|v| v.as_f64()).ok_or_else(|| {
+                lumosai_core::Error::InvalidInput("缺少或无效的 a 参数".to_string())
+            })?;
 
-            let b = params.get("b")
-                .and_then(|v| v.as_f64())
-                .ok_or_else(|| lumosai_core::Error::InvalidInput("缺少或无效的 b 参数".to_string()))?;
+            let b = params.get("b").and_then(|v| v.as_f64()).ok_or_else(|| {
+                lumosai_core::Error::InvalidInput("缺少或无效的 b 参数".to_string())
+            })?;
 
             let result = match operation {
                 "add" => a + b,
@@ -102,13 +125,18 @@ fn create_manual_calculator_tool() -> Box<dyn Tool> {
                 "multiply" => a * b,
                 "divide" => {
                     if b == 0.0 {
-                        return Err(lumosai_core::Error::InvalidInput("除数不能为零".to_string()));
+                        return Err(lumosai_core::Error::InvalidInput(
+                            "除数不能为零".to_string(),
+                        ));
                     }
                     a / b
                 }
-                _ => return Err(lumosai_core::Error::InvalidInput(
-                    format!("不支持的运算类型: {}", operation)
-                )),
+                _ => {
+                    return Err(lumosai_core::Error::InvalidInput(format!(
+                        "不支持的运算类型: {}",
+                        operation
+                    )))
+                }
             };
 
             Ok(json!({
@@ -148,7 +176,6 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // 演示工具的 schema
     println!("\n� 工具 Schema 信息:");
 
-
     // 4. 创建基础 Agent 演示宏的价值
     println!("\n🤖 创建 Agent 演示宏的价值:");
     let mock_provider = MockLlmProvider::new(vec![
@@ -157,7 +184,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     let agent = quick_agent(
         "macro_demo_agent",
-        "你是一个演示宏功能的 AI 助手，专门用于展示 LumosAI 宏系统的优势。"
+        "你是一个演示宏功能的 AI 助手，专门用于展示 LumosAI 宏系统的优势。",
     )
     .model(Arc::new(mock_provider))
     .build()?;
@@ -177,7 +204,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     use lumosai_core::tool::ToolExecutionContext;
     let context = ToolExecutionContext::default();
-    let calc_result = manual_tool.execute(calc_params, context, &Default::default()).await?;
+    let calc_result = manual_tool
+        .execute(calc_params, context, &Default::default())
+        .await?;
     println!("   📊 计算结果: {}", calc_result);
 
     // 5. 测试 Agent 对话

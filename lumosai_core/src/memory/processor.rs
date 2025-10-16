@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use crate::base::Base;
 use crate::llm::Message;
-use crate::logger::{Component, Logger};
-use crate::telemetry::TelemetrySink;
+// use crate::compat::{Component, Logger};
+// use crate::compat::TelemetrySink;
 use crate::Result;
 
 /// Options for memory processors

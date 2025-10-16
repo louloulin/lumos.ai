@@ -9,7 +9,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::Result;
-use crate::logger::{Component, Logger};
+// use crate::compat::{Component, Logger};
 use crate::tool::{Tool, ToolSchema};
 
 /// Tool category

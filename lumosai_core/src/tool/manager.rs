@@ -14,7 +14,7 @@ use chrono::{DateTime, Utc};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::Result;
-use crate::logger::{Component, Logger};
+// use crate::compat::{Component, Logger};
 use crate::tool::{Tool, ToolRegistry, ToolMetadata, ToolCategory};
 use crate::tool::enhanced::{EnhancedTool, ToolStats, ToolHealth, RateLimit, StreamingConfig, BatchConfig};
 use crate::agent::types::RuntimeContext;

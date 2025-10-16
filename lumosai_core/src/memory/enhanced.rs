@@ -11,7 +11,7 @@ use std::sync::Arc;
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::Result;
 use crate::llm::{LlmProvider, Message};
-use crate::logger::{Component, Logger};
+// use crate::compat::{Component, Logger};
 use crate::memory::{Memory, MemoryConfig};
 use crate::vector::VectorStorage;
 

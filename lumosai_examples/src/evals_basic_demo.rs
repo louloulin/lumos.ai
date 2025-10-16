@@ -53,7 +53,8 @@ impl Metric for MockMetric {
         }
 
         // 如果输出包含输入中的关键词，加分
-        if output.contains("AI") || output.contains("人工智能") || output.contains("机器学习") {
+        if output.contains("AI") || output.contains("人工智能") || output.contains("机器学习")
+        {
             score += 0.2;
         }
 
@@ -102,9 +103,21 @@ async fn main() -> Result<()> {
     ));
 
     println!("✅ 创建了 3 个评估指标:");
-    println!("   - {}: {}", accuracy_metric.name(), accuracy_metric.description());
-    println!("   - {}: {}", relevance_metric.name(), relevance_metric.description());
-    println!("   - {}: {}", coherence_metric.name(), coherence_metric.description());
+    println!(
+        "   - {}: {}",
+        accuracy_metric.name(),
+        accuracy_metric.description()
+    );
+    println!(
+        "   - {}: {}",
+        relevance_metric.name(),
+        relevance_metric.description()
+    );
+    println!(
+        "   - {}: {}",
+        coherence_metric.name(),
+        coherence_metric.description()
+    );
 
     // 2. 创建基于指标的评估器
     println!("\n🔍 2. 创建基于指标的评估器");
@@ -127,9 +140,18 @@ async fn main() -> Result<()> {
     };
 
     let test_cases = vec![
-        ("什么是人工智能？", "人工智能是计算机科学的一个分支，致力于创建能够执行通常需要人类智能的任务的系统。"),
-        ("解释机器学习的基本概念", "机器学习是人工智能的一个子集，它使计算机能够从数据中学习并做出预测或决策。"),
-        ("深度学习有什么应用？", "深度学习在图像识别、自然语言处理、语音识别等领域有广泛应用。"),
+        (
+            "什么是人工智能？",
+            "人工智能是计算机科学的一个分支，致力于创建能够执行通常需要人类智能的任务的系统。",
+        ),
+        (
+            "解释机器学习的基本概念",
+            "机器学习是人工智能的一个子集，它使计算机能够从数据中学习并做出预测或决策。",
+        ),
+        (
+            "深度学习有什么应用？",
+            "深度学习在图像识别、自然语言处理、语音识别等领域有广泛应用。",
+        ),
     ];
 
     println!("✅ 准备了 {} 个测试案例", test_cases.len());
@@ -161,7 +183,8 @@ async fn main() -> Result<()> {
     let mut total_score = 0.0;
     let mut evaluation_results = Vec::new();
 
-    for (i, ((input, _expected), output)) in test_cases.iter().zip(model_outputs.iter()).enumerate() {
+    for (i, ((input, _expected), output)) in test_cases.iter().zip(model_outputs.iter()).enumerate()
+    {
         println!("\n--- 测试案例 {} ---", i + 1);
         println!("输入: {}", input);
         println!("输出: {}", output);
@@ -215,7 +238,10 @@ async fn main() -> Result<()> {
     println!("\n📋 7. 评估报告");
     println!("==================================================");
     println!("评估框架: LumosAI Evals v0.2.0");
-    println!("评估时间: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
+    println!(
+        "评估时间: {}",
+        chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
+    );
     println!("评估器数量: 3 个");
     println!("指标数量: 3 个");
     println!("测试案例: {} 个", test_cases.len());

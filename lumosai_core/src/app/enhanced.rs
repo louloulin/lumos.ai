@@ -11,7 +11,7 @@ use crate::agent::{trait_def::Agent, AgentConfig};
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::Result;
 use crate::llm::{LlmProvider, Message};
-use crate::logger::{Component, Logger};
+// use crate::compat::{Component, Logger};
 use crate::memory::{Memory, MemoryConfig};
 use crate::rag::RagPipeline;
 use crate::tool::{EnhancedToolCategory as ToolCategory, Tool, ToolMetadata, ToolRegistry};

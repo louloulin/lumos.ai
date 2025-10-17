@@ -17,30 +17,12 @@ async fn main() -> CliResult<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Create(args) => {
-            // 将逗号分隔的字符串转换为 Vec<String>
-            let components = args
-                .components
-                .map(|s| s.split(',').map(|s| s.trim().to_string()).collect());
-
-            // 创建name的副本以避免所有权问题
-            let name_clone = args.name.clone();
-
-            commands::create::run(
-                name_clone,
-                components,
-                args.llm,
-                args.llm_api_key,
-                args.name.or_else(|| {
-                    args.project_dir.and_then(|p| {
-                        p.file_name()
-                            .and_then(|n| n.to_str().map(|s| s.to_string()))
-                    })
-                }),
-                args.example,
-            )
-            .await
+        Commands::New(args) | Commands::Create(args) => {
+            commands::create::run_new(args).await
         }
+        Commands::Test(args) => commands::build::run_test(args).await,
+        Commands::Build(args) => commands::build::run_build(args).await,
+        Commands::Deploy(args) => commands::deploy::run_deploy(args).await,
         Commands::Dev(options) => commands::dev::run(options).await,
         Commands::Ui(args) => {
             commands::ui::run(

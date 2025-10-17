@@ -1,5 +1,6 @@
 use crate::error::{CliError, CliResult};
 use crate::util::create_dir_all;
+use crate::CreateArgs;
 use colored::Colorize;
 use dialoguer::{Confirm, Input, MultiSelect, Select};
 use std::fs;
@@ -798,4 +799,118 @@ mod tests {
         let basic_content = fs::read_to_string(basic_example_path).unwrap();
         assert!(basic_content.contains("use test_project::agents::"));
     }
+}
+
+/// 新的项目创建函数，支持模板选择
+pub async fn run_new(args: CreateArgs) -> CliResult<()> {
+    println!("{}", "🚀 创建新的 LumosAI 项目".bright_blue().bold());
+
+    // 获取项目名称
+    let project_name = match args.name {
+        Some(name) => name,
+        None => Input::new()
+            .with_prompt("项目名称")
+            .interact()
+            .map_err(|e| CliError::Other(e.to_string()))?
+    };
+
+    // 选择模板
+    let template = match args.template {
+        Some(template) => template,
+        None => {
+            let templates = vec![
+                "hello-world",
+                "chatbot",
+                "rag-system",
+                "multi-agent",
+                "research-assistant",
+                "workflow-automation"
+            ];
+
+            let selection = Select::new()
+                .with_prompt("选择项目模板")
+                .items(&templates)
+                .default(0)
+                .interact()
+                .map_err(|e| CliError::Other(e.to_string()))?;
+
+            templates[selection].to_string()
+        }
+    };
+
+    println!("📋 项目名称: {}", project_name.bright_green());
+    println!("📋 选择模板: {}", template.bright_green());
+
+    // 创建项目目录
+    let project_path = PathBuf::from(&project_name);
+    if project_path.exists() {
+        return Err(CliError::ProjectExists(project_name));
+    }
+
+    create_dir_all(&project_path)?;
+
+    // 复制模板文件
+    copy_template(&template, &project_path, &project_name).await?;
+
+    println!("\n{} 项目创建成功！", "✅".bright_green());
+    println!("📁 项目路径: {}", project_path.display().to_string().bright_cyan());
+    println!("\n下一步:");
+    println!("  cd {}", project_name);
+    println!("  cargo run");
+
+    Ok(())
+}
+
+/// 复制模板文件到新项目
+async fn copy_template(template: &str, project_path: &Path, project_name: &str) -> CliResult<()> {
+    // 模板源路径（相对于当前工作目录）
+    let template_source = PathBuf::from("docs/examples").join(template);
+
+    if !template_source.exists() {
+        return Err(CliError::TemplateNotFound(template.to_string()));
+    }
+
+    println!("📋 复制模板文件...");
+
+    // 复制所有文件
+    copy_dir_recursive(&template_source, project_path)?;
+
+    // 更新 Cargo.toml 中的项目名称
+    let cargo_toml_path = project_path.join("Cargo.toml");
+    if cargo_toml_path.exists() {
+        let content = fs::read_to_string(&cargo_toml_path)
+            .map_err(|e| CliError::Io(e))?;
+
+        let updated_content = content.replace(
+            &format!("name = \"{}\"", template),
+            &format!("name = \"{}\"", project_name)
+        );
+
+        fs::write(&cargo_toml_path, updated_content)
+            .map_err(|e| CliError::Io(e))?;
+    }
+
+    Ok(())
+}
+
+/// 递归复制目录
+fn copy_dir_recursive(src: &Path, dst: &Path) -> CliResult<()> {
+    if !dst.exists() {
+        create_dir_all(dst)?;
+    }
+
+    for entry in fs::read_dir(src).map_err(|e| CliError::Io(e))? {
+        let entry = entry.map_err(|e| CliError::Io(e))?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            fs::copy(&src_path, &dst_path)
+                .map_err(|e| CliError::Io(e))?;
+        }
+    }
+
+    Ok(())
 }

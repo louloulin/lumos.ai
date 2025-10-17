@@ -20,6 +20,9 @@ pub enum CliError {
     /// 模板配置未找到
     TemplateConfigNotFound(String),
 
+    /// 项目已存在
+    ProjectExists(String),
+
     /// 工具链错误
     ToolchainError(String),
 
@@ -153,6 +156,7 @@ impl fmt::Display for CliError {
             CliError::JsonParse(err) => write!(f, "JSON解析错误: {}", err),
             CliError::TemplateNotFound(name) => write!(f, "模板未找到: {}", name),
             CliError::TemplateConfigNotFound(path) => write!(f, "模板配置未找到: {}", path),
+            CliError::ProjectExists(name) => write!(f, "项目已存在: {}", name),
             CliError::ToolchainError(msg) => write!(f, "工具链错误: {}", msg),
             CliError::Interaction(msg) => write!(f, "交互错误: {}", msg),
             CliError::Canceled(msg) => write!(f, "{}", msg),

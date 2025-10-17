@@ -376,6 +376,81 @@ pub struct PortMapping {
     pub protocol: String,
 }
 
+
+
+// 临时的实现
+pub struct InMemoryMetricsCollector {
+    metrics: Arc<std::sync::Mutex<HashMap<String, MetricValue>>>,
+}
+
+impl InMemoryMetricsCollector {
+    pub fn new() -> Self {
+        Self {
+            metrics: Arc::new(std::sync::Mutex::new(HashMap::new())),
+        }
+    }
+
+    pub fn get_metrics(&self) -> HashMap<String, MetricValue> {
+        self.metrics.lock().map(|m| m.clone()).unwrap_or_default()
+    }
+}
+
+#[async_trait]
+impl MetricsCollector for InMemoryMetricsCollector {
+    async fn record_metric(&self, name: &str, value: f64) {
+        if let Ok(mut metrics) = self.metrics.lock() {
+            metrics.insert(name.to_string(), MetricValue::Float(value));
+        }
+    }
+
+    async fn record_memory_operation(&self, _metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+
+    async fn record_tool_execution(&self, _metrics: ToolMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+
+    async fn record_agent_execution(&self, _metrics: AgentMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+}
+
+pub struct InMemoryTraceCollector {
+    traces: Arc<std::sync::Mutex<Vec<TraceStep>>>,
+}
+
+impl InMemoryTraceCollector {
+    pub fn new() -> Self {
+        Self {
+            traces: Arc::new(std::sync::Mutex::new(Vec::new())),
+        }
+    }
+
+    pub fn get_traces(&self) -> Vec<TraceStep> {
+        self.traces.lock().map(|t| t.clone()).unwrap_or_default()
+    }
+}
+
+#[async_trait]
+impl TraceCollector for InMemoryTraceCollector {
+    async fn start_trace(&self, name: &str) -> String {
+        let trace_id = format!("trace_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
+        trace_id
+    }
+
+    async fn add_trace_step(&self, _trace_id: &str, step: TraceStep) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if let Ok(mut traces) = self.traces.lock() {
+            traces.push(step);
+        }
+        Ok(())
+    }
+
+    async fn end_trace(&self, _trace_id: &str) {
+        // 临时实现，什么都不做
+    }
+}
+
 // 云适配器实现（临时）
 pub struct AwsAdapter;
 pub struct AzureAdapter;

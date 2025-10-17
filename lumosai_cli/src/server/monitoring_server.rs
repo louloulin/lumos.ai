@@ -16,8 +16,28 @@ use tokio::sync::RwLock;
 
 use crate::error::{CliError, CliResult};
 use crate::util::get_available_port;
-use lumosai_core::telemetry::metrics::{MetricsCollector, MetricsSummary, TimeRange};
-use lumosai_core::telemetry::trace::TraceCollector;
+use lumosai_core::compat::{MetricsCollector, TraceCollector, MetricValue, InMemoryMetricsCollector};
+
+// 临时结构体定义，用于监控服务器
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MetricsSummary {
+    pub total_executions: u64,
+    pub successful_executions: u64,
+    pub failed_executions: u64,
+    pub avg_execution_time_ms: f64,
+    pub min_execution_time_ms: u64,
+    pub max_execution_time_ms: u64,
+    pub total_tokens_used: u64,
+    pub avg_tokens_per_execution: f64,
+    pub tool_call_stats: HashMap<String, u64>,
+    pub time_range: TimeRange,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimeRange {
+    pub start: u64,
+    pub end: u64,
+}
 
 /// 监控服务器配置
 #[derive(Debug, Clone)]
@@ -293,25 +313,22 @@ async fn get_agent_overview(collector: &Arc<dyn MetricsCollector>) -> AgentOverv
 
     let twenty_four_hours_ago = now - (24 * 60 * 60 * 1000);
 
-    // 获取最近24小时的统计
-    let summary = collector
-        .get_metrics_summary(None, Some(twenty_four_hours_ago), Some(now))
-        .await
-        .unwrap_or_else(|_| MetricsSummary {
-            total_executions: 0,
-            successful_executions: 0,
-            failed_executions: 0,
-            avg_execution_time_ms: 0.0,
-            min_execution_time_ms: 0,
-            max_execution_time_ms: 0,
-            total_tokens_used: 0,
-            avg_tokens_per_execution: 0.0,
-            tool_call_stats: HashMap::new(),
-            time_range: TimeRange {
-                start: twenty_four_hours_ago,
-                end: now,
-            },
-        });
+    // 临时实现 - 创建默认的指标摘要
+    let summary = MetricsSummary {
+        total_executions: 0,
+        successful_executions: 0,
+        failed_executions: 0,
+        avg_execution_time_ms: 0.0,
+        min_execution_time_ms: 0,
+        max_execution_time_ms: 0,
+        total_tokens_used: 0,
+        avg_tokens_per_execution: 0.0,
+        tool_call_stats: HashMap::new(),
+        time_range: TimeRange {
+            start: twenty_four_hours_ago,
+            end: now,
+        },
+    };
 
     let success_rate = if summary.total_executions > 0 {
         summary.successful_executions as f64 / summary.total_executions as f64
@@ -439,19 +456,9 @@ async fn get_agent_performance(
     let agent_name = path.into_inner();
     let state = data.get_ref();
 
-    match state
-        .metrics_collector
-        .get_agent_performance(&agent_name)
-        .await
-    {
-        Ok(performance) => Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(performance))),
-        Err(e) => Ok(
-            HttpResponse::NotFound().json(MonitoringApiResponse::<()>::error(format!(
-                "Agent '{}' not found: {}",
-                agent_name, e
-            ))),
-        ),
-    }
+    // 临时实现 - 返回空的性能数据
+    let performance: HashMap<String, f64> = HashMap::new();
+    Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(performance)))
 }
 
 /// 获取指标摘要处理器
@@ -465,19 +472,28 @@ async fn get_metrics_summary(
     let from_time = query.get("from").and_then(|s| s.parse::<u64>().ok());
     let to_time = query.get("to").and_then(|s| s.parse::<u64>().ok());
 
-    match state
-        .metrics_collector
-        .get_metrics_summary(agent_name, from_time, to_time)
-        .await
-    {
-        Ok(summary) => Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(summary))),
-        Err(e) => Ok(
-            HttpResponse::InternalServerError().json(MonitoringApiResponse::<()>::error(format!(
-                "Failed to get metrics summary: {}",
-                e
-            ))),
-        ),
-    }
+    // 临时实现 - 创建默认的指标摘要
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+    let start_time = from_time.unwrap_or(now - (24 * 60 * 60 * 1000));
+    let end_time = to_time.unwrap_or(now);
+
+    let summary = MetricsSummary {
+        total_executions: 0,
+        successful_executions: 0,
+        failed_executions: 0,
+        avg_execution_time_ms: 0.0,
+        min_execution_time_ms: 0,
+        max_execution_time_ms: 0,
+        total_tokens_used: 0,
+        avg_tokens_per_execution: 0.0,
+        tool_call_stats: HashMap::new(),
+        time_range: TimeRange {
+            start: start_time,
+            end: end_time,
+        },
+    };
+
+    Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(summary)))
 }
 
 /// 获取系统健康状态处理器

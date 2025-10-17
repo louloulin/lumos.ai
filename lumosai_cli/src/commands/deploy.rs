@@ -3,7 +3,9 @@ use crate::error::CliResult;
 use crate::util::{
     check_command_available, copy_dir_all, create_dir_all, find_project_root, is_lumos_project,
 };
+use crate::DeployArgs;
 use colored::Colorize;
+use dialoguer::Confirm;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
@@ -197,6 +199,68 @@ async fn deploy_gcp(project_dir: &Path, build_dir: &Path) -> CliResult<()> {
 
     // 实际GCP部署逻辑应在此处实现
     println!("{}", "GCP部署功能尚未完全实现，敬请期待".bright_yellow());
+
+    Ok(())
+}
+
+/// 运行部署命令
+pub async fn run_deploy(args: DeployArgs) -> CliResult<()> {
+    println!("{}", "🚀 部署 LumosAI 项目".bright_blue().bold());
+
+    // 确定项目目录
+    let project_dir = match args.project_dir {
+        Some(dir) => dir,
+        None => find_project_root()?,
+    };
+
+    // 检查是否为Lumos项目
+    if !is_lumos_project(&project_dir) {
+        println!("{}", "警告: 当前目录不是一个Lumos AI项目".bright_yellow());
+    }
+
+    println!("📁 项目目录: {}", project_dir.display().to_string().bright_cyan());
+    println!("🌍 部署环境: {}", args.env.bright_green());
+
+    // 如果不是强制部署，询问确认
+    if !args.force {
+        println!("\n⚠️  即将部署到 {} 环境", args.env.bright_yellow());
+
+        let confirm = dialoguer::Confirm::new()
+            .with_prompt("确认继续部署吗？")
+            .default(false)
+            .interact()
+            .map_err(|e| format!("交互错误: {}", e))?;
+
+        if !confirm {
+            println!("部署已取消");
+            return Ok(());
+        }
+    }
+
+    // 根据环境选择部署目标
+    let target = match args.env.as_str() {
+        "dev" => "local",
+        "staging" => "docker",
+        "production" => "aws",
+        _ => "local"
+    };
+
+    println!("🎯 部署目标: {}", target.bright_green());
+
+    // 如果提供了配置文件，显示配置信息
+    if let Some(config_path) = &args.config {
+        println!("⚙️  配置文件: {}", config_path.display().to_string().bright_cyan());
+
+        if !config_path.exists() {
+            return Err(format!("配置文件不存在: {}", config_path.display()).into());
+        }
+    }
+
+    // 执行部署
+    run(Some(project_dir), target).await?;
+
+    println!("\n{} 部署完成！", "✅".bright_green());
+    println!("🌐 环境: {}", args.env.bright_cyan());
 
     Ok(())
 }

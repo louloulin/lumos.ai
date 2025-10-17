@@ -4,9 +4,7 @@ use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use lumosai_core::telemetry::collectors::InMemoryMetricsCollector;
-use lumosai_core::telemetry::metrics::MetricsCollector;
-use lumosai_core::telemetry::trace::TraceCollector;
+use lumosai_core::compat::{InMemoryMetricsCollector, InMemoryTraceCollector, MetricsCollector, TraceCollector};
 
 use crate::error::{CliError, CliResult};
 use crate::server::monitoring_server;
@@ -96,7 +94,7 @@ pub async fn run(options: MonitoringOptions) -> CliResult<()> {
     // 创建指标收集器和追踪收集器
     // 在实际应用中，这些可能会从项目配置中加载或从文件系统恢复
     let metrics_collector: Arc<dyn MetricsCollector> = Arc::new(InMemoryMetricsCollector::new());
-    let trace_collector: Arc<dyn TraceCollector> = Arc::new(InMemoryMetricsCollector::new());
+    let trace_collector: Arc<dyn TraceCollector> = Arc::new(InMemoryTraceCollector::new());
 
     // 启动监控服务器
     monitoring_server::start_monitoring_server(

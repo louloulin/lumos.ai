@@ -168,8 +168,12 @@ impl SLAMonitor {
         let service_name = metrics.service_name.clone();
 
         // 检查是否有SLA违约
-        if let Some(sla) = self.sla_definitions.values().find(|s| s.service_name == service_name) {
-            self.check_violations(sla, &metrics).await?;
+        let sla_opt = self.sla_definitions.values()
+            .find(|s| s.service_name == service_name)
+            .cloned();
+
+        if let Some(sla) = sla_opt {
+            self.check_violations(&sla, &metrics).await?;
         }
 
         self.sla_metrics.insert(service_name, metrics);

@@ -12,14 +12,12 @@ use lumosai_core::base::{Base, BaseComponent, ComponentConfig};
 use lumosai_core::llm::function_calling::{FunctionCall, FunctionDefinition, ToolChoice};
 use lumosai_core::llm::provider::FunctionCallingResponse;
 use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role};
-use lumosai_core::logger::{LogEntry, Logger};
-use lumosai_core::telemetry::{Event, TelemetrySink};
+use lumosai_core::compat::{Logger, TelemetrySink, Component, Event};
 use lumosai_core::tool::{
     ParameterSchema, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
 };
 use lumosai_core::{Error, Result};
 use serde_json::{json, Value};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Mock LLM provider with function calling support for testing
@@ -143,7 +141,7 @@ impl Base for CalculatorTool {
         self.base.name()
     }
 
-    fn component(&self) -> lumosai_core::logger::Component {
+    fn component(&self) -> Component {
         self.base.component()
     }
 
@@ -215,32 +213,21 @@ impl Tool for CalculatorTool {
 pub struct MockLogger;
 
 impl Logger for MockLogger {
-    fn debug(&self, message: &str, _metadata: Option<HashMap<String, Value>>) {
-        println!("[DEBUG] {}", message);
-    }
-
-    fn info(&self, message: &str, _metadata: Option<HashMap<String, Value>>) {
-        println!("[INFO] {}", message);
-    }
-
-    fn warn(&self, message: &str, _metadata: Option<HashMap<String, Value>>) {
-        println!("[WARN] {}", message);
-    }
-
-    fn error(&self, message: &str, _metadata: Option<HashMap<String, Value>>) {
-        println!("[ERROR] {}", message);
-    }
-
-    fn get_logs_by_run_id(&self, _run_id: &str) -> Vec<LogEntry> {
-        vec![]
+    fn log(&self, level: lumosai_core::compat::LogLevel, message: &str) {
+        println!("[{:?}] {}", level, message);
     }
 }
 
 /// Mock telemetry sink for testing
 pub struct MockTelemetry;
 
+#[async_trait]
 impl TelemetrySink for MockTelemetry {
-    fn record_event(&self, _event: Event) {
+    async fn send_event(&self, _event: Event) {
+        // No-op for testing
+    }
+
+    fn record_event(&self, _event: serde_json::Value) {
         // No-op for testing
     }
 }

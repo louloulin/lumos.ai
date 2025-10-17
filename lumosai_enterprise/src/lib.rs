@@ -19,8 +19,9 @@ pub mod error;
 // Re-export main types
 pub use monitoring::{EnterpriseMonitoring, EnterpriseMetric, ComplianceMonitor};
 pub use security::{SecurityFramework, SecurityPolicy, ThreatDetectionEngine};
-pub use compliance::{ComplianceManager, ComplianceStandard, AuditManager};
-pub use multi_tenant::{MultiTenantArchitecture, TenantManager, TenantContext};
+pub use compliance::{ComplianceManager, AuditManager};
+pub use config::ComplianceStandard;
+pub use multi_tenant::{MultiTenantManager, Tenant, TenantStatus, TenantConfig, ResourceLimits};
 pub use cost_tracking::{CostTracker, CostMetrics, BillingManager};
 pub use sla_monitoring::{SLAMonitor, SLAMetrics, ServiceLevelAgreement};
 pub use incident_management::{IncidentManager, Incident, IncidentResponse};

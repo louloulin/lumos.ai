@@ -10,15 +10,14 @@ use std::sync::Arc;
 
 use lumosai_core::base::Base;
 use lumosai_core::error::{Error as CoreError, Result as CoreResult};
-use lumosai_core::logger::{Component as LogComponent, ConsoleLogger, LogLevel, Logger};
-use lumosai_core::telemetry::TelemetrySink;
+use lumosai_core::compat::{Component as LogComponent, Logger, LogLevel, TelemetrySink, create_logger};
 use lumosai_core::tool::{
     ParameterSchema, SchemaFormat, Tool as LumosTool, ToolExecutionContext, ToolExecutionOptions,
     ToolSchema,
 };
 
 use crate::types::{ParameterSchema as MCPParameterSchema, ToolDefinition};
-use crate::{EnhancedMCPManager, MCPError, Result as MCPResult};
+use crate::{EnhancedMCPManager, Result as MCPResult};
 
 /// Adapter that wraps MCP tools to work with the Lumos tool system
 #[derive(Debug, Clone)]
@@ -150,11 +149,7 @@ impl Base for MCPToolAdapter {
 
     fn logger(&self) -> Arc<dyn Logger> {
         // Return a default logger for now
-        Arc::new(ConsoleLogger::new(
-            &self.tool_name,
-            LogComponent::Tool,
-            LogLevel::Info,
-        ))
+        create_logger(&self.tool_name, LogComponent::Tool, LogLevel::Info)
     }
 
     fn set_logger(&mut self, _logger: Arc<dyn Logger>) {

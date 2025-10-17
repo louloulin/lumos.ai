@@ -2,12 +2,12 @@ use async_trait::async_trait;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{create_basic_agent, Agent};
 use lumosai_core::llm::{Message, MockLlmProvider, Role};
-use lumosai_core::logger::Logger;
-use lumosai_core::telemetry::TelemetrySink;
+use lumosai_core::compat::{Logger, TelemetrySink};
 use lumosai_core::tool::{
     ParameterSchema, SchemaFormat, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
 };
-use lumosai_core::{Base, BaseComponent, LogComponent, Result};
+use lumosai_core::{Base, BaseComponent, Result};
+use lumosai_core::compat::Component;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -41,7 +41,7 @@ impl Base for CalculatorTool {
         self.base.name()
     }
 
-    fn component(&self) -> LogComponent {
+    fn component(&self) -> Component {
         self.base.component()
     }
 
@@ -171,7 +171,7 @@ impl Base for WeatherTool {
         self.base.name()
     }
 
-    fn component(&self) -> LogComponent {
+    fn component(&self) -> Component {
         self.base.component()
     }
 

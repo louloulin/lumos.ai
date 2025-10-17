@@ -14,6 +14,7 @@ lumosai_core = { path = "../lumosai_core" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+toml = "0.8"
 uuid = { workspace = true }
 chrono = { workspace = true }
 

@@ -564,7 +564,10 @@ impl PerformanceMonitor {
         Ok(Self {
             thresholds: PerformanceThresholds::default(),
             metrics: PerformanceMetrics {
-                response_time_histogram: Arc::new(Histogram::new(vec![0.1, 0.5, 1.0, 2.5, 5.0, 10.0]).unwrap()),
+                response_time_histogram: Arc::new(Histogram::with_opts(
+                    prometheus::HistogramOpts::new("response_time", "Response time histogram")
+                        .buckets(vec![0.1, 0.5, 1.0, 2.5, 5.0, 10.0])
+                ).unwrap()),
                 throughput_counter: Arc::new(Counter::new("throughput", "Throughput counter").unwrap()),
                 error_rate_counter: Arc::new(Counter::new("errors", "Error rate counter").unwrap()),
                 cpu_usage_gauge: Arc::new(Gauge::new("cpu_usage", "CPU usage gauge").unwrap()),

@@ -49,6 +49,14 @@ pub enum EnterpriseError {
     #[error("多租户错误: {0}")]
     MultiTenant(String),
 
+    /// 租户已存在
+    #[error("租户已存在: {tenant_id}")]
+    TenantAlreadyExists { tenant_id: String },
+
+    /// 租户不存在
+    #[error("租户不存在: {tenant_id}")]
+    TenantNotFound { tenant_id: String },
+
     /// 成本跟踪错误
     #[error("成本跟踪错误: {0}")]
     CostTracking(String),
@@ -97,9 +105,7 @@ pub enum EnterpriseError {
     #[error("威胁检测错误: {0}")]
     ThreatDetection(String),
 
-    /// 租户不存在
-    #[error("租户不存在: {0}")]
-    TenantNotFound(String),
+
 
     /// 资源不足
     #[error("资源不足: {0}")]
@@ -150,6 +156,19 @@ impl From<&str> for EnterpriseError {
 impl From<String> for EnterpriseError {
     fn from(msg: String) -> Self {
         EnterpriseError::Internal(msg)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for EnterpriseError {
+    fn from(e: std::string::FromUtf8Error) -> Self {
+        EnterpriseError::Internal(e.to_string())
+    }
+}
+
+#[cfg(feature = "prometheus")]
+impl From<prometheus::Error> for EnterpriseError {
+    fn from(e: prometheus::Error) -> Self {
+        EnterpriseError::Internal(e.to_string())
     }
 }
 
@@ -220,7 +239,7 @@ impl EnterpriseError {
             EnterpriseError::Authentication(_) |
             EnterpriseError::Authorization(_) |
             EnterpriseError::PermissionDenied(_) |
-            EnterpriseError::TenantNotFound(_) |
+            EnterpriseError::TenantNotFound { .. } |
             EnterpriseError::Validation(_)
         )
     }
@@ -243,7 +262,7 @@ impl EnterpriseError {
         matches!(
             self,
             EnterpriseError::InsufficientResources(_) |
-            EnterpriseError::QuotaExceeded(_) |
+            EnterpriseError::QuotaExceeded { .. } |
             EnterpriseError::CapacityPlanning(_)
         )
     }
@@ -272,7 +291,11 @@ mod tests {
         assert!(auth_err.is_fatal());
         assert!(auth_err.is_security_related());
 
-        let quota_err = EnterpriseError::QuotaExceeded("配额超限".to_string());
+        let quota_err = EnterpriseError::QuotaExceeded {
+            tenant_id: "test_tenant".to_string(),
+            resource_type: "CPU".to_string(),
+            requested: 100,
+        };
         assert!(!quota_err.is_temporary());
         assert!(!quota_err.is_security_related());
         assert!(quota_err.is_resource_related());

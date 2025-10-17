@@ -8,6 +8,7 @@ pub mod builtin;
 mod context;
 pub mod enhanced;
 pub mod function;
+
 pub mod registry;
 mod schema;
 mod tool;
@@ -25,6 +26,7 @@ pub use builtin::{
 pub use context::ToolExecutionContext;
 pub use enhanced::{EnhancedTool, ToolCapability, ToolCategory as EnhancedToolCategory};
 pub use function::{FunctionSchema, FunctionTool};
+
 pub use registry::{ToolCategory, ToolMetadata, ToolRegistry, ToolRegistryStats};
 pub use schema::{ParameterSchema, SchemaFormat, ToolExecutionOptions, ToolSchema};
 pub use tool::{GenericTool, Tool};

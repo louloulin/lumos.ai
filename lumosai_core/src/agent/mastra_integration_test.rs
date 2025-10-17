@@ -13,6 +13,7 @@ mod tests {
         DeduplicationProcessor, MemoryProcessor, MemoryProcessorOptions, MessageLimitProcessor,
     };
     use crate::tool::Tool;
+    use crate::compat::{create_logger, Component, LogLevel};
 
     fn create_test_logger() -> Arc<dyn crate::compat::Logger> {
         // create_logger already returns Arc<dyn Logger>, so we don't need to wrap it again
@@ -71,7 +72,7 @@ mod tests {
             context.get_variable("session_id"),
             Some(&serde_json::Value::String("abc".to_string()))
         );
-        assert_eq!(context.get_variable("nonexistent"));
+        assert_eq!(context.get_variable("nonexistent"), None);
 
         // Test metadata setting and getting
         context.set_metadata("thread_id".to_string(), "thread_123".to_string());
@@ -79,7 +80,7 @@ mod tests {
 
         assert_eq!(context.get_metadata("thread_id"), Some("thread_123"));
         assert_eq!(context.get_metadata("agent_name"), Some("test_agent"));
-        assert_eq!(context.get_metadata("nonexistent"));
+        assert_eq!(context.get_metadata("nonexistent"), None);
     }
 
     #[tokio::test]

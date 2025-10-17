@@ -449,6 +449,6 @@ mod tests {
 
         let removed = thread.remove_metadata("key1");
         assert_eq!(removed, Some(Value::String("value1".to_string())));
-        assert_eq!(thread.get_metadata("key1"));
+        assert_eq!(thread.get_metadata("key1"), None);
     }
 }

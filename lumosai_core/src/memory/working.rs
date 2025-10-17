@@ -480,7 +480,7 @@ mod tests {
         // 测试删除值
         memory.delete_value("test_key").await.unwrap();
         let value = memory.get_value("test_key").await.unwrap();
-        assert_eq!(value);
+        assert_eq!(value, None);
 
         // 测试清空
         memory
@@ -489,7 +489,7 @@ mod tests {
             .unwrap();
         memory.clear().await.unwrap();
         let value = memory.get_value("test_key").await.unwrap();
-        assert_eq!(value);
+        assert_eq!(value, None);
     }
 
     #[tokio::test]

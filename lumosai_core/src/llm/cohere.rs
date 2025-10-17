@@ -121,7 +121,7 @@ impl LlmProvider for CohereProvider {
             "model": self.config.model,
             "prompt": prompt,
             "max_tokens": options.max_tokens.unwrap_or(1000),
-            "temperature": options.temperature.unwrap_or(0.7),
+            "temperature": options.temperature.map(|t| t.value()).unwrap_or(0.7),
             "k": 0,
             "stop_sequences": options.stop.as_ref().unwrap_or(&vec![]),
             "return_likelihoods": "NONE"

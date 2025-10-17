@@ -218,24 +218,34 @@ impl LlmProvider for ZhipuProvider {
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
 
-        // Build request body
+        // Build request body with required parameters for Zhipu AI
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": messages,
+            "stream": false,
+            "do_sample": true,
         });
 
-        // Add optional parameters
+        // Add optional parameters with defaults
         if let Some(temperature) = options.temperature {
-            body["temperature"] = serde_json::json!(temperature);
+            // 使用 Temperature 类型的精确值
+            let temp_value = temperature.value();
+            body["temperature"] = serde_json::json!(temp_value);
+        } else {
+            body["temperature"] = serde_json::json!(0.7);
         }
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
+        } else {
+            body["max_tokens"] = serde_json::json!(1000);
         }
 
-        // Check for top_p in extra parameters
+        // Add top_p parameter (required for Zhipu AI)
         if let Some(top_p) = options.extra.get("top_p") {
             body["top_p"] = top_p.clone();
+        } else {
+            body["top_p"] = serde_json::json!(0.7);
         }
 
         // Send request
@@ -278,31 +288,45 @@ impl LlmProvider for ZhipuProvider {
         messages: &[Message],
         options: &LlmOptions,
     ) -> Result<String> {
+
+
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
 
         // Convert messages to 智谱AI format
         let api_messages = self.convert_messages(messages);
 
-        // Build request body
+        // Build request body with required parameters for Zhipu AI
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": api_messages,
+            "stream": false,
+            "do_sample": true,
         });
 
-        // Add optional parameters
+        // Add optional parameters with defaults
         if let Some(temperature) = options.temperature {
-            body["temperature"] = serde_json::json!(temperature);
+            // 使用 Temperature 类型的精确值
+            let temp_value = temperature.value();
+            body["temperature"] = serde_json::json!(temp_value);
+        } else {
+            body["temperature"] = serde_json::json!(0.7);
         }
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
+        } else {
+            body["max_tokens"] = serde_json::json!(1000);
         }
 
-        // Check for top_p in extra parameters
+        // Add top_p parameter (required for Zhipu AI)
         if let Some(top_p) = options.extra.get("top_p") {
             body["top_p"] = top_p.clone();
+        } else {
+            body["top_p"] = serde_json::json!(0.7);
         }
+
+
 
         // Send request
         let res = self
@@ -353,25 +377,34 @@ impl LlmProvider for ZhipuProvider {
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
 
-        // Build request body with streaming enabled
+        // Build request body with streaming enabled and required parameters
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": messages,
             "stream": true,
+            "do_sample": true,
         });
 
-        // Add optional parameters
+        // Add optional parameters with defaults
         if let Some(temperature) = options.temperature {
-            body["temperature"] = serde_json::json!(temperature);
+            // 使用 Temperature 类型的精确值
+            let temp_value = temperature.value();
+            body["temperature"] = serde_json::json!(temp_value);
+        } else {
+            body["temperature"] = serde_json::json!(0.7);
         }
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
+        } else {
+            body["max_tokens"] = serde_json::json!(1000);
         }
 
-        // Check for top_p in extra parameters
+        // Add top_p parameter (required for Zhipu AI)
         if let Some(top_p) = options.extra.get("top_p") {
             body["top_p"] = top_p.clone();
+        } else {
+            body["top_p"] = serde_json::json!(0.7);
         }
 
         // Send request
@@ -499,7 +532,9 @@ impl LlmProvider for ZhipuProvider {
 
         // Add other options
         if let Some(temperature) = options.temperature {
-            body["temperature"] = serde_json::json!(temperature);
+            // 使用 Temperature 类型的精确值
+            let temp_value = temperature.value();
+            body["temperature"] = serde_json::json!(temp_value);
         }
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
@@ -637,7 +672,7 @@ mod tests {
 
     #[test]
     fn test_zhipu_provider_creation() {
-        let provider = ZhipuProvider::new("test-key".to_string());
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4".to_string()));
         assert_eq!(provider.model, "glm-4");
         assert_eq!(provider.base_url, "https://open.bigmodel.cn/api/paas/v4");
     }
@@ -660,13 +695,13 @@ mod tests {
 
     #[test]
     fn test_supports_function_calling() {
-        let provider = ZhipuProvider::new("test-key".to_string());
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4".to_string()));
         assert!(provider.supports_function_calling());
     }
 
     #[test]
     fn test_provider_name() {
-        let provider = ZhipuProvider::new("test-key".to_string());
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4".to_string()));
         assert_eq!(provider.name(), "zhipu");
     }
 }

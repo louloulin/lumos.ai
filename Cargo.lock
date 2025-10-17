@@ -7649,6 +7649,7 @@ name = "lumosai_cloud"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "aws-sdk-ec2",
  "aws-sdk-eks",
  "aws-sdk-s3",

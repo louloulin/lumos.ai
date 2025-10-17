@@ -178,7 +178,7 @@ impl LlmProvider for GeminiProvider {
         let contents = self.convert_prompt(prompt);
 
         let generation_config = GenerationConfig {
-            temperature: options.temperature,
+            temperature: options.temperature.map(|t| t.value()),
             max_output_tokens: options.max_tokens,
             top_p: options
                 .extra
@@ -239,7 +239,7 @@ impl LlmProvider for GeminiProvider {
         let contents = self.convert_messages(messages)?;
 
         let generation_config = GenerationConfig {
-            temperature: options.temperature,
+            temperature: options.temperature.map(|t| t.value()),
             max_output_tokens: options.max_tokens,
             top_p: options
                 .extra

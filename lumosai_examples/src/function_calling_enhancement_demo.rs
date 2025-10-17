@@ -12,7 +12,9 @@ use lumosai_core::base::{Base, BaseComponent, ComponentConfig};
 use lumosai_core::llm::function_calling::{FunctionCall, FunctionDefinition, ToolChoice};
 use lumosai_core::llm::provider::FunctionCallingResponse;
 use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role};
-use lumosai_core::compat::{Logger, TelemetrySink, Component, Event};
+use lumosai_core::compat::{Component, Event};
+use lumosai_core::logger::Logger;
+use lumosai_core::telemetry::TelemetrySink;
 use lumosai_core::tool::{
     ParameterSchema, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
 };

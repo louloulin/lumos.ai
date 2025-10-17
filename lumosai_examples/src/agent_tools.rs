@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{create_basic_agent, Agent};
 use lumosai_core::llm::{Message, MockLlmProvider, Role};
-use lumosai_core::compat::{Logger, TelemetrySink};
+use lumosai_core::logger::Logger;
+use lumosai_core::telemetry::TelemetrySink;
 use lumosai_core::tool::{
     ParameterSchema, SchemaFormat, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
 };
@@ -23,7 +24,7 @@ impl CalculatorTool {
         let id = "calculator".to_string();
         Self {
             id: id.clone(),
-            base: BaseComponent::new_with_name(id, LogComponent::Tool),
+            base: BaseComponent::new_with_name(id, Component::Tool),
         }
     }
 }
@@ -155,7 +156,7 @@ impl WeatherTool {
         let id = "weather".to_string();
         Self {
             id: id.clone(),
-            base: BaseComponent::new_with_name(id, LogComponent::Tool),
+            base: BaseComponent::new_with_name(id, Component::Tool),
         }
     }
 }

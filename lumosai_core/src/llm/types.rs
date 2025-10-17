@@ -1,6 +1,76 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer, Deserializer};
 use std::collections::HashMap;
 use std::fmt;
+
+/// 精确的温度类型，避免浮点精度问题
+/// 专门为 LLM API 设计，确保序列化时的精度控制
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Temperature(f32);
+
+impl Temperature {
+    /// 创建新的温度值，自动舍入到一位小数
+    pub fn new(value: f32) -> Self {
+        // 舍入到一位小数，避免浮点精度问题
+        let rounded = (value * 10.0).round() / 10.0;
+        Temperature(rounded)
+    }
+
+    /// 获取温度值
+    pub fn value(&self) -> f32 {
+        self.0
+    }
+
+    /// 常用的温度预设
+    pub const DETERMINISTIC: Temperature = Temperature(0.0);
+    pub const LOW: Temperature = Temperature(0.3);
+    pub const BALANCED: Temperature = Temperature(0.7);
+    pub const CREATIVE: Temperature = Temperature(1.0);
+    pub const HIGH: Temperature = Temperature(1.5);
+}
+
+impl From<f32> for Temperature {
+    fn from(value: f32) -> Self {
+        Temperature::new(value)
+    }
+}
+
+impl From<Temperature> for f32 {
+    fn from(temp: Temperature) -> Self {
+        temp.0
+    }
+}
+
+impl Default for Temperature {
+    fn default() -> Self {
+        Temperature::BALANCED
+    }
+}
+
+impl Serialize for Temperature {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // 确保序列化时使用精确的值
+        serializer.serialize_f32(self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for Temperature {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = f32::deserialize(deserializer)?;
+        Ok(Temperature::new(value))
+    }
+}
+
+impl fmt::Display for Temperature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:.1}", self.0)
+    }
+}
 
 /// Role enum representing the role of a message sender
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -135,8 +205,8 @@ impl Message {
 /// Options for LLM text generation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmOptions {
-    /// Temperature parameter for controlling randomness (0.0-1.0)
-    pub temperature: Option<f32>,
+    /// Temperature parameter for controlling randomness (0.0-1.0) - 使用精确的 Temperature 类型
+    pub temperature: Option<Temperature>,
     /// Maximum number of tokens to generate
     pub max_tokens: Option<u32>,
     /// Whether to stream the output
@@ -153,7 +223,8 @@ pub struct LlmOptions {
 impl Default for LlmOptions {
     fn default() -> Self {
         Self {
-            temperature: Some(0.7),
+            // 使用精确的 Temperature 类型，自动处理精度问题
+            temperature: Some(Temperature::BALANCED),
             max_tokens: Some(1000),
             stream: false,
             stop: None,
@@ -169,8 +240,14 @@ impl LlmOptions {
         Self::default()
     }
 
-    /// Set temperature
+    /// Set temperature - 自动应用精度控制
     pub fn with_temperature(mut self, temperature: f32) -> Self {
+        self.temperature = Some(Temperature::new(temperature));
+        self
+    }
+
+    /// Set temperature using Temperature type
+    pub fn with_temperature_precise(mut self, temperature: Temperature) -> Self {
         self.temperature = Some(temperature);
         self
     }

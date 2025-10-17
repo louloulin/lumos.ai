@@ -17,8 +17,10 @@ pub mod agent;
 pub mod config;
 pub mod error;
 pub mod llm;
+pub mod logger;
 pub mod memory;
 pub mod prelude;
+pub mod telemetry;
 pub mod tool;
 pub mod workflow;
 
@@ -36,7 +38,7 @@ pub mod vector;
 
 // 核心模块导出
 pub use agent::{
-    create_basic_agent, Agent, AgentConfig, AgentFactory, AgentGenerateOptions, AgentStreamOptions,
+    create_basic_agent, Agent, AgentBuilder, AgentConfig, AgentFactory, AgentGenerateOptions, AgentStreamOptions,
     BasicAgent,
 };
 pub use config::*;

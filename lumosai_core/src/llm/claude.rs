@@ -149,7 +149,7 @@ impl ClaudeProvider {
     fn convert_options(&self, options: &LlmOptions) -> ClaudeOptions {
         ClaudeOptions {
             max_tokens: options.max_tokens.unwrap_or(4096),
-            temperature: options.temperature,
+            temperature: options.temperature.map(|t| t.value()),
             top_p: options.extra.get("top_p").and_then(|v| v.as_f64()),
             top_k: options
                 .extra

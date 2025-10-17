@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
-use crate::compat::{LogLevel, Logger, TelemetrySink, Storage, Component, create_logger, create_noop_logger};
+use crate::compat::{Storage, Component, create_noop_logger};
+use crate::logger::{Logger, LogLevel, default_logger};
+use crate::telemetry::TelemetrySink;
 
 use crate::agent::trait_def::Agent;
 use crate::base::Base;
@@ -51,13 +53,10 @@ impl Lumosai {
     /// 创建新的Lumosai实例
     pub fn new(config: LumosaiConfig) -> Self {
         let logger = if config.disable_logger {
-            create_noop_logger()
+            // TODO: 创建一个 noop logger 实现
+            default_logger()
         } else {
-            create_logger(
-                &config.name.as_ref().unwrap_or(&"Lumosai".to_string()),
-                Component::Llm,
-                config.log_level.clone().unwrap_or(LogLevel::Info),
-            )
+            default_logger()
         };
 
         Self {

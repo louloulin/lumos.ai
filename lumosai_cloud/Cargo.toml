@@ -43,8 +43,9 @@ axum = { workspace = true }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
-# Docker integration (暂时移除，版本冲突)
+# Docker integration (暂时禁用，依赖冲突)
 # bollard = { version = "0.15", optional = true }
+async-trait = "0.1"
 
 # Configuration
 config = "0.14"
@@ -82,11 +83,11 @@ tempfile = "3.0"
 wiremock = "0.5"
 
 [features]
-default = ["kubernetes", "monitoring"]  # 暂时移除 docker
+default = ["kubernetes", "monitoring"]
 
 # Core features
 kubernetes = ["kube", "k8s-openapi"]
-# docker = ["bollard"]  # 暂时移除
+# docker = ["bollard"]  # 暂时禁用
 monitoring = ["prometheus", "opentelemetry-prometheus"]
 
 # Cloud providers

@@ -11,7 +11,9 @@ use tokio_stream::wrappers::ReceiverStream;
 use url::Url;
 
 use lumosai_core::base::{Base, BaseComponent};
-use lumosai_core::compat::{Component, Logger, TelemetrySink};
+use lumosai_core::compat::Component;
+use lumosai_core::logger::Logger;
+use lumosai_core::telemetry::TelemetrySink;
 use lumosai_core::tool::{
     SchemaFormat, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
 };

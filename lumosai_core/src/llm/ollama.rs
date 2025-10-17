@@ -151,7 +151,7 @@ impl OllamaProvider {
     /// Convert LlmOptions to OllamaOptions
     fn convert_options(&self, options: &LlmOptions) -> OllamaOptions {
         OllamaOptions {
-            temperature: options.temperature,
+            temperature: options.temperature.map(|t| t.value()),
             top_p: options
                 .extra
                 .get("top_p")

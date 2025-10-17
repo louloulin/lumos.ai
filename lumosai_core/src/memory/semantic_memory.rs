@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use crate::compat::{Component, LogLevel, MetricsCollector, MemoryMetrics};
+use crate::compat::{Component, MetricsCollector, MemoryMetrics};
+use crate::logger::LogLevel;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
@@ -446,19 +447,19 @@ impl<P: LlmProvider, E: EmbeddingProvider> Base for SemanticMemory<P, E> {
         self.base.component()
     }
 
-    fn logger(&self) -> Arc<dyn crate::compat::Logger> {
+    fn logger(&self) -> Arc<dyn crate::logger::Logger> {
         self.base.logger()
     }
 
-    fn set_logger(&mut self, logger: Arc<dyn crate::compat::Logger>) {
+    fn set_logger(&mut self, logger: Arc<dyn crate::logger::Logger>) {
         self.base.set_logger(logger);
     }
 
-    fn telemetry(&self) -> Option<Arc<dyn crate::compat::TelemetrySink>> {
+    fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
         self.base.telemetry()
     }
 
-    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::compat::TelemetrySink>) {
+    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
 }

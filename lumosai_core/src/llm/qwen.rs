@@ -387,7 +387,7 @@ impl LlmProvider for QwenProvider {
                     "model": self.model,
                     "messages": messages_json,
                     "max_tokens": options.max_tokens.unwrap_or(1024),
-                    "temperature": options.temperature.unwrap_or(0.7),
+                    "temperature": options.temperature.map(|t| t.value()).unwrap_or(0.7),
                     "enable_thinking": false
                 });
 
@@ -448,7 +448,7 @@ impl LlmProvider for QwenProvider {
                         "messages": messages_json
                     },
                     "parameters": {
-                        "temperature": options.temperature.unwrap_or(0.7),
+                        "temperature": options.temperature.map(|t| t.value()).unwrap_or(0.7),
                         "max_tokens": options.max_tokens.unwrap_or(1024),
                         "top_p": options.extra.get("top_p").and_then(|v| v.as_f64()).unwrap_or(0.8),
                         "result_format": "message"

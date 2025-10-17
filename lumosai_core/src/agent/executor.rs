@@ -27,9 +27,11 @@ use crate::llm::{
     FunctionDefinition, LlmOptions, LlmProvider, Message, Role, ToolChoice as LlmToolChoice,
 };
 use crate::compat::{
-    Component, Logger, TelemetrySink, MetricsCollector, TraceCollector, VoiceProvider,
+    Component, MetricsCollector, TraceCollector, VoiceProvider,
     AgentMetrics, ExecutionContext, MetricValue, TraceStep, TraceStepType, TelemetryTokenUsage
 };
+use crate::logger::Logger;
+use crate::telemetry::TelemetrySink;
 use crate::memory::Memory;
 use crate::memory::{create_working_memory, WorkingMemory};
 use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
@@ -53,8 +55,8 @@ pub struct BasicAgent {
     working_memory: Option<Box<dyn WorkingMemory>>,
     /// 语音提供者
     voice: Option<Arc<dyn VoiceProvider>>,
-    /// Temperature for LLM calls
-    temperature: Option<f32>,
+    /// Temperature for LLM calls - 使用精确的 Temperature 类型
+    temperature: Option<crate::llm::types::Temperature>,
     /// Abort signal
     abort_signal: Option<watch::Receiver<bool>>,
     /// Output schema for structured outputs

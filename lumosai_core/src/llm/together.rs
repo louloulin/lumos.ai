@@ -185,7 +185,7 @@ impl LlmProvider for TogetherProvider {
             model: self.config.model.clone(),
             prompt: prompt.to_string(),
             max_tokens: options.max_tokens,
-            temperature: options.temperature,
+            temperature: options.temperature.map(|t| t.value()),
             top_p: options
                 .extra
                 .get("top_p")
@@ -239,7 +239,7 @@ impl LlmProvider for TogetherProvider {
             model: self.config.model.clone(),
             messages: together_messages,
             max_tokens: options.max_tokens,
-            temperature: options.temperature,
+            temperature: options.temperature.map(|t| t.value()),
             top_p: options
                 .extra
                 .get("top_p")

@@ -75,19 +75,19 @@ impl Base for FunctionTool {
         self.base.component()
     }
 
-    fn logger(&self) -> Arc<dyn crate::compat::Logger> {
+    fn logger(&self) -> Arc<dyn crate::logger::Logger> {
         self.base.logger()
     }
 
-    fn set_logger(&mut self, logger: Arc<dyn crate::compat::Logger>) {
+    fn set_logger(&mut self, logger: Arc<dyn crate::logger::Logger>) {
         self.base.set_logger(logger);
     }
 
-    fn telemetry(&self) -> Option<Arc<dyn crate::compat::TelemetrySink>> {
+    fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
         self.base.telemetry()
     }
 
-    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::compat::TelemetrySink>) {
+    fn set_telemetry(&mut self, telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
 }

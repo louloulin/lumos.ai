@@ -3,7 +3,7 @@
 //! 提供跨语言的统一接口和数据结构
 
 use crate::error::{BindingError, Result};
-use lumosai_core::{Agent, AgentBuilder, LlmProvider, Tool};
+use lumosai_core::{Agent, AgentBuilder, BasicAgent, LlmProvider, Tool};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 /// 跨语言Agent包装器
 pub struct CrossLangAgent {
     /// 内部Rust Agent实例
-    inner: Agent,
+    inner: BasicAgent,
 
     /// 运行时状态
     runtime: Arc<tokio::runtime::Runtime>,
@@ -171,7 +171,7 @@ pub struct RuntimeConfig {
 
 impl CrossLangAgent {
     /// 创建新的跨语言Agent
-    pub fn new(agent: Agent) -> Self {
+    pub fn new(agent: BasicAgent) -> Self {
         let runtime =
             Arc::new(tokio::runtime::Runtime::new().expect("Failed to create tokio runtime"));
 
@@ -183,16 +183,26 @@ impl CrossLangAgent {
 
     /// 生成响应
     pub fn generate(&self, input: &str) -> Result<CrossLangResponse> {
-        let input = input.to_string();
+        use lumosai_core::llm::{Message, Role};
+        use lumosai_core::agent::types::AgentGenerateOptions;
+
+        let message = Message {
+            role: Role::User,
+            content: input.to_string(),
+            metadata: None,
+            name: None,
+        };
+
+        let options = AgentGenerateOptions::default();
         let agent = &self.inner;
 
         let result = self
             .runtime
-            .block_on(async move { agent.generate(&input).await });
+            .block_on(async move { agent.generate(&[message], &options).await });
 
         match result {
             Ok(response) => Ok(CrossLangResponse {
-                content: response.content,
+                content: response.response,
                 response_type: ResponseType::Text,
                 metadata: HashMap::new(),
                 tool_calls: Vec::new(),
@@ -210,11 +220,22 @@ impl CrossLangAgent {
 
     /// 异步生成响应
     pub async fn generate_async(&self, input: &str) -> Result<CrossLangResponse> {
-        let result = self.inner.generate(input).await;
+        use lumosai_core::llm::{Message, Role};
+        use lumosai_core::agent::types::AgentGenerateOptions;
+
+        let message = Message {
+            role: Role::User,
+            content: input.to_string(),
+            metadata: None,
+            name: None,
+        };
+
+        let options = AgentGenerateOptions::default();
+        let result = self.inner.generate(&[message], &options).await;
 
         match result {
             Ok(response) => Ok(CrossLangResponse {
-                content: response.content,
+                content: response.response,
                 response_type: ResponseType::Text,
                 metadata: HashMap::new(),
                 tool_calls: Vec::new(),
@@ -279,36 +300,36 @@ impl CrossLangAgentBuilder {
 
     /// 设置模型
     pub fn model(mut self, model: &str) -> Self {
-        self.inner = self.inner.model(model);
+        self.inner = self.inner.model_name(model);
         self
     }
 
     /// 添加工具
     pub fn tool(mut self, tool: CrossLangTool) -> Self {
-        self.inner = self.inner.tool(tool.inner);
+        // Convert Arc<dyn Tool> to Box<dyn Tool> by cloning
+        let boxed_tool: Box<dyn Tool> = tool.inner.clone_box();
+        self.inner = self.inner.tool(boxed_tool);
         self
     }
 
     /// 添加多个工具
     pub fn tools(mut self, tools: Vec<CrossLangTool>) -> Self {
         for tool in tools {
-            self.inner = self.inner.tool(tool.inner);
+            let boxed_tool: Box<dyn Tool> = tool.inner.clone_box();
+            self.inner = self.inner.tool(boxed_tool);
         }
         self
     }
 
     /// 构建Agent
     pub fn build(self) -> Result<CrossLangAgent> {
-        let agent = self
-            .runtime
-            .block_on(async move { self.inner.build().await })?;
-
+        let agent = self.inner.build()?;
         Ok(CrossLangAgent::new(agent))
     }
 
     /// 异步构建Agent
     pub async fn build_async(self) -> Result<CrossLangAgent> {
-        let agent = self.inner.build().await?;
+        let agent = self.inner.build()?;
         Ok(CrossLangAgent::new(agent))
     }
 }

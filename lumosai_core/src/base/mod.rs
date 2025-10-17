@@ -5,7 +5,9 @@
 use crate::types::Metadata;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::compat::{Component, LogLevel, Logger, TelemetrySink, Event, create_logger};
+use crate::compat::{Component, Event};
+use crate::logger::{Logger, LogLevel, default_logger};
+use crate::telemetry::TelemetrySink;
 
 /// Component configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -48,7 +50,7 @@ pub trait Base: Send + Sync {
                 name: event_name.to_string(),
                 data: serde_json::to_value(data).unwrap_or_default(),
             };
-            telemetry.record_event(serde_json::to_value(event).unwrap_or_default());
+            telemetry.record_event(event_name, serde_json::to_value(event).unwrap_or_default());
         }
     }
 }
@@ -76,7 +78,7 @@ impl BaseComponent {
         Self {
             name: Some(name.clone()),
             component: component.clone(),
-            logger: create_logger(&name, component, log_level),
+            logger: default_logger(),
             telemetry: None,
         }
     }
@@ -87,7 +89,7 @@ impl BaseComponent {
         Self {
             name: Some(name.clone()),
             component: component.clone(),
-            logger: create_logger(&name, component, LogLevel::Info),
+            logger: default_logger(),
             telemetry: None,
         }
     }

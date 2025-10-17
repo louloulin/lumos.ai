@@ -33,6 +33,10 @@ pub enum Error {
     #[error("Memory error: {0}")]
     Memory(String),
 
+    /// Unsupported operation errors
+    #[error("Unsupported operation: {0}")]
+    UnsupportedOperation(String),
+
     /// Cloud deployment errors
     #[error("Cloud error: {0}")]
     Cloud(String),

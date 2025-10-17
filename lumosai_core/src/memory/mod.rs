@@ -8,6 +8,9 @@ use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+// 导入统一内存系统
+pub mod unified;
+
 /// 语义回忆配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticRecallConfig {
@@ -136,6 +139,9 @@ pub use working::{
     create_working_memory, BasicWorkingMemory, WorkingMemory, WorkingMemoryConfig,
     WorkingMemoryContent,
 };
+
+// 导出统一内存系统 - 这是新的推荐API
+pub use unified::{Memory as UnifiedMemory, MemoryType};
 
 /// 添加兼容函数，用于创建基本工作内存
 #[inline]

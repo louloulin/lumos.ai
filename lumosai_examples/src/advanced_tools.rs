@@ -10,7 +10,8 @@ use std::path::Path;
 
 use lumosai_core::{
     base::{Base, BaseComponent, ComponentConfig},
-    compat::{Component, LogLevel},
+    compat::Component,
+    logger::LogLevel,
     error::{Error, Result},
     tool::{ParameterSchema, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema},
 };

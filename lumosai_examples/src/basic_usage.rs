@@ -4,7 +4,7 @@ use std::sync::Arc;
 use lumosai_core::{
     create_memory_vector_storage, Base, Lumosai, LumosaiConfig, SimilarityMetric,
 };
-use lumosai_core::compat::LogLevel;
+use lumosai_core::logger::LogLevel;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -59,8 +59,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Lumosai组件类型: {:?}", lumosai.component());
 
     // 记录一些日志
-    lumosai.logger().info("这是一条信息日志", None);
-    lumosai.logger().debug("这是一条调试日志", None);
+    lumosai.logger().info("这是一条信息日志").await;
+    lumosai.logger().debug("这是一条调试日志").await;
 
     println!("基本示例运行完成！");
 

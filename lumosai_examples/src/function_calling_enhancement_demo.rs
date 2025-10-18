@@ -212,24 +212,35 @@ impl Tool for CalculatorTool {
 }
 
 /// Mock logger for testing
+#[derive(Debug)]
 pub struct MockLogger;
 
+#[async_trait]
 impl Logger for MockLogger {
-    fn log(&self, level: lumosai_core::compat::LogLevel, message: &str) {
+    async fn log(&self, level: lumosai_core::logger::LogLevel, message: &str, _metadata: Option<serde_json::Value>) {
         println!("[{:?}] {}", level, message);
     }
 }
 
 /// Mock telemetry sink for testing
+#[derive(Debug)]
 pub struct MockTelemetry;
 
 #[async_trait]
 impl TelemetrySink for MockTelemetry {
-    async fn send_event(&self, _event: Event) {
+    async fn record_metric(&self, _name: &str, _value: f64, _tags: Option<std::collections::HashMap<String, String>>) {
         // No-op for testing
     }
 
-    fn record_event(&self, _event: serde_json::Value) {
+    async fn start_trace(&self, _name: &str) -> String {
+        "mock_trace_id".to_string()
+    }
+
+    async fn end_trace(&self, _trace_id: &str, _duration: std::time::Duration) {
+        // No-op for testing
+    }
+
+    async fn record_event(&self, _name: &str, _data: serde_json::Value) {
         // No-op for testing
     }
 }

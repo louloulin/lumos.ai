@@ -47,7 +47,7 @@ async fn test_quick_agent_creation() -> Result<()> {
 }
 
 fn test_tool_creation_functions() -> Result<()> {
-    // 测试各种工具创建函数
+    // 测试各种工具创建函数 (只测试实际存在的函数)
     let tools = vec![
         ("calculator", calculator()),
         ("file_reader", file_reader()),
@@ -55,17 +55,18 @@ fn test_tool_creation_functions() -> Result<()> {
         ("json_parser", json_parser()),
         ("csv_parser", csv_parser()),
         ("web_scraper", web_scraper()),
-        ("http_request", http_request()),
-        ("url_validator", url_validator()),
-        ("time_tool", time_tool()),
+        ("web_search", web_search()),
+        ("datetime", datetime()),  // 使用实际存在的函数名
         ("uuid_generator", uuid_generator()),
-        ("hash_tool", hash_tool()),
         ("statistics", statistics()),
-        ("directory_lister", directory_lister()),
-        ("file_info", file_info()),
-        ("data_transformer", data_transformer()),
-        ("excel_reader", excel_reader()),
         ("json_api", json_api()),
+        // 注释掉不存在的函数
+        // ("url_validator", url_validator()),
+        // ("hash_tool", hash_tool()),
+        // ("directory_lister", directory_lister()),
+        // ("file_info", file_info()),
+        // ("data_transformer", data_transformer()),
+        // ("excel_reader", excel_reader()),
     ];
 
     for (name, tool) in tools {
@@ -95,8 +96,11 @@ async fn test_specialized_agents() -> Result<()> {
         "Hello!".to_string()
     ]));
 
-    // 测试 Web Agent
-    let web_agent = web_agent_quick("web_helper", "You can browse the web")
+    // TODO: 这些专用 agent 快速创建函数尚未实现
+    // 使用通用的 agent_quick 函数代替
+
+    // 测试 Web Agent (使用专用函数)
+    let web_agent = web_agent("web_helper", "You can browse the web")
         .model(llm.clone())
         .build()?;
 
@@ -107,8 +111,8 @@ async fn test_specialized_agents() -> Result<()> {
         web_agent.get_tools().len()
     );
 
-    // 测试 File Agent
-    let file_agent = file_agent_quick("file_helper", "You can manage files")
+    // 测试 File Agent (使用专用函数)
+    let file_agent = file_agent("file_helper", "You can manage files")
         .model(llm.clone())
         .build()?;
 
@@ -119,8 +123,8 @@ async fn test_specialized_agents() -> Result<()> {
         file_agent.get_tools().len()
     );
 
-    // 测试 Data Agent
-    let data_agent = data_agent_quick("data_helper", "You can process data")
+    // 测试 Data Agent (使用专用函数)
+    let data_agent = data_agent("data_helper", "You can process data")
         .model(llm.clone())
         .build()?;
 

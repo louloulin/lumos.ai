@@ -90,6 +90,7 @@ tempfile = "3.8"
 tokio-test = "0.4"
 tempfile = "3.8"
 mockall = "0.11"
+criterion = { version = "0.5", features = ["async_tokio"] }
 
 # 明确定义集成测试
 [[test]]
@@ -132,3 +133,6 @@ path = "tests/chain_call_dsl_tests.rs"
 name = "security_demo"
 path = "examples/security_demo.rs"
 
+[[bench]]
+name = "tool_performance"
+harness = false

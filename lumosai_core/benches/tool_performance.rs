@@ -132,8 +132,40 @@ fn bench_http_tools(c: &mut Criterion) {
         });
     });
 
-    // Skip HTTP POST and API Call for now due to Value parameter issues
-    // TODO: Fix macro-generated parameter validation for Value types
+    // HTTP POST
+    let post_tool = http_post_tool();
+    group.bench_function("http_post", |b| {
+        b.to_async(&rt).iter(|| async {
+            let params = json!({
+                "url": "https://api.example.com/test",
+                "body": {"test": "data", "value": 123},
+                "timeout_seconds": 30
+            });
+
+            post_tool.execute(
+                black_box(params),
+                black_box(context.clone()),
+                black_box(&options)
+            ).await.unwrap()
+        });
+    });
+
+    // API Call
+    let api_tool = api_call_tool();
+    group.bench_function("api_call", |b| {
+        b.to_async(&rt).iter(|| async {
+            let params = json!({
+                "url": "https://api.example.com/test",
+                "method": "GET"
+            });
+
+            api_tool.execute(
+                black_box(params),
+                black_box(context.clone()),
+                black_box(&options)
+            ).await.unwrap()
+        });
+    });
 
     group.finish();
 }

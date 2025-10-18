@@ -654,6 +654,8 @@ pub fn rust_type_to_json_type(ty: &Type) -> String {
                     "f32" | "f64" => "number".to_string(),
                     "bool" => "boolean".to_string(),
                     "Vec" => "array".to_string(),
+                    "Value" => "object".to_string(), // serde_json::Value
+                    "HashMap" | "Map" => "object".to_string(),
                     _ => "string".to_string(),
                 }
             } else {
@@ -707,22 +709,108 @@ pub fn generate_tool_impl(
         let param_name = format_ident!("{}", param.name);
         let param_key = &param.name;
         let rust_type = &param.rust_type;
+        let json_type = rust_type_to_json_type(&param.rust_type);
 
+        // 根据类型生成不同的提取代码
         if param.required {
-            quote! {
-                let #param_name: #rust_type = params.get(#param_key)
-                    .ok_or_else(|| crate::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
-                    .as_str()
-                    .ok_or_else(|| crate::error::Error::Tool(format!("Parameter {} must be a string", #param_key)))?
-                    .parse()
-                    .map_err(|_| crate::error::Error::Tool(format!("Failed to parse parameter: {}", #param_key)))?;
+            match json_type.as_str() {
+                "object" | "array" => {
+                    // Value 类型直接克隆
+                    quote! {
+                        let #param_name: #rust_type = params.get(#param_key)
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
+                            .clone();
+                    }
+                }
+                "string" => {
+                    quote! {
+                        let #param_name: #rust_type = params.get(#param_key)
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
+                            .as_str()
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Parameter {} must be a string", #param_key)))?
+                            .to_string();
+                    }
+                }
+                "integer" => {
+                    quote! {
+                        let #param_name: #rust_type = params.get(#param_key)
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
+                            .as_i64()
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Parameter {} must be an integer", #param_key)))? as #rust_type;
+                    }
+                }
+                "number" => {
+                    quote! {
+                        let #param_name: #rust_type = params.get(#param_key)
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
+                            .as_f64()
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Parameter {} must be a number", #param_key)))? as #rust_type;
+                    }
+                }
+                "boolean" => {
+                    quote! {
+                        let #param_name: #rust_type = params.get(#param_key)
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
+                            .as_bool()
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Parameter {} must be a boolean", #param_key)))?;
+                    }
+                }
+                _ => {
+                    // 默认使用字符串解析
+                    quote! {
+                        let #param_name: #rust_type = params.get(#param_key)
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
+                            .as_str()
+                            .ok_or_else(|| crate::error::Error::Tool(format!("Parameter {} must be a string", #param_key)))?
+                            .parse()
+                            .map_err(|_| crate::error::Error::Tool(format!("Failed to parse parameter: {}", #param_key)))?;
+                    }
+                }
             }
         } else {
-            quote! {
-                let #param_name: Option<#rust_type> = params.get(#param_key)
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.parse().ok())
-                    .flatten();
+            match json_type.as_str() {
+                "object" | "array" => {
+                    // Option<Value> 类型直接克隆
+                    quote! {
+                        let #param_name: Option<#rust_type> = params.get(#param_key).cloned();
+                    }
+                }
+                "string" => {
+                    quote! {
+                        let #param_name: Option<#rust_type> = params.get(#param_key)
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                    }
+                }
+                "integer" => {
+                    quote! {
+                        let #param_name: Option<#rust_type> = params.get(#param_key)
+                            .and_then(|v| v.as_i64())
+                            .map(|n| n as #rust_type);
+                    }
+                }
+                "number" => {
+                    quote! {
+                        let #param_name: Option<#rust_type> = params.get(#param_key)
+                            .and_then(|v| v.as_f64())
+                            .map(|n| n as #rust_type);
+                    }
+                }
+                "boolean" => {
+                    quote! {
+                        let #param_name: Option<#rust_type> = params.get(#param_key)
+                            .and_then(|v| v.as_bool());
+                    }
+                }
+                _ => {
+                    // 默认使用字符串解析
+                    quote! {
+                        let #param_name: Option<#rust_type> = params.get(#param_key)
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.parse().ok())
+                            .flatten();
+                    }
+                }
             }
         }
     }).collect();

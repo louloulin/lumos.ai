@@ -52,11 +52,35 @@
 pub use crate::{Error, Result};
 
 // ============================================================================
-// Agent API - 统一的 Agent 创建和管理接口
+// Agent API - 统一的渐进式 Agent 创建接口
 // ============================================================================
 
-/// 统一的 Agent 接口 - 推荐使用 Agent::new()
-pub use crate::agent::{Agent, AgentBuilder};
+/// 统一的 Agent 接口 - 渐进式 API 设计
+///
+/// **Level 1 - 5分钟上手**:
+/// ```rust
+/// let agent = Agent::new("assistant", "你是一个AI助手").await?;
+/// let response = agent.generate("你好").await?;
+/// ```
+///
+/// **Level 2 - 链式配置**:
+/// ```rust
+/// let agent = Agent::new("assistant", "你是一个AI助手").await?
+///     .with_model("gpt-4")?
+///     .with_tools(vec![calculator(), web_search()])?;
+/// ```
+///
+/// **Level 3 - 完整构建器**:
+/// ```rust
+/// let agent = Agent::builder()
+///     .name("research_agent")
+///     .instructions("专业研究助手")
+///     .model(openai("gpt-4")?)
+///     .max_tool_calls(10)
+///     .build()?;
+/// ```
+pub use crate::agent::simplified_api::{Agent, AgentInstance};
+pub use crate::agent::AgentBuilder;
 
 // ============================================================================
 // 工具系统 - 简化的工具创建接口

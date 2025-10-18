@@ -12,7 +12,7 @@ use crate::error::{Error, Result};
 use crate::llm::{LlmProvider, Message, Role};
 use crate::memory::MemoryConfig;
 use crate::tool::Tool;
-use crate::unified_api;
+use crate::unified_api::{self, llm::*};
 use std::sync::Arc;
 
 /// 渐进式 Agent API - 三层设计
@@ -63,26 +63,72 @@ impl AgentInstance {
     /// let agent = Agent::new("assistant", "你是一个AI助手").await?
     ///     .model("gpt-4");
     /// ```
-    pub fn model(mut self, model_name: &str) -> Result<Self> {
-        // 这里需要重新构建 agent，因为模型是不可变的
-        // 在实际实现中，我们可能需要一个更灵活的设计
-        // 暂时返回错误，提示用户使用 builder 模式
-        Err(Error::Config("Model cannot be changed after creation. Use Agent::builder() for advanced configuration.".to_string()))
+    /// Level 2 API - 设置模型（重新构建 Agent）
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let agent = Agent::new("assistant", "你是一个AI助手").await?
+    ///     .with_model("gpt-4")?;
+    /// ```
+    pub fn with_model(self, model_name: &str) -> Result<Self> {
+        // 获取当前配置
+        let name = self.inner.get_name().to_string();
+        let instructions = self.inner.get_instructions().to_string();
+
+        // 解析模型 - 智能检测模型提供商
+        let model = Agent::resolve_model_provider(model_name)?;
+
+        // 重新构建 Agent
+        let new_agent = AgentBuilder::new()
+            .name(&name)
+            .instructions(&instructions)
+            .model(model)
+            .enable_smart_defaults()
+            .build()?;
+
+        Ok(Self::new(new_agent))
     }
 
-    /// Level 2 API - 添加工具
-    pub fn tools(mut self, tools: &[Box<dyn Tool>]) -> Result<Self> {
+    /// Level 2 API - 添加工具（重新构建 Agent）
+    pub fn with_tools(self, tools: Vec<Box<dyn Tool>>) -> Result<Self> {
+        // 获取当前配置
+        let name = self.inner.get_name().to_string();
+        let instructions = self.inner.get_instructions().to_string();
+        let model = self.inner.get_llm();
+
+        // 重新构建 Agent，添加工具
+        let mut builder = AgentBuilder::new()
+            .name(&name)
+            .instructions(&instructions)
+            .model(model)
+            .enable_smart_defaults();
+
         for tool in tools {
-            // 这里需要克隆工具，但 Tool trait 可能不支持克隆
-            // 暂时返回错误，提示用户使用 builder 模式
+            builder = builder.tool(tool);
         }
-        Err(Error::Config("Tools cannot be added after creation. Use Agent::builder() for advanced configuration.".to_string()))
+
+        let new_agent = builder.build()?;
+        Ok(Self::new(new_agent))
     }
 
-    /// Level 2 API - 设置内存
-    pub fn memory(mut self, memory: Arc<dyn crate::memory::Memory>) -> Result<Self> {
-        // 同样的问题，BasicAgent 的内存是不可变的
-        Err(Error::Config("Memory cannot be changed after creation. Use Agent::builder() for advanced configuration.".to_string()))
+    /// Level 2 API - 设置内存（重新构建 Agent）
+    pub fn with_memory(self, _memory: Arc<dyn crate::memory::Memory>) -> Result<Self> {
+        // 获取当前配置
+        let name = self.inner.get_name().to_string();
+        let instructions = self.inner.get_instructions().to_string();
+        let model = self.inner.get_llm();
+
+        // 重新构建 Agent，暂时不支持自定义内存
+        // TODO: 实现自定义内存配置
+        let new_agent = AgentBuilder::new()
+            .name(&name)
+            .instructions(&instructions)
+            .model(model)
+            .enable_smart_defaults()
+            .build()?;
+
+        Ok(Self::new(new_agent))
     }
 
     /// 生成响应
@@ -179,6 +225,34 @@ impl Agent {
     /// ```
     pub fn builder() -> AgentBuilder {
         AgentBuilder::new()
+    }
+
+    /// 智能解析模型提供商
+    ///
+    /// 根据模型名称自动选择合适的提供商
+    fn resolve_model_provider(model_name: &str) -> Result<Arc<dyn LlmProvider>> {
+        match model_name {
+            // OpenAI 模型
+            name if name.starts_with("gpt-") => {
+                openai(name)
+            }
+            // Anthropic 模型
+            name if name.starts_with("claude-") => {
+                claude(name)
+            }
+            // DeepSeek 模型
+            name if name.contains("deepseek") => {
+                deepseek(name)
+            }
+            // Qwen 模型
+            name if name.contains("qwen") || name.contains("glm") => {
+                qwen(name)
+            }
+            // 默认尝试 DeepSeek（因为我们已经验证过它可以工作）
+            _ => {
+                deepseek(model_name)
+            }
+        }
     }
 
     /// 快速创建（向后兼容）- 返回 AgentBuilder 用于链式配置

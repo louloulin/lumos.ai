@@ -258,15 +258,15 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
         use serde_json::Value;
 
         // Create the tool factory function
-        pub fn #fn_name() -> Box<dyn lumosai_core::tool::Tool> {
-            Box::new(FunctionTool::new(
+        pub fn #fn_name() -> Box<dyn crate::tool::Tool> {
+            Box::new(crate::tool::FunctionTool::new(
                 #tool_name.to_string(),
                 #tool_description.to_string(),
                 #schema_def,
-                |params: Value| -> lumosai_core::Result<Value> {
+                |params: serde_json::Value| -> crate::Result<serde_json::Value> {
                     // 将 Value 转换为对象以便访问参数
                     let params = params.as_object()
-                        .ok_or_else(|| lumosai_core::Error::InvalidInput("Parameters must be a JSON object".to_string()))?;
+                        .ok_or_else(|| crate::Error::InvalidInput("Parameters must be a JSON object".to_string()))?;
 
                     #(#param_extractions)*
 
@@ -459,6 +459,9 @@ pub struct ToolConfig {
     pub category: Option<String>,
     pub validate_params: bool,
     pub validate_output: bool,
+    pub examples: Vec<String>,
+    pub tags: Vec<String>,
+    pub version: Option<String>,
 }
 
 impl Default for ToolConfig {
@@ -469,6 +472,9 @@ impl Default for ToolConfig {
             category: None,
             validate_params: true,
             validate_output: false,
+            examples: Vec::new(),
+            tags: Vec::new(),
+            version: None,
         }
     }
 }
@@ -502,6 +508,26 @@ impl Parse for ToolConfig {
                     let val: syn::LitBool = input.parse()?;
                     config.validate_output = val.value;
                 }
+                "examples" => {
+                    // Parse array of strings: examples = ["example1", "example2"]
+                    let content;
+                    syn::bracketed!(content in input);
+                    let examples: syn::punctuated::Punctuated<LitStr, Token![,]> =
+                        content.parse_terminated(|input| input.parse::<LitStr>(), Token![,])?;
+                    config.examples = examples.iter().map(|s| s.value()).collect();
+                }
+                "tags" => {
+                    // Parse array of strings: tags = ["tag1", "tag2"]
+                    let content;
+                    syn::bracketed!(content in input);
+                    let tags: syn::punctuated::Punctuated<LitStr, Token![,]> =
+                        content.parse_terminated(|input| input.parse::<LitStr>(), Token![,])?;
+                    config.tags = tags.iter().map(|s| s.value()).collect();
+                }
+                "version" => {
+                    let version: LitStr = input.parse()?;
+                    config.version = Some(version.value());
+                }
                 _ => {
                     return Err(syn::Error::new(
                         key.span(),
@@ -517,6 +543,20 @@ impl Parse for ToolConfig {
     }
 }
 
+/// 参数验证器类型
+#[derive(Debug, Clone)]
+pub enum ParameterValidator {
+    None,
+    Url,
+    Email,
+    Range(f64, f64),
+    MinLength(usize),
+    MaxLength(usize),
+    Regex(String),
+    NonEmpty,
+    Custom(String),
+}
+
 /// 参数信息
 #[derive(Debug, Clone)]
 pub struct ParameterInfo {
@@ -524,6 +564,9 @@ pub struct ParameterInfo {
     pub rust_type: Type,
     pub description: Option<String>,
     pub required: bool,
+    pub validator: ParameterValidator,
+    pub default_value: Option<String>,
+    pub examples: Vec<String>,
 }
 
 /// 从函数签名提取参数信息
@@ -544,6 +587,9 @@ pub fn extract_parameters(fn_item: &ItemFn) -> syn::Result<Vec<ParameterInfo>> {
                         rust_type,
                         description,
                         required,
+                        validator: ParameterValidator::None,
+                        default_value: None,
+                        examples: Vec::new(),
                     });
                 }
             }
@@ -645,7 +691,7 @@ pub fn generate_tool_impl(
         let required = param.required;
 
         quote! {
-            lumosai_core::tool::ParameterSchema {
+            crate::tool::ParameterSchema {
                 name: #name.to_string(),
                 description: #description.to_string(),
                 r#type: #json_type.to_string(),
@@ -665,11 +711,11 @@ pub fn generate_tool_impl(
         if param.required {
             quote! {
                 let #param_name: #rust_type = params.get(#param_key)
-                    .ok_or_else(|| lumosai_core::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
+                    .ok_or_else(|| crate::error::Error::Tool(format!("Missing required parameter: {}", #param_key)))?
                     .as_str()
-                    .ok_or_else(|| lumosai_core::error::Error::Tool(format!("Parameter {} must be a string", #param_key)))?
+                    .ok_or_else(|| crate::error::Error::Tool(format!("Parameter {} must be a string", #param_key)))?
                     .parse()
-                    .map_err(|_| lumosai_core::error::Error::Tool(format!("Failed to parse parameter: {}", #param_key)))?;
+                    .map_err(|_| crate::error::Error::Tool(format!("Failed to parse parameter: {}", #param_key)))?;
             }
         } else {
             quote! {
@@ -697,48 +743,48 @@ pub fn generate_tool_impl(
 
         #[derive(Debug, Clone)]
         pub struct #tool_struct_name {
-            base: lumosai_core::base::BaseComponent,
+            base: crate::base::BaseComponent,
         }
 
         impl #tool_struct_name {
             pub fn new() -> Self {
                 Self {
-                    base: lumosai_core::base::BaseComponent::new_with_name(
+                    base: crate::base::BaseComponent::new_with_name(
                         #tool_name,
-                        lumosai_core::compat::Component::Tool,
+                        crate::compat::Component::Tool,
                     ),
                 }
             }
         }
 
-        impl lumosai_core::base::Base for #tool_struct_name {
+        impl crate::base::Base for #tool_struct_name {
             fn name(&self) -> Option<&str> {
                 self.base.name()
             }
 
-            fn component(&self) -> lumosai_core::compat::Component {
+            fn component(&self) -> crate::compat::Component {
                 self.base.component()
             }
 
-            fn logger(&self) -> std::sync::Arc<dyn lumosai_core::compat::Logger> {
+            fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
                 self.base.logger()
             }
 
-            fn set_logger(&mut self, logger: std::sync::Arc<dyn lumosai_core::compat::Logger>) {
+            fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::logger::Logger>) {
                 self.base.set_logger(logger);
             }
 
-            fn telemetry(&self) -> Option<std::sync::Arc<dyn lumosai_core::compat::TelemetrySink>> {
+            fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
                 self.base.telemetry()
             }
 
-            fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn lumosai_core::compat::TelemetrySink>) {
+            fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
                 self.base.set_telemetry(telemetry);
             }
         }
 
         #[async_trait::async_trait]
-        impl lumosai_core::tool::Tool for #tool_struct_name {
+        impl crate::tool::Tool for #tool_struct_name {
             fn id(&self) -> &str {
                 #tool_name
             }
@@ -747,8 +793,8 @@ pub fn generate_tool_impl(
                 #tool_description
             }
 
-            fn schema(&self) -> lumosai_core::tool::ToolSchema {
-                lumosai_core::tool::ToolSchema {
+            fn schema(&self) -> crate::tool::ToolSchema {
+                crate::tool::ToolSchema {
                     parameters: vec![
                         #(#param_schemas),*
                     ],
@@ -759,26 +805,26 @@ pub fn generate_tool_impl(
             async fn execute(
                 &self,
                 params: serde_json::Value,
-                _context: lumosai_core::tool::ToolExecutionContext,
-                _options: &lumosai_core::tool::ToolExecutionOptions,
-            ) -> lumosai_core::error::Result<serde_json::Value> {
+                _context: crate::tool::ToolExecutionContext,
+                _options: &crate::tool::ToolExecutionOptions,
+            ) -> crate::error::Result<serde_json::Value> {
                 let params = params.as_object()
-                    .ok_or_else(|| lumosai_core::error::Error::Tool("Parameters must be a JSON object".to_string()))?;
+                    .ok_or_else(|| crate::error::Error::Tool("Parameters must be a JSON object".to_string()))?;
 
                 #(#param_extractions)*
 
                 let result = #call_expr?;
 
                 Ok(serde_json::to_value(result)
-                    .map_err(|e| lumosai_core::error::Error::Tool(format!("Failed to serialize result: {}", e)))?)
+                    .map_err(|e| crate::error::Error::Tool(format!("Failed to serialize result: {}", e)))?)
             }
 
-            fn clone_box(&self) -> Box<dyn lumosai_core::tool::Tool> {
+            fn clone_box(&self) -> Box<dyn crate::tool::Tool> {
                 Box::new(self.clone())
             }
         }
 
-        pub fn #tool_fn_name() -> Box<dyn lumosai_core::tool::Tool> {
+        pub fn #tool_fn_name() -> Box<dyn crate::tool::Tool> {
             Box::new(#tool_struct_name::new())
         }
     })

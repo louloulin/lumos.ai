@@ -95,9 +95,12 @@ pub mod communication;
 pub mod data;
 pub mod database;
 pub mod file;
+pub mod macro_tools;
 pub mod math;
 pub mod system;
 pub mod web;
+
+
 
 // Re-export tool creation functions
 pub use ai::*;
@@ -105,6 +108,7 @@ pub use communication::*;
 pub use data::*;
 pub use database::*;
 pub use file::*;
+pub use macro_tools::*;
 pub use math::*;
 pub use system::*;
 pub use web::*;

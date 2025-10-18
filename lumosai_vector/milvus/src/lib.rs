@@ -44,9 +44,6 @@
 //! }
 //! ```
 
-use std::collections::HashMap;
-use std::sync::Arc;
-
 pub mod client;
 pub mod config;
 pub mod error;
@@ -61,7 +58,8 @@ pub use types::*;
 
 // Re-export core types for convenience
 pub use lumosai_vector_core::traits::VectorStorage;
-pub use lumosai_vector_core::types::*;
+// Note: Avoid glob re-exports to prevent ambiguity
+pub use lumosai_vector_core::types::{Document, DocumentId, FilterCondition, SimilarityMetric, Vector};
 
 /// Milvus client for managing connections and databases
 #[derive(Clone)]
@@ -91,7 +89,7 @@ impl MilvusConnection {
         };
 
         // Authenticate if credentials are provided
-        if let Some(ref auth) = connection.config.auth {
+        if let Some(ref _auth) = connection.config.auth {
             connection.authenticate().await?;
         }
 

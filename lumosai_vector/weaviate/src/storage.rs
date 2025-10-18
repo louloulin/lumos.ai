@@ -6,7 +6,6 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::Duration;
 use tracing::{debug, instrument, warn};
-use uuid::Uuid;
 
 use crate::error::WeaviateResult;
 use crate::filter::convert_filter_to_where;
@@ -32,7 +31,7 @@ impl WeaviateVectorStorage {
     pub async fn with_config(config: WeaviateConfig) -> Result<Self> {
         config.validate().map_err(VectorError::from)?;
 
-        let mut client_builder =
+        let client_builder =
             Client::builder().timeout(Duration::from_secs(config.timeout_seconds));
 
         // Add authentication headers if provided

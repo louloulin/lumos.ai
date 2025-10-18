@@ -28,7 +28,7 @@ demos = []
 qdrant = ["lumosai_vector/qdrant"]
 postgres = ["lumosai_vector"]
 weaviate = ["lumosai_vector/weaviate"]
-# SQLite features (temporarily disabled)
+# SQLite features (temporarily disabled due to dependency conflicts)
 # sqlite = ["rusqlite"]
 # vector_sqlite = ["rusqlite"]
 
@@ -82,6 +82,9 @@ ring = "0.17"
 # Additional dependencies for new features
 bytes = "1.5"
 tempfile = "3.8"
+
+# SQLite dependencies (temporarily disabled due to dependency conflicts)
+# rusqlite = { version = "0.29", optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

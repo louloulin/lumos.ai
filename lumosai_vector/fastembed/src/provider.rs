@@ -296,7 +296,6 @@ impl Default for FastEmbedProviderBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio_test;
 
     #[tokio::test]
     async fn test_provider_creation() {
@@ -318,7 +317,7 @@ mod tests {
 
     #[test]
     fn test_text_validation() {
-        let provider = FastEmbedProviderBuilder::new(FastEmbedModel::BGESmallENV15).build();
+        let _provider = FastEmbedProviderBuilder::new(FastEmbedModel::BGESmallENV15).build();
 
         // This is a sync test, so we can't actually create the provider
         // But we can test the builder

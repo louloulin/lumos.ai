@@ -7,7 +7,7 @@ use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 
 use crate::config::{ComplianceConfig, ComplianceStandard};
-use crate::error::{EnterpriseError, Result};
+use crate::error::Result;
 
 /// 合规管理器
 pub struct ComplianceManager {

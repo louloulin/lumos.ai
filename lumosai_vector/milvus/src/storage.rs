@@ -13,7 +13,7 @@ use crate::{
     client::MilvusClient,
     config::MilvusConfig,
     error::{MilvusError, MilvusResult},
-    types::{CollectionSchema, MilvusEntity},
+    types::CollectionSchema,
     utils,
 };
 
@@ -103,7 +103,7 @@ impl MilvusStorage {
     }
 
     /// Build search parameters
-    fn build_search_params(&self, metric_type: &str) -> serde_json::Value {
+    fn build_search_params(&self, _metric_type: &str) -> serde_json::Value {
         let params = &self.config.index_config.index_params;
 
         match self.config.index_config.default_index_type {
@@ -543,7 +543,7 @@ impl VectorStorage for MilvusStorage {
         };
 
         // Execute query
-        let query_response = self
+        let _query_response = self
             .client
             .query(index_name, &query_expr, &output_fields, None, None)
             .await

@@ -434,7 +434,7 @@ impl InMemoryTraceCollector {
 
 #[async_trait]
 impl TraceCollector for InMemoryTraceCollector {
-    async fn start_trace(&self, name: &str) -> String {
+    async fn start_trace(&self, _name: &str) -> String {
         let trace_id = format!("trace_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
         trace_id
     }

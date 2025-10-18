@@ -1,8 +1,5 @@
 //! Milvus client implementation
 
-use std::collections::HashMap;
-use std::time::Duration;
-
 use crate::{
     config::MilvusConfig,
     error::{MilvusError, MilvusResult},

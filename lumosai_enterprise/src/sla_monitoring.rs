@@ -2,7 +2,6 @@
 //!
 //! 提供服务级别协议监控和管理功能
 
-use async_trait::async_trait;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

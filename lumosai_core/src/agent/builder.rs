@@ -7,6 +7,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use super::dynamic_config::{DynamicArgument, EnhancedRuntimeContext, DynamicConfigResolver, static_arg};
 use super::trait_def::Agent;
 use super::types::{TelemetrySettings, VoiceConfig};
 use super::{AgentConfig, BasicAgent, ModelResolver};
@@ -125,6 +126,12 @@ pub struct AgentBuilder {
     model_resolver: Option<ModelResolver>, // Model resolver for string names
     tenant_id: Option<String>,             // Multi-tenant support
     isolation_level: Option<String>,       // Isolation level for multi-tenancy
+
+    // 动态配置支持 - 对标 Mastra
+    dynamic_instructions: Option<DynamicArgument<String>>,
+    dynamic_model: Option<DynamicArgument<String>>,
+    dynamic_tools: Option<DynamicArgument<Vec<String>>>,
+    runtime_context: Option<EnhancedRuntimeContext>,
 }
 
 impl Default for AgentBuilder {
@@ -158,6 +165,12 @@ impl AgentBuilder {
             model_resolver: None,
             tenant_id: None,
             isolation_level: None,
+
+            // 动态配置字段初始化
+            dynamic_instructions: None,
+            dynamic_model: None,
+            dynamic_tools: None,
+            runtime_context: None,
         }
     }
 
@@ -369,7 +382,73 @@ impl AgentBuilder {
         self
     }
 
-    /// Build the agent
+    // === 动态配置方法 - 对标 Mastra ===
+
+    /// 设置动态指令（基于运行时上下文）
+    ///
+    /// # Example
+    /// ```rust
+    /// use lumosai_core::agent::AgentBuilder;
+    /// use lumosai_core::agent::dynamic_config::{dynamic_arg, EnhancedRuntimeContext};
+    ///
+    /// let builder = AgentBuilder::new()
+    ///     .dynamic_instructions(dynamic_arg(|ctx: &EnhancedRuntimeContext| async move {
+    ///         Ok(format!("You are a {} assistant for {}",
+    ///             ctx.user_role.as_deref().unwrap_or("general"),
+    ///             ctx.domain.as_deref().unwrap_or("general tasks")
+    ///         ))
+    ///     }));
+    /// ```
+    pub fn dynamic_instructions(mut self, instructions: DynamicArgument<String>) -> Self {
+        self.dynamic_instructions = Some(instructions);
+        self
+    }
+
+    /// 设置动态模型选择（基于运行时上下文）
+    ///
+    /// # Example
+    /// ```rust
+    /// use lumosai_core::agent::AgentBuilder;
+    /// use lumosai_core::agent::dynamic_config::{dynamic_arg, ComplexityLevel};
+    ///
+    /// let builder = AgentBuilder::new()
+    ///     .dynamic_model(dynamic_arg(|ctx| async move {
+    ///         Ok(match ctx.complexity {
+    ///             ComplexityLevel::Simple => "gpt-3.5-turbo".to_string(),
+    ///             ComplexityLevel::Complex => "gpt-4".to_string(),
+    ///             ComplexityLevel::Expert => "claude-3-opus".to_string(),
+    ///         })
+    ///     }));
+    /// ```
+    pub fn dynamic_model(mut self, model: DynamicArgument<String>) -> Self {
+        self.dynamic_model = Some(model);
+        self
+    }
+
+    /// 设置动态工具列表（基于运行时上下文）
+    ///
+    /// # Example
+    /// ```rust
+    /// use lumosai_core::agent::AgentBuilder;
+    /// use lumosai_core::agent::dynamic_config::dynamic_arg;
+    ///
+    /// let builder = AgentBuilder::new()
+    ///     .dynamic_tools(dynamic_arg(|ctx| async move {
+    ///         Ok(ctx.get_user_tools())
+    ///     }));
+    /// ```
+    pub fn dynamic_tools(mut self, tools: DynamicArgument<Vec<String>>) -> Self {
+        self.dynamic_tools = Some(tools);
+        self
+    }
+
+    /// 设置运行时上下文
+    pub fn with_runtime_context(mut self, context: EnhancedRuntimeContext) -> Self {
+        self.runtime_context = Some(context);
+        self
+    }
+
+    /// Build the agent (同步版本，不支持动态配置)
     pub fn build(mut self) -> Result<BasicAgent> {
         // Apply smart defaults if enabled
         if self.smart_defaults {
@@ -431,25 +510,31 @@ impl AgentBuilder {
         Ok(agent)
     }
 
-    /// Build the agent asynchronously (supports model name resolution)
+    /// Build the agent asynchronously (supports model name resolution and dynamic configuration)
     pub async fn build_async(mut self) -> Result<BasicAgent> {
         // Apply smart defaults if enabled
         if self.smart_defaults {
             self = self.apply_smart_defaults()?;
         }
 
-        // Validate required fields
-        let name = self
-            .name
-            .ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
-        let instructions = self
-            .instructions
-            .ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
+        // 处理动态配置解析
+        let (final_name, final_instructions, final_model_name) = if self.runtime_context.is_some() {
+            self.resolve_dynamic_config().await?
+        } else {
+            // 使用静态配置
+            let name = self
+                .name
+                .ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
+            let instructions = self
+                .instructions
+                .ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
+            (name, instructions, self.model_name.clone())
+        };
 
         // Resolve model if needed
         let model = if let Some(model) = self.model {
             model
-        } else if let Some(model_name) = self.model_name {
+        } else if let Some(model_name) = final_model_name.or(self.model_name) {
             let resolver = self.model_resolver.unwrap_or_default();
             resolver.resolve(&model_name).await?
         } else {
@@ -460,8 +545,8 @@ impl AgentBuilder {
 
         // Create config
         let config = AgentConfig {
-            name,
-            instructions,
+            name: final_name,
+            instructions: final_instructions,
             memory_config: self.memory_config,
             model_id: self.model_id,
             voice_config: self.voice_config,
@@ -485,6 +570,35 @@ impl AgentBuilder {
         }
 
         Ok(agent)
+    }
+
+    /// 解析动态配置 - 对标 Mastra 的动态参数解析
+    async fn resolve_dynamic_config(&self) -> Result<(String, String, Option<String>)> {
+        let context = self.runtime_context.as_ref()
+            .ok_or_else(|| Error::Configuration("Runtime context is required for dynamic config".to_string()))?;
+
+        let resolver = DynamicConfigResolver;
+
+        // 解析动态指令
+        let instructions = if let Some(dynamic_instructions) = &self.dynamic_instructions {
+            resolver.resolve_string(dynamic_instructions, context).await?
+        } else {
+            self.instructions.clone()
+                .ok_or_else(|| Error::Configuration("Instructions are required".to_string()))?
+        };
+
+        // 解析动态模型
+        let model_name = if let Some(dynamic_model) = &self.dynamic_model {
+            Some(resolver.resolve_model(dynamic_model, context).await?)
+        } else {
+            self.model_name.clone()
+        };
+
+        // 解析名称（目前使用静态值，可以扩展为动态）
+        let name = self.name.clone()
+            .ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
+
+        Ok((name, instructions, model_name))
     }
 
     /// Apply smart defaults to simplify configuration

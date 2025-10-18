@@ -5,6 +5,7 @@
 //! - Level 2: 链式配置，更多控制
 //! - Level 3: 完整构建器模式，高级配置
 
+use super::dynamic_config::{DynamicArgument, EnhancedRuntimeContext, ComplexityLevel, dynamic_arg, static_arg};
 use super::{AgentBuilder, BasicAgent};
 use crate::agent::trait_def::Agent as AgentTrait;
 use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult};
@@ -225,6 +226,44 @@ impl Agent {
     /// ```
     pub fn builder() -> AgentBuilder {
         AgentBuilder::new()
+    }
+
+    /// 创建动态配置的 Agent - 对标 Mastra 的 DynamicArgument
+    ///
+    /// 支持基于运行时上下文的动态配置，实现真正的上下文感知 Agent
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::simplified_api::Agent;
+    /// use lumosai_core::agent::dynamic_config::{EnhancedRuntimeContext, ComplexityLevel, dynamic_arg};
+    ///
+    /// // 创建运行时上下文
+    /// let context = EnhancedRuntimeContext::new("session_123".to_string())
+    ///     .with_user_role("developer".to_string())
+    ///     .with_domain("ai_development".to_string())
+    ///     .with_complexity(ComplexityLevel::Complex);
+    ///
+    /// // 创建动态配置的 Agent
+    /// let agent = Agent::dynamic("adaptive_assistant")
+    ///     .dynamic_instructions(dynamic_arg(|ctx| async move {
+    ///         Ok(format!("You are a {} assistant for {}",
+    ///             ctx.user_role.as_deref().unwrap_or("general"),
+    ///             ctx.domain.as_deref().unwrap_or("general tasks")
+    ///         ))
+    ///     }))
+    ///     .dynamic_model(dynamic_arg(|ctx| async move {
+    ///         Ok(match ctx.complexity {
+    ///             ComplexityLevel::Simple => "gpt-3.5-turbo".to_string(),
+    ///             ComplexityLevel::Complex => "gpt-4".to_string(),
+    ///             ComplexityLevel::Expert => "claude-3-opus".to_string(),
+    ///         })
+    ///     }))
+    ///     .with_runtime_context(context)
+    ///     .build_async().await?;
+    /// ```
+    pub fn dynamic(name: &str) -> AgentBuilder {
+        AgentBuilder::new().name(name)
     }
 
     /// 智能解析模型提供商

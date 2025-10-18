@@ -6,6 +6,7 @@ pub mod chain;
 pub mod config;
 pub mod config_validator;
 pub mod convenience;
+pub mod dynamic_config;
 pub mod enhanced_integration_test;
 pub mod evaluation;
 pub mod events;

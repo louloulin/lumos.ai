@@ -1,0 +1,38 @@
+[package]
+name = "lumosai_multimodal"
+version = "0.2.0"
+edition = "2021"
+authors = ["LumosAI Team"]
+description = "多模态能力集成 - 语音和视觉处理"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/louloulin/lumosai"
+
+[dependencies]
+# 核心依赖
+lumosai_core = { path = "../lumosai_core", version = "0.2.0" }
+anyhow = "1.0"
+thiserror = "1.0"
+async-trait = "0.1"
+tokio = { version = "1.35", features = ["full"] }
+
+# 序列化
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP 客户端
+reqwest = { version = "0.11", features = ["json", "multipart", "stream"] }
+
+# 日志
+tracing = "0.1"
+
+# Base64 编码
+base64 = "0.21"
+
+# 音频处理
+hound = "3.5"  # WAV 文件处理
+
+# 图像处理
+image = "0.24"  # 图像格式转换
+
+[dev-dependencies]
+tokio-test = "0.4"

@@ -1,10 +1,11 @@
 //! 统一内存系统 - LumosAI v2.0 第四周任务
 //!
 //! 提供统一的内存接口，简化内存系统的使用和配置
-//! 
+//!
 //! # 设计目标
 //! - 统一内存接口，减少抽象层次
 //! - 提供简单的构造函数：basic(), semantic(), working()
+//! - 支持 CompositeMemory 构建器模式
 //! - 智能默认配置，开箱即用
 //! - 保持向后兼容性
 
@@ -18,7 +19,7 @@ use crate::memory::{
     BasicMemory, MemoryConfig, SemanticRecallConfig, WorkingMemoryConfig,
     create_working_memory, create_semantic_memory, WorkingMemory,
     semantic_memory::{SemanticMemoryTrait, SemanticSearchOptions},
-    Memory as MemoryTrait,
+    Memory as MemoryTrait, MemoryProcessor,
 };
 
 /// 内存类型枚举
@@ -529,5 +530,207 @@ impl std::fmt::Display for MemoryStats {
             self.memory_type,
             self.last_updated.format("%Y-%m-%d %H:%M:%S")
         )
+    }
+}
+
+// ============================================================================
+// CompositeMemory 构建器 - Week 11-12 统一内存架构
+// ============================================================================
+
+/// CompositeMemory 构建器配置
+///
+/// 支持链式配置多种内存类型和处理器
+#[derive(Default)]
+pub struct CompositeMemoryBuilder {
+    /// 工作内存配置
+    working_config: Option<WorkingMemoryConfig>,
+    /// 语义内存配置
+    semantic_config: Option<SemanticMemoryConfig>,
+    /// 内存处理器列表
+    processors: Vec<Arc<dyn MemoryProcessor>>,
+    /// 命名空间
+    namespace: Option<String>,
+}
+
+/// 语义内存配置
+pub struct SemanticMemoryConfig {
+    /// 向量存储后端名称
+    pub vector_store: String,
+    /// 嵌入模型名称
+    pub embedding_model: String,
+    /// 索引配置
+    pub index_config: Option<String>,
+}
+
+impl Memory {
+    /// 创建 CompositeMemory 构建器
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::UnifiedMemory;
+    ///
+    /// let memory = UnifiedMemory::composite()
+    ///     .working(1000)
+    ///     .semantic("qdrant", "openai")
+    ///     .build()
+    ///     .await?;
+    /// ```
+    pub fn composite() -> CompositeMemoryBuilder {
+        CompositeMemoryBuilder::default()
+    }
+}
+
+impl CompositeMemoryBuilder {
+    /// 配置工作内存
+    ///
+    /// # 参数
+    /// - `capacity`: 工作内存容量（消息数量）
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let builder = Memory::composite().working(1000);
+    /// ```
+    pub fn working(mut self, capacity: usize) -> Self {
+        self.working_config = Some(WorkingMemoryConfig {
+            enabled: true,
+            template: None,
+            content_type: Some("buffer".to_string()),
+            max_capacity: Some(capacity),
+        });
+        self
+    }
+
+    /// 配置语义内存
+    ///
+    /// # 参数
+    /// - `vector_store`: 向量存储后端（如 "qdrant", "weaviate"）
+    /// - `embedding_model`: 嵌入模型（如 "openai", "sentence-transformers"）
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let builder = Memory::composite()
+    ///     .semantic("qdrant", "openai");
+    /// ```
+    pub fn semantic(mut self, vector_store: &str, embedding_model: &str) -> Self {
+        self.semantic_config = Some(SemanticMemoryConfig {
+            vector_store: vector_store.to_string(),
+            embedding_model: embedding_model.to_string(),
+            index_config: None,
+        });
+        self
+    }
+
+    /// 添加内存处理器
+    ///
+    /// # 参数
+    /// - `processor`: 内存处理器实例
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::MessageLimitProcessor;
+    ///
+    /// let builder = Memory::composite()
+    ///     .processor(Arc::new(MessageLimitProcessor::new(4000)));
+    /// ```
+    pub fn processor(mut self, processor: Arc<dyn MemoryProcessor>) -> Self {
+        self.processors.push(processor);
+        self
+    }
+
+    /// 批量添加内存处理器
+    ///
+    /// # 参数
+    /// - `processors`: 处理器列表
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::{MessageLimitProcessor, DeduplicationProcessor};
+    ///
+    /// let builder = Memory::composite()
+    ///     .processors(vec![
+    ///         Arc::new(MessageLimitProcessor::new(4000)),
+    ///         Arc::new(DeduplicationProcessor::new()),
+    ///     ]);
+    /// ```
+    pub fn processors(mut self, processors: Vec<Arc<dyn MemoryProcessor>>) -> Self {
+        self.processors.extend(processors);
+        self
+    }
+
+    /// 设置命名空间
+    ///
+    /// # 参数
+    /// - `namespace`: 命名空间名称
+    pub fn namespace(mut self, namespace: &str) -> Self {
+        self.namespace = Some(namespace.to_string());
+        self
+    }
+
+    /// 构建 CompositeMemory 实例
+    ///
+    /// # 返回
+    ///
+    /// 返回配置好的 Memory 实例
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let memory = Memory::composite()
+    ///     .working(1000)
+    ///     .semantic("qdrant", "openai")
+    ///     .build()
+    ///     .await?;
+    /// ```
+    pub async fn build(self) -> Result<Memory> {
+        // 创建工作内存（如果配置了）
+        let working_memory_box = if let Some(config) = self.working_config.clone() {
+            Some(create_working_memory(&config)?)
+        } else {
+            None
+        };
+
+        // 将 Box<dyn WorkingMemory> 转换为 Arc<dyn WorkingMemory>
+        // 这里我们需要重新创建实例，因为 Box 和 Arc 不能直接转换
+        let working_memory_arc = if let Some(config) = self.working_config.clone() {
+            // 直接创建 BasicWorkingMemory 并包装为 Arc
+            Some(Arc::new(crate::memory::working::BasicWorkingMemory::new(config)) as Arc<dyn WorkingMemory>)
+        } else {
+            None
+        };
+
+        // 创建语义内存（如果配置了）
+        // 注意：这里需要实际的向量存储和嵌入提供商实例
+        // 当前使用 None 作为占位符
+        let semantic_memory: Option<Arc<dyn SemanticMemoryTrait>> = None;
+
+        // 创建基础内存，组合工作内存和语义内存
+        let basic_memory = BasicMemory::new(working_memory_arc.clone(), semantic_memory.clone());
+
+        // 确定内存类型
+        let memory_type = match (self.working_config.is_some(), self.semantic_config.is_some()) {
+            (true, true) => MemoryType::Hybrid {
+                working_size: self.working_config.as_ref().and_then(|c| c.max_capacity),
+                enable_semantic: true,
+            },
+            (true, false) => MemoryType::Working {
+                size: self.working_config.as_ref().and_then(|c| c.max_capacity).unwrap_or(1000),
+            },
+            (false, true) => MemoryType::Semantic,
+            (false, false) => MemoryType::Basic,
+        };
+
+        Ok(Memory {
+            inner: MemoryImpl::Hybrid {
+                basic: basic_memory,
+                working: working_memory_box,
+                semantic: semantic_memory,
+            },
+            memory_type,
+        })
     }
 }

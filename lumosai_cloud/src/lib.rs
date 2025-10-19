@@ -32,7 +32,8 @@ pub struct CloudNativeManager {
     /// Kubernetes客户端
     pub kubernetes: Option<kubernetes::KubernetesManager>,
 
-    /// Docker客户端
+    /// Docker客户端（仅在启用 docker feature 时可用）
+    #[cfg(feature = "docker")]
     pub docker: Option<docker::DockerManager>,
 
     /// 云提供商客户端
@@ -615,6 +616,7 @@ impl CloudNativeManager {
     pub async fn new() -> Result<Self> {
         Ok(Self {
             kubernetes: None,
+            #[cfg(feature = "docker")]
             docker: None,
             cloud_providers: HashMap::new(),
             monitoring: monitoring::CloudMonitoring::new().await?,
@@ -648,11 +650,19 @@ impl CloudNativeManager {
     }
 
     /// 部署到Docker
-    async fn deploy_to_docker(&mut self, config: DeploymentConfig) -> Result<DeploymentResult> {
-        if let Some(docker) = &mut self.docker {
-            docker.deploy_agent(config).await
-        } else {
-            Err(CloudError::DockerNotConfigured)
+    async fn deploy_to_docker(&mut self, _config: DeploymentConfig) -> Result<DeploymentResult> {
+        #[cfg(feature = "docker")]
+        {
+            if let Some(docker) = &mut self.docker {
+                docker.deploy_agent(_config).await
+            } else {
+                Err(CloudError::DockerNotConfigured)
+            }
+        }
+
+        #[cfg(not(feature = "docker"))]
+        {
+            Err(CloudError::FeatureNotEnabled("docker".to_string()))
         }
     }
 

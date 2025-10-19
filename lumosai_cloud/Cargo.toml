@@ -100,21 +100,22 @@ gcp = ["google-cloud-storage"]
 jaeger = ["opentelemetry-jaeger"]
 all-clouds = ["aws", "azure", "gcp"]
 
-[[bin]]
-name = "lumosai-operator"
-path = "src/bin/operator.rs"
-required-features = ["kubernetes"]
+# 暂时禁用，文件不存在
+# [[bin]]
+# name = "lumosai-operator"
+# path = "src/bin/operator.rs"
+# required-features = ["kubernetes"]
 
-[[bin]]
-name = "lumosai-deploy"
-path = "src/bin/deploy.rs"
+# [[bin]]
+# name = "lumosai-deploy"
+# path = "src/bin/deploy.rs"
 
-[[example]]
-name = "kubernetes_deployment"
-path = "examples/kubernetes_deployment.rs"
-required-features = ["kubernetes"]
+# [[example]]
+# name = "kubernetes_deployment"
+# path = "examples/kubernetes_deployment.rs"
+# required-features = ["kubernetes"]
 
-[[example]]
-name = "docker_deployment"
-path = "examples/docker_deployment.rs"
-required-features = ["docker"]
+# [[example]]
+# name = "docker_deployment"
+# path = "examples/docker_deployment.rs"
+# required-features = ["docker"]

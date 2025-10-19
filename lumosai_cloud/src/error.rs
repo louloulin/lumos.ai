@@ -28,6 +28,10 @@ pub enum CloudError {
     #[error("Docker not configured")]
     DockerNotConfigured,
 
+    /// 功能未启用错误
+    #[error("Feature '{0}' is not enabled. Please enable it in Cargo.toml")]
+    FeatureNotEnabled(String),
+
     /// 云提供商错误
     #[error("Cloud provider '{0}' not configured")]
     CloudProviderNotConfigured(String),
@@ -330,6 +334,7 @@ impl CloudError {
             Self::DockerConnection(_) => "DOCKER_CONNECTION",
             Self::DockerDeployment(_) => "DOCKER_DEPLOYMENT",
             Self::DockerNotConfigured => "DOCKER_NOT_CONFIGURED",
+            Self::FeatureNotEnabled(_) => "FEATURE_NOT_ENABLED",
             Self::CloudProviderNotConfigured(_) => "CLOUD_PROVIDER_NOT_CONFIGURED",
             Self::AwsError(_) => "AWS_ERROR",
             Self::AzureError(_) => "AZURE_ERROR",

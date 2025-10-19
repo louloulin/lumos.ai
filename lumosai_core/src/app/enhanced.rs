@@ -133,7 +133,8 @@ impl EnhancedApp {
         })?;
         providers.insert(name.clone(), provider);
 
-        self.base
+        let _ = self
+            .base
             .logger()
             .info(&format!("LLM provider '{name}' added"));
         Ok(())
@@ -154,7 +155,7 @@ impl EnhancedApp {
         })?;
         agents.insert(name.clone(), agent);
 
-        self.base.logger().info(&format!("Agent '{name}' added"));
+        let _ = self.base.logger().info(&format!("Agent '{name}' added"));
         Ok(())
     }
 
@@ -199,7 +200,7 @@ impl EnhancedApp {
     /// Set memory manager
     pub fn set_memory(&mut self, memory: Arc<dyn Memory>) {
         self.memory = Some(memory);
-        self.base.logger().info("Memory manager set");
+        let _ = self.base.logger().info("Memory manager set");
     }
 
     /// Get memory manager

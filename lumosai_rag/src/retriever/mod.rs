@@ -17,10 +17,14 @@ pub trait Retriever: Send + Sync {
 
 pub mod bm25;
 pub mod hybrid;
+pub mod reranker;
 mod in_memory;
 mod vector_store;
 
 pub use bm25::{BM25Config, BM25Retriever, BM25Stats};
 pub use hybrid::{HybridRetriever, HybridSearchConfig, KeywordRetriever, RerankStrategy};
 pub use in_memory::InMemoryVectorStore;
+pub use reranker::{
+    ChainReranker, CrossEncoderReranker, DiversityReranker, LLMReranker, Reranker,
+};
 pub use vector_store::VectorStore;

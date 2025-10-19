@@ -1,0 +1,14 @@
+[package]
+name = "test_macro_tools"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lumosai_core = { path = "./lumosai_core" }
+serde_json = "1.0"
+tempfile = "3.0"
+tokio = { version = "1.0", features = ["full"] }
+
+[[bin]]
+name = "test_macro_tools"
+path = "test_macro_tools.rs"

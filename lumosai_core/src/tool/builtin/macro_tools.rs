@@ -1,7 +1,54 @@
 //! 基于宏的工具实现
 //!
-//! 这个模块展示了如何使用 #[tool] 宏来简化工具定义，
-//! 替代手动的 FunctionTool 实现
+//! 这个模块展示了如何使用 `#[tool]` 宏来简化工具定义，
+//! 替代手动的 `FunctionTool` 实现。
+//!
+//! # 工具分类
+//!
+//! ## 文件操作工具 (4个)
+//! - [`read_file_tool`] - 读取文件内容
+//! - [`write_file_tool`] - 写入文件内容
+//! - [`list_directory_tool`] - 列出目录内容
+//! - [`get_file_info_tool`] - 获取文件信息
+//!
+//! ## 网络请求工具 (3个)
+//! - [`http_get_tool`] - HTTP GET 请求
+//! - [`http_post_tool`] - HTTP POST 请求
+//! - [`api_call_tool`] - 通用 API 调用
+//!
+//! ## 数据处理工具 (3个)
+//! - [`parse_json_tool`] - JSON 解析和验证
+//! - [`process_text_tool`] - 文本处理
+//! - [`convert_data_tool`] - 数据格式转换
+//!
+//! # 使用示例
+//!
+//! ```rust,no_run
+//! use lumosai_core::tool::builtin::macro_tools::*;
+//! use lumosai_core::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
+//! use serde_json::json;
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! // 创建工具实例
+//! let tool = read_file_tool();
+//!
+//! // 准备参数
+//! let params = json!({
+//!     "path": "/tmp/test.txt",
+//!     "encoding": "utf-8",
+//!     "max_size": 1048576
+//! });
+//!
+//! // 创建执行上下文
+//! let context = ToolExecutionContext::default();
+//! let options = ToolExecutionOptions::default();
+//!
+//! // 执行工具
+//! let result = tool.execute(params, context, &options).await?;
+//! println!("Result: {}", result);
+//! # Ok(())
+//! # }
+//! ```
 
 use crate::{Error, Result};
 use lumos_macro::tool;
@@ -13,9 +60,54 @@ use tokio::fs;
 // 文件操作工具 (使用宏重构)
 // ============================================================================
 
-/// 文件读取工具 - 使用宏实现
-/// 
-/// 替代原有的 create_file_reader_tool() 手动实现
+/// 读取文件内容
+///
+/// 这个工具使用 `#[tool]` 宏实现，替代原有的 `create_file_reader_tool()` 手动实现。
+///
+/// # 参数
+///
+/// - `path` (必需): 文件路径，可以是绝对路径或相对路径
+/// - `encoding` (可选): 文件编码，默认为 "utf-8"
+/// - `max_size` (可选): 最大文件大小（字节），默认为 1MB (1048576)
+///
+/// # 返回值
+///
+/// 返回一个 JSON 对象，包含以下字段：
+///
+/// - `success` (boolean): 操作是否成功
+/// - `path` (string): 文件路径
+/// - `content` (string): 文件内容（成功时）
+/// - `size` (number): 文件大小（字节）
+/// - `encoding` (string): 使用的编码
+/// - `timestamp` (string): 操作时间戳 (RFC3339 格式)
+/// - `error` (string): 错误信息（失败时）
+///
+/// # 错误处理
+///
+/// - 文件不存在: 返回 `success: false` 和错误信息
+/// - 文件过大: 返回 `success: false` 和大小信息
+/// - 读取失败: 返回 `Error::Tool`
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use lumosai_core::tool::builtin::macro_tools::read_file_tool;
+/// use lumosai_core::tool::Tool;
+/// use serde_json::json;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let tool = read_file_tool();
+/// let params = json!({
+///     "path": "/tmp/test.txt",
+///     "encoding": "utf-8",
+///     "max_size": 1048576
+/// });
+/// let context = Default::default();
+/// let options = Default::default();
+/// let result = tool.execute(params, context, &options).await?;
+/// # Ok(())
+/// # }
+/// ```
 #[tool(
     name = "file_reader_v2",
     description = "读取文件内容，支持编码和大小限制"
@@ -66,7 +158,56 @@ async fn read_file(
     }))
 }
 
-/// 文件写入工具 - 使用宏实现
+/// 写入内容到文件
+///
+/// 这个工具使用 `#[tool]` 宏实现，支持自动创建目录和备份功能。
+///
+/// # 参数
+///
+/// - `path` (必需): 目标文件路径
+/// - `content` (必需): 要写入的内容
+/// - `encoding` (可选): 文件编码，默认为 "utf-8"
+/// - `create_backup` (可选): 是否创建备份，默认为 false
+/// - `create_dirs` (可选): 是否自动创建父目录，默认为 true
+///
+/// # 返回值
+///
+/// 返回一个 JSON 对象，包含以下字段：
+///
+/// - `success` (boolean): 操作是否成功
+/// - `path` (string): 文件路径
+/// - `size` (number): 写入的字节数
+/// - `encoding` (string): 使用的编码
+/// - `backup_created` (boolean): 是否创建了备份
+/// - `timestamp` (string): 操作时间戳 (RFC3339 格式)
+///
+/// # 错误处理
+///
+/// - 创建目录失败: 返回 `Error::Tool`
+/// - 创建备份失败: 返回 `Error::Tool`
+/// - 写入文件失败: 返回 `Error::Tool`
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use lumosai_core::tool::builtin::macro_tools::write_file_tool;
+/// use lumosai_core::tool::Tool;
+/// use serde_json::json;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let tool = write_file_tool();
+/// let params = json!({
+///     "path": "/tmp/output.txt",
+///     "content": "Hello, World!",
+///     "create_backup": true,
+///     "create_dirs": true
+/// });
+/// let context = Default::default();
+/// let options = Default::default();
+/// let result = tool.execute(params, context, &options).await?;
+/// # Ok(())
+/// # }
+/// ```
 #[tool(
     name = "file_writer_v2",
     description = "写入内容到文件，支持创建目录和备份"

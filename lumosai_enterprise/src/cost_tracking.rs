@@ -2,9 +2,9 @@
 //!
 //! 提供企业级成本跟踪和分析功能
 
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -126,7 +126,12 @@ impl CostTracker {
     }
 
     /// 记录成本
-    pub async fn record_cost(&mut self, tenant_id: &str, resource_type: &str, usage_amount: f64) -> Result<()> {
+    pub async fn record_cost(
+        &mut self,
+        tenant_id: &str,
+        resource_type: &str,
+        usage_amount: f64,
+    ) -> Result<()> {
         if let Some(rule) = self.cost_rules.get(resource_type) {
             let total_cost = usage_amount * rule.unit_cost;
 
@@ -148,7 +153,11 @@ impl CostTracker {
     }
 
     /// 获取成本指标
-    pub async fn get_metrics(&self, start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Result<CostMetrics> {
+    pub async fn get_metrics(
+        &self,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+    ) -> Result<CostMetrics> {
         let mut total_cost = 0.0;
         let mut cost_by_tenant = HashMap::new();
         let mut cost_by_resource = HashMap::new();
@@ -157,8 +166,12 @@ impl CostTracker {
             if record.timestamp >= start_time && record.timestamp <= end_time {
                 total_cost += record.total_cost;
 
-                *cost_by_tenant.entry(record.tenant_id.clone()).or_insert(0.0) += record.total_cost;
-                *cost_by_resource.entry(record.resource_type.clone()).or_insert(0.0) += record.total_cost;
+                *cost_by_tenant
+                    .entry(record.tenant_id.clone())
+                    .or_insert(0.0) += record.total_cost;
+                *cost_by_resource
+                    .entry(record.resource_type.clone())
+                    .or_insert(0.0) += record.total_cost;
             }
         }
 
@@ -193,14 +206,30 @@ impl BillingManager {
     }
 
     /// 记录使用量
-    pub async fn record_usage(&mut self, tenant_id: &str, resource_type: &str, amount: f64) -> Result<()> {
-        self.cost_tracker.record_cost(tenant_id, resource_type, amount).await
+    pub async fn record_usage(
+        &mut self,
+        tenant_id: &str,
+        resource_type: &str,
+        amount: f64,
+    ) -> Result<()> {
+        self.cost_tracker
+            .record_cost(tenant_id, resource_type, amount)
+            .await
     }
 
     /// 生成账单
-    pub async fn generate_bill(&self, tenant_id: &str, start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Result<f64> {
+    pub async fn generate_bill(
+        &self,
+        tenant_id: &str,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+    ) -> Result<f64> {
         let metrics = self.cost_tracker.get_metrics(start_time, end_time).await?;
-        Ok(metrics.cost_by_tenant.get(tenant_id).unwrap_or(&0.0).clone())
+        Ok(metrics
+            .cost_by_tenant
+            .get(tenant_id)
+            .unwrap_or(&0.0)
+            .clone())
     }
 }
 
@@ -239,7 +268,10 @@ mod tests {
         assert!(tracker.set_cost_rule(rule).await.is_ok());
 
         // 记录成本
-        assert!(tracker.record_cost("tenant1", "cpu_cores", 10.0).await.is_ok());
+        assert!(tracker
+            .record_cost("tenant1", "cpu_cores", 10.0)
+            .await
+            .is_ok());
 
         // 获取指标
         let start_time = Utc::now() - chrono::Duration::hours(1);
@@ -266,12 +298,18 @@ mod tests {
         assert!(billing.cost_tracker.set_cost_rule(rule).await.is_ok());
 
         // 记录使用量
-        assert!(billing.record_usage("tenant1", "memory_gb", 8.0).await.is_ok());
+        assert!(billing
+            .record_usage("tenant1", "memory_gb", 8.0)
+            .await
+            .is_ok());
 
         // 生成账单
         let start_time = Utc::now() - chrono::Duration::hours(1);
         let end_time = Utc::now();
-        let bill = billing.generate_bill("tenant1", start_time, end_time).await.unwrap();
+        let bill = billing
+            .generate_bill("tenant1", start_time, end_time)
+            .await
+            .unwrap();
 
         assert_eq!(bill, 0.4); // 8.0 * 0.05
     }

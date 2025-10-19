@@ -270,6 +270,12 @@ pub struct RoundRobinLoadBalancer {
     current_index: Arc<RwLock<usize>>,
 }
 
+impl Default for RoundRobinLoadBalancer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RoundRobinLoadBalancer {
     pub fn new() -> Self {
         Self {

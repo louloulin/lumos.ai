@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             storage
         }
         Err(e) => {
-            println!("❌ Failed to create Milvus storage: {}", e);
+            println!("❌ Failed to create Milvus storage: {e}");
             println!("💡 Make sure Milvus is running on localhost:19530");
             println!("   You can start Milvus using Docker:");
             println!("   docker run -p 19530:19530 -p 9091:9091 milvusdb/milvus:latest");
@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if e.to_string().contains("already exists") {
                 println!("ℹ️  Collection 'documents' already exists, continuing...");
             } else {
-                println!("❌ Failed to create collection: {}", e);
+                println!("❌ Failed to create collection: {e}");
                 return Ok(());
             }
         }
@@ -101,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
         Err(e) => {
-            println!("❌ Failed to insert documents: {}", e);
+            println!("❌ Failed to insert documents: {e}");
             return Ok(());
         }
     }
@@ -134,13 +134,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("  {}. ID: {}, Score: {:.4}", i + 1, result.id, result.score);
                 if let Some(metadata) = &result.metadata {
                     if let Some(category) = metadata.get("category") {
-                        println!("     Category: {:?}", category);
+                        println!("     Category: {category:?}");
                     }
                 }
             }
         }
         Err(e) => {
-            println!("❌ Search failed: {}", e);
+            println!("❌ Search failed: {e}");
         }
     }
 
@@ -172,7 +172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            println!("⚠️  Filtered search failed: {}", e);
+            println!("⚠️  Filtered search failed: {e}");
             println!("   Note: Metadata filtering may require specific Milvus configuration");
         }
     }
@@ -194,7 +194,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            println!("❌ Failed to retrieve documents: {}", e);
+            println!("❌ Failed to retrieve documents: {e}");
         }
     }
 
@@ -211,7 +211,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match storage.update_document("documents", updated_doc).await {
         Ok(_) => println!("✅ Document 'doc1' updated successfully"),
-        Err(e) => println!("❌ Failed to update document: {}", e),
+        Err(e) => println!("❌ Failed to update document: {e}"),
     }
 
     // 9. Delete a document
@@ -221,14 +221,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
     {
         Ok(_) => println!("✅ Document 'doc5' deleted successfully"),
-        Err(e) => println!("❌ Failed to delete document: {}", e),
+        Err(e) => println!("❌ Failed to delete document: {e}"),
     }
 
     // 10. List collections and get collection info
     println!("\n📊 Getting collection information...");
     match storage.list_indexes().await {
         Ok(indexes) => {
-            println!("✅ Available collections: {:?}", indexes);
+            println!("✅ Available collections: {indexes:?}");
 
             if indexes.contains(&"documents".to_string()) {
                 match storage.describe_index("documents").await {
@@ -240,18 +240,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("   - Vector count: {}", index_info.vector_count);
                         println!("   - Storage size: {} bytes", index_info.size_bytes);
                     }
-                    Err(e) => println!("❌ Failed to get collection info: {}", e),
+                    Err(e) => println!("❌ Failed to get collection info: {e}"),
                 }
             }
         }
-        Err(e) => println!("❌ Failed to list collections: {}", e),
+        Err(e) => println!("❌ Failed to list collections: {e}"),
     }
 
     // 11. Health check
     println!("\n🏥 Performing health check...");
     match storage.health_check().await {
         Ok(_) => println!("✅ Milvus is healthy"),
-        Err(e) => println!("❌ Health check failed: {}", e),
+        Err(e) => println!("❌ Health check failed: {e}"),
     }
 
     // 12. Backend info

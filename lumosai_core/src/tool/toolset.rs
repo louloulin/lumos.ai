@@ -396,7 +396,7 @@ impl ToolSet {
 }
 
 /// Tool set statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ToolSetStats {
     /// Total number of tools
     pub total_tools: u32,
@@ -404,16 +404,6 @@ pub struct ToolSetStats {
     pub categories: HashMap<String, u32>,
     /// Tools by capability
     pub capabilities: HashMap<String, u32>,
-}
-
-impl Default for ToolSetStats {
-    fn default() -> Self {
-        Self {
-            total_tools: 0,
-            categories: HashMap::new(),
-            capabilities: HashMap::new(),
-        }
-    }
 }
 
 /// Tool set builder for fluent construction

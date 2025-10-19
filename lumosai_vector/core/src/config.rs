@@ -70,17 +70,13 @@ pub enum StorageConfig {
 /// SQLite synchronous mode
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default)]
 pub enum SqliteSynchronous {
     Off,
+    #[default]
     Normal,
     Full,
     Extra,
-}
-
-impl Default for SqliteSynchronous {
-    fn default() -> Self {
-        SqliteSynchronous::Normal
-    }
 }
 
 /// Embedding model configuration
@@ -149,6 +145,7 @@ pub struct IndexCreateConfig {
 /// Index-specific options
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default)]
 pub struct IndexOptions {
     /// Enable approximate nearest neighbor search
     pub approximate: bool,
@@ -162,19 +159,6 @@ pub struct IndexOptions {
     pub compression: bool,
     /// Custom backend-specific options
     pub custom: HashMap<String, MetadataValue>,
-}
-
-impl Default for IndexOptions {
-    fn default() -> Self {
-        Self {
-            approximate: false,
-            num_trees: None,
-            accuracy: None,
-            max_vectors: None,
-            compression: false,
-            custom: HashMap::new(),
-        }
-    }
 }
 
 /// Search configuration

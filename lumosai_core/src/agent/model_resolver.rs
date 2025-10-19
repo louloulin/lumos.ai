@@ -175,8 +175,7 @@ impl ModelResolver {
             Ok("qwen".to_string())
         } else {
             Err(Error::Configuration(format!(
-                "Cannot infer provider for model: {}. Use explicit format like 'openai/{}'",
-                model_name, model_name
+                "Cannot infer provider for model: {model_name}. Use explicit format like 'openai/{model_name}'"
             )))
         }
     }

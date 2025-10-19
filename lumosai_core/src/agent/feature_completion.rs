@@ -509,8 +509,7 @@ impl FeatureCompletenessChecker {
         for (category, count) in categories {
             if count > 2 {
                 recommendations.push(format!(
-                    "Focus on {} features (missing {} items)",
-                    category, count
+                    "Focus on {category} features (missing {count} items)"
                 ));
             }
         }

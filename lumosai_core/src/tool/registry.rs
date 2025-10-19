@@ -2,11 +2,11 @@
 //!
 //! Provides dynamic tool registration, discovery and management functionality, similar to Mastra's tool system
 
+use crate::compat::Component;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use crate::compat::Component;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::Result;
@@ -104,8 +104,7 @@ impl ToolRegistry {
             })?;
             if tools.contains_key(&tool_name) {
                 return Err(crate::error::Error::Internal(format!(
-                    "Tool '{}' is already registered",
-                    tool_name
+                    "Tool '{tool_name}' is already registered"
                 )));
             }
         }
@@ -150,9 +149,9 @@ impl ToolRegistry {
             }
         }
 
-        self.base.logger().info(
-            &format!("Tool '{}' registered successfully", tool_name)
-        );
+        self.base
+            .logger()
+            .info(&format!("Tool '{tool_name}' registered successfully"));
         Ok(())
     }
 
@@ -167,7 +166,7 @@ impl ToolRegistry {
         };
 
         let metadata = metadata.ok_or_else(|| {
-            crate::error::Error::Internal(format!("Tool '{}' not found", tool_name))
+            crate::error::Error::Internal(format!("Tool '{tool_name}' not found"))
         })?;
 
         // Remove tool
@@ -214,9 +213,9 @@ impl ToolRegistry {
             }
         }
 
-        self.base.logger().info(
-            &format!("Tool '{}' unregistered successfully", tool_name)
-        );
+        self.base
+            .logger()
+            .info(&format!("Tool '{tool_name}' unregistered successfully"));
         Ok(())
     }
 

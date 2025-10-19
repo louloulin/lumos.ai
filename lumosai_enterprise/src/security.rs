@@ -1,11 +1,11 @@
 //! 企业级安全框架
 
 use async_trait::async_trait;
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::config::{SecurityConfig, ThreatDetectionConfig};
 use crate::error::{EnterpriseError, Result};
@@ -493,12 +493,22 @@ impl SecurityFramework {
     }
 
     /// 检查权限
-    pub async fn check_permission(&self, user_id: &str, resource: &str, action: &str) -> Result<bool> {
-        self.authz_manager.check_permission(user_id, resource, action).await
+    pub async fn check_permission(
+        &self,
+        user_id: &str,
+        resource: &str,
+        action: &str,
+    ) -> Result<bool> {
+        self.authz_manager
+            .check_permission(user_id, resource, action)
+            .await
     }
 
     /// 检测威胁
-    pub async fn detect_threats(&mut self, request_data: &HashMap<String, String>) -> Result<Vec<ThreatDetectionResult>> {
+    pub async fn detect_threats(
+        &mut self,
+        request_data: &HashMap<String, String>,
+    ) -> Result<Vec<ThreatDetectionResult>> {
         self.threat_detector.detect(request_data).await
     }
 
@@ -576,7 +586,12 @@ impl AuthorizationManager {
         })
     }
 
-    async fn check_permission(&self, _user_id: &str, _resource: &str, _action: &str) -> Result<bool> {
+    async fn check_permission(
+        &self,
+        _user_id: &str,
+        _resource: &str,
+        _action: &str,
+    ) -> Result<bool> {
         // 简化实现
         Ok(true)
     }
@@ -612,7 +627,10 @@ impl ThreatDetectionEngine {
         })
     }
 
-    async fn detect(&self, _request_data: &HashMap<String, String>) -> Result<Vec<ThreatDetectionResult>> {
+    async fn detect(
+        &self,
+        _request_data: &HashMap<String, String>,
+    ) -> Result<Vec<ThreatDetectionResult>> {
         // 简化实现
         Ok(Vec::new())
     }
@@ -649,7 +667,10 @@ mod tests {
         let config = SecurityConfig::default();
         let mut framework = SecurityFramework::new(config).await.unwrap();
 
-        let token = framework.authenticate("testuser", "password").await.unwrap();
+        let token = framework
+            .authenticate("testuser", "password")
+            .await
+            .unwrap();
         assert!(!token.is_empty());
 
         let claims = framework.verify_token(&token).unwrap();

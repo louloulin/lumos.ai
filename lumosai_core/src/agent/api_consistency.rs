@@ -312,19 +312,17 @@ impl ApiConsistencyChecker {
 
         if critical_count > 0 {
             recommendations.push(format!(
-                "Address {} critical issues immediately",
-                critical_count
+                "Address {critical_count} critical issues immediately"
             ));
         }
 
         if high_count > 0 {
-            recommendations.push(format!("Fix {} high-priority issues", high_count));
+            recommendations.push(format!("Fix {high_count} high-priority issues"));
         }
 
         if medium_count > 0 {
             recommendations.push(format!(
-                "Consider addressing {} medium-priority issues",
-                medium_count
+                "Consider addressing {medium_count} medium-priority issues"
             ));
         }
 
@@ -337,8 +335,7 @@ impl ApiConsistencyChecker {
         for (category, count) in categories {
             if count > 2 {
                 recommendations.push(format!(
-                    "Focus on improving {} (has {} issues)",
-                    category, count
+                    "Focus on improving {category} (has {count} issues)"
                 ));
             }
         }
@@ -389,7 +386,7 @@ impl ApiStandardizer {
 
         // 确保错误消息以"Error:"开头
         if !cleaned.to_lowercase().starts_with("error:") {
-            format!("Error: {}", cleaned)
+            format!("Error: {cleaned}")
         } else {
             cleaned.to_string()
         }

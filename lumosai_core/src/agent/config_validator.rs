@@ -69,8 +69,7 @@ impl ConfigValidator {
                     return Err(Error::Validation {
                         field: "model".to_string(),
                         message: format!(
-                            "Unsupported model '{}'. Supported models: GPT, Claude, Qwen, Gemini, Llama, Mistral, Yi",
-                            model
+                            "Unsupported model '{model}'. Supported models: GPT, Claude, Qwen, Gemini, Llama, Mistral, Yi"
                         ),
                     });
                 }
@@ -88,7 +87,7 @@ impl ConfigValidator {
             "temperature",
             Box::new(|value: &Value| {
                 if let Some(temp) = value.as_f64() {
-                    if temp < 0.0 || temp > 2.0 {
+                    if !(0.0..=2.0).contains(&temp) {
                         return Err(Error::Validation {
                             field: "temperature".to_string(),
                             message: "Temperature must be between 0.0 and 2.0".to_string(),
@@ -145,7 +144,7 @@ impl ConfigValidator {
         // 转换为JSON进行验证
         let config_json = serde_json::to_value(config).map_err(|e| Error::Validation {
             field: "config".to_string(),
-            message: format!("Failed to serialize config: {}", e),
+            message: format!("Failed to serialize config: {e}"),
         })?;
 
         self.validate_json(&config_json)
@@ -163,7 +162,7 @@ impl ConfigValidator {
             if !config_obj.contains_key(required_field) {
                 return Err(Error::Validation {
                     field: required_field.to_string(),
-                    message: format!("Missing required field: {}", required_field),
+                    message: format!("Missing required field: {required_field}"),
                 });
             }
         }
@@ -173,7 +172,7 @@ impl ConfigValidator {
             if let Some(rule) = self.validation_rules.get(field) {
                 rule(value).map_err(|e| Error::Validation {
                     field: field.to_string(),
-                    message: format!("Validation failed for field '{}': {}", field, e),
+                    message: format!("Validation failed for field '{field}': {e}"),
                 })?;
             }
         }
@@ -196,7 +195,7 @@ impl ConfigValidator {
         // 检查必需字段
         for required_field in &self.required_fields {
             if !config_obj.contains_key(required_field) {
-                report.add_error(format!("Missing required field: {}", required_field));
+                report.add_error(format!("Missing required field: {required_field}"));
             }
         }
 
@@ -204,12 +203,12 @@ impl ConfigValidator {
         for (field, value) in config_obj {
             if let Some(rule) = self.validation_rules.get(field) {
                 if let Err(e) = rule(value) {
-                    report.add_error(format!("Field '{}': {}", field, e));
+                    report.add_error(format!("Field '{field}': {e}"));
                 } else {
-                    report.add_success(format!("Field '{}' is valid", field));
+                    report.add_success(format!("Field '{field}' is valid"));
                 }
             } else {
-                report.add_warning(format!("Unknown field '{}' (will be ignored)", field));
+                report.add_warning(format!("Unknown field '{field}' (will be ignored)"));
             }
         }
 

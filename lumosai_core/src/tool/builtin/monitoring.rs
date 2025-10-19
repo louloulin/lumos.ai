@@ -13,10 +13,7 @@ use lumos_macro::tool;
 use serde_json::{json, Value};
 
 /// 系统监控（CPU、内存、磁盘）
-#[tool(
-    name = "system_monitor",
-    description = "系统监控（CPU、内存、磁盘）"
-)]
+#[tool(name = "system_monitor", description = "系统监控（CPU、内存、磁盘）")]
 async fn system_monitor(
     target: String,
     metrics: Option<String>,
@@ -25,7 +22,7 @@ async fn system_monitor(
     let metrics = metrics.unwrap_or_else(|| "all".to_string());
     let interval_seconds = interval_seconds.unwrap_or(60);
 
-    let valid_metrics = vec!["all", "cpu", "memory", "disk", "network"];
+    let valid_metrics = ["all", "cpu", "memory", "disk", "network"];
     let metrics_lower = metrics.to_lowercase();
     if !valid_metrics.contains(&metrics_lower.as_str()) {
         return Ok(json!({
@@ -34,7 +31,7 @@ async fn system_monitor(
         }));
     }
 
-    if interval_seconds < 1 || interval_seconds > 3600 {
+    if !(1..=3600).contains(&interval_seconds) {
         return Ok(json!({
             "success": false,
             "error": format!("监控间隔必须在 1-3600 秒之间，当前值: {}", interval_seconds)
@@ -110,7 +107,13 @@ async fn performance_analyzer(
     let time_range_minutes = time_range_minutes.unwrap_or(60);
     let metrics = metrics.unwrap_or_else(|| "all".to_string());
 
-    let valid_metrics = vec!["all", "response_time", "throughput", "error_rate", "latency"];
+    let valid_metrics = [
+        "all",
+        "response_time",
+        "throughput",
+        "error_rate",
+        "latency",
+    ];
     let metrics_lower = metrics.to_lowercase();
     if !valid_metrics.contains(&metrics_lower.as_str()) {
         return Ok(json!({
@@ -119,7 +122,7 @@ async fn performance_analyzer(
         }));
     }
 
-    if time_range_minutes < 1 || time_range_minutes > 1440 {
+    if !(1..=1440).contains(&time_range_minutes) {
         return Ok(json!({
             "success": false,
             "error": format!("时间范围必须在 1-1440 分钟之间，当前值: {}", time_range_minutes)
@@ -182,10 +185,7 @@ async fn performance_analyzer(
 }
 
 /// 告警配置（阈值设置、通知规则）
-#[tool(
-    name = "alert_config",
-    description = "告警配置（阈值设置、通知规则）"
-)]
+#[tool(name = "alert_config", description = "告警配置（阈值设置、通知规则）")]
 async fn alert_config(
     alert_name: String,
     metric: String,
@@ -197,7 +197,13 @@ async fn alert_config(
     let enabled = enabled.unwrap_or(true);
     let notification_channels = notification_channels.unwrap_or_else(|| "email".to_string());
 
-    let valid_metrics = vec!["cpu_usage", "memory_usage", "disk_usage", "response_time", "error_rate"];
+    let valid_metrics = [
+        "cpu_usage",
+        "memory_usage",
+        "disk_usage",
+        "response_time",
+        "error_rate",
+    ];
     let metric_lower = metric.to_lowercase();
     if !valid_metrics.contains(&metric_lower.as_str()) {
         return Ok(json!({
@@ -206,7 +212,7 @@ async fn alert_config(
         }));
     }
 
-    let valid_operators = vec![">", ">=", "<", "<=", "==", "!="];
+    let valid_operators = [">", ">=", "<", "<=", "==", "!="];
     if !valid_operators.contains(&operator.as_str()) {
         return Ok(json!({
             "success": false,
@@ -214,7 +220,7 @@ async fn alert_config(
         }));
     }
 
-    let valid_channels = vec!["email", "sms", "slack", "webhook", "pagerduty"];
+    let valid_channels = ["email", "sms", "slack", "webhook", "pagerduty"];
     let channels: Vec<&str> = notification_channels.split(',').map(|s| s.trim()).collect();
     for channel in &channels {
         if !valid_channels.contains(channel) {
@@ -227,7 +233,7 @@ async fn alert_config(
 
     // Mock 实现：生成告警配置
     let alert_id = format!("alert_{}", chrono::Utc::now().timestamp());
-    
+
     Ok(json!({
         "success": true,
         "alert_id": alert_id,
@@ -308,4 +314,3 @@ mod tests {
         assert!(result["alert_id"].is_string());
     }
 }
-

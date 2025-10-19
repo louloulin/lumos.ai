@@ -302,7 +302,6 @@ pub fn euclidean_distance(a: &[f32], b: &[f32]) -> LanceDbResult<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lumosai_vector_core::types::Document;
 
     #[test]
     fn test_create_document_schema() {

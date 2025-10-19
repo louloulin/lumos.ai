@@ -105,8 +105,6 @@ pub enum EnterpriseError {
     #[error("威胁检测错误: {0}")]
     ThreatDetection(String),
 
-
-
     /// 资源不足
     #[error("资源不足: {0}")]
     InsufficientResources(String),
@@ -223,11 +221,11 @@ impl EnterpriseError {
     pub fn is_temporary(&self) -> bool {
         matches!(
             self,
-            EnterpriseError::Network(_) |
-            EnterpriseError::Timeout |
-            EnterpriseError::Http(_) |
-            EnterpriseError::Redis(_) |
-            EnterpriseError::Database(_)
+            EnterpriseError::Network(_)
+                | EnterpriseError::Timeout
+                | EnterpriseError::Http(_)
+                | EnterpriseError::Redis(_)
+                | EnterpriseError::Database(_)
         )
     }
 
@@ -235,12 +233,12 @@ impl EnterpriseError {
     pub fn is_fatal(&self) -> bool {
         matches!(
             self,
-            EnterpriseError::Config(_) |
-            EnterpriseError::Authentication(_) |
-            EnterpriseError::Authorization(_) |
-            EnterpriseError::PermissionDenied(_) |
-            EnterpriseError::TenantNotFound { .. } |
-            EnterpriseError::Validation(_)
+            EnterpriseError::Config(_)
+                | EnterpriseError::Authentication(_)
+                | EnterpriseError::Authorization(_)
+                | EnterpriseError::PermissionDenied(_)
+                | EnterpriseError::TenantNotFound { .. }
+                | EnterpriseError::Validation(_)
         )
     }
 
@@ -248,12 +246,12 @@ impl EnterpriseError {
     pub fn is_security_related(&self) -> bool {
         matches!(
             self,
-            EnterpriseError::Security(_) |
-            EnterpriseError::Authentication(_) |
-            EnterpriseError::Authorization(_) |
-            EnterpriseError::PermissionDenied(_) |
-            EnterpriseError::Encryption(_) |
-            EnterpriseError::ThreatDetection(_)
+            EnterpriseError::Security(_)
+                | EnterpriseError::Authentication(_)
+                | EnterpriseError::Authorization(_)
+                | EnterpriseError::PermissionDenied(_)
+                | EnterpriseError::Encryption(_)
+                | EnterpriseError::ThreatDetection(_)
         )
     }
 
@@ -261,9 +259,9 @@ impl EnterpriseError {
     pub fn is_resource_related(&self) -> bool {
         matches!(
             self,
-            EnterpriseError::InsufficientResources(_) |
-            EnterpriseError::QuotaExceeded { .. } |
-            EnterpriseError::CapacityPlanning(_)
+            EnterpriseError::InsufficientResources(_)
+                | EnterpriseError::QuotaExceeded { .. }
+                | EnterpriseError::CapacityPlanning(_)
         )
     }
 }

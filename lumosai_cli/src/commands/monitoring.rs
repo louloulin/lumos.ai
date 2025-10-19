@@ -4,7 +4,9 @@ use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use lumosai_core::compat::{InMemoryMetricsCollector, InMemoryTraceCollector, MetricsCollector, TraceCollector};
+use lumosai_core::compat::{
+    InMemoryMetricsCollector, InMemoryTraceCollector, MetricsCollector, TraceCollector,
+};
 
 use crate::error::{CliError, CliResult};
 use crate::server::monitoring_server;

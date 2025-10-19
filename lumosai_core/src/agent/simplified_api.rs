@@ -5,11 +5,10 @@
 //! - Level 2: 链式配置，更多控制
 //! - Level 3: 完整构建器模式，高级配置
 
-use super::dynamic_config::{DynamicArgument, EnhancedRuntimeContext, ComplexityLevel, dynamic_arg, static_arg};
 use super::{AgentBuilder, BasicAgent};
 use crate::agent::trait_def::Agent as AgentTrait;
-use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult};
-use crate::error::{Error, Result};
+use crate::agent::types::AgentGenerateOptions;
+use crate::error::Result;
 use crate::llm::{LlmProvider, Message, Role};
 use crate::memory::MemoryConfig;
 use crate::tool::Tool;
@@ -272,25 +271,15 @@ impl Agent {
     fn resolve_model_provider(model_name: &str) -> Result<Arc<dyn LlmProvider>> {
         match model_name {
             // OpenAI 模型
-            name if name.starts_with("gpt-") => {
-                openai(name)
-            }
+            name if name.starts_with("gpt-") => openai(name),
             // Anthropic 模型
-            name if name.starts_with("claude-") => {
-                claude(name)
-            }
+            name if name.starts_with("claude-") => claude(name),
             // DeepSeek 模型
-            name if name.contains("deepseek") => {
-                deepseek(name)
-            }
+            name if name.contains("deepseek") => deepseek(name),
             // Qwen 模型
-            name if name.contains("qwen") || name.contains("glm") => {
-                qwen(name)
-            }
+            name if name.contains("qwen") || name.contains("glm") => qwen(name),
             // 默认尝试 DeepSeek（因为我们已经验证过它可以工作）
-            _ => {
-                deepseek(model_name)
-            }
+            _ => deepseek(model_name),
         }
     }
 
@@ -306,33 +295,31 @@ impl Agent {
 /// AgentBuilder 扩展 - 支持智能默认值
 impl AgentBuilder {
     /// 配置基础内存
-    pub fn with_basic_memory(mut self) -> Self {
+    pub fn with_basic_memory(self) -> Self {
         self.memory_config(MemoryConfig::default())
     }
 
     /// 添加默认工具集
-    pub fn with_default_tools(mut self) -> Self {
+    pub fn with_default_tools(self) -> Self {
         // 添加常用工具：计算器、时间、基础文本处理
-        self.with_calculator()
-            .with_time_tools()
-            .with_text_tools()
+        self.with_calculator().with_time_tools().with_text_tools()
     }
 
     /// 添加计算器工具
-    pub fn with_calculator(mut self) -> Self {
+    pub fn with_calculator(self) -> Self {
         // 这里需要实际的计算器工具实现
         // 暂时返回 self，在后续实现中添加
         self
     }
 
     /// 添加时间工具
-    pub fn with_time_tools(mut self) -> Self {
+    pub fn with_time_tools(self) -> Self {
         // 添加获取当前时间、日期计算等工具
         self
     }
 
     /// 添加文本处理工具
-    pub fn with_text_tools(mut self) -> Self {
+    pub fn with_text_tools(self) -> Self {
         // 添加文本分析、格式化等工具
         self
     }

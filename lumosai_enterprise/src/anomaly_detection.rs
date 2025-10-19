@@ -2,9 +2,9 @@
 //!
 //! 提供企业级异常检测和机器学习功能
 
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::error::Result;
 
@@ -67,8 +67,15 @@ impl AnomalyDetector {
     }
 
     /// 检测异常
-    pub async fn detect_anomaly(&mut self, metric_name: &str, value: f64) -> Result<Option<AnomalyAlert>> {
-        let anomaly_score = self.ml_engine.calculate_anomaly_score(metric_name, value).await?;
+    pub async fn detect_anomaly(
+        &mut self,
+        metric_name: &str,
+        value: f64,
+    ) -> Result<Option<AnomalyAlert>> {
+        let anomaly_score = self
+            .ml_engine
+            .calculate_anomaly_score(metric_name, value)
+            .await?;
 
         if anomaly_score > 0.7 {
             let alert = AnomalyAlert {

@@ -8,8 +8,14 @@ use serde_json::{json, Value};
 
 /// Docker 管理（容器、网络、卷）
 #[tool(name = "docker_manager", description = "Docker 管理（容器、网络、卷）")]
-async fn docker_manager(operation: String, container_name: Option<String>, image: Option<String>) -> Result<Value> {
-    let valid_ops = vec!["list", "start", "stop", "restart", "remove", "inspect", "logs"];
+async fn docker_manager(
+    operation: String,
+    container_name: Option<String>,
+    image: Option<String>,
+) -> Result<Value> {
+    let valid_ops = [
+        "list", "start", "stop", "restart", "remove", "inspect", "logs",
+    ];
     let op_lower = operation.to_lowercase();
 
     if !valid_ops.contains(&op_lower.as_str()) {
@@ -19,8 +25,12 @@ async fn docker_manager(operation: String, container_name: Option<String>, image
         }));
     }
 
-    if ["start", "stop", "restart", "remove", "inspect", "logs"].contains(&op_lower.as_str()) && container_name.is_none() {
-        return Ok(json!({"success": false, "error": format!("{} 操作需要 container_name", operation)}));
+    if ["start", "stop", "restart", "remove", "inspect", "logs"].contains(&op_lower.as_str())
+        && container_name.is_none()
+    {
+        return Ok(
+            json!({"success": false, "error": format!("{} 操作需要 container_name", operation)}),
+        );
     }
 
     let mut result = json!({"success": true, "operation": op_lower, "timestamp": chrono::Utc::now().to_rfc3339()});
@@ -59,10 +69,16 @@ async fn docker_manager(operation: String, container_name: Option<String>, image
 
 /// 镜像管理（构建、推送、拉取）
 #[tool(name = "image_manager", description = "镜像管理（构建、推送、拉取）")]
-async fn image_manager(operation: String, image_name: String, tag: Option<String>, dockerfile_path: Option<String>, registry: Option<String>) -> Result<Value> {
+async fn image_manager(
+    operation: String,
+    image_name: String,
+    tag: Option<String>,
+    dockerfile_path: Option<String>,
+    registry: Option<String>,
+) -> Result<Value> {
     let tag = tag.unwrap_or_else(|| "latest".to_string());
     let registry = registry.unwrap_or_else(|| "docker.io".to_string());
-    let valid_ops = vec!["list", "build", "push", "pull", "remove", "inspect"];
+    let valid_ops = ["list", "build", "push", "pull", "remove", "inspect"];
     let op_lower = operation.to_lowercase();
 
     if !valid_ops.contains(&op_lower.as_str()) {
@@ -102,8 +118,13 @@ async fn image_manager(operation: String, image_name: String, tag: Option<String
 
 /// 容器编排（部署、扩缩容、服务）
 #[tool(name = "orchestration", description = "容器编排（部署、扩缩容、服务）")]
-async fn orchestration(operation: String, service_name: String, replicas: Option<i64>, image: Option<String>) -> Result<Value> {
-    let valid_ops = vec!["deploy", "scale", "update", "remove", "list", "inspect"];
+async fn orchestration(
+    operation: String,
+    service_name: String,
+    replicas: Option<i64>,
+    image: Option<String>,
+) -> Result<Value> {
+    let valid_ops = ["deploy", "scale", "update", "remove", "list", "inspect"];
     let op_lower = operation.to_lowercase();
 
     if !valid_ops.contains(&op_lower.as_str()) {
@@ -145,7 +166,11 @@ async fn orchestration(operation: String, service_name: String, replicas: Option
 }
 
 pub fn get_all_container_tools() -> Vec<Box<dyn crate::tool::Tool>> {
-    vec![docker_manager_tool(), image_manager_tool(), orchestration_tool()]
+    vec![
+        docker_manager_tool(),
+        image_manager_tool(),
+        orchestration_tool(),
+    ]
 }
 
 #[cfg(test)]

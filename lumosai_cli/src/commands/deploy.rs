@@ -218,7 +218,10 @@ pub async fn run_deploy(args: DeployArgs) -> CliResult<()> {
         println!("{}", "警告: 当前目录不是一个Lumos AI项目".bright_yellow());
     }
 
-    println!("📁 项目目录: {}", project_dir.display().to_string().bright_cyan());
+    println!(
+        "📁 项目目录: {}",
+        project_dir.display().to_string().bright_cyan()
+    );
     println!("🌍 部署环境: {}", args.env.bright_green());
 
     // 如果不是强制部署，询问确认
@@ -242,14 +245,17 @@ pub async fn run_deploy(args: DeployArgs) -> CliResult<()> {
         "dev" => "local",
         "staging" => "docker",
         "production" => "aws",
-        _ => "local"
+        _ => "local",
     };
 
     println!("🎯 部署目标: {}", target.bright_green());
 
     // 如果提供了配置文件，显示配置信息
     if let Some(config_path) = &args.config {
-        println!("⚙️  配置文件: {}", config_path.display().to_string().bright_cyan());
+        println!(
+            "⚙️  配置文件: {}",
+            config_path.display().to_string().bright_cyan()
+        );
 
         if !config_path.exists() {
             return Err(format!("配置文件不存在: {}", config_path.display()).into());

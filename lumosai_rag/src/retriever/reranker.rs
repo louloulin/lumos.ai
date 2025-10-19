@@ -4,10 +4,7 @@
 
 use async_trait::async_trait;
 
-use crate::{
-    error::Result,
-    types::ScoredDocument,
-};
+use crate::{error::Result, types::ScoredDocument};
 
 /// 重排序器 trait
 #[async_trait]
@@ -20,7 +17,11 @@ pub trait Reranker: Send + Sync {
     ///
     /// # 返回
     /// 重排序后的文档列表（按相关性降序）
-    async fn rerank(&self, query: &str, documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>>;
+    async fn rerank(
+        &self,
+        query: &str,
+        documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>>;
 }
 
 /// 交叉编码器重排序（Cross-Encoder Reranking）
@@ -52,16 +53,16 @@ impl CrossEncoderReranker {
         // Mock 实现：基于简单的文本匹配
         let query_lower = query.to_lowercase();
         let doc_lower = document.to_lowercase();
-        
+
         let query_words: Vec<&str> = query_lower.split_whitespace().collect();
         let mut match_count = 0;
-        
+
         for word in &query_words {
             if doc_lower.contains(word) {
                 match_count += 1;
             }
         }
-        
+
         if query_words.is_empty() {
             0.0
         } else {
@@ -72,7 +73,11 @@ impl CrossEncoderReranker {
 
 #[async_trait]
 impl Reranker for CrossEncoderReranker {
-    async fn rerank(&self, query: &str, mut documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn rerank(
+        &self,
+        query: &str,
+        mut documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         // 计算每个文档的重排序分数
         for doc in &mut documents {
             let relevance_score = self.compute_relevance_score(query, &doc.document.content);
@@ -81,7 +86,11 @@ impl Reranker for CrossEncoderReranker {
         }
 
         // 按新分数排序
-        documents.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        documents.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // 如果指定了 top_k，只返回前 k 个文档
         if let Some(k) = self.top_k {
@@ -124,41 +133,51 @@ impl LLMReranker {
         // Mock 实现：基于文档长度和查询匹配度
         let query_lower = query.to_lowercase();
         let doc_lower = document.to_lowercase();
-        
+
         let query_words: Vec<&str> = query_lower.split_whitespace().collect();
         let mut match_score = 0.0;
-        
+
         for word in &query_words {
             if doc_lower.contains(word) {
                 match_score += 1.0;
             }
         }
-        
+
         let normalized_score = if query_words.is_empty() {
             0.0
         } else {
             match_score / query_words.len() as f32
         };
-        
+
         // 考虑文档长度（较短的文档可能更精确）
         let length_penalty = 1.0 / (1.0 + (document.len() as f32 / 1000.0));
-        
+
         Ok((normalized_score + length_penalty) / 2.0)
     }
 }
 
 #[async_trait]
 impl Reranker for LLMReranker {
-    async fn rerank(&self, query: &str, mut documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn rerank(
+        &self,
+        query: &str,
+        mut documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         // 使用 LLM 评估每个文档的相关性
         for doc in &mut documents {
-            let relevance_score = self.evaluate_relevance(query, &doc.document.content).await?;
+            let relevance_score = self
+                .evaluate_relevance(query, &doc.document.content)
+                .await?;
             // 结合原始分数和 LLM 评估分数
             doc.score = (doc.score * 0.3) + (relevance_score * 0.7); // LLM 权重更高
         }
 
         // 按新分数排序
-        documents.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        documents.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // 如果指定了 top_k，只返回前 k 个文档
         if let Some(k) = self.top_k {
@@ -195,10 +214,10 @@ impl DiversityReranker {
         // 简单的 Jaccard 相似度
         let words1: std::collections::HashSet<_> = doc1.split_whitespace().collect();
         let words2: std::collections::HashSet<_> = doc2.split_whitespace().collect();
-        
+
         let intersection = words1.intersection(&words2).count();
         let union = words1.union(&words2).count();
-        
+
         if union == 0 {
             0.0
         } else {
@@ -209,12 +228,20 @@ impl DiversityReranker {
 
 #[async_trait]
 impl Reranker for DiversityReranker {
-    async fn rerank(&self, _query: &str, documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn rerank(
+        &self,
+        _query: &str,
+        documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         let mut result = Vec::new();
         let mut remaining = documents;
 
         // 按原始分数排序
-        remaining.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        remaining.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         while !remaining.is_empty() {
             // 取出分数最高的文档
@@ -230,7 +257,8 @@ impl Reranker for DiversityReranker {
 
             // 移除与已选文档过于相似的文档
             remaining.retain(|doc| {
-                let similarity = self.compute_similarity(&best.document.content, &doc.document.content);
+                let similarity =
+                    self.compute_similarity(&best.document.content, &doc.document.content);
                 similarity < self.similarity_threshold
             });
         }
@@ -263,7 +291,11 @@ impl ChainReranker {
 
 #[async_trait]
 impl Reranker for ChainReranker {
-    async fn rerank(&self, query: &str, mut documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn rerank(
+        &self,
+        query: &str,
+        mut documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         // 依次应用每个重排序器
         for reranker in &self.rerankers {
             documents = reranker.rerank(query, documents).await?;
@@ -317,4 +349,3 @@ mod tests {
         assert!(result.len() <= 2);
     }
 }
-

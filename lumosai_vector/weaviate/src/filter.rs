@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 /// Convert a filter condition to Weaviate GraphQL where clause
 pub fn convert_filter_to_where(condition: FilterCondition) -> Result<String> {
     let where_obj = convert_condition_to_object(condition)?;
-    Ok(format!("{}", where_obj))
+    Ok(format!("{where_obj}"))
 }
 
 /// Convert a filter condition to a JSON object

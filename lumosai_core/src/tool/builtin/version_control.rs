@@ -13,10 +13,7 @@ use lumos_macro::tool;
 use serde_json::{json, Value};
 
 /// Git 状态查询（分支、变更、提交）
-#[tool(
-    name = "git_status",
-    description = "Git 状态查询（分支、变更、提交）"
-)]
+#[tool(name = "git_status", description = "Git 状态查询（分支、变更、提交）")]
 async fn git_status(
     repository_path: String,
     show_untracked: Option<bool>,
@@ -82,10 +79,7 @@ async fn git_status(
 }
 
 /// Git 操作（提交、推送、拉取）
-#[tool(
-    name = "git_operation",
-    description = "Git 操作（提交、推送、拉取）"
-)]
+#[tool(name = "git_operation", description = "Git 操作（提交、推送、拉取）")]
 async fn git_operation(
     repository_path: String,
     operation: String,
@@ -96,7 +90,9 @@ async fn git_operation(
     let force = force.unwrap_or(false);
     let branch = branch.unwrap_or_else(|| "main".to_string());
 
-    let valid_operations = vec!["commit", "push", "pull", "fetch", "merge", "rebase", "checkout"];
+    let valid_operations = [
+        "commit", "push", "pull", "fetch", "merge", "rebase", "checkout",
+    ];
     let operation_lower = operation.to_lowercase();
     if !valid_operations.contains(&operation_lower.as_str()) {
         return Ok(json!({
@@ -203,7 +199,14 @@ async fn repository_analyzer(
     let analysis_type = analysis_type.unwrap_or_else(|| "all".to_string());
     let time_range_days = time_range_days.unwrap_or(30);
 
-    let valid_types = vec!["all", "statistics", "contributors", "history", "files", "branches"];
+    let valid_types = [
+        "all",
+        "statistics",
+        "contributors",
+        "history",
+        "files",
+        "branches",
+    ];
     let type_lower = analysis_type.to_lowercase();
     if !valid_types.contains(&type_lower.as_str()) {
         return Ok(json!({
@@ -212,7 +215,7 @@ async fn repository_analyzer(
         }));
     }
 
-    if time_range_days < 1 || time_range_days > 365 {
+    if !(1..=365).contains(&time_range_days) {
         return Ok(json!({
             "success": false,
             "error": format!("时间范围必须在 1-365 天之间，当前值: {}", time_range_days)
@@ -379,4 +382,3 @@ mod tests {
         assert!(result["statistics"].is_object());
     }
 }
-

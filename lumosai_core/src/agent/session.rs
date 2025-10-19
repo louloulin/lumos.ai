@@ -287,10 +287,7 @@ impl SessionStorage for MemorySessionStorage {
             session.metadata.updated_at = Utc::now();
             Ok(())
         } else {
-            Err(Error::NotFound(format!(
-                "Session not found: {}",
-                session_id
-            )))
+            Err(Error::NotFound(format!("Session not found: {session_id}")))
         }
     }
 

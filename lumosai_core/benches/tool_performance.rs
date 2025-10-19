@@ -2,7 +2,7 @@
 //!
 //! 对比宏驱动工具和手动实现工具的性能差异
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use lumosai_core::tool::builtin::macro_tools::*;
 use lumosai_core::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
 use serde_json::json;
@@ -35,13 +35,13 @@ fn bench_json_parser(c: &mut Criterion) {
     let tool = parse_json_tool();
     let context = create_test_context();
     let options = create_test_options();
-    
+
     let mut group = c.benchmark_group("json_parser");
-    
+
     // 测试不同大小的 JSON
     for size in [10, 100, 1000].iter() {
         let json_data = generate_json_data(*size);
-        
+
         group.bench_with_input(
             BenchmarkId::from_parameter(format!("{}fields", size)),
             &json_data,
@@ -51,17 +51,19 @@ fn bench_json_parser(c: &mut Criterion) {
                         "json_string": data,
                         "validate_schema": false
                     });
-                    
+
                     tool.execute(
                         black_box(params),
                         black_box(context.clone()),
-                        black_box(&options)
-                    ).await.unwrap()
+                        black_box(&options),
+                    )
+                    .await
+                    .unwrap()
                 });
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -71,9 +73,9 @@ fn bench_text_processor(c: &mut Criterion) {
     let tool = process_text_tool();
     let context = create_test_context();
     let options = create_test_options();
-    
+
     let mut group = c.benchmark_group("text_processor");
-    
+
     // 测试不同操作
     let operations = vec![
         ("uppercase", "hello world"),
@@ -82,7 +84,7 @@ fn bench_text_processor(c: &mut Criterion) {
         ("reverse", "hello world"),
         ("length", "hello world"),
     ];
-    
+
     for (op, text) in operations.iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(op),
@@ -93,17 +95,19 @@ fn bench_text_processor(c: &mut Criterion) {
                         "text": input_text,
                         "operation": operation
                     });
-                    
+
                     tool.execute(
                         black_box(params),
                         black_box(context.clone()),
-                        black_box(&options)
-                    ).await.unwrap()
+                        black_box(&options),
+                    )
+                    .await
+                    .unwrap()
                 });
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -124,11 +128,14 @@ fn bench_http_tools(c: &mut Criterion) {
                 "timeout_seconds": 30
             });
 
-            get_tool.execute(
-                black_box(params),
-                black_box(context.clone()),
-                black_box(&options)
-            ).await.unwrap()
+            get_tool
+                .execute(
+                    black_box(params),
+                    black_box(context.clone()),
+                    black_box(&options),
+                )
+                .await
+                .unwrap()
         });
     });
 
@@ -142,11 +149,14 @@ fn bench_http_tools(c: &mut Criterion) {
                 "timeout_seconds": 30
             });
 
-            post_tool.execute(
-                black_box(params),
-                black_box(context.clone()),
-                black_box(&options)
-            ).await.unwrap()
+            post_tool
+                .execute(
+                    black_box(params),
+                    black_box(context.clone()),
+                    black_box(&options),
+                )
+                .await
+                .unwrap()
         });
     });
 
@@ -159,11 +169,14 @@ fn bench_http_tools(c: &mut Criterion) {
                 "method": "GET"
             });
 
-            api_tool.execute(
-                black_box(params),
-                black_box(context.clone()),
-                black_box(&options)
-            ).await.unwrap()
+            api_tool
+                .execute(
+                    black_box(params),
+                    black_box(context.clone()),
+                    black_box(&options),
+                )
+                .await
+                .unwrap()
         });
     });
 
@@ -173,31 +186,23 @@ fn bench_http_tools(c: &mut Criterion) {
 /// 基准测试：工具创建开销
 fn bench_tool_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("tool_creation");
-    
+
     group.bench_function("create_json_parser", |b| {
-        b.iter(|| {
-            black_box(parse_json_tool())
-        });
+        b.iter(|| black_box(parse_json_tool()));
     });
-    
+
     group.bench_function("create_text_processor", |b| {
-        b.iter(|| {
-            black_box(process_text_tool())
-        });
+        b.iter(|| black_box(process_text_tool()));
     });
-    
+
     group.bench_function("create_http_get", |b| {
-        b.iter(|| {
-            black_box(http_get_tool())
-        });
+        b.iter(|| black_box(http_get_tool()));
     });
-    
+
     group.bench_function("create_all_tools", |b| {
-        b.iter(|| {
-            black_box(get_all_macro_tools())
-        });
+        b.iter(|| black_box(get_all_macro_tools()));
     });
-    
+
     group.finish();
 }
 
@@ -223,4 +228,3 @@ criterion_group!(
 );
 
 criterion_main!(benches);
-

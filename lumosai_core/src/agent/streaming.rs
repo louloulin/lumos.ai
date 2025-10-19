@@ -16,8 +16,8 @@ use uuid::Uuid;
 
 use crate::agent::trait_def::Agent;
 use crate::agent::types::{AgentGenerateOptions, AgentStep, ToolCall, ToolResult};
-use crate::llm::Message;
 use crate::compat::TraceCollector;
+use crate::llm::Message;
 
 /// Events emitted during streaming agent execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -223,7 +223,7 @@ impl<T: Agent> StreamingAgent<T> {
 
             // End trace
             if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
-                trace_collector.end_trace(&trace_id).await;
+                trace_collector.end_trace(trace_id).await;
             }
         })
     }
@@ -285,7 +285,7 @@ impl<T: Agent> StreamingAgent<T> {
         let prompt = messages
             .last()
             .map(|msg| msg.content.clone())
-            .unwrap_or_else(|| "".to_string());
+            .unwrap_or_default();
 
         Ok(Box::pin(async_stream::stream! {
             // Stream initial LLM generation directly here instead of calling self.stream_llm_generation
@@ -428,7 +428,7 @@ impl<T: Agent> StreamingAgent<T> {
         let prompt = messages
             .last()
             .map(|msg| msg.content.clone())
-            .unwrap_or_else(|| "".to_string());
+            .unwrap_or_default();
 
         Ok(Box::pin(async_stream::stream! {
             // Stream LLM generation directly here instead of calling self.stream_llm_generation

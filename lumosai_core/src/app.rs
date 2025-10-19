@@ -222,7 +222,7 @@ impl LumosApp {
     pub async fn start(&self) -> Result<()> {
         println!("Starting Lumosai application: {}", self.name);
         if let Some(desc) = &self.description {
-            println!("Description: {}", desc);
+            println!("Description: {desc}");
         }
 
         println!("Registered components:");
@@ -243,11 +243,11 @@ impl LumosApp {
     /// 执行用户请求
     pub async fn run(&self, request: impl Into<String>) -> Result<String> {
         let request_str = request.into();
-        println!("Processing request: {}", request_str);
+        println!("Processing request: {request_str}");
 
         // 简单实现：将请求转发给第一个可用的代理
         if let Some((agent_name, agent)) = self.agents.iter().next() {
-            println!("Routing request to agent: {}", agent_name);
+            println!("Routing request to agent: {agent_name}");
 
             // 创建用户消息
             let user_message = crate::llm::Message {
@@ -290,7 +290,7 @@ impl LumosApp {
     pub fn agent(&self, name: &str) -> Result<&Arc<dyn Agent>> {
         self.agents
             .get(name)
-            .ok_or_else(|| crate::Error::Configuration(format!("Agent '{}' not found", name)))
+            .ok_or_else(|| crate::Error::Configuration(format!("Agent '{name}' not found")))
     }
 
     /// 获取所有工具列表

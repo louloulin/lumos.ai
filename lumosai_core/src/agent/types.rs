@@ -426,9 +426,10 @@ pub enum LifecycleState {
 }
 
 /// Agent status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum AgentStatus {
     /// Agent is idle
+    #[default]
     Idle,
     /// Agent is processing a request
     Processing,
@@ -438,14 +439,8 @@ pub enum AgentStatus {
     Paused,
 }
 
-impl Default for AgentStatus {
-    fn default() -> Self {
-        AgentStatus::Idle
-    }
-}
-
 /// Agent capabilities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentCapabilities {
     /// List of agent capabilities
     pub capabilities: Vec<String>,
@@ -453,19 +448,11 @@ pub struct AgentCapabilities {
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
-impl Default for AgentCapabilities {
-    fn default() -> Self {
-        Self {
-            capabilities: Vec::new(),
-            metadata: HashMap::new(),
-        }
-    }
-}
-
 /// Isolation level for multi-tenant environments
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum IsolationLevel {
     /// No isolation
+    #[default]
     None,
     /// Tenant-level isolation
     Tenant,
@@ -475,12 +462,6 @@ pub enum IsolationLevel {
     Session,
     /// Custom isolation level
     Custom(String),
-}
-
-impl Default for IsolationLevel {
-    fn default() -> Self {
-        IsolationLevel::None
-    }
 }
 
 /// Evaluation metric trait for agent performance measurement

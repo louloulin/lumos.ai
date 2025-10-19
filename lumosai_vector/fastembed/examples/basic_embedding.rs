@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let text = "Hello, world! This is a test sentence for embedding generation.";
     let embedding = provider.embed_text(text).await?;
 
-    println!("✅ Generated embedding for: \"{}\"", text);
+    println!("✅ Generated embedding for: \"{text}\"");
     println!("   Dimensions: {}", embedding.len());
     println!(
         "   First 5 values: {:?}",
@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
             }
             Err(e) => {
-                println!("⚠️  {}: Model not available ({})", description, e);
+                println!("⚠️  {description}: Model not available ({e})");
             }
         }
     }
@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let provider = FastEmbedProvider::new(FastEmbedModel::BGESmallENV15, config).await?;
 
     let large_batch: Vec<String> = (0..100)
-        .map(|i| format!("This is test sentence number {} for batch processing.", i))
+        .map(|i| format!("This is test sentence number {i} for batch processing."))
         .collect();
 
     let start = std::time::Instant::now();
@@ -144,14 +144,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Calculate similarity between English and Spanish
             if embeddings.len() >= 2 {
                 let similarity = cosine_similarity(&embeddings[0], &embeddings[1]);
-                println!(
-                    "   Similarity between English and Spanish: {:.3}",
-                    similarity
-                );
+                println!("   Similarity between English and Spanish: {similarity:.3}");
             }
         }
         Err(e) => {
-            println!("⚠️  Multilingual model not available: {}", e);
+            println!("⚠️  Multilingual model not available: {e}");
         }
     }
 

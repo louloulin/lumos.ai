@@ -90,7 +90,7 @@ impl QdrantConfig {
     /// Get the full collection name with prefix
     pub fn collection_name(&self, name: &str) -> String {
         match &self.collection_prefix {
-            Some(prefix) => format!("{}_{}", prefix, name),
+            Some(prefix) => format!("{prefix}_{name}"),
             None => name.to_string(),
         }
     }

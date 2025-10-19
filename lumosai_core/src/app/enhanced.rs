@@ -2,11 +2,11 @@
 //!
 //! Provides Mastra-like unified application management functionality
 
+use crate::compat::Component;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use crate::compat::Component;
 
 use crate::agent::{trait_def::Agent, AgentConfig};
 use crate::base::{Base, BaseComponent, ComponentConfig};
@@ -135,7 +135,7 @@ impl EnhancedApp {
 
         self.base
             .logger()
-            .info(&format!("LLM provider '{}' added", name));
+            .info(&format!("LLM provider '{name}' added"));
         Ok(())
     }
 
@@ -154,9 +154,7 @@ impl EnhancedApp {
         })?;
         agents.insert(name.clone(), agent);
 
-        self.base
-            .logger()
-            .info(&format!("Agent '{}' added", name));
+        self.base.logger().info(&format!("Agent '{name}' added"));
         Ok(())
     }
 
@@ -240,7 +238,7 @@ impl EnhancedApp {
     /// Run agent
     pub async fn run_agent(&self, agent_name: &str, messages: &[Message]) -> Result<String> {
         let agent = self.get_agent(agent_name)?.ok_or_else(|| {
-            crate::error::Error::Internal(format!("Agent '{}' not found", agent_name))
+            crate::error::Error::Internal(format!("Agent '{agent_name}' not found"))
         })?;
 
         let options = crate::agent::types::AgentGenerateOptions::default();
@@ -278,15 +276,13 @@ impl EnhancedApp {
 
     /// Start application
     pub async fn start(&self) -> Result<()> {
-        self.base.logger().info(
-            &format!("Starting application '{}'", self.config.name)
-        );
+        self.base
+            .logger()
+            .info(&format!("Starting application '{}'", self.config.name));
 
         // Here you can add startup logic, such as initializing connections, warming up models, etc.
 
-        self.base
-            .logger()
-            .info("Application started successfully");
+        self.base.logger().info("Application started successfully");
         Ok(())
     }
 

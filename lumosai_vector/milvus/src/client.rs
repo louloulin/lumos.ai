@@ -70,8 +70,7 @@ impl MilvusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(MilvusError::Database(format!(
-                "Failed to list collections: {}",
-                error_text
+                "Failed to list collections: {error_text}"
             )))
         }
     }
@@ -117,8 +116,7 @@ impl MilvusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(MilvusError::Collection(format!(
-                "Failed to create collection: {}",
-                error_text
+                "Failed to create collection: {error_text}"
             )))
         }
     }
@@ -139,8 +137,7 @@ impl MilvusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(MilvusError::Collection(format!(
-                "Failed to drop collection: {}",
-                error_text
+                "Failed to drop collection: {error_text}"
             )))
         }
     }
@@ -161,8 +158,7 @@ impl MilvusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(MilvusError::Collection(format!(
-                "Failed to describe collection: {}",
-                error_text
+                "Failed to describe collection: {error_text}"
             )))
         }
     }
@@ -181,7 +177,7 @@ impl MilvusClient {
         let request = CreateIndexRequest {
             collection_name: collection_name.to_string(),
             field_name: field_name.to_string(),
-            index_name: format!("{}_index", field_name),
+            index_name: format!("{field_name}_index"),
             extra_params: IndexExtraParams {
                 index_type: index_type.to_string(),
                 metric_type: metric_type.to_string(),
@@ -201,8 +197,7 @@ impl MilvusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(MilvusError::Index(format!(
-                "Failed to create index: {}",
-                error_text
+                "Failed to create index: {error_text}"
             )))
         }
     }
@@ -275,8 +270,7 @@ impl MilvusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(MilvusError::Database(format!(
-                "Failed to insert entities: {}",
-                error_text
+                "Failed to insert entities: {error_text}"
             )))
         }
     }
@@ -323,8 +317,7 @@ impl MilvusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(MilvusError::Query(format!(
-                "Failed to search: {}",
-                error_text
+                "Failed to search: {error_text}"
             )))
         }
     }
@@ -363,10 +356,7 @@ impl MilvusClient {
             }
         } else {
             let error_text = response.text().await.unwrap_or_default();
-            Err(MilvusError::Query(format!(
-                "Failed to query: {}",
-                error_text
-            )))
+            Err(MilvusError::Query(format!("Failed to query: {error_text}")))
         }
     }
 
@@ -395,8 +385,7 @@ impl MilvusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(MilvusError::Database(format!(
-                "Failed to delete: {}",
-                error_text
+                "Failed to delete: {error_text}"
             )))
         }
     }
@@ -420,8 +409,7 @@ impl MilvusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(MilvusError::Database(format!(
-                "Failed to get collection stats: {}",
-                error_text
+                "Failed to get collection stats: {error_text}"
             )))
         }
     }

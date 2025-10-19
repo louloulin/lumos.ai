@@ -16,10 +16,10 @@ async fn main() {
     // 测试 1: 系统监控
     println!("🖥️  测试 1: 系统监控");
     println!("{}", "-".repeat(80));
-    
+
     let tools = get_all_monitoring_tools();
     let monitor_tool = &tools[0];
-    
+
     println!("工具名称: {}", monitor_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", monitor_tool.description());
     println!();
@@ -33,20 +33,23 @@ async fn main() {
 
     for (desc, target, metrics) in monitoring_scenarios {
         println!("{}", desc);
-        
+
         let params = json!({
             "target": target,
             "metrics": metrics,
             "interval_seconds": 60
         });
 
-        match monitor_tool.execute(params, context.clone(), &options).await {
+        match monitor_tool
+            .execute(params, context.clone(), &options)
+            .await
+        {
             Ok(result) => {
                 if result["success"] == true {
                     println!("  ✅ 监控目标: {}", result["target"]);
                     println!("  监控类型: {}", result["metrics_type"]);
                     println!("  监控间隔: {}秒", result["interval_seconds"]);
-                    
+
                     if let Some(cpu) = result.get("cpu") {
                         println!("  📈 CPU:");
                         println!("    使用率: {}%", cpu["usage_percent"]);
@@ -54,7 +57,7 @@ async fn main() {
                         println!("    温度: {}°C", cpu["temperature_celsius"]);
                         println!("    状态: {}", cpu["status"]);
                     }
-                    
+
                     if let Some(memory) = result.get("memory") {
                         println!("  💾 内存:");
                         println!("    总容量: {} GB", memory["total_gb"]);
@@ -62,7 +65,7 @@ async fn main() {
                         println!("    使用率: {}%", memory["usage_percent"]);
                         println!("    状态: {}", memory["status"]);
                     }
-                    
+
                     if let Some(disk) = result.get("disk") {
                         println!("  💿 磁盘:");
                         println!("    总容量: {} GB", disk["total_gb"]);
@@ -70,7 +73,7 @@ async fn main() {
                         println!("    使用率: {}%", disk["usage_percent"]);
                         println!("    状态: {}", disk["status"]);
                     }
-                    
+
                     if let Some(network) = result.get("network") {
                         println!("  🌐 网络:");
                         println!("    接收: {} Mbps", network["rx_mbps"]);
@@ -90,9 +93,9 @@ async fn main() {
     // 测试 2: 性能分析
     println!("⚡ 测试 2: 性能分析");
     println!("{}", "-".repeat(80));
-    
+
     let analyzer_tool = &tools[1];
-    
+
     println!("工具名称: {}", analyzer_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", analyzer_tool.description());
     println!();
@@ -106,19 +109,22 @@ async fn main() {
 
     for (desc, service, metrics, time_range) in analysis_scenarios {
         println!("{}", desc);
-        
+
         let params = json!({
             "service_name": service,
             "time_range_minutes": time_range,
             "metrics": metrics
         });
 
-        match analyzer_tool.execute(params, context.clone(), &options).await {
+        match analyzer_tool
+            .execute(params, context.clone(), &options)
+            .await
+        {
             Ok(result) => {
                 if result["success"] == true {
                     println!("  ✅ 服务名称: {}", result["service_name"]);
                     println!("  时间范围: {}分钟", result["time_range_minutes"]);
-                    
+
                     if let Some(response_time) = result.get("response_time") {
                         println!("  ⏱️  响应时间:");
                         println!("    平均: {} ms", response_time["avg_ms"]);
@@ -127,7 +133,7 @@ async fn main() {
                         println!("    P99: {} ms", response_time["p99_ms"]);
                         println!("    状态: {}", response_time["status"]);
                     }
-                    
+
                     if let Some(throughput) = result.get("throughput") {
                         println!("  📊 吞吐量:");
                         println!("    RPS: {}", throughput["requests_per_second"]);
@@ -135,7 +141,7 @@ async fn main() {
                         println!("    峰值 RPS: {}", throughput["peak_rps"]);
                         println!("    状态: {}", throughput["status"]);
                     }
-                    
+
                     if let Some(error_rate) = result.get("error_rate") {
                         println!("  ❌ 错误率:");
                         println!("    错误率: {}%", error_rate["error_percent"]);
@@ -154,9 +160,9 @@ async fn main() {
     // 测试 3: 告警配置
     println!("🚨 测试 3: 告警配置");
     println!("{}", "-".repeat(80));
-    
+
     let alert_tool = &tools[2];
-    
+
     println!("工具名称: {}", alert_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", alert_tool.description());
     println!();
@@ -170,7 +176,7 @@ async fn main() {
                 "threshold": 80,
                 "operator": ">",
                 "notification_channels": "email,slack"
-            })
+            }),
         ),
         (
             "场景 2: 内存使用率告警",
@@ -180,7 +186,7 @@ async fn main() {
                 "threshold": 90,
                 "operator": ">=",
                 "notification_channels": "email,sms,pagerduty"
-            })
+            }),
         ),
         (
             "场景 3: 响应时间告警",
@@ -190,7 +196,7 @@ async fn main() {
                 "threshold": 500,
                 "operator": ">",
                 "notification_channels": "slack,webhook"
-            })
+            }),
         ),
         (
             "场景 4: 错误率告警",
@@ -201,21 +207,27 @@ async fn main() {
                 "operator": ">",
                 "notification_channels": "email,pagerduty",
                 "enabled": true
-            })
+            }),
         ),
     ];
 
     for (desc, params) in alert_scenarios {
         println!("{}", desc);
-        
+
         match alert_tool.execute(params, context.clone(), &options).await {
             Ok(result) => {
                 if result["success"] == true {
                     println!("  ✅ 告警 ID: {}", result["alert_id"]);
                     println!("  告警名称: {}", result["alert_name"]);
                     println!("  监控指标: {}", result["config"]["metric"]);
-                    println!("  阈值: {} {}", result["config"]["operator"], result["config"]["threshold"]);
-                    println!("  通知渠道: {:?}", result["config"]["notification_channels"]);
+                    println!(
+                        "  阈值: {} {}",
+                        result["config"]["operator"], result["config"]["threshold"]
+                    );
+                    println!(
+                        "  通知渠道: {:?}",
+                        result["config"]["notification_channels"]
+                    );
                     println!("  状态: {}", result["status"]);
                     println!("  消息: {}", result["message"]);
                 } else {
@@ -230,14 +242,17 @@ async fn main() {
     // 测试 4: 参数验证
     println!("🔍 测试 4: 参数验证");
     println!("{}", "-".repeat(80));
-    
+
     println!("测试 4.1: 无效的监控指标");
     let params = json!({
         "target": "server-01",
         "metrics": "invalid_metric"
     });
 
-    match monitor_tool.execute(params, context.clone(), &options).await {
+    match monitor_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             if result["success"] == false {
                 println!("  ✅ 正确拒绝: {}", result["error"]);
@@ -268,14 +283,15 @@ async fn main() {
     // 测试 5: 批量获取工具
     println!("📦 测试 5: 获取所有监控告警工具");
     println!("{}", "-".repeat(80));
-    
+
     let all_tools = get_all_monitoring_tools();
     println!("总共 {} 个监控告警工具:\n", all_tools.len());
-    
+
     for (i, tool) in all_tools.iter().enumerate() {
-        println!("{}. {} - {}", 
-            i + 1, 
-            tool.name().unwrap_or("unknown"), 
+        println!(
+            "{}. {} - {}",
+            i + 1,
+            tool.name().unwrap_or("unknown"),
             tool.description()
         );
     }
@@ -302,4 +318,3 @@ async fn main() {
     println!("  - 支持自定义告警规则和聚合");
     println!("{}", "=".repeat(80));
 }
-

@@ -151,17 +151,16 @@ pub fn validate_against_schema(value: &Value, schema: &Value) -> Result<()> {
 
     // Compile schema using the simple compile method
     let compiled_schema = JSONSchema::compile(schema)
-        .map_err(|e| Error::InvalidInput(format!("Invalid schema: {}", e)))?;
+        .map_err(|e| Error::InvalidInput(format!("Invalid schema: {e}")))?;
 
     // Validate with detailed error reporting
     if let Err(errors) = compiled_schema.validate(value) {
         let error_details = errors
-            .map(|e| format!("{} at path: {}", e.to_string(), e.instance_path))
+            .map(|e| format!("{} at path: {}", e, e.instance_path))
             .collect::<Vec<_>>()
             .join(", ");
         return Err(Error::InvalidInput(format!(
-            "Schema validation failed: {}",
-            error_details
+            "Schema validation failed: {error_details}"
         )));
     }
 
@@ -186,16 +185,14 @@ pub fn generate_system_prompt(
     if use_function_calling {
         // For function calling mode, we don't need to explain tool format in system prompt
         format!(
-            "{}\n\nYou have access to specialized tools. Use them when needed.",
-            base_instructions
+            "{base_instructions}\n\nYou have access to specialized tools. Use them when needed."
         )
     } else if let Some(tools_desc) = tools_description {
         // For non-function-calling mode, explain the expected tool format
         format!(
-            "{}\n\nYou have access to the following tools:\n{}\n\n\
+            "{base_instructions}\n\nYou have access to the following tools:\n{tools_desc}\n\n\
              To use a tool, use exactly the following format:\n\
-             Using the tool 'tool_name' with parameters: {{\"param1\": \"value1\", \"param2\": value2}}",
-            base_instructions, tools_desc
+             Using the tool 'tool_name' with parameters: {{\"param1\": \"value1\", \"param2\": value2}}"
         )
     } else {
         base_instructions.to_string()
@@ -241,9 +238,9 @@ pub fn create_tools_description(
 
         for (category, cat_tools) in categories.iter() {
             if format.markdown_formatting {
-                descriptions.push(format!("### {}", category));
+                descriptions.push(format!("### {category}"));
             } else {
-                descriptions.push(format!("Category: {}", category));
+                descriptions.push(format!("Category: {category}"));
             }
 
             for tool in cat_tools {
@@ -301,9 +298,9 @@ fn format_tool_description(tool: &Box<dyn Tool>, format: &ToolDescriptionFormat)
             desc.push_str("\nExamples:");
             for example in examples {
                 if format.markdown_formatting {
-                    desc.push_str(&format!("\n```json\n{}\n```", example));
+                    desc.push_str(&format!("\n```json\n{example}\n```"));
                 } else {
-                    desc.push_str(&format!("\n  {}", example));
+                    desc.push_str(&format!("\n  {example}"));
                 }
             }
         }

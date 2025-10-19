@@ -19,12 +19,12 @@ async fn main() -> Result<()> {
     // Level 1 API 演示 - 5分钟上手
     println!("\n📚 Level 1 API - 5分钟上手");
     println!("最简单的使用方式，自动配置一切：");
-    
+
     match Agent::new("assistant", "你是一个友好的AI助手").await {
         Ok(agent) => {
             println!("✅ Agent 创建成功: {}", agent.name());
             println!("📝 指令: {}", agent.instructions());
-            
+
             // 生成响应
             match agent.generate("你好，请介绍一下自己").await {
                 Ok(response) => {
@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
     // Level 2 API 演示 - 链式配置（模拟）
     println!("\n🔧 Level 2 API - 链式配置");
     println!("提供更多控制，但保持简洁：");
-    
+
     // 注意：由于当前实现的限制，Level 2 API 暂时返回错误
     // 这是设计上的权衡，真正的 Level 2 API 需要更复杂的内部架构
     println!("💡 Level 2 API 当前返回配置错误，建议使用 Level 3 API");
@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     // Level 3 API 演示 - 完整构建器模式
     println!("\n⚙️  Level 3 API - 完整构建器模式");
     println!("完全控制，适合高级用户：");
-    
+
     let llm = Arc::new(MockLlmProvider::new(vec![
         "你好！我是 LumosAI 助手，很高兴为您服务！".to_string(),
         "我可以帮助您处理各种任务，包括回答问题、分析数据、编写代码等。".to_string(),
@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
     println!("\n🚀 快速创建方法演示");
     let quick_agent = Agent::quick("quick_helper", "你是一个快速助手")
         .model(Arc::new(MockLlmProvider::new(vec![
-            "我是快速助手，随时为您提供帮助！".to_string()
+            "我是快速助手，随时为您提供帮助！".to_string(),
         ])))
         .build()?;
 

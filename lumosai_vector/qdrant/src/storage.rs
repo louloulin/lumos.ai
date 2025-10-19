@@ -3,18 +3,15 @@
 use async_trait::async_trait;
 use qdrant_client::{
     qdrant::{
-        CreateCollection, DeletePoints, Distance, PointStruct, PointsSelector, SearchPoints,
-        UpsertPoints, Value as QdrantValue, VectorParams, VectorsConfig,
+        CreateCollection, Distance, PointStruct, Value as QdrantValue, VectorParams, VectorsConfig,
     },
     Qdrant,
 };
 use std::collections::HashMap;
 use tracing::{debug, instrument, warn};
-use uuid::Uuid;
 
-use crate::error::QdrantResult;
 use crate::filter::QdrantFilterConverter;
-use crate::{QdrantConfig, QdrantError};
+use crate::QdrantConfig;
 use lumosai_vector_core::prelude::*;
 
 /// Qdrant vector storage implementation
@@ -45,7 +42,7 @@ impl QdrantVectorStorage {
         client
             .list_collections()
             .await
-            .map_err(|e| VectorError::ConnectionFailed(format!("Failed to connect: {}", e)))?;
+            .map_err(|e| VectorError::ConnectionFailed(format!("Failed to connect: {e}")))?;
 
         Ok(Self { client, config })
     }
@@ -123,7 +120,7 @@ impl VectorStorage for QdrantVectorStorage {
             .create_collection(create_collection)
             .await
             .map_err(|e| {
-                VectorError::OperationFailed(format!("Failed to create collection: {}", e))
+                VectorError::OperationFailed(format!("Failed to create collection: {e}"))
             })?;
 
         debug!("Created Qdrant collection: {}", collection_name);
@@ -133,7 +130,7 @@ impl VectorStorage for QdrantVectorStorage {
     #[instrument(skip(self))]
     async fn list_indexes(&self) -> Result<Vec<String>> {
         let response = self.client.list_collections().await.map_err(|e| {
-            VectorError::OperationFailed(format!("Failed to list collections: {}", e))
+            VectorError::OperationFailed(format!("Failed to list collections: {e}"))
         })?;
 
         let mut indexes = Vec::new();
@@ -141,7 +138,7 @@ impl VectorStorage for QdrantVectorStorage {
             let name = collection.name;
             // Remove prefix if present
             if let Some(prefix) = &self.config.collection_prefix {
-                if let Some(stripped) = name.strip_prefix(&format!("{}_", prefix)) {
+                if let Some(stripped) = name.strip_prefix(&format!("{prefix}_")) {
                     indexes.push(stripped.to_string());
                 } else {
                     indexes.push(name);
@@ -163,7 +160,7 @@ impl VectorStorage for QdrantVectorStorage {
             .collection_info(collection_name.clone())
             .await
             .map_err(|e| {
-                VectorError::OperationFailed(format!("Failed to get collection info: {}", e))
+                VectorError::OperationFailed(format!("Failed to get collection info: {e}"))
             })?;
 
         let result = response.result.ok_or_else(|| {
@@ -193,7 +190,7 @@ impl VectorStorage for QdrantVectorStorage {
             .delete_collection(collection_name.clone())
             .await
             .map_err(|e| {
-                VectorError::OperationFailed(format!("Failed to delete collection: {}", e))
+                VectorError::OperationFailed(format!("Failed to delete collection: {e}"))
             })?;
 
         debug!("Deleted Qdrant collection: {}", collection_name);
@@ -265,7 +262,7 @@ impl VectorStorage for QdrantVectorStorage {
                 .upsert_points(upsert_request)
                 .await
                 .map_err(|e| {
-                    VectorError::OperationFailed(format!("Failed to upsert points: {}", e))
+                    VectorError::OperationFailed(format!("Failed to upsert points: {e}"))
                 })?;
         }
 
@@ -324,7 +321,7 @@ impl VectorStorage for QdrantVectorStorage {
             .client
             .search_points(search_points)
             .await
-            .map_err(|e| VectorError::OperationFailed(format!("Search failed: {}", e)))?;
+            .map_err(|e| VectorError::OperationFailed(format!("Search failed: {e}")))?;
 
         let mut results = Vec::new();
         for scored_point in response.result {
@@ -386,7 +383,7 @@ impl VectorStorage for QdrantVectorStorage {
         self.client
             .delete_points(delete_request)
             .await
-            .map_err(|e| VectorError::OperationFailed(format!("Failed to delete points: {}", e)))?;
+            .map_err(|e| VectorError::OperationFailed(format!("Failed to delete points: {e}")))?;
 
         Ok(())
     }
@@ -407,7 +404,7 @@ impl VectorStorage for QdrantVectorStorage {
         self.client
             .list_collections()
             .await
-            .map_err(|e| VectorError::ConnectionFailed(format!("Health check failed: {}", e)))?;
+            .map_err(|e| VectorError::ConnectionFailed(format!("Health check failed: {e}")))?;
         Ok(())
     }
 

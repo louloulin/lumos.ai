@@ -163,24 +163,23 @@ impl LlmProvider for DeepSeekProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "DeepSeek API returned error status {}: {}",
-                status, text
+                "DeepSeek API returned error status {status}: {text}"
             )));
         }
 
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {e}")))?;
 
         // Extract generated text
         let content = response["choices"][0]["message"]["content"]
@@ -238,24 +237,23 @@ impl LlmProvider for DeepSeekProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "DeepSeek API returned error status {}: {}",
-                status, text
+                "DeepSeek API returned error status {status}: {text}"
             )));
         }
 
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {e}")))?;
 
         // Extract generated text
         let content = response["choices"][0]["message"]["content"]
@@ -401,24 +399,23 @@ impl LlmProvider for DeepSeekProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {e}")))?;
 
         let status = res.status();
         let response_text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "DeepSeek API returned error status {}: {}",
-                status, response_text
+                "DeepSeek API returned error status {status}: {response_text}"
             )));
         }
 
         // Parse response
         let response: DeepSeekResponse = serde_json::from_str(&response_text)
-            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {e}")))?;
 
         if response.choices.is_empty() {
             return Err(Error::Llm("No choices in DeepSeek response".to_string()));

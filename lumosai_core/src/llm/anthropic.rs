@@ -131,7 +131,7 @@ impl LlmProvider for AnthropicProvider {
 
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String> {
         // 构建完整提示
-        let full_prompt = format!("Human: {}\n\nAssistant:", prompt);
+        let full_prompt = format!("Human: {prompt}\n\nAssistant:");
 
         // 准备请求数据
         let url = format!("{}/complete", self.base_url);
@@ -163,24 +163,23 @@ impl LlmProvider for AnthropicProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("Anthropic API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Anthropic API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read Anthropic response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read Anthropic response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "Anthropic API returned error status {}: {}",
-                status, text
+                "Anthropic API returned error status {status}: {text}"
             )));
         }
 
         // 解析响应
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse Anthropic response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse Anthropic response: {e}")))?;
 
         // 提取生成的文本
         let content = response["completion"]
@@ -232,24 +231,23 @@ impl LlmProvider for AnthropicProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("Anthropic API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Anthropic API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read Anthropic response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read Anthropic response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "Anthropic API returned error status {}: {}",
-                status, text
+                "Anthropic API returned error status {status}: {text}"
             )));
         }
 
         // 解析响应
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse Anthropic response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse Anthropic response: {e}")))?;
 
         // 提取生成的文本
         let content = response["completion"]

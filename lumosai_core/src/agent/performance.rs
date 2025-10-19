@@ -89,7 +89,7 @@ impl PerformanceMonitor {
         let metrics = self
             .metrics
             .lock()
-            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {}", e)))?;
+            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {e}")))?;
         Ok(metrics.clone())
     }
 
@@ -98,12 +98,12 @@ impl PerformanceMonitor {
         let mut metrics = self
             .metrics
             .lock()
-            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {}", e)))?;
+            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {e}")))?;
 
         let mut response_times = self
             .response_times
             .lock()
-            .map_err(|e| Error::Lock(format!("Failed to lock response times: {}", e)))?;
+            .map_err(|e| Error::Lock(format!("Failed to lock response times: {e}")))?;
 
         *metrics = PerformanceMetrics::default();
         response_times.clear();
@@ -116,7 +116,7 @@ impl PerformanceMonitor {
         let mut metrics = self
             .metrics
             .lock()
-            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {}", e)))?;
+            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {e}")))?;
 
         metrics.memory_usage = memory_bytes;
         metrics.last_updated = SystemTime::now()
@@ -132,7 +132,7 @@ impl PerformanceMonitor {
         let mut metrics = self
             .metrics
             .lock()
-            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {}", e)))?;
+            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {e}")))?;
 
         metrics.cpu_usage = cpu_percent;
         metrics.last_updated = SystemTime::now()
@@ -148,7 +148,7 @@ impl PerformanceMonitor {
         let mut metrics = self
             .metrics
             .lock()
-            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {}", e)))?;
+            .map_err(|e| Error::Lock(format!("Failed to lock metrics: {e}")))?;
 
         metrics.cache_hit_rate = hit_rate;
         metrics.last_updated = SystemTime::now()
@@ -341,7 +341,7 @@ impl PerformanceAnalyzer {
             recommendations.push(PerformanceRecommendation {
                 category: "Error Rate".to_string(),
                 severity: "critical".to_string(),
-                description: format!("Error rate is {:.1}%, which is very high", error_rate),
+                description: format!("Error rate is {error_rate:.1}%, which is very high"),
                 suggestion:
                     "Investigate error causes, improve error handling, and add retry mechanisms"
                         .to_string(),
@@ -351,7 +351,7 @@ impl PerformanceAnalyzer {
             recommendations.push(PerformanceRecommendation {
                 category: "Error Rate".to_string(),
                 severity: "medium".to_string(),
-                description: format!("Error rate is {:.1}%", error_rate),
+                description: format!("Error rate is {error_rate:.1}%"),
                 suggestion: "Review error logs and implement better error handling".to_string(),
                 estimated_improvement: "Improved reliability".to_string(),
             });

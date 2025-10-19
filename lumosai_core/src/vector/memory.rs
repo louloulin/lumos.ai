@@ -113,12 +113,12 @@ impl MemoryVectorStorage {
     /// Evaluate filter condition against metadata
     fn evaluate_filter(&self, filter: &FilterCondition, metadata: &HashMap<String, Value>) -> bool {
         match filter {
-            FilterCondition::Eq(field, value) => metadata.get(field).map_or(false, |v| v == value),
+            FilterCondition::Eq(field, value) => metadata.get(field) == Some(value),
             FilterCondition::Gt(field, value) => {
                 if let (Some(field_value), Some(filter_value)) =
                     (metadata.get(field), value.as_f64())
                 {
-                    field_value.as_f64().map_or(false, |v| v > filter_value)
+                    field_value.as_f64().is_some_and(|v| v > filter_value)
                 } else {
                     false
                 }
@@ -127,7 +127,7 @@ impl MemoryVectorStorage {
                 if let (Some(field_value), Some(filter_value)) =
                     (metadata.get(field), value.as_f64())
                 {
-                    field_value.as_f64().map_or(false, |v| v < filter_value)
+                    field_value.as_f64().is_some_and(|v| v < filter_value)
                 } else {
                     false
                 }
@@ -289,7 +289,7 @@ impl VectorStorage for MemoryVectorStorage {
 
         let index = indexes
             .get(index_name)
-            .ok_or_else(|| Error::Storage(format!("Index {} not found", index_name)))?;
+            .ok_or_else(|| Error::Storage(format!("Index {index_name} not found")))?;
 
         if query_vector.len() != index.dimension {
             return Err(VectorError::DimensionMismatch {
@@ -352,12 +352,11 @@ impl VectorStorage for MemoryVectorStorage {
 
         let index = indexes
             .get_mut(index_name)
-            .ok_or_else(|| VectorError::InvalidVector(format!("Index {} not found", index_name)))?;
+            .ok_or_else(|| VectorError::InvalidVector(format!("Index {index_name} not found")))?;
 
         if !index.vectors.contains_key(id) {
             return Err(VectorError::InvalidVector(format!(
-                "Vector with ID {} not found",
-                id
+                "Vector with ID {id} not found"
             )));
         }
 
@@ -390,7 +389,7 @@ impl VectorStorage for MemoryVectorStorage {
 
         let index = indexes
             .get_mut(index_name)
-            .ok_or_else(|| VectorError::InvalidVector(format!("Index {} not found", index_name)))?;
+            .ok_or_else(|| VectorError::InvalidVector(format!("Index {index_name} not found")))?;
 
         index.vectors.remove(id);
         index.metadata.remove(id);

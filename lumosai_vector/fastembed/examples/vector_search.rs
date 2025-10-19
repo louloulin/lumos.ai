@@ -150,7 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for query in queries {
-        println!("\n🔍 Query: \"{}\"", query);
+        println!("\n🔍 Query: \"{query}\"");
 
         let start = std::time::Instant::now();
         let results = search_engine.search(query, 3).await?;
@@ -214,7 +214,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ];
 
             for (lang, query) in ml_queries {
-                println!("\n🌍 {} query: \"{}\"", lang, query);
+                println!("\n🌍 {lang} query: \"{query}\"");
                 let results = ml_engine.search(query, 2).await?;
 
                 for result in results {
@@ -223,7 +223,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            println!("⚠️  Multilingual model not available: {}", e);
+            println!("⚠️  Multilingual model not available: {e}");
         }
     }
 
@@ -253,7 +253,7 @@ async fn await_similarity_analysis(
             } else {
                 0.0
             };
-            print!("{:>8.3}", similarity);
+            print!("{similarity:>8.3}");
         }
         println!();
     }

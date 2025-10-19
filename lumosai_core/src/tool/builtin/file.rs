@@ -357,22 +357,22 @@ impl FileManagerTool {
 
     fn read_file(&self, path: &str) -> Result<String> {
         fs::read_to_string(path)
-            .map_err(|e| Error::Tool(format!("Failed to read file '{}': {}", path, e)))
+            .map_err(|e| Error::Tool(format!("Failed to read file '{path}': {e}")))
     }
 
     fn write_file(&self, path: &str, content: &str) -> Result<()> {
         fs::write(path, content)
-            .map_err(|e| Error::Tool(format!("Failed to write file '{}': {}", path, e)))
+            .map_err(|e| Error::Tool(format!("Failed to write file '{path}': {e}")))
     }
 
     fn list_directory(&self, path: &str) -> Result<Vec<String>> {
         let entries = fs::read_dir(path)
-            .map_err(|e| Error::Tool(format!("Failed to read directory '{}': {}", path, e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to read directory '{path}': {e}")))?;
 
         let mut files = Vec::new();
         for entry in entries {
             let entry =
-                entry.map_err(|e| Error::Tool(format!("Failed to read directory entry: {}", e)))?;
+                entry.map_err(|e| Error::Tool(format!("Failed to read directory entry: {e}")))?;
             let file_name = entry.file_name().to_string_lossy().to_string();
             files.push(file_name);
         }
@@ -389,12 +389,12 @@ impl FileManagerTool {
         let path_obj = Path::new(path);
         if path_obj.is_file() {
             fs::remove_file(path)
-                .map_err(|e| Error::Tool(format!("Failed to delete file '{}': {}", path, e)))
+                .map_err(|e| Error::Tool(format!("Failed to delete file '{path}': {e}")))
         } else if path_obj.is_dir() {
             fs::remove_dir_all(path)
-                .map_err(|e| Error::Tool(format!("Failed to delete directory '{}': {}", path, e)))
+                .map_err(|e| Error::Tool(format!("Failed to delete directory '{path}': {e}")))
         } else {
-            Err(Error::Tool(format!("Path '{}' does not exist", path)))
+            Err(Error::Tool(format!("Path '{path}' does not exist")))
         }
     }
 }
@@ -515,7 +515,7 @@ impl Tool for FileManagerTool {
                     "success": true
                 }))
             }
-            _ => Err(Error::Tool(format!("Unknown operation: {}", operation))),
+            _ => Err(Error::Tool(format!("Unknown operation: {operation}"))),
         }
     }
 

@@ -150,23 +150,22 @@ impl BaiduProvider {
             .post(&url)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE token request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE token request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE token response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE token response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE token API returned error status {}: {}",
-                status, text
+                "百度ERNIE token API returned error status {status}: {text}"
             )));
         }
 
         let token_response: BaiduTokenResponse = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE token response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE token response: {e}")))?;
 
         self.access_token = Some(token_response.access_token.clone());
         Ok(token_response.access_token)
@@ -254,24 +253,23 @@ impl LlmProvider for BaiduProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE API returned error status {}: {}",
-                status, text
+                "百度ERNIE API returned error status {status}: {text}"
             )));
         }
 
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {e}")))?;
 
         // Extract generated text
         let content = response["result"]
@@ -326,24 +324,23 @@ impl LlmProvider for BaiduProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE API returned error status {}: {}",
-                status, text
+                "百度ERNIE API returned error status {status}: {text}"
             )));
         }
 
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {e}")))?;
 
         // Extract generated text
         let content = response["result"]
@@ -402,7 +399,7 @@ impl LlmProvider for BaiduProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE streaming request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE streaming request failed: {e}")))?;
 
         let status = response.status();
         if !status.is_success() {
@@ -411,8 +408,7 @@ impl LlmProvider for BaiduProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(Error::Llm(format!(
-                "百度ERNIE streaming API returned error status {}: {}",
-                status, error_text
+                "百度ERNIE streaming API returned error status {status}: {error_text}"
             )));
         }
 
@@ -441,28 +437,22 @@ impl LlmProvider for BaiduProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE embedding request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE embedding request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await.map_err(|e| {
-            Error::Llm(format!(
-                "Failed to read 百度ERNIE embedding response: {}",
-                e
-            ))
-        })?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE embedding response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE embedding API returned error status {}: {}",
-                status, text
+                "百度ERNIE embedding API returned error status {status}: {text}"
             )));
         }
 
         let response: BaiduEmbeddingResponse = serde_json::from_str(&text).map_err(|e| {
-            Error::Llm(format!(
-                "Failed to parse 百度ERNIE embedding response: {}",
-                e
-            ))
+            Error::Llm(format!("Failed to parse 百度ERNIE embedding response: {e}"))
         })?;
 
         if response.data.is_empty() {
@@ -539,24 +529,23 @@ impl LlmProvider for BaiduProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {e}")))?;
 
         let status = res.status();
         let response_text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE API returned error status {}: {}",
-                status, response_text
+                "百度ERNIE API returned error status {status}: {response_text}"
             )));
         }
 
         // Parse response
         let response: BaiduResponse = serde_json::from_str(&response_text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {e}")))?;
 
         // Convert function calls
         let function_calls: Vec<FunctionCall> = if let Some(function_call) = response.function_call
@@ -587,12 +576,12 @@ impl BaiduProvider {
         let byte_stream = response.bytes_stream();
 
         Ok(byte_stream
-            .map_err(|e| Error::Llm(format!("HTTP stream error: {}", e)))
+            .map_err(|e| Error::Llm(format!("HTTP stream error: {e}")))
             .map(|chunk_result| {
                 chunk_result.and_then(|chunk| {
                     // Convert bytes to string
                     let text = String::from_utf8(chunk.to_vec())
-                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {}", e)))?;
+                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {e}")))?;
 
                     // Split by lines and process each line
                     let mut results = Vec::new();
@@ -625,8 +614,7 @@ impl BaiduProvider {
                                 }
                                 Err(e) => {
                                     return Err(Error::Llm(format!(
-                                        "Failed to parse 百度ERNIE streaming response: {}",
-                                        e
+                                        "Failed to parse 百度ERNIE streaming response: {e}"
                                     )));
                                 }
                             }

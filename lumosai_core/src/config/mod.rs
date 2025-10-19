@@ -25,7 +25,7 @@ impl ConfigLoader {
             _ => {
                 // Try to detect by content
                 let content = std::fs::read_to_string(path).map_err(|e| {
-                    Error::Configuration(format!("Failed to read config file: {}", e))
+                    Error::Configuration(format!("Failed to read config file: {e}"))
                 })?;
 
                 // Try YAML first, then TOML
@@ -41,7 +41,7 @@ impl ConfigLoader {
     /// Load TOML file and convert to YAML config structure
     fn load_toml_as_yaml<P: AsRef<Path>>(path: P) -> Result<YamlConfig> {
         let content = std::fs::read_to_string(path)
-            .map_err(|e| Error::Configuration(format!("Failed to read TOML config file: {}", e)))?;
+            .map_err(|e| Error::Configuration(format!("Failed to read TOML config file: {e}")))?;
 
         Self::parse_toml_content(&content)
     }
@@ -50,14 +50,14 @@ impl ConfigLoader {
     pub fn parse_toml_content(content: &str) -> Result<YamlConfig> {
         // Parse TOML to generic value
         let toml_value: toml::Value = toml::from_str(content)
-            .map_err(|e| Error::Configuration(format!("Failed to parse TOML: {}", e)))?;
+            .map_err(|e| Error::Configuration(format!("Failed to parse TOML: {e}")))?;
 
         // Convert TOML value to YAML value
         let yaml_value = Self::toml_to_yaml_value(toml_value)?;
 
         // Deserialize from YAML value
         serde_yaml::from_value(yaml_value).map_err(|e| {
-            Error::Configuration(format!("Failed to convert TOML to YAML config: {}", e))
+            Error::Configuration(format!("Failed to convert TOML to YAML config: {e}"))
         })
     }
 
@@ -117,9 +117,8 @@ impl ConfigLoader {
             ConfigFormat::Yaml => config.to_file(path),
             ConfigFormat::Toml => {
                 let toml_content = Self::yaml_to_toml_string(&config)?;
-                std::fs::write(path, toml_content).map_err(|e| {
-                    Error::Configuration(format!("Failed to write TOML config: {}", e))
-                })
+                std::fs::write(path, toml_content)
+                    .map_err(|e| Error::Configuration(format!("Failed to write TOML config: {e}")))
             }
         }
     }
@@ -128,14 +127,14 @@ impl ConfigLoader {
     fn yaml_to_toml_string(config: &YamlConfig) -> Result<String> {
         // Serialize to YAML value first
         let yaml_value = serde_yaml::to_value(config)
-            .map_err(|e| Error::Configuration(format!("Failed to serialize config: {}", e)))?;
+            .map_err(|e| Error::Configuration(format!("Failed to serialize config: {e}")))?;
 
         // Convert to TOML value
         let toml_value = Self::yaml_to_toml_value(yaml_value)?;
 
         // Serialize to TOML string
         toml::to_string_pretty(&toml_value)
-            .map_err(|e| Error::Configuration(format!("Failed to serialize TOML: {}", e)))
+            .map_err(|e| Error::Configuration(format!("Failed to serialize TOML: {e}")))
     }
 
     /// Convert YAML value to TOML value

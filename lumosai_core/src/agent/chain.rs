@@ -328,10 +328,10 @@ impl AgentChain {
     /// 保存当前上下文到文件
     pub fn save_context(&self, path: &str) -> Result<()> {
         let json = serde_json::to_string_pretty(&self.context.steps)
-            .map_err(|e| Error::Configuration(format!("Failed to serialize context: {}", e)))?;
+            .map_err(|e| Error::Configuration(format!("Failed to serialize context: {e}")))?;
 
         std::fs::write(path, json)
-            .map_err(|e| Error::Configuration(format!("Failed to write context file: {}", e)))?;
+            .map_err(|e| Error::Configuration(format!("Failed to write context file: {e}")))?;
 
         Ok(())
     }
@@ -339,10 +339,10 @@ impl AgentChain {
     /// 从文件加载上下文
     pub fn load_context(mut self, path: &str) -> Result<Self> {
         let content = std::fs::read_to_string(path)
-            .map_err(|e| Error::Configuration(format!("Failed to read context file: {}", e)))?;
+            .map_err(|e| Error::Configuration(format!("Failed to read context file: {e}")))?;
 
         let steps: Vec<ChainStep> = serde_json::from_str(&content)
-            .map_err(|e| Error::Configuration(format!("Failed to parse context file: {}", e)))?;
+            .map_err(|e| Error::Configuration(format!("Failed to parse context file: {e}")))?;
 
         // 重建消息历史
         self.context.messages.clear();

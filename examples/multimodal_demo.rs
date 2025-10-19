@@ -3,9 +3,8 @@
 //! 演示语音处理（STT/TTS）和视觉处理（图像理解/生成）功能
 
 use lumosai_multimodal::{
-    OpenAIVision, OpenAIVoice, VisionProvider, VoiceProvider,
-    TranscriptionOptions, SynthesisOptions, VisionOptions, GenerationOptions,
-    ImageSize,
+    GenerationOptions, ImageSize, OpenAIVision, OpenAIVoice, SynthesisOptions,
+    TranscriptionOptions, VisionOptions, VisionProvider, VoiceProvider,
 };
 
 #[tokio::main]
@@ -16,8 +15,8 @@ async fn main() {
 
     // 注意：这些示例需要有效的 OpenAI API 密钥
     // 可以通过环境变量 OPENAI_API_KEY 设置
-    let api_key = std::env::var("OPENAI_API_KEY")
-        .unwrap_or_else(|_| "your-api-key-here".to_string());
+    let api_key =
+        std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "your-api-key-here".to_string());
 
     if api_key == "your-api-key-here" {
         println!("⚠️  请设置环境变量 OPENAI_API_KEY 以运行实际测试");
@@ -106,7 +105,7 @@ async fn test_voice_processing(api_key: &str) {
     let voice = OpenAIVoice::new(api_key);
 
     println!("提供商: {}", voice.name());
-    
+
     let caps = voice.capabilities();
     println!("支持语言: {} 种", caps.supported_languages.len());
     println!("支持格式: {} 种", caps.supported_formats.len());
@@ -145,11 +144,25 @@ async fn test_vision_processing(api_key: &str) {
     let vision = OpenAIVision::new(api_key);
 
     println!("提供商: {}", vision.name());
-    
+
     let caps = vision.capabilities();
     println!("支持格式: {} 种", caps.supported_formats.len());
-    println!("图像理解: {}", if caps.supports_understanding { "✅" } else { "❌" });
-    println!("图像生成: {}", if caps.supports_generation { "✅" } else { "❌" });
+    println!(
+        "图像理解: {}",
+        if caps.supports_understanding {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
+    println!(
+        "图像生成: {}",
+        if caps.supports_generation {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
     println!();
 
     // 场景 1: 图像生成
@@ -190,7 +203,10 @@ async fn test_vision_processing(api_key: &str) {
         detail: Some("auto".to_string()),
     };
 
-    match vision.describe_image_url(image_url, prompt, Some(options)).await {
+    match vision
+        .describe_image_url(image_url, prompt, Some(options))
+        .await
+    {
         Ok(description) => {
             println!("  ✅ 理解成功");
             println!("  描述: {}", description);
@@ -200,4 +216,3 @@ async fn test_vision_processing(api_key: &str) {
         }
     }
 }
-

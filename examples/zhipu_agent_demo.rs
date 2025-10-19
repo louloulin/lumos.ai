@@ -2,8 +2,8 @@
 //!
 //! 展示如何使用修复后的智谱 AI 提供商创建真实的 AI Agent
 
-use lumosai_core::agent::{AgentBuilder, Agent};
-use lumosai_core::llm::{ZhipuProvider, LlmOptions};
+use lumosai_core::agent::{Agent, AgentBuilder};
+use lumosai_core::llm::{LlmOptions, ZhipuProvider};
 use std::env;
 use std::sync::Arc;
 
@@ -83,10 +83,10 @@ async fn demo_conversation_agent(api_key: &str) -> Result<(), Box<dyn std::error
     for (i, message) in conversations.iter().enumerate() {
         println!("\n第{}轮对话:", i + 1);
         println!("👤 用户: {}", message);
-        
+
         let response = agent.generate_simple(message).await?;
         println!("🤖 智谱 AI: {}", response);
-        
+
         // 添加短暂延迟，避免 API 限制
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
     }
@@ -109,7 +109,7 @@ async fn demo_professional_agent(api_key: &str) -> Result<(), Box<dyn std::error
         .name("tech_expert")
         .instructions(
             "你是一位资深的技术专家，特别擅长 Rust、AI 和系统架构。\
-            请提供专业、详细的技术解答，包含实用的建议和最佳实践。"
+            请提供专业、详细的技术解答，包含实用的建议和最佳实践。",
         )
         .model(zhipu_provider.clone())
         .build()?;
@@ -123,10 +123,10 @@ async fn demo_professional_agent(api_key: &str) -> Result<(), Box<dyn std::error
 
     for (i, question) in tech_questions.iter().enumerate() {
         println!("\n📋 技术问题 {}: {}", i + 1, question);
-        
+
         let response = tech_agent.generate_simple(question).await?;
         println!("🔬 技术专家回复:\n{}", response);
-        
+
         // 添加延迟
         tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
     }
@@ -137,14 +137,14 @@ async fn demo_professional_agent(api_key: &str) -> Result<(), Box<dyn std::error
         .name("creative_writer")
         .instructions(
             "你是一位富有创意的作家，擅长创作有趣的故事和诗歌。\
-            请发挥想象力，创作生动有趣的内容。"
+            请发挥想象力，创作生动有趣的内容。",
         )
         .model(zhipu_provider)
         .build()?;
 
     let creative_prompt = "请写一首关于 AI 和人类合作开发软件的现代诗，要体现科技与人文的结合";
     println!("🎨 创意提示: {}", creative_prompt);
-    
+
     let creative_response = creative_agent.generate_simple(creative_prompt).await?;
     println!("✨ 创意作品:\n{}", creative_response);
 
@@ -160,17 +160,14 @@ mod tests {
     async fn test_zhipu_provider_creation() {
         let api_key = "test_key".to_string();
         let provider = ZhipuProvider::new(api_key, Some("glm-4".to_string()));
-        
+
         assert_eq!(provider.name(), "zhipu");
     }
 
     #[tokio::test]
     async fn test_agent_builder_with_zhipu() {
         let api_key = "test_key".to_string();
-        let zhipu_provider = Arc::new(ZhipuProvider::new(
-            api_key,
-            Some("glm-4".to_string()),
-        ));
+        let zhipu_provider = Arc::new(ZhipuProvider::new(api_key, Some("glm-4".to_string())));
 
         let agent = AgentBuilder::new()
             .name("test_agent")

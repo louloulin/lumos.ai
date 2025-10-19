@@ -34,6 +34,12 @@ pub struct CompositeVoice {
     providers: Vec<Box<dyn VoiceProvider>>,
 }
 
+impl Default for CompositeVoice {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CompositeVoice {
     pub fn new() -> Self {
         Self {

@@ -33,7 +33,7 @@ pub enum SessionState {
 }
 
 /// Session context information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SessionContext {
     /// Current topic or focus of the conversation
     pub current_topic: Option<String>,
@@ -190,19 +190,6 @@ impl Default for SessionState {
     }
 }
 
-impl Default for SessionContext {
-    fn default() -> Self {
-        Self {
-            current_topic: None,
-            facts: Vec::new(),
-            open_questions: Vec::new(),
-            action_items: Vec::new(),
-            preferences: HashMap::new(),
-            tags: Vec::new(),
-        }
-    }
-}
-
 impl Default for SessionConfig {
     fn default() -> Self {
         Self {
@@ -222,7 +209,7 @@ impl Session {
     pub fn new(params: CreateSessionParams) -> Self {
         let now = Utc::now();
         let session_id = params.id.unwrap_or_else(|| Uuid::new_v4().to_string());
-        let thread_id = format!("thread_{}", session_id);
+        let thread_id = format!("thread_{session_id}");
 
         Self {
             id: session_id,
@@ -331,8 +318,7 @@ impl Session {
             Ok(())
         } else {
             Err(Error::NotFound(format!(
-                "Action item {} not found",
-                action_id
+                "Action item {action_id} not found"
             )))
         }
     }
@@ -464,7 +450,7 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         let mut session = self
             .get_session(session_id)
             .await?
-            .ok_or_else(|| Error::NotFound(format!("Session {} not found", session_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Session {session_id} not found")))?;
 
         session.update(params)?;
 
@@ -506,7 +492,7 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         let mut session = self
             .get_session(session_id)
             .await?
-            .ok_or_else(|| Error::NotFound(format!("Session {} not found", session_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Session {session_id} not found")))?;
 
         if !session.is_active() {
             return Err(Error::InvalidOperation(
@@ -539,7 +525,7 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         let session = self
             .get_session(session_id)
             .await?
-            .ok_or_else(|| Error::NotFound(format!("Session {} not found", session_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Session {session_id} not found")))?;
 
         let params = super::thread::GetMessagesParams {
             limit,
@@ -604,7 +590,7 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         let session = self
             .get_session(session_id)
             .await?
-            .ok_or_else(|| Error::NotFound(format!("Session {} not found", session_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Session {session_id} not found")))?;
 
         let thread_stats = self
             .thread_manager
@@ -640,7 +626,7 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
                 session
                     .resource_id
                     .as_ref()
-                    .map_or(false, |rid| rid == resource_id)
+                    .is_some_and(|rid| rid == resource_id)
                     && session.is_active()
             })
             .cloned()

@@ -574,8 +574,7 @@ impl Workflow for EnhancedWorkflow {
             Ok(())
         } else {
             Err(Error::NotFound(format!(
-                "Workflow run '{}' not found",
-                run_id
+                "Workflow run '{run_id}' not found"
             )))
         }
     }
@@ -588,14 +587,12 @@ impl Workflow for EnhancedWorkflow {
                     run.input.clone()
                 } else {
                     return Err(Error::InvalidState(format!(
-                        "Workflow run '{}' is not suspended",
-                        run_id
+                        "Workflow run '{run_id}' is not suspended"
                     )));
                 }
             } else {
                 return Err(Error::NotFound(format!(
-                    "Workflow run '{}' not found",
-                    run_id
+                    "Workflow run '{run_id}' not found"
                 )));
             }
         };

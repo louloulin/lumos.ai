@@ -50,20 +50,24 @@ fn camelCaseFunction() {
         "check_comments": true
     });
 
-    match quality_tool.execute(params, context.clone(), &options).await {
+    match quality_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             println!("\n✅ 质量分析结果:");
             println!("  质量评分: {}", result["quality_score"]);
             println!("  代码行数: {}", result["metrics"]["code_lines"]);
             println!("  注释行数: {}", result["metrics"]["comment_lines"]);
             println!("  注释率: {}", result["metrics"]["comment_ratio"]);
-            
+
             if let Some(issues) = result["issues"].as_array() {
                 if !issues.is_empty() {
                     println!("\n  发现的问题:");
                     for (i, issue) in issues.iter().enumerate() {
-                        println!("    {}. [{}] {}", 
-                            i + 1, 
+                        println!(
+                            "    {}. [{}] {}",
+                            i + 1,
                             issue["severity"].as_str().unwrap_or("unknown"),
                             issue["message"].as_str().unwrap_or("unknown")
                         );
@@ -75,7 +79,11 @@ fn camelCaseFunction() {
                 if !suggestions.is_empty() {
                     println!("\n  改进建议:");
                     for (i, suggestion) in suggestions.iter().enumerate() {
-                        println!("    {}. {}", i + 1, suggestion.as_str().unwrap_or("unknown"));
+                        println!(
+                            "    {}. {}",
+                            i + 1,
+                            suggestion.as_str().unwrap_or("unknown")
+                        );
                     }
                 }
             }
@@ -136,7 +144,10 @@ fn complex_function(x: i32, y: i32, z: i32) -> i32 {
         "threshold": 10
     });
 
-    match complexity_tool.execute(params, context.clone(), &options).await {
+    match complexity_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             println!("\n✅ 复杂度分析结果:");
             println!("  圈复杂度: {}", result["cyclomatic_complexity"]);
@@ -149,7 +160,8 @@ fn complex_function(x: i32, y: i32, z: i32) -> i32 {
                 if !warnings.is_empty() {
                     println!("\n  警告:");
                     for (i, warning) in warnings.iter().enumerate() {
-                        println!("    {}. [{}] {}", 
+                        println!(
+                            "    {}. [{}] {}",
                             i + 1,
                             warning["severity"].as_str().unwrap_or("unknown"),
                             warning["message"].as_str().unwrap_or("unknown")
@@ -162,7 +174,8 @@ fn complex_function(x: i32, y: i32, z: i32) -> i32 {
                 if !functions.is_empty() {
                     println!("\n  函数复杂度:");
                     for func in functions {
-                        println!("    - {}: {} ({})", 
+                        println!(
+                            "    - {}: {} ({})",
                             func["name"].as_str().unwrap_or("unknown"),
                             func["complexity"],
                             func["status"].as_str().unwrap_or("unknown")
@@ -212,7 +225,10 @@ fn connect_database() {
         "scan_level": "strict"
     });
 
-    match security_tool.execute(params, context.clone(), &options).await {
+    match security_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             println!("\n✅ 安全扫描结果:");
             println!("  风险评分: {}", result["risk_score"]);
@@ -223,7 +239,8 @@ fn connect_database() {
                 if !vulnerabilities.is_empty() {
                     println!("\n  发现的漏洞:");
                     for (i, vuln) in vulnerabilities.iter().enumerate() {
-                        println!("    {}. [{}] {} - {}", 
+                        println!(
+                            "    {}. [{}] {} - {}",
                             i + 1,
                             vuln["severity"].as_str().unwrap_or("unknown"),
                             vuln["type"].as_str().unwrap_or("unknown"),
@@ -255,7 +272,12 @@ fn connect_database() {
     println!("总共 {} 个代码分析工具:\n", all_tools.len());
 
     for (i, tool) in all_tools.iter().enumerate() {
-        println!("{}. {} - {}", i + 1, tool.name().unwrap_or("unknown"), tool.description());
+        println!(
+            "{}. {} - {}",
+            i + 1,
+            tool.name().unwrap_or("unknown"),
+            tool.description()
+        );
     }
 
     // ========================================================================
@@ -298,12 +320,18 @@ fn main() {
         "check_comments": true
     });
 
-    match code_quality_tool().execute(params, context.clone(), &options).await {
+    match code_quality_tool()
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             println!("\n✅ 质量分析结果:");
             println!("  质量评分: {}", result["quality_score"]);
             println!("  注释率: {}", result["metrics"]["comment_ratio"]);
-            println!("  问题数量: {}", result["issues"].as_array().map(|a| a.len()).unwrap_or(0));
+            println!(
+                "  问题数量: {}",
+                result["issues"].as_array().map(|a| a.len()).unwrap_or(0)
+            );
         }
         Err(e) => println!("❌ 分析失败: {}", e),
     }
@@ -333,4 +361,3 @@ fn main() {
 
     Ok(())
 }
-

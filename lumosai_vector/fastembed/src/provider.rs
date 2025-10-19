@@ -167,7 +167,7 @@ impl FastEmbedProvider {
                 chunk.iter().map(|text| self.truncate_text(text)).collect();
 
             let embeddings = model.embed(processed_texts, None).map_err(|e| {
-                FastEmbedError::EmbeddingGeneration(format!("FastEmbed embedding failed: {}", e))
+                FastEmbedError::EmbeddingGeneration(format!("FastEmbed embedding failed: {e}"))
             })?;
 
             all_embeddings.extend(embeddings);
@@ -310,7 +310,7 @@ mod tests {
             }
             Err(e) => {
                 // Log the error but don't fail the test in case models aren't available
-                eprintln!("FastEmbed model not available (this is OK in CI): {}", e);
+                eprintln!("FastEmbed model not available (this is OK in CI): {e}");
             }
         }
     }

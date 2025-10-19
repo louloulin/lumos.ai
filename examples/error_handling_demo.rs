@@ -44,7 +44,7 @@ async fn main() {
         Ok(_) => println!("❌ 应该返回错误"),
         Err(e) => println!("✅ 正确返回错误: {:?}", e),
     }
-    
+
     // 测试 2: 参数类型不匹配 (字符串)
     println!("\n📋 测试 2: 参数类型不匹配 (字符串)");
     println!("{}", "-".repeat(80));
@@ -67,7 +67,7 @@ async fn main() {
         Ok(_) => println!("❌ 应该返回错误"),
         Err(e) => println!("✅ 正确返回错误: {:?}", e),
     }
-    
+
     // 测试 4: 参数类型不匹配 (布尔值)
     println!("\n📋 测试 4: 参数类型不匹配 (布尔值)");
     println!("{}", "-".repeat(80));
@@ -85,7 +85,7 @@ async fn main() {
     println!("\n📋 测试 5: Value 类型参数 (应该接受任何 JSON 值)");
     println!("{}", "-".repeat(80));
     let tool = http_post_tool();
-    
+
     let test_cases = vec![
         ("对象", json!({"test": "data"})),
         ("数组", json!([1, 2, 3])),
@@ -93,19 +93,19 @@ async fn main() {
         ("数字", json!(123)),
         ("布尔值", json!(true)),
     ];
-    
+
     for (name, body) in test_cases {
         let params = json!({
             "url": "https://api.example.com/test",
             "body": body
         });
-        
+
         match tool.execute(params, context.clone(), &options).await {
             Ok(_) => println!("✅ {} 类型正确接受", name),
             Err(e) => println!("❌ {} 类型错误拒绝: {:?}", name, e),
         }
     }
-    
+
     // 测试 6: 可选参数缺失
     println!("\n📋 测试 6: 可选参数缺失");
     println!("{}", "-".repeat(80));
@@ -143,7 +143,7 @@ async fn main() {
         Ok(_) => println!("✅ 额外参数正确被忽略"),
         Err(e) => println!("❌ 不应该返回错误: {:?}", e),
     }
-    
+
     // 测试 9: 空字符串参数
     println!("\n📋 测试 9: 空字符串参数");
     println!("{}", "-".repeat(80));
@@ -201,7 +201,7 @@ async fn main() {
         }
         Err(e) => println!("❌ 不应该返回错误: {:?}", e),
     }
-    
+
     // 测试 12: 数组参数
     println!("\n📋 测试 12: 数组参数");
     println!("{}", "-".repeat(80));
@@ -221,4 +221,3 @@ async fn main() {
     println!("\n{}", "=".repeat(80));
     println!("✅ 错误处理演示完成！");
 }
-

@@ -7,7 +7,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::dynamic_config::{DynamicArgument, EnhancedRuntimeContext, DynamicConfigResolver, static_arg};
+use super::dynamic_config::{DynamicArgument, DynamicConfigResolver, EnhancedRuntimeContext};
 use super::trait_def::Agent;
 use super::types::{TelemetrySettings, VoiceConfig};
 use super::{AgentConfig, BasicAgent, ModelResolver};
@@ -525,9 +525,9 @@ impl AgentBuilder {
             let name = self
                 .name
                 .ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
-            let instructions = self
-                .instructions
-                .ok_or_else(|| Error::Configuration("Agent instructions are required".to_string()))?;
+            let instructions = self.instructions.ok_or_else(|| {
+                Error::Configuration("Agent instructions are required".to_string())
+            })?;
             (name, instructions, self.model_name.clone())
         };
 
@@ -574,16 +574,20 @@ impl AgentBuilder {
 
     /// 解析动态配置 - 对标 Mastra 的动态参数解析
     async fn resolve_dynamic_config(&self) -> Result<(String, String, Option<String>)> {
-        let context = self.runtime_context.as_ref()
-            .ok_or_else(|| Error::Configuration("Runtime context is required for dynamic config".to_string()))?;
+        let context = self.runtime_context.as_ref().ok_or_else(|| {
+            Error::Configuration("Runtime context is required for dynamic config".to_string())
+        })?;
 
         let resolver = DynamicConfigResolver;
 
         // 解析动态指令
         let instructions = if let Some(dynamic_instructions) = &self.dynamic_instructions {
-            resolver.resolve_string(dynamic_instructions, context).await?
+            resolver
+                .resolve_string(dynamic_instructions, context)
+                .await?
         } else {
-            self.instructions.clone()
+            self.instructions
+                .clone()
                 .ok_or_else(|| Error::Configuration("Instructions are required".to_string()))?
         };
 
@@ -595,7 +599,9 @@ impl AgentBuilder {
         };
 
         // 解析名称（目前使用静态值，可以扩展为动态）
-        let name = self.name.clone()
+        let name = self
+            .name
+            .clone()
             .ok_or_else(|| Error::Configuration("Agent name is required".to_string()))?;
 
         Ok((name, instructions, model_name))

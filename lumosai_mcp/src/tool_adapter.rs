@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use lumosai_core::base::Base;
-use lumosai_core::error::{Error as CoreError, Result as CoreResult};
 use lumosai_core::compat::Component as LogComponent;
-use lumosai_core::logger::{Logger, LogLevel, default_logger};
+use lumosai_core::error::{Error as CoreError, Result as CoreResult};
+use lumosai_core::logger::{default_logger, LogLevel, Logger};
 use lumosai_core::telemetry::TelemetrySink;
 use lumosai_core::tool::{
     ParameterSchema, SchemaFormat, Tool as LumosTool, ToolExecutionContext, ToolExecutionOptions,

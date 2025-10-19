@@ -2,16 +2,15 @@
 //!
 //! 提供Agent之间的消息传递、协作和协调功能
 
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock, Mutex};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
 
-use crate::error::{Error, Result};
-use crate::llm::Message;
 use crate::agent::Agent;
+use crate::error::{Error, Result};
 
 /// Agent通信消息类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -204,8 +203,11 @@ impl AgentCommunicationManager {
         let agent_id_clone = agent_id.clone();
         tokio::spawn(async move {
             while let Some(message) = receiver.recv().await {
-                if let Err(e) = manager.handle_agent_message(agent_id_clone.clone(), message).await {
-                    eprintln!("处理Agent消息时出错: {}", e);
+                if let Err(e) = manager
+                    .handle_agent_message(agent_id_clone.clone(), message)
+                    .await
+                {
+                    eprintln!("处理Agent消息时出错: {e}");
                 }
             }
         });
@@ -232,11 +234,13 @@ impl AgentCommunicationManager {
     pub async fn send_message(&self, message: AgentMessage) -> Result<()> {
         // 检查接收者是否存在
         let routes = self.message_routes.read().await;
-        let sender = routes.get(&message.receiver_id)
+        let sender = routes
+            .get(&message.receiver_id)
             .ok_or_else(|| Error::InvalidInput(format!("Agent {} 不存在", message.receiver_id)))?;
 
         // 发送消息
-        sender.send(message.clone())
+        sender
+            .send(message.clone())
             .map_err(|_| Error::InvalidInput("发送消息失败".to_string()))?;
 
         // 记录消息历史
@@ -262,14 +266,20 @@ impl AgentCommunicationManager {
         self.send_message(message).await?;
 
         // 等待响应
-        let response = response_receiver.await
+        let response = response_receiver
+            .await
             .map_err(|_| Error::InvalidInput("等待响应超时".to_string()))?;
 
         Ok(response)
     }
 
     /// 广播消息
-    pub async fn broadcast_message(&self, sender_id: String, message_type: AgentMessageType, content: Value) -> Result<()> {
+    pub async fn broadcast_message(
+        &self,
+        sender_id: String,
+        message_type: AgentMessageType,
+        content: Value,
+    ) -> Result<()> {
         let agents = self.agents.read().await;
         let routes = self.message_routes.read().await;
 
@@ -342,9 +352,16 @@ impl AgentCommunicationManager {
     }
 
     /// 添加消息处理器
-    pub async fn add_message_handler(&self, message_type: AgentMessageType, handler: MessageHandler) {
+    pub async fn add_message_handler(
+        &self,
+        message_type: AgentMessageType,
+        handler: MessageHandler,
+    ) {
         let mut handlers = self.message_handlers.write().await;
-        handlers.entry(message_type).or_insert_with(Vec::new).push(handler);
+        handlers
+            .entry(message_type)
+            .or_insert_with(Vec::new)
+            .push(handler);
     }
 
     /// 获取已注册的Agent列表

@@ -111,24 +111,22 @@ impl LanceDbStorage {
                 let formatted_values: std::result::Result<Vec<String>, LanceDbError> =
                     values.iter().map(|v| self.format_value(v)).collect();
                 let values_str = formatted_values?.join(", ");
-                Ok(format!("{} IN ({})", field, values_str))
+                Ok(format!("{field} IN ({values_str})"))
             }
             FilterCondition::NotIn(field, values) => {
                 let formatted_values: std::result::Result<Vec<String>, LanceDbError> =
                     values.iter().map(|v| self.format_value(v)).collect();
                 let values_str = formatted_values?.join(", ");
-                Ok(format!("{} NOT IN ({})", field, values_str))
+                Ok(format!("{field} NOT IN ({values_str})"))
             }
-            FilterCondition::Exists(field) => Ok(format!("{} IS NOT NULL", field)),
-            FilterCondition::NotExists(field) => Ok(format!("{} IS NULL", field)),
+            FilterCondition::Exists(field) => Ok(format!("{field} IS NOT NULL")),
+            FilterCondition::NotExists(field) => Ok(format!("{field} IS NULL")),
             FilterCondition::Contains(field, substring) => {
-                Ok(format!("{} LIKE '%{}%'", field, substring))
+                Ok(format!("{field} LIKE '%{substring}%'"))
             }
-            FilterCondition::StartsWith(field, prefix) => {
-                Ok(format!("{} LIKE '{}%'", field, prefix))
-            }
-            FilterCondition::EndsWith(field, suffix) => Ok(format!("{} LIKE '%{}'", field, suffix)),
-            FilterCondition::Regex(field, pattern) => Ok(format!("{} REGEXP '{}'", field, pattern)),
+            FilterCondition::StartsWith(field, prefix) => Ok(format!("{field} LIKE '{prefix}%'")),
+            FilterCondition::EndsWith(field, suffix) => Ok(format!("{field} LIKE '%{suffix}'")),
+            FilterCondition::Regex(field, pattern) => Ok(format!("{field} REGEXP '{pattern}'")),
             FilterCondition::And(conditions) => {
                 let expressions: std::result::Result<Vec<String>, LanceDbError> = conditions
                     .iter()
@@ -145,7 +143,7 @@ impl LanceDbStorage {
             }
             FilterCondition::Not(condition) => {
                 let expression = self.build_filter_expression(condition)?;
-                Ok(format!("NOT ({})", expression))
+                Ok(format!("NOT ({expression})"))
             }
         }
     }
@@ -222,7 +220,7 @@ impl VectorStorage for LanceDbStorage {
             )
             .execute()
             .await
-            .map_err(|e| LanceDbError::from(e))?;
+            .map_err(LanceDbError::from)?;
 
         // Create index if auto-create is enabled and index type is specified
         if self.config.index_config.auto_create_index {
@@ -239,7 +237,7 @@ impl VectorStorage for LanceDbStorage {
                             )
                             .execute()
                             .await
-                            .map_err(|e| LanceDbError::from(e))?;
+                            .map_err(LanceDbError::from)?;
                     }
                 }
                 crate::config::IndexType::IVFPQ => {
@@ -259,7 +257,7 @@ impl VectorStorage for LanceDbStorage {
                         .create_index(&["vector"], lancedb::index::Index::IvfPq(builder))
                         .execute()
                         .await
-                        .map_err(|e| LanceDbError::from(e))?;
+                        .map_err(LanceDbError::from)?;
                 }
                 crate::config::IndexType::HNSW => {
                     // HNSW index creation (if supported by LanceDB version)
@@ -293,23 +291,18 @@ impl VectorStorage for LanceDbStorage {
             .await
             .map_err(VectorError::from)?
         {
-            return Err(
-                LanceDbError::not_found(format!("Index '{}' not found", index_name)).into(),
-            );
+            return Err(LanceDbError::not_found(format!("Index '{index_name}' not found")).into());
         }
 
         let table = db
             .open_table(index_name)
             .execute()
             .await
-            .map_err(|e| LanceDbError::from(e))?;
+            .map_err(LanceDbError::from)?;
 
         // Get table statistics
-        let count = table
-            .count_rows(None)
-            .await
-            .map_err(|e| LanceDbError::from(e))?;
-        let schema = table.schema().await.map_err(|e| LanceDbError::from(e))?;
+        let count = table.count_rows(None).await.map_err(LanceDbError::from)?;
+        let schema = table.schema().await.map_err(LanceDbError::from)?;
 
         // Extract vector dimension from schema
         let vector_field = schema
@@ -343,9 +336,7 @@ impl VectorStorage for LanceDbStorage {
             .await
             .map_err(VectorError::from)?
         {
-            return Err(
-                LanceDbError::not_found(format!("Index '{}' not found", index_name)).into(),
-            );
+            return Err(LanceDbError::not_found(format!("Index '{index_name}' not found")).into());
         }
 
         self.client
@@ -377,9 +368,7 @@ impl VectorStorage for LanceDbStorage {
             .await
             .map_err(VectorError::from)?
         {
-            return Err(
-                LanceDbError::not_found(format!("Index '{}' not found", index_name)).into(),
-            );
+            return Err(LanceDbError::not_found(format!("Index '{index_name}' not found")).into());
         }
 
         // Validate documents have embeddings
@@ -409,7 +398,7 @@ impl VectorStorage for LanceDbStorage {
             .open_table(index_name)
             .execute()
             .await
-            .map_err(|e| LanceDbError::from(e))?;
+            .map_err(LanceDbError::from)?;
 
         // Use add operation for inserting data
         table
@@ -419,7 +408,7 @@ impl VectorStorage for LanceDbStorage {
             ))
             .execute()
             .await
-            .map_err(|e| LanceDbError::from(e))?;
+            .map_err(LanceDbError::from)?;
 
         // Return document IDs
         Ok(documents.into_iter().map(|doc| doc.id).collect())
@@ -445,7 +434,7 @@ impl VectorStorage for LanceDbStorage {
             .open_table(&request.index_name)
             .execute()
             .await
-            .map_err(|e| LanceDbError::from(e))?;
+            .map_err(LanceDbError::from)?;
 
         // Build query - extract vector from SearchQuery
         let vector = match &request.query {
@@ -459,7 +448,7 @@ impl VectorStorage for LanceDbStorage {
 
         let mut query = table
             .vector_search(vector)
-            .map_err(|e| LanceDbError::from(e))?
+            .map_err(LanceDbError::from)?
             .limit(request.top_k);
 
         // Add filter if provided
@@ -474,15 +463,11 @@ impl VectorStorage for LanceDbStorage {
         // LanceDB 0.20.0 doesn't support runtime metric changes in vector search
 
         // Execute query
-        let mut results = query.execute().await.map_err(|e| LanceDbError::from(e))?;
+        let mut results = query.execute().await.map_err(LanceDbError::from)?;
 
         // Collect all batches from the stream
         let mut all_batches = Vec::new();
-        while let Some(batch) = results
-            .try_next()
-            .await
-            .map_err(|e| LanceDbError::from(e))?
-        {
+        while let Some(batch) = results.try_next().await.map_err(LanceDbError::from)? {
             all_batches.push(batch);
         }
 
@@ -538,26 +523,24 @@ impl VectorStorage for LanceDbStorage {
             .await
             .map_err(VectorError::from)?
         {
-            return Err(
-                LanceDbError::not_found(format!("Index '{}' not found", index_name)).into(),
-            );
+            return Err(LanceDbError::not_found(format!("Index '{index_name}' not found")).into());
         }
 
         let table = db
             .open_table(index_name)
             .execute()
             .await
-            .map_err(|e| LanceDbError::from(e))?;
+            .map_err(LanceDbError::from)?;
 
         // Build delete condition
-        let ids_str: Vec<String> = ids.iter().map(|id| format!("'{}'", id)).collect();
+        let ids_str: Vec<String> = ids.iter().map(|id| format!("'{id}'")).collect();
         let delete_condition = format!("id IN ({})", ids_str.join(", "));
 
         // Execute delete
         table
             .delete(&delete_condition)
             .await
-            .map_err(|e| LanceDbError::from(e))?;
+            .map_err(LanceDbError::from)?;
 
         Ok(())
     }
@@ -580,19 +563,17 @@ impl VectorStorage for LanceDbStorage {
             .await
             .map_err(VectorError::from)?
         {
-            return Err(
-                LanceDbError::not_found(format!("Index '{}' not found", index_name)).into(),
-            );
+            return Err(LanceDbError::not_found(format!("Index '{index_name}' not found")).into());
         }
 
         let table = db
             .open_table(index_name)
             .execute()
             .await
-            .map_err(|e| LanceDbError::from(e))?;
+            .map_err(LanceDbError::from)?;
 
         // Build query condition
-        let ids_str: Vec<String> = ids.iter().map(|id| format!("'{}'", id)).collect();
+        let ids_str: Vec<String> = ids.iter().map(|id| format!("'{id}'")).collect();
         let condition = format!("id IN ({})", ids_str.join(", "));
 
         // Select columns based on include_vectors flag
@@ -618,15 +599,11 @@ impl VectorStorage for LanceDbStorage {
             .select(lancedb::query::Select::Columns(columns))
             .execute()
             .await
-            .map_err(|e| LanceDbError::from(e))?;
+            .map_err(LanceDbError::from)?;
 
         // Collect all batches from the stream
         let mut all_batches = Vec::new();
-        while let Some(batch) = results
-            .try_next()
-            .await
-            .map_err(|e| LanceDbError::from(e))?
-        {
+        while let Some(batch) = results.try_next().await.map_err(LanceDbError::from)? {
             all_batches.push(batch);
         }
 

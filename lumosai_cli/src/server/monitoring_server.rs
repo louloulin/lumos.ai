@@ -16,7 +16,9 @@ use tokio::sync::RwLock;
 
 use crate::error::{CliError, CliResult};
 use crate::util::get_available_port;
-use lumosai_core::compat::{MetricsCollector, TraceCollector, MetricValue, InMemoryMetricsCollector};
+use lumosai_core::compat::{
+    InMemoryMetricsCollector, MetricValue, MetricsCollector, TraceCollector,
+};
 
 // 临时结构体定义，用于监控服务器
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -473,7 +475,10 @@ async fn get_metrics_summary(
     let to_time = query.get("to").and_then(|s| s.parse::<u64>().ok());
 
     // 临时实现 - 创建默认的指标摘要
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
     let start_time = from_time.unwrap_or(now - (24 * 60 * 60 * 1000));
     let end_time = to_time.unwrap_or(now);
 

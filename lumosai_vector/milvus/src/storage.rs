@@ -150,7 +150,7 @@ impl MilvusStorage {
                     formatted_values.push(self.format_value(value)?);
                 }
                 let values_str = formatted_values.join(", ");
-                Ok(format!("{} in [{}]", field, values_str))
+                Ok(format!("{field} in [{values_str}]"))
             }
             FilterCondition::NotIn(field, values) => {
                 let mut formatted_values = Vec::new();
@@ -158,25 +158,23 @@ impl MilvusStorage {
                     formatted_values.push(self.format_value(value)?);
                 }
                 let values_str = formatted_values.join(", ");
-                Ok(format!("{} not in [{}]", field, values_str))
+                Ok(format!("{field} not in [{values_str}]"))
             }
-            FilterCondition::Exists(field) => Ok(format!("{} != null", field)),
-            FilterCondition::NotExists(field) => Ok(format!("{} == null", field)),
+            FilterCondition::Exists(field) => Ok(format!("{field} != null")),
+            FilterCondition::NotExists(field) => Ok(format!("{field} == null")),
             FilterCondition::Contains(field, substring) => {
                 // Milvus doesn't have direct string contains, use JSON contains for metadata
                 if field == "metadata" {
-                    Ok(format!("JSON_CONTAINS({}, '\"{}\"')", field, substring))
+                    Ok(format!("JSON_CONTAINS({field}, '\"{substring}\"')"))
                 } else {
-                    Ok(format!("{} like '%{}%'", field, substring))
+                    Ok(format!("{field} like '%{substring}%'"))
                 }
             }
-            FilterCondition::StartsWith(field, prefix) => {
-                Ok(format!("{} like '{}%'", field, prefix))
-            }
-            FilterCondition::EndsWith(field, suffix) => Ok(format!("{} like '%{}'", field, suffix)),
+            FilterCondition::StartsWith(field, prefix) => Ok(format!("{field} like '{prefix}%'")),
+            FilterCondition::EndsWith(field, suffix) => Ok(format!("{field} like '%{suffix}'")),
             FilterCondition::Regex(field, pattern) => {
                 // Milvus doesn't support regex directly, convert to like if possible
-                Ok(format!("{} like '{}'", field, pattern))
+                Ok(format!("{field} like '{pattern}'"))
             }
             FilterCondition::And(conditions) => {
                 let mut expressions = Vec::new();
@@ -194,7 +192,7 @@ impl MilvusStorage {
             }
             FilterCondition::Not(condition) => {
                 let expression = self.build_filter_expression(condition)?;
-                Ok(format!("not ({})", expression))
+                Ok(format!("not ({expression})"))
             }
         }
     }
@@ -227,7 +225,7 @@ impl VectorStorage for MilvusStorage {
             .client
             .has_collection(&config.name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+            .map_err(lumosai_vector_core::error::VectorError::from)?
         {
             return Err(lumosai_vector_core::error::VectorError::IndexAlreadyExists(
                 format!("Collection '{}' already exists", config.name),
@@ -241,7 +239,7 @@ impl VectorStorage for MilvusStorage {
         self.client
             .create_collection(schema)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
 
         // Create index if auto-create is enabled
         if self.config.index_config.auto_create_index {
@@ -253,7 +251,7 @@ impl VectorStorage for MilvusStorage {
             self.client
                 .create_index(&config.name, "vector", index_type, metric_type, params)
                 .await
-                .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+                .map_err(lumosai_vector_core::error::VectorError::from)?;
         }
 
         Ok(())
@@ -264,7 +262,7 @@ impl VectorStorage for MilvusStorage {
             .client
             .list_collections()
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
         Ok(collections)
     }
 
@@ -273,10 +271,10 @@ impl VectorStorage for MilvusStorage {
             .client
             .has_collection(index_name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+            .map_err(lumosai_vector_core::error::VectorError::from)?
         {
             return Err(
-                MilvusError::not_found(format!("Collection '{}' not found", index_name)).into(),
+                MilvusError::not_found(format!("Collection '{index_name}' not found")).into(),
             );
         }
 
@@ -284,12 +282,12 @@ impl VectorStorage for MilvusStorage {
             .client
             .describe_collection(index_name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
         let stats = self
             .client
             .get_collection_stats(index_name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
 
         // Extract vector dimension from schema
         let dimension = collection_info
@@ -318,17 +316,17 @@ impl VectorStorage for MilvusStorage {
             .client
             .has_collection(index_name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+            .map_err(lumosai_vector_core::error::VectorError::from)?
         {
             return Err(lumosai_vector_core::error::VectorError::IndexNotFound(
-                format!("Collection '{}' not found", index_name),
+                format!("Collection '{index_name}' not found"),
             ));
         }
 
         self.client
             .drop_collection(index_name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
         Ok(())
     }
 
@@ -345,10 +343,10 @@ impl VectorStorage for MilvusStorage {
             .client
             .has_collection(index_name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+            .map_err(lumosai_vector_core::error::VectorError::from)?
         {
             return Err(lumosai_vector_core::error::VectorError::IndexNotFound(
-                format!("Collection '{}' not found", index_name),
+                format!("Collection '{index_name}' not found"),
             ));
         }
 
@@ -363,7 +361,7 @@ impl VectorStorage for MilvusStorage {
 
         // Convert documents to Milvus entities
         let entities = utils::documents_to_entities(&documents)
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
 
         // Insert entities in batches
         let batch_size = self.config.performance.batch_size;
@@ -371,7 +369,7 @@ impl VectorStorage for MilvusStorage {
             self.client
                 .insert(index_name, chunk)
                 .await
-                .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+                .map_err(lumosai_vector_core::error::VectorError::from)?;
         }
 
         // Return document IDs
@@ -383,7 +381,7 @@ impl VectorStorage for MilvusStorage {
             .client
             .has_collection(&request.index_name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+            .map_err(lumosai_vector_core::error::VectorError::from)?
         {
             return Err(lumosai_vector_core::error::VectorError::IndexNotFound(
                 format!("Collection '{}' not found", request.index_name),
@@ -418,7 +416,7 @@ impl VectorStorage for MilvusStorage {
             .as_ref()
             .map(|f| self.build_filter_expression(f))
             .transpose()
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
 
         let search_response = self
             .client
@@ -432,7 +430,7 @@ impl VectorStorage for MilvusStorage {
                 filter_expr.as_deref(),
             )
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
 
         // Convert Milvus response to SearchResponse
         let mut results = Vec::new();
@@ -481,22 +479,22 @@ impl VectorStorage for MilvusStorage {
             .client
             .has_collection(index_name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+            .map_err(lumosai_vector_core::error::VectorError::from)?
         {
             return Err(lumosai_vector_core::error::VectorError::index_not_found(
-                format!("Collection '{}' not found", index_name),
+                format!("Collection '{index_name}' not found"),
             ));
         }
 
         // Build delete expression
-        let ids_str: Vec<String> = ids.iter().map(|id| format!("\"{}\"", id)).collect();
+        let ids_str: Vec<String> = ids.iter().map(|id| format!("\"{id}\"")).collect();
         let delete_expr = format!("id in [{}]", ids_str.join(", "));
 
         // Execute delete
         self.client
             .delete(index_name, &delete_expr)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
 
         Ok(())
     }
@@ -515,15 +513,15 @@ impl VectorStorage for MilvusStorage {
             .client
             .has_collection(index_name)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?
+            .map_err(lumosai_vector_core::error::VectorError::from)?
         {
             return Err(lumosai_vector_core::error::VectorError::IndexNotFound(
-                format!("Collection '{}' not found", index_name),
+                format!("Collection '{index_name}' not found"),
             ));
         }
 
         // Build query expression
-        let ids_str: Vec<String> = ids.iter().map(|id| format!("\"{}\"", id)).collect();
+        let ids_str: Vec<String> = ids.iter().map(|id| format!("\"{id}\"")).collect();
         let query_expr = format!("id in [{}]", ids_str.join(", "));
 
         // Select fields based on include_vectors flag
@@ -547,7 +545,7 @@ impl VectorStorage for MilvusStorage {
             .client
             .query(index_name, &query_expr, &output_fields, None, None)
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
 
         // Convert response to documents
         // This is a simplified implementation - in practice, you'd need to parse the field data properly
@@ -572,7 +570,7 @@ impl VectorStorage for MilvusStorage {
             .client
             .health_check()
             .await
-            .map_err(|e| lumosai_vector_core::error::VectorError::from(e))?;
+            .map_err(lumosai_vector_core::error::VectorError::from)?;
 
         if is_healthy {
             Ok(())

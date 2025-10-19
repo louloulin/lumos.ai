@@ -306,7 +306,7 @@ impl EventBus {
 
         // 广播事件
         if let Err(e) = self.sender.send(event.clone()) {
-            return Err(Error::Event(format!("Failed to broadcast event: {}", e)));
+            return Err(Error::Event(format!("Failed to broadcast event: {e}")));
         }
 
         // 调用注册的处理器

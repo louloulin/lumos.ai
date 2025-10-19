@@ -4,7 +4,9 @@
 
 use lumosai_rag::{
     document::{AdaptiveChunker, SemanticChunker, SmartChunker},
-    embedding::{EmbeddingProvider, LocalEmbeddingProvider, ZhipuEmbeddingProvider, CachedEmbeddingProvider},
+    embedding::{
+        CachedEmbeddingProvider, EmbeddingProvider, LocalEmbeddingProvider, ZhipuEmbeddingProvider,
+    },
     retriever::{CrossEncoderReranker, DiversityReranker, LLMReranker, Reranker},
     types::{Document, Metadata, ScoredDocument},
 };
@@ -60,13 +62,13 @@ async fn main() {
 async fn test_smart_chunking() {
     // 场景 1: 语义分块
     println!("场景 1: 语义分块");
-    
+
     let embedding_provider = Arc::new(LocalEmbeddingProvider::new(128));
     let semantic_chunker = SemanticChunker::new(
         embedding_provider.clone(),
-        0.7,  // 相似度阈值
-        100,  // 最小块大小
-        500,  // 最大块大小
+        0.7, // 相似度阈值
+        100, // 最小块大小
+        500, // 最大块大小
     );
 
     let doc = create_test_document(
@@ -92,7 +94,7 @@ async fn test_smart_chunking() {
 
     // 场景 2: 自适应分块
     println!("场景 2: 自适应分块");
-    
+
     let adaptive_chunker = AdaptiveChunker::new(200, 50);
 
     let code_doc = create_test_document(
@@ -119,7 +121,7 @@ async fn test_smart_chunking() {
 async fn test_embedding_providers() {
     // 场景 1: 本地嵌入提供商
     println!("场景 1: 本地嵌入提供商");
-    
+
     let local_provider = LocalEmbeddingProvider::new(128);
     let text = "这是一个测试文本";
 
@@ -137,7 +139,7 @@ async fn test_embedding_providers() {
 
     // 场景 2: 缓存嵌入提供商
     println!("场景 2: 缓存嵌入提供商");
-    
+
     let inner = Box::new(LocalEmbeddingProvider::new(64));
     let cached_provider = CachedEmbeddingProvider::new(inner, 100);
 
@@ -159,9 +161,9 @@ async fn test_embedding_providers() {
 
     // 场景 3: 智谱 AI 嵌入提供商（需要 API 密钥）
     println!("场景 3: 智谱 AI 嵌入提供商");
-    
-    let api_key = std::env::var("ZHIPU_API_KEY")
-        .unwrap_or_else(|_| "your-api-key-here".to_string());
+
+    let api_key =
+        std::env::var("ZHIPU_API_KEY").unwrap_or_else(|_| "your-api-key-here".to_string());
 
     if api_key == "your-api-key-here" {
         println!("  ⚠️  请设置环境变量 ZHIPU_API_KEY 以测试智谱 AI 嵌入");
@@ -192,14 +194,19 @@ async fn test_reranking() {
 
     // 场景 1: 交叉编码器重排序
     println!("场景 1: 交叉编码器重排序");
-    
+
     let cross_encoder = CrossEncoderReranker::new("test-model", Some(3));
     match cross_encoder.rerank(query, documents.clone()).await {
         Ok(reranked) => {
             println!("  ✅ 交叉编码器重排序成功");
             println!("  返回文档数: {}", reranked.len());
             for (i, doc) in reranked.iter().enumerate() {
-                println!("  排名 {}: {} (分数: {:.3})", i + 1, doc.document.id, doc.score);
+                println!(
+                    "  排名 {}: {} (分数: {:.3})",
+                    i + 1,
+                    doc.document.id,
+                    doc.score
+                );
             }
         }
         Err(e) => {
@@ -210,14 +217,19 @@ async fn test_reranking() {
 
     // 场景 2: LLM 重排序
     println!("场景 2: LLM 重排序");
-    
+
     let llm_reranker = LLMReranker::new("gpt-4", Some(3));
     match llm_reranker.rerank(query, documents.clone()).await {
         Ok(reranked) => {
             println!("  ✅ LLM 重排序成功");
             println!("  返回文档数: {}", reranked.len());
             for (i, doc) in reranked.iter().enumerate() {
-                println!("  排名 {}: {} (分数: {:.3})", i + 1, doc.document.id, doc.score);
+                println!(
+                    "  排名 {}: {} (分数: {:.3})",
+                    i + 1,
+                    doc.document.id,
+                    doc.score
+                );
             }
         }
         Err(e) => {
@@ -228,14 +240,19 @@ async fn test_reranking() {
 
     // 场景 3: 多样性重排序
     println!("场景 3: 多样性重排序");
-    
+
     let diversity_reranker = DiversityReranker::new(0.5, Some(3));
     match diversity_reranker.rerank(query, documents.clone()).await {
         Ok(reranked) => {
             println!("  ✅ 多样性重排序成功");
             println!("  返回文档数: {}", reranked.len());
             for (i, doc) in reranked.iter().enumerate() {
-                println!("  排名 {}: {} (分数: {:.3})", i + 1, doc.document.id, doc.score);
+                println!(
+                    "  排名 {}: {} (分数: {:.3})",
+                    i + 1,
+                    doc.document.id,
+                    doc.score
+                );
             }
         }
         Err(e) => {
@@ -261,4 +278,3 @@ fn create_scored_document(id: &str, content: &str, score: f32) -> ScoredDocument
         score,
     }
 }
-

@@ -409,8 +409,7 @@ impl LlmProvider for QwenProvider {
                 let response_json: OpenAICompatResponse = serde_json::from_str(&response_text)
                     .map_err(|e| {
                         Error::Llm(format!(
-                            "Failed to parse response: {}\nResponse text: {}",
-                            e, response_text
+                            "Failed to parse response: {e}\nResponse text: {response_text}"
                         ))
                     })?;
 
@@ -474,8 +473,7 @@ impl LlmProvider for QwenProvider {
                 let response_json: DashScopeResponse = serde_json::from_str(&response_text)
                     .map_err(|e| {
                         Error::Llm(format!(
-                            "Failed to parse response: {}\nResponse text: {}",
-                            e, response_text
+                            "Failed to parse response: {e}\nResponse text: {response_text}"
                         ))
                     })?;
 

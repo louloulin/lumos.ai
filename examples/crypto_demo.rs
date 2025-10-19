@@ -16,10 +16,10 @@ async fn main() {
     // 测试 1: 哈希计算
     println!("🔑 测试 1: 哈希计算");
     println!("{}", "-".repeat(80));
-    
+
     let tools = get_all_crypto_tools();
     let hash_tool = &tools[0];
-    
+
     println!("工具名称: {}", hash_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", hash_tool.description());
     println!();
@@ -29,7 +29,7 @@ async fn main() {
     println!();
 
     let algorithms = vec!["md5", "sha1", "sha256", "sha512"];
-    
+
     for algo in algorithms {
         let params = json!({
             "input": test_data,
@@ -51,16 +51,16 @@ async fn main() {
     // 测试 2: 对称加密
     println!("🔒 测试 2: 对称加密");
     println!("{}", "-".repeat(80));
-    
+
     let encrypt_tool = &tools[1];
-    
+
     println!("工具名称: {}", encrypt_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", encrypt_tool.description());
     println!();
 
     let plaintext = "This is a secret message!";
     let key = "my-super-secret-key-32-bytes!";
-    
+
     println!("明文: {}", plaintext);
     println!("密钥: {}", key);
     println!();
@@ -73,7 +73,7 @@ async fn main() {
 
     for (desc, algo) in encryption_scenarios {
         println!("加密算法: {}", desc);
-        
+
         let params = json!({
             "plaintext": plaintext,
             "key": key,
@@ -81,7 +81,10 @@ async fn main() {
             "encoding": "base64"
         });
 
-        match encrypt_tool.execute(params, context.clone(), &options).await {
+        match encrypt_tool
+            .execute(params, context.clone(), &options)
+            .await
+        {
             Ok(result) => {
                 if result["success"] == true {
                     println!("  ✅ 加密成功:");
@@ -104,9 +107,9 @@ async fn main() {
     // 测试 3: 对称解密
     println!("🔓 测试 3: 对称解密");
     println!("{}", "-".repeat(80));
-    
+
     let decrypt_tool = &tools[2];
-    
+
     println!("工具名称: {}", decrypt_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", decrypt_tool.description());
     println!();
@@ -114,7 +117,7 @@ async fn main() {
     let ciphertext = "U2FsdGVkX1+vupppZksvRf5pq5g5XjFRlipRkwB0K1Y=";
     let iv = "1234567890abcdef";
     let tag = "fedcba0987654321";
-    
+
     println!("密文: {}", ciphertext);
     println!("IV: {}", iv);
     println!("认证标签: {}", tag);
@@ -128,7 +131,10 @@ async fn main() {
         "tag": tag
     });
 
-    match decrypt_tool.execute(params, context.clone(), &options).await {
+    match decrypt_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             if result["success"] == true {
                 println!("✅ 解密成功:");
@@ -146,9 +152,9 @@ async fn main() {
     // 测试 4: 密码生成
     println!("🎲 测试 4: 密码生成");
     println!("{}", "-".repeat(80));
-    
+
     let password_tool = &tools[3];
-    
+
     println!("工具名称: {}", password_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", password_tool.description());
     println!();
@@ -158,7 +164,7 @@ async fn main() {
             "场景 1: 默认配置（16字符）",
             json!({
                 "length": 16
-            })
+            }),
         ),
         (
             "场景 2: 强密码（32字符，包含所有类型）",
@@ -169,7 +175,7 @@ async fn main() {
                 "include_numbers": true,
                 "include_symbols": true,
                 "exclude_ambiguous": true
-            })
+            }),
         ),
         (
             "场景 3: 简单密码（12字符，仅字母和数字）",
@@ -180,7 +186,7 @@ async fn main() {
                 "include_numbers": true,
                 "include_symbols": false,
                 "exclude_ambiguous": true
-            })
+            }),
         ),
         (
             "场景 4: PIN码（8字符，仅数字）",
@@ -190,14 +196,17 @@ async fn main() {
                 "include_lowercase": false,
                 "include_numbers": true,
                 "include_symbols": false
-            })
+            }),
         ),
     ];
 
     for (desc, params) in password_scenarios {
         println!("{}", desc);
-        
-        match password_tool.execute(params, context.clone(), &options).await {
+
+        match password_tool
+            .execute(params, context.clone(), &options)
+            .await
+        {
             Ok(result) => {
                 if result["success"] == true {
                     println!("  ✅ 生成成功:");
@@ -218,7 +227,7 @@ async fn main() {
     // 测试 5: 参数验证
     println!("🔍 测试 5: 参数验证");
     println!("{}", "-".repeat(80));
-    
+
     println!("测试 5.1: 无效的哈希算法");
     let params = json!({
         "input": "test",
@@ -241,7 +250,10 @@ async fn main() {
         "key": "short"
     });
 
-    match encrypt_tool.execute(params, context.clone(), &options).await {
+    match encrypt_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             if result["success"] == false {
                 println!("  ✅ 正确拒绝: {}", result["error"]);
@@ -256,7 +268,10 @@ async fn main() {
         "length": 200
     });
 
-    match password_tool.execute(params, context.clone(), &options).await {
+    match password_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             if result["success"] == false {
                 println!("  ✅ 正确拒绝: {}", result["error"]);
@@ -269,14 +284,15 @@ async fn main() {
     // 测试 6: 批量获取工具
     println!("📦 测试 6: 获取所有加密解密工具");
     println!("{}", "-".repeat(80));
-    
+
     let all_tools = get_all_crypto_tools();
     println!("总共 {} 个加密解密工具:\n", all_tools.len());
-    
+
     for (i, tool) in all_tools.iter().enumerate() {
-        println!("{}. {} - {}", 
-            i + 1, 
-            tool.name().unwrap_or("unknown"), 
+        println!(
+            "{}. {} - {}",
+            i + 1,
+            tool.name().unwrap_or("unknown"),
             tool.description()
         );
     }
@@ -305,4 +321,3 @@ async fn main() {
     println!("  - 支持密钥派生和密钥管理");
     println!("{}", "=".repeat(80));
 }
-

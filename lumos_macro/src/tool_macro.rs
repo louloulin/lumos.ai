@@ -91,7 +91,7 @@ impl Parse for ToolExecuteArgs {
                     // 直接创建一个表达式
                     let inner_content_str = inner_content.to_string();
                     params = Some(Expr::Verbatim(
-                        proc_macro2::TokenStream::from_str(&format!("{{{}}}", inner_content_str))
+                        proc_macro2::TokenStream::from_str(&format!("{{{inner_content_str}}}"))
                             .unwrap(),
                     ));
 
@@ -150,7 +150,7 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
                                     Err(e) => {
                                         let error = syn::Error::new(
                                             attr.span(),
-                                            format!("Failed to parse parameter attributes: {}", e),
+                                            format!("Failed to parse parameter attributes: {e}"),
                                         );
                                         return error.to_compile_error().into();
                                     }
@@ -231,7 +231,7 @@ pub fn tool_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     // Create a renamed version of the original function with parameter attributes removed
-    let impl_fn_name = syn::Ident::new(&format!("{}_impl", fn_name), fn_name.span());
+    let impl_fn_name = syn::Ident::new(&format!("{fn_name}_impl"), fn_name.span());
     let mut impl_input = input.clone();
     impl_input.sig.ident = impl_fn_name.clone();
 
@@ -292,7 +292,7 @@ pub fn tool_nom_macro(input: TokenStream) -> TokenStream {
     let tool_def = match parse_tool_macro(&input_str) {
         Ok(def) => def,
         Err(e) => {
-            let error_msg = format!("Failed to parse tool macro: {}", e);
+            let error_msg = format!("Failed to parse tool macro: {e}");
             return quote! {
                 compile_error!(#error_msg);
             }
@@ -314,7 +314,7 @@ fn generate_tool_code(tool_def: ToolDef) -> TokenStream {
     let handler_tokens: proc_macro2::TokenStream = match handler_expr.parse() {
         Ok(tokens) => tokens,
         Err(e) => {
-            let error_msg = format!("Invalid handler expression: {}", e);
+            let error_msg = format!("Invalid handler expression: {e}");
             return quote! {
                 compile_error!(#error_msg);
             }
@@ -412,7 +412,8 @@ pub fn tool_attribute_macro(attr: TokenStream, item: TokenStream) -> TokenStream
                 let error_msg = e.to_string();
                 return quote! {
                     compile_error!(#error_msg);
-                }.into();
+                }
+                .into();
             }
         }
     };
@@ -424,7 +425,8 @@ pub fn tool_attribute_macro(attr: TokenStream, item: TokenStream) -> TokenStream
             let error_msg = e.to_string();
             return quote! {
                 compile_error!(#error_msg);
-            }.into();
+            }
+            .into();
         }
     };
 
@@ -435,7 +437,8 @@ pub fn tool_attribute_macro(attr: TokenStream, item: TokenStream) -> TokenStream
             let error_msg = e.to_string();
             return quote! {
                 compile_error!(#error_msg);
-            }.into();
+            }
+            .into();
         }
     };
 
@@ -446,7 +449,8 @@ pub fn tool_attribute_macro(attr: TokenStream, item: TokenStream) -> TokenStream
             let error_msg = e.to_string();
             quote! {
                 compile_error!(#error_msg);
-            }.into()
+            }
+            .into()
         }
     }
 }
@@ -531,7 +535,7 @@ impl Parse for ToolConfig {
                 _ => {
                     return Err(syn::Error::new(
                         key.span(),
-                        format!("Unknown tool attribute: {}", key),
+                        format!("Unknown tool attribute: {key}"),
                     ));
                 }
             }
@@ -649,8 +653,8 @@ pub fn rust_type_to_json_type(ty: &Type) -> String {
             if let Some(segment) = type_path.path.segments.last() {
                 match segment.ident.to_string().as_str() {
                     "String" | "str" => "string".to_string(),
-                    "i8" | "i16" | "i32" | "i64" | "i128" | "isize"
-                    | "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => "integer".to_string(),
+                    "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32"
+                    | "u64" | "u128" | "usize" => "integer".to_string(),
                     "f32" | "f64" => "number".to_string(),
                     "bool" => "boolean".to_string(),
                     "Vec" => "array".to_string(),
@@ -674,35 +678,45 @@ pub fn generate_tool_impl(
 ) -> syn::Result<proc_macro2::TokenStream> {
     let fn_name = &fn_item.sig.ident;
     let tool_name = config.name.unwrap_or_else(|| fn_name.to_string());
-    let tool_description = config.description.unwrap_or_else(|| {
-        format!("Tool generated from function {}", fn_name)
-    });
+    let tool_description = config
+        .description
+        .unwrap_or_else(|| format!("Tool generated from function {fn_name}"));
 
-    let tool_struct_name = format_ident!("{}Tool",
-        fn_name.to_string().chars()
+    let tool_struct_name = format_ident!(
+        "{}Tool",
+        fn_name
+            .to_string()
+            .chars()
             .enumerate()
-            .map(|(i, c)| if i == 0 { c.to_uppercase().collect::<String>() } else { c.to_string() })
+            .map(|(i, c)| if i == 0 {
+                c.to_uppercase().collect::<String>()
+            } else {
+                c.to_string()
+            })
             .collect::<String>()
     );
 
     // 生成参数 schema
-    let param_schemas: Vec<proc_macro2::TokenStream> = params.iter().map(|param| {
-        let name = &param.name;
-        let description = param.description.as_deref().unwrap_or("Parameter");
-        let json_type = rust_type_to_json_type(&param.rust_type);
-        let required = param.required;
+    let param_schemas: Vec<proc_macro2::TokenStream> = params
+        .iter()
+        .map(|param| {
+            let name = &param.name;
+            let description = param.description.as_deref().unwrap_or("Parameter");
+            let json_type = rust_type_to_json_type(&param.rust_type);
+            let required = param.required;
 
-        quote! {
-            crate::tool::ParameterSchema {
-                name: #name.to_string(),
-                description: #description.to_string(),
-                r#type: #json_type.to_string(),
-                required: #required,
-                properties: None,
-                default: None,
+            quote! {
+                crate::tool::ParameterSchema {
+                    name: #name.to_string(),
+                    description: #description.to_string(),
+                    r#type: #json_type.to_string(),
+                    required: #required,
+                    properties: None,
+                    default: None,
+                }
             }
-        }
-    }).collect();
+        })
+        .collect();
 
     // 生成参数提取代码
     let param_extractions: Vec<proc_macro2::TokenStream> = params.iter().map(|param| {
@@ -815,7 +829,8 @@ pub fn generate_tool_impl(
         }
     }).collect();
 
-    let param_names: Vec<proc_macro2::Ident> = params.iter().map(|p| format_ident!("{}", p.name)).collect();
+    let param_names: Vec<proc_macro2::Ident> =
+        params.iter().map(|p| format_ident!("{}", p.name)).collect();
     let tool_fn_name = format_ident!("{}_tool", fn_name);
 
     // 检查函数是否是异步的

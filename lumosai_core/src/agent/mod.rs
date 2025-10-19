@@ -106,11 +106,11 @@ pub use orchestration::{
 pub use events::{EventBus, EventFilter, EventHandler, LogEventHandler, MetricsEventHandler};
 
 // Re-export communication and collaboration
-pub use communication::{
-    AgentCommunicationManager, AgentMessage, AgentMessageType, CommunicationConfig,
-};
 pub use collaboration::{
     AgentRole as CrewAgentRole, AgentTask, CollaborationMode, Crew, CrewStats, TaskStatus,
+};
+pub use communication::{
+    AgentCommunicationManager, AgentMessage, AgentMessageType, CommunicationConfig,
 };
 
 // 暂时移除模块化代理组件的重新导出

@@ -144,6 +144,12 @@ pub struct AgentBuilderWithTools {
     selected_tools: Vec<String>,
 }
 
+impl Default for AgentBuilderWithTools {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AgentBuilderWithTools {
     pub fn new() -> Self {
         Self {

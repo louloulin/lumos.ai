@@ -244,11 +244,11 @@ pub fn create_uuid_generator_tool() -> FunctionTool {
 
             for i in 0..count {
                 // Mock UUID generation - in real implementation would use uuid crate
-                let mock_uuid = format!("550e8400-e29b-41d4-a716-44665544{:04}", i);
+                let mock_uuid = format!("550e8400-e29b-41d4-a716-44665544{i:04}");
 
                 let formatted_uuid = match format {
                     "simple" => mock_uuid.replace("-", ""),
-                    "urn" => format!("urn:uuid:{}", mock_uuid),
+                    "urn" => format!("urn:uuid:{mock_uuid}"),
                     _ => mock_uuid, // standard format
                 };
 
@@ -353,7 +353,7 @@ pub fn create_hash_generator_tool() -> FunctionTool {
 // Mock base64 module for compilation
 mod base64 {
     pub fn encode(input: &str) -> String {
-        format!("base64_{}", input)
+        format!("base64_{input}")
     }
 }
 
@@ -409,18 +409,18 @@ impl CodeExecutorTool {
 
     fn execute_python(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
         let mut temp_file = NamedTempFile::new()
-            .map_err(|e| Error::Tool(format!("Failed to create temp file: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to create temp file: {e}")))?;
 
         temp_file
             .write_all(code.as_bytes())
-            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {e}")))?;
 
         let output = Command::new("python3")
             .arg(temp_file.path())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to execute Python code: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to execute Python code: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -431,18 +431,18 @@ impl CodeExecutorTool {
 
     fn execute_javascript(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
         let mut temp_file = NamedTempFile::new()
-            .map_err(|e| Error::Tool(format!("Failed to create temp file: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to create temp file: {e}")))?;
 
         temp_file
             .write_all(code.as_bytes())
-            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {e}")))?;
 
         let output = Command::new("node")
             .arg(temp_file.path())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to execute JavaScript code: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to execute JavaScript code: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -458,7 +458,7 @@ impl CodeExecutorTool {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to execute Bash code: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to execute Bash code: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -469,14 +469,14 @@ impl CodeExecutorTool {
 
     fn execute_rust(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
         // For Rust, we'll create a simple main function wrapper
-        let wrapped_code = format!("fn main() {{\n{}\n}}", code);
+        let wrapped_code = format!("fn main() {{\n{code}\n}}");
 
         let mut temp_file = NamedTempFile::with_suffix(".rs")
-            .map_err(|e| Error::Tool(format!("Failed to create temp file: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to create temp file: {e}")))?;
 
         temp_file
             .write_all(wrapped_code.as_bytes())
-            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {e}")))?;
 
         // Compile first
         let compile_output = Command::new("rustc")
@@ -486,7 +486,7 @@ impl CodeExecutorTool {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to compile Rust code: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to compile Rust code: {e}")))?;
 
         if !compile_output.status.success() {
             let stderr = String::from_utf8_lossy(&compile_output.stderr).to_string();
@@ -498,7 +498,7 @@ impl CodeExecutorTool {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to execute Rust binary: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to execute Rust binary: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -583,7 +583,7 @@ impl Tool for CodeExecutorTool {
             "javascript" | "js" | "node" => self.execute_javascript(code, timeout)?,
             "bash" | "sh" => self.execute_bash(code, timeout)?,
             "rust" | "rs" => self.execute_rust(code, timeout)?,
-            _ => return Err(Error::Tool(format!("Unsupported language: {}", language))),
+            _ => return Err(Error::Tool(format!("Unsupported language: {language}"))),
         };
 
         Ok(json!({

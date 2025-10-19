@@ -30,9 +30,9 @@
 //! }
 //! ```
 
+use crate::error::Result;
 use lumos_macro::tool;
 use serde_json::{json, Value};
-use crate::error::Result;
 
 /// 代码质量分析工具
 ///
@@ -87,10 +87,13 @@ async fn code_quality(
     let lines: Vec<&str> = code.lines().collect();
     let total_lines = lines.len();
     let blank_lines = lines.iter().filter(|l| l.trim().is_empty()).count();
-    let comment_lines = lines.iter().filter(|l| {
-        let trimmed = l.trim();
-        trimmed.starts_with("//") || trimmed.starts_with("#") || trimmed.starts_with("/*")
-    }).count();
+    let comment_lines = lines
+        .iter()
+        .filter(|l| {
+            let trimmed = l.trim();
+            trimmed.starts_with("//") || trimmed.starts_with("#") || trimmed.starts_with("/*")
+        })
+        .count();
     let code_lines = total_lines - blank_lines - comment_lines;
     let comment_ratio = if total_lines > 0 {
         (comment_lines as f64 / total_lines as f64) * 100.0
@@ -126,18 +129,16 @@ async fn code_quality(
     }
 
     // 检查命名规范 (简化版)
-    if check_naming {
-        if language == "rust" && code.contains("fn ") {
-            // 检查是否有驼峰命名的函数 (Rust 应该使用 snake_case)
-            if code.contains("fn camelCase") || code.contains("fn PascalCase") {
-                quality_score -= 15.0;
-                issues.push(json!({
-                    "type": "naming_convention",
-                    "severity": "warning",
-                    "message": "Rust 函数应使用 snake_case 命名"
-                }));
-                suggestions.push("将函数名改为 snake_case 格式");
-            }
+    if check_naming && language == "rust" && code.contains("fn ") {
+        // 检查是否有驼峰命名的函数 (Rust 应该使用 snake_case)
+        if code.contains("fn camelCase") || code.contains("fn PascalCase") {
+            quality_score -= 15.0;
+            issues.push(json!({
+                "type": "naming_convention",
+                "severity": "warning",
+                "message": "Rust 函数应使用 snake_case 命名"
+            }));
+            suggestions.push("将函数名改为 snake_case 格式");
         }
     }
 
@@ -209,11 +210,7 @@ async fn code_quality(
     name = "code_complexity",
     description = "分析代码复杂度（圈复杂度、认知复杂度）"
 )]
-async fn code_complexity(
-    code: String,
-    language: String,
-    threshold: Option<i64>,
-) -> Result<Value> {
+async fn code_complexity(code: String, language: String, threshold: Option<i64>) -> Result<Value> {
     let threshold = threshold.unwrap_or(10);
 
     // 简化的复杂度计算
@@ -223,7 +220,9 @@ async fn code_complexity(
     let mut functions = Vec::new();
 
     // 计算控制流语句数量
-    let control_keywords = vec!["if", "else", "for", "while", "match", "case", "switch", "catch"];
+    let control_keywords = vec![
+        "if", "else", "for", "while", "match", "case", "switch", "catch",
+    ];
     for keyword in control_keywords {
         let count = code.matches(keyword).count();
         cyclomatic_complexity += count;
@@ -250,9 +249,13 @@ async fn code_complexity(
     }
 
     // 分析函数 (简化版)
-    let function_pattern = if language == "rust" { "fn " } else { "function " };
+    let function_pattern = if language == "rust" {
+        "fn "
+    } else {
+        "function "
+    };
     let function_count = code.matches(function_pattern).count();
-    
+
     for i in 0..function_count {
         let func_complexity = cyclomatic_complexity / function_count.max(1);
         functions.push(json!({
@@ -313,10 +316,7 @@ async fn code_complexity(
 ///     "scan_level": "strict"
 /// });
 /// ```
-#[tool(
-    name = "security_scan",
-    description = "扫描代码安全漏洞和潜在风险"
-)]
+#[tool(name = "security_scan", description = "扫描代码安全漏洞和潜在风险")]
 async fn security_scan(
     code: String,
     language: String,
@@ -367,7 +367,7 @@ async fn security_scan(
                 "message": format!("使用了不安全的函数: {}", func),
                 "line": "N/A"
             }));
-            let recommendation = format!("避免使用 {} 函数，寻找更安全的替代方案", func);
+            let recommendation = format!("避免使用 {func} 函数，寻找更安全的替代方案");
             recommendations.push(recommendation);
         }
     }
@@ -408,4 +408,3 @@ pub fn get_all_code_analysis_tools() -> Vec<Box<dyn crate::tool::Tool>> {
         security_scan_tool(),
     ]
 }
-

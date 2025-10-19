@@ -1,11 +1,11 @@
 //! 工作内存模块，提供工作内存的实现和操作
 
+use crate::compat::{Component, MemoryMetrics, MetricsCollector};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use crate::compat::{Component, MetricsCollector, MemoryMetrics};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
@@ -181,7 +181,7 @@ impl BasicWorkingMemory {
                     Err(Error::Parsing("模板必须是有效的JSON对象".to_string()))
                 }
             }
-            Err(e) => Err(Error::Parsing(format!("无法解析模板: {}", e))),
+            Err(e) => Err(Error::Parsing(format!("无法解析模板: {e}"))),
         }
     }
 
@@ -212,7 +212,7 @@ impl BasicWorkingMemory {
             if let Err(e) = collector.record_memory_operation(metrics).await {
                 // 记录日志但不影响主要操作
                 let logger = self.logger();
-                logger.error(&format!("Failed to record memory metrics: {}", e));
+                logger.error(&format!("Failed to record memory metrics: {e}"));
             }
         }
     }
@@ -259,8 +259,7 @@ impl WorkingMemory for BasicWorkingMemory {
 
                 if size > max_capacity {
                     return Err(Error::Constraint(format!(
-                        "工作内存内容超过最大容量限制: {} > {}",
-                        size, max_capacity
+                        "工作内存内容超过最大容量限制: {size} > {max_capacity}"
                     )));
                 }
             }

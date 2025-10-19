@@ -203,7 +203,7 @@ impl LlmProvider for ClaudeProvider {
 
         let response = self
             .client
-            .post(&format!("{}/v1/messages", self.config.base_url))
+            .post(format!("{}/v1/messages", self.config.base_url))
             .header("Content-Type", "application/json")
             .header("x-api-key", &self.config.api_key)
             .header("anthropic-version", "2023-06-01")
@@ -211,7 +211,7 @@ impl LlmProvider for ClaudeProvider {
             .send()
             .await
             .map_err(|e| LumosError::NetworkError {
-                message: format!("Failed to send request to Claude API: {}", e),
+                message: format!("Failed to send request to Claude API: {e}"),
                 source: Some(Box::new(e)),
             })?;
 
@@ -220,14 +220,14 @@ impl LlmProvider for ClaudeProvider {
             let status_code = status.as_u16();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LumosError::ApiError {
-                message: format!("Claude API error: {}", error_text),
+                message: format!("Claude API error: {error_text}"),
                 status_code: Some(status_code),
             });
         }
 
         let claude_response: ClaudeResponse =
             response.json().await.map_err(|e| LumosError::ParseError {
-                message: format!("Failed to parse Claude response: {}", e),
+                message: format!("Failed to parse Claude response: {e}"),
                 source: Some(Box::new(e)),
             })?;
 
@@ -298,7 +298,7 @@ impl ClaudeProvider {
 
         let response = self
             .client
-            .post(&format!("{}/v1/messages", self.config.base_url))
+            .post(format!("{}/v1/messages", self.config.base_url))
             .header("Content-Type", "application/json")
             .header("x-api-key", &self.config.api_key)
             .header("anthropic-version", "2023-06-01")
@@ -306,7 +306,7 @@ impl ClaudeProvider {
             .send()
             .await
             .map_err(|e| LumosError::NetworkError {
-                message: format!("Failed to send request to Claude API: {}", e),
+                message: format!("Failed to send request to Claude API: {e}"),
                 source: Some(Box::new(e)),
             })?;
 
@@ -315,7 +315,7 @@ impl ClaudeProvider {
             let status_code = status.as_u16();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LumosError::ApiError {
-                message: format!("Claude API error: {}", error_text),
+                message: format!("Claude API error: {error_text}"),
                 status_code: Some(status_code),
             });
         }
@@ -346,7 +346,7 @@ impl ClaudeProvider {
                     Ok("".to_string())
                 }
                 Err(e) => Err(LumosError::NetworkError {
-                    message: format!("Stream error: {}", e),
+                    message: format!("Stream error: {e}"),
                     source: Some(Box::new(e)),
                 }),
             }

@@ -69,16 +69,16 @@ pub fn create_calculator_tool() -> FunctionTool {
             match result {
                 Ok(value) => {
                     let formatted_result = match format {
-                        "scientific" => format!("{:.precision$e}", value, precision = precision),
+                        "scientific" => format!("{value:.precision$e}"),
                         "fraction" => {
                             // Mock fraction conversion
                             if value.fract() == 0.0 {
                                 format!("{}/1", value as i64)
                             } else {
-                                format!("{:.precision$}", value, precision = precision)
+                                format!("{value:.precision$}")
                             }
                         }
-                        _ => format!("{:.precision$}", value, precision = precision),
+                        _ => format!("{value:.precision$}"),
                     };
 
                     Ok(json!({
@@ -189,10 +189,7 @@ pub fn create_statistics_tool() -> FunctionTool {
                             _ => continue,
                         };
 
-                        results.insert(
-                            operation,
-                            format!("{:.precision$}", result, precision = precision),
-                        );
+                        results.insert(operation, format!("{result:.precision$}"));
                     }
 
                     Ok(json!({
@@ -264,7 +261,7 @@ fn evaluate_simple_expression(expr: &str) -> std::result::Result<f64, String> {
 
     // Try to parse as a single number
     expr.parse::<f64>()
-        .map_err(|_| format!("Unable to evaluate expression: {}", expr))
+        .map_err(|_| format!("Unable to evaluate expression: {expr}"))
 }
 
 /// Calculate mean of a dataset
@@ -389,12 +386,12 @@ impl CalculatorTool {
         }
 
         // If no operation found, try to parse as a number
-        self.parse_number(&cleaned).map_err(|e| e)
+        self.parse_number(&cleaned)
     }
 
     fn parse_number(&self, s: &str) -> Result<f64> {
         s.parse::<f64>()
-            .map_err(|_| Error::Tool(format!("Invalid number: {}", s)))
+            .map_err(|_| Error::Tool(format!("Invalid number: {s}")))
     }
 }
 

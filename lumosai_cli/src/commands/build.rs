@@ -1,6 +1,6 @@
 use crate::error::CliResult;
 use crate::util::{copy_dir_all, create_dir_all, find_project_root, is_lumos_project};
-use crate::{TestArgs, BuildArgs};
+use crate::{BuildArgs, TestArgs};
 use colored::Colorize;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -135,7 +135,10 @@ pub async fn run_test(args: TestArgs) -> CliResult<()> {
         println!("{}", "警告: 当前目录不是一个Lumos AI项目".bright_yellow());
     }
 
-    println!("📁 项目目录: {}", project_dir.display().to_string().bright_cyan());
+    println!(
+        "📁 项目目录: {}",
+        project_dir.display().to_string().bright_cyan()
+    );
 
     // 构建测试命令
     let mut cmd = Command::new("cargo");
@@ -185,7 +188,10 @@ pub async fn run_build(args: BuildArgs) -> CliResult<()> {
         println!("{}", "警告: 当前目录不是一个Lumos AI项目".bright_yellow());
     }
 
-    println!("📁 项目目录: {}", project_dir.display().to_string().bright_cyan());
+    println!(
+        "📁 项目目录: {}",
+        project_dir.display().to_string().bright_cyan()
+    );
     println!("🔧 构建模式: {}", args.mode.bright_green());
 
     // 构建命令
@@ -212,7 +218,10 @@ pub async fn run_build(args: BuildArgs) -> CliResult<()> {
     // 处理输出目录
     if let Some(output_dir) = args.output {
         copy_build_artifacts(&project_dir, &output_dir)?;
-        println!("📦 构建产物已复制到: {}", output_dir.display().to_string().bright_cyan());
+        println!(
+            "📦 构建产物已复制到: {}",
+            output_dir.display().to_string().bright_cyan()
+        );
     }
 
     println!("\n{} 构建完成！", "✅".bright_green());

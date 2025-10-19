@@ -1,5 +1,5 @@
 //! 智谱 AI 修复演示
-//! 
+//!
 //! 展示如何正确集成智谱 AI API
 
 use serde_json::json;
@@ -27,7 +27,7 @@ async fn test_raw_api_call(api_key: &str) -> Result<(), Box<dyn std::error::Erro
     println!("\n🧪 测试原始 API 调用...");
 
     let client = reqwest::Client::new();
-    
+
     // 正确的智谱 AI API 请求格式
     let body = json!({
         "model": "glm-4",
@@ -62,7 +62,7 @@ async fn test_raw_api_call(api_key: &str) -> Result<(), Box<dyn std::error::Erro
 
     if status.is_success() {
         println!("✅ API 调用成功！");
-        
+
         // 解析响应
         let response_json: serde_json::Value = serde_json::from_str(&text)?;
         if let Some(content) = response_json["choices"][0]["message"]["content"].as_str() {
@@ -70,7 +70,7 @@ async fn test_raw_api_call(api_key: &str) -> Result<(), Box<dyn std::error::Erro
         }
     } else {
         println!("❌ API 调用失败: {}", text);
-        
+
         // 分析错误
         if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&text) {
             if let Some(error_code) = error_json["error"]["code"].as_str() {
@@ -91,14 +91,14 @@ async fn test_raw_api_call(api_key: &str) -> Result<(), Box<dyn std::error::Erro
 #[allow(dead_code)]
 mod fixed_implementation {
     use serde_json::json;
-    
+
     pub struct FixedZhipuProvider {
         api_key: String,
         client: reqwest::Client,
         model: String,
         base_url: String,
     }
-    
+
     impl FixedZhipuProvider {
         pub fn new(api_key: String, model: Option<String>) -> Self {
             Self {
@@ -108,7 +108,7 @@ mod fixed_implementation {
                 base_url: "https://open.bigmodel.cn/api/paas/v4".to_string(),
             }
         }
-        
+
         pub async fn generate(&self, prompt: &str) -> Result<String, Box<dyn std::error::Error>> {
             let body = json!({
                 "model": self.model,
@@ -124,27 +124,28 @@ mod fixed_implementation {
                 "top_p": 0.7,
                 "do_sample": true
             });
-            
-            let response = self.client
+
+            let response = self
+                .client
                 .post(&format!("{}/chat/completions", self.base_url))
                 .header("Content-Type", "application/json")
                 .header("Authorization", format!("Bearer {}", self.api_key))
                 .json(&body)
                 .send()
                 .await?;
-                
+
             let status = response.status();
             let text = response.text().await?;
-            
+
             if !status.is_success() {
                 return Err(format!("智谱AI API 错误: {} - {}", status, text).into());
             }
-            
+
             let response_json: serde_json::Value = serde_json::from_str(&text)?;
             let content = response_json["choices"][0]["message"]["content"]
                 .as_str()
                 .ok_or("无效的响应格式")?;
-                
+
             Ok(content.to_string())
         }
     }
@@ -153,7 +154,7 @@ mod fixed_implementation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_api_format() {
         let body = json!({
@@ -165,20 +166,20 @@ mod tests {
             "top_p": 0.7,
             "do_sample": true
         });
-        
+
         // 验证 JSON 格式正确
         assert!(body.is_object());
         assert_eq!(body["model"], "glm-4");
         assert!(body["messages"].is_array());
     }
-    
+
     #[test]
     fn test_provider_creation() {
         let provider = fixed_implementation::FixedZhipuProvider::new(
             "test_key".to_string(),
-            Some("glm-4".to_string())
+            Some("glm-4".to_string()),
         );
-        
+
         // 验证提供商创建成功
         assert_eq!(provider.model, "glm-4");
         assert_eq!(provider.base_url, "https://open.bigmodel.cn/api/paas/v4");

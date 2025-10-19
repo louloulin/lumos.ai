@@ -2,12 +2,12 @@
 //!
 //! 提供对历史消息的语义搜索功能，支持根据语义关联度检索最相关的历史消息
 
+use crate::compat::Component;
+use crate::logger::LogLevel;
 use async_trait::async_trait;
 use chrono;
 use serde_json::Value;
 use std::collections::HashMap;
-use crate::compat::Component;
-use crate::logger::LogLevel;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
@@ -83,11 +83,7 @@ impl SemanticMemory {
         target_index: usize,
         window: &MessageRange,
     ) -> Vec<String> {
-        let start = if target_index >= window.before {
-            target_index - window.before
-        } else {
-            0
-        };
+        let start = target_index.saturating_sub(window.before);
 
         let end = std::cmp::min(target_index + window.after + 1, message_ids.len());
 
@@ -212,7 +208,7 @@ impl Memory for SemanticMemory {
             let query = config.query.as_deref().unwrap_or("最近的对话");
             let embedding = match self.llm.get_embedding(query).await {
                 Ok(embedding) => embedding,
-                Err(_) => return Err(Error::Unavailable(format!("获取嵌入向量失败: {}", query))),
+                Err(_) => return Err(Error::Unavailable(format!("获取嵌入向量失败: {query}"))),
             };
 
             // 创建过滤条件

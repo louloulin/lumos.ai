@@ -256,24 +256,23 @@ impl LlmProvider for ZhipuProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "智谱AI API returned error status {}: {}",
-                status, text
+                "智谱AI API returned error status {status}: {text}"
             )));
         }
 
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {e}")))?;
 
         // Extract generated text
         let content = response["choices"][0]["message"]["content"]
@@ -288,8 +287,6 @@ impl LlmProvider for ZhipuProvider {
         messages: &[Message],
         options: &LlmOptions,
     ) -> Result<String> {
-
-
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
 
@@ -326,8 +323,6 @@ impl LlmProvider for ZhipuProvider {
             body["top_p"] = serde_json::json!(0.7);
         }
 
-
-
         // Send request
         let res = self
             .client
@@ -336,24 +331,23 @@ impl LlmProvider for ZhipuProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "智谱AI API returned error status {}: {}",
-                status, text
+                "智谱AI API returned error status {status}: {text}"
             )));
         }
 
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {e}")))?;
 
         // Extract generated text
         let content = response["choices"][0]["message"]["content"]
@@ -415,7 +409,7 @@ impl LlmProvider for ZhipuProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI streaming request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI streaming request failed: {e}")))?;
 
         let status = response.status();
         if !status.is_success() {
@@ -424,8 +418,7 @@ impl LlmProvider for ZhipuProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(Error::Llm(format!(
-                "智谱AI streaming API returned error status {}: {}",
-                status, error_text
+                "智谱AI streaming API returned error status {status}: {error_text}"
             )));
         }
 
@@ -449,23 +442,22 @@ impl LlmProvider for ZhipuProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI embedding request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI embedding request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI embedding response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI embedding response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "智谱AI embedding API returned error status {}: {}",
-                status, text
+                "智谱AI embedding API returned error status {status}: {text}"
             )));
         }
 
         let response: ZhipuEmbeddingResponse = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI embedding response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI embedding response: {e}")))?;
 
         if response.data.is_empty() {
             return Err(Error::Llm(
@@ -551,24 +543,23 @@ impl LlmProvider for ZhipuProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {e}")))?;
 
         let status = res.status();
         let response_text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "智谱AI API returned error status {}: {}",
-                status, response_text
+                "智谱AI API returned error status {status}: {response_text}"
             )));
         }
 
         // Parse response
         let response: ZhipuResponse = serde_json::from_str(&response_text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {e}")))?;
 
         if response.choices.is_empty() {
             return Err(Error::Llm("No choices in 智谱AI response".to_string()));
@@ -609,12 +600,12 @@ impl ZhipuProvider {
         let byte_stream = response.bytes_stream();
 
         Ok(byte_stream
-            .map_err(|e| Error::Llm(format!("HTTP stream error: {}", e)))
+            .map_err(|e| Error::Llm(format!("HTTP stream error: {e}")))
             .map(|chunk_result| {
                 chunk_result.and_then(|chunk| {
                     // Convert bytes to string
                     let text = String::from_utf8(chunk.to_vec())
-                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {}", e)))?;
+                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {e}")))?;
 
                     // Split by lines and process each line
                     let mut results = Vec::new();
@@ -644,8 +635,7 @@ impl ZhipuProvider {
                                 }
                                 Err(e) => {
                                     return Err(Error::Llm(format!(
-                                        "Failed to parse 智谱AI streaming response: {}",
-                                        e
+                                        "Failed to parse 智谱AI streaming response: {e}"
                                     )));
                                 }
                             }

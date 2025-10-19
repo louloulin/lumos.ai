@@ -5,11 +5,7 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use crate::{
-    embedding::EmbeddingProvider,
-    error::Result,
-    types::Document,
-};
+use crate::{embedding::EmbeddingProvider, error::Result, types::Document};
 
 /// 智能文档分块器 trait
 ///
@@ -67,7 +63,7 @@ impl SemanticChunker {
 
         for ch in text.chars() {
             current_sentence.push(ch);
-            
+
             // 句子结束标记
             if matches!(ch, '.' | '!' | '?' | '。' | '！' | '？' | '\n') {
                 let trimmed = current_sentence.trim().to_string();
@@ -116,7 +112,7 @@ impl SmartChunker for SemanticChunker {
     async fn chunk(&self, document: &Document) -> Result<Vec<Document>> {
         // 1. 分割成句子
         let sentences = self.split_into_sentences(&document.content);
-        
+
         if sentences.is_empty() {
             return Ok(vec![document.clone()]);
         }
@@ -250,7 +246,7 @@ impl SmartChunker for AdaptiveChunker {
 
         while start < content_len {
             let end = (start + chunk_size).min(content_len);
-            
+
             // 尝试在单词边界处分割
             let actual_end = if end < content_len {
                 content[start..end]
@@ -262,7 +258,7 @@ impl SmartChunker for AdaptiveChunker {
             };
 
             let chunk_content = content[start..actual_end].trim().to_string();
-            
+
             if !chunk_content.is_empty() {
                 let mut chunk_doc = document.clone();
                 chunk_doc.id = format!("{}_chunk_{}", document.id, chunk_index);
@@ -308,7 +304,7 @@ mod tests {
 
         let chunks = chunker.chunk(&doc).await.unwrap();
         assert!(!chunks.is_empty());
-        
+
         // 验证每个块都有唯一 ID
         for (i, chunk) in chunks.iter().enumerate() {
             assert_eq!(chunk.id, format!("test_chunk_{}", i));
@@ -318,12 +314,20 @@ mod tests {
     #[test]
     fn test_document_type_detection() {
         let chunker = AdaptiveChunker::new(1000, 100);
-        
-        let code_doc = create_test_document("code", "```rust\nfn main() {\n    println!(\"Hello\");\n}\n```");
-        assert!(matches!(chunker.detect_document_type(&code_doc.content), DocumentType::Code));
-        
+
+        let code_doc = create_test_document(
+            "code",
+            "```rust\nfn main() {\n    println!(\"Hello\");\n}\n```",
+        );
+        assert!(matches!(
+            chunker.detect_document_type(&code_doc.content),
+            DocumentType::Code
+        ));
+
         let markdown_doc = create_test_document("md", "# Title\n## Subtitle\nContent");
-        assert!(matches!(chunker.detect_document_type(&markdown_doc.content), DocumentType::Markdown));
+        assert!(matches!(
+            chunker.detect_document_type(&markdown_doc.content),
+            DocumentType::Markdown
+        ));
     }
 }
-

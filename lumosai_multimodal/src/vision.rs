@@ -1,8 +1,8 @@
 //! 视觉处理 trait 定义
 
-use async_trait::async_trait;
 use crate::error::Result;
-use crate::types::{VisionOptions, GenerationOptions, ImageFormat, MultimodalMessage};
+use crate::types::{GenerationOptions, ImageFormat, MultimodalMessage, VisionOptions};
+use async_trait::async_trait;
 
 /// 视觉处理能力
 #[derive(Debug, Clone)]
@@ -205,4 +205,3 @@ mod tests {
         assert!(caps.supports_generation);
     }
 }
-

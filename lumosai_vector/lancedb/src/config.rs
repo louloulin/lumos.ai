@@ -232,12 +232,12 @@ impl LanceDbConfig {
 
     /// Create a configuration for local file storage
     pub fn local(path: &str) -> Self {
-        Self::new(&format!("file://{}", path))
+        Self::new(&format!("file://{path}"))
     }
 
     /// Create a configuration for AWS S3 storage
     pub fn s3(bucket: &str, region: &str) -> Self {
-        let mut config = Self::new(&format!("s3://{}", bucket));
+        let mut config = Self::new(&format!("s3://{bucket}"));
         config.storage_options = Some(StorageOptions {
             s3: Some(S3Config {
                 region: region.to_string(),
@@ -254,7 +254,7 @@ impl LanceDbConfig {
 
     /// Create a configuration for Azure Blob Storage
     pub fn azure(account_name: &str, container_name: &str) -> Self {
-        let mut config = Self::new(&format!("azure://{}/{}", account_name, container_name));
+        let mut config = Self::new(&format!("azure://{account_name}/{container_name}"));
         config.storage_options = Some(StorageOptions {
             s3: None,
             azure: Some(AzureConfig {
@@ -270,7 +270,7 @@ impl LanceDbConfig {
 
     /// Create a configuration for Google Cloud Storage
     pub fn gcs(project_id: &str, bucket_name: &str) -> Self {
-        let mut config = Self::new(&format!("gs://{}", bucket_name));
+        let mut config = Self::new(&format!("gs://{bucket_name}"));
         config.storage_options = Some(StorageOptions {
             s3: None,
             azure: None,

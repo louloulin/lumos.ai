@@ -64,4 +64,3 @@ impl From<hound::Error> for MultimodalError {
         MultimodalError::AudioError(err.to_string())
     }
 }
-

@@ -10,16 +10,16 @@
 //! - 保持向后兼容性
 
 use async_trait::async_trait;
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 use crate::error::Result;
 use crate::llm::{LlmProvider, Message};
 use crate::memory::{
-    BasicMemory, MemoryConfig, SemanticRecallConfig, WorkingMemoryConfig,
-    create_working_memory, create_semantic_memory, WorkingMemory,
+    create_semantic_memory, create_working_memory,
     semantic_memory::{SemanticMemoryTrait, SemanticSearchOptions},
-    Memory as MemoryTrait, MemoryProcessor,
+    BasicMemory, Memory as MemoryTrait, MemoryConfig, MemoryProcessor, SemanticRecallConfig,
+    WorkingMemory, WorkingMemoryConfig,
 };
 
 /// 内存类型枚举
@@ -32,7 +32,7 @@ pub enum MemoryType {
     /// 工作内存 - 临时数据存储，支持容量限制
     Working { size: usize },
     /// 混合内存 - 结合多种内存类型
-    Hybrid { 
+    Hybrid {
         working_size: Option<usize>,
         enable_semantic: bool,
     },
@@ -55,20 +55,20 @@ enum MemoryImpl {
 }
 
 /// 统一内存结构体
-/// 
+///
 /// 这是 LumosAI v2.0 推荐的内存API，提供简化的接口和智能默认配置
-/// 
+///
 /// # 示例
-/// 
+///
 /// ```rust
 /// use lumosai_core::memory::UnifiedMemory;
-/// 
+///
 /// // 创建基础内存
 /// let memory = UnifiedMemory::basic();
-/// 
+///
 /// // 创建语义内存
 /// let memory = UnifiedMemory::semantic();
-/// 
+///
 /// // 创建工作内存（指定大小）
 /// let memory = UnifiedMemory::working(1000);
 /// ```
@@ -81,17 +81,17 @@ pub struct Memory {
 
 impl Memory {
     /// 创建基础内存
-    /// 
+    ///
     /// 基础内存提供简单的消息存储和检索功能，适合大多数应用场景
-    /// 
+    ///
     /// # 示例
-    /// 
+    ///
     /// ```rust
     /// let memory = Memory::basic();
     /// ```
     pub fn basic() -> Self {
         let basic_memory = BasicMemory::new(None, None);
-        
+
         Self {
             inner: MemoryImpl::Basic(basic_memory),
             memory_type: MemoryType::Basic,
@@ -99,13 +99,13 @@ impl Memory {
     }
 
     /// 创建语义内存
-    /// 
+    ///
     /// 语义内存基于向量相似度进行智能检索，适合需要语义理解的应用
-    /// 
+    ///
     /// 注意：需要提供 LLM 提供者来生成嵌入向量
-    /// 
+    ///
     /// # 示例
-    /// 
+    ///
     /// ```rust
     /// let memory = Memory::semantic();
     /// ```
@@ -133,7 +133,7 @@ impl Memory {
         // 注意：这里我们创建一个占位符实现
         // 在实际使用时，用户需要通过 with_llm() 方法提供 LLM 提供者
         let basic_memory = BasicMemory::new(None, None);
-        
+
         Self {
             inner: MemoryImpl::Basic(basic_memory),
             memory_type: MemoryType::Semantic,
@@ -141,15 +141,15 @@ impl Memory {
     }
 
     /// 创建工作内存
-    /// 
+    ///
     /// 工作内存提供临时数据存储，支持容量限制和自动清理
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `size` - 内存容量限制
-    /// 
+    ///
     /// # 示例
-    /// 
+    ///
     /// ```rust
     /// let memory = Memory::working(1000);
     /// ```
@@ -162,11 +162,12 @@ impl Memory {
         };
 
         // 创建工作内存实例
-        let working_memory = create_working_memory(&config)
-            .unwrap_or_else(|_| {
-                // 如果创建失败，使用基础内存作为后备
-                Box::new(crate::memory::working::BasicWorkingMemory::new(config.clone()))
-            });
+        let working_memory = create_working_memory(&config).unwrap_or_else(|_| {
+            // 如果创建失败，使用基础内存作为后备
+            Box::new(crate::memory::working::BasicWorkingMemory::new(
+                config.clone(),
+            ))
+        });
 
         Self {
             inner: MemoryImpl::Working(working_memory),
@@ -175,22 +176,22 @@ impl Memory {
     }
 
     /// 创建混合内存
-    /// 
+    ///
     /// 混合内存结合了多种内存类型的优势
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `working_size` - 工作内存大小（可选）
     /// * `enable_semantic` - 是否启用语义内存
-    /// 
+    ///
     /// # 示例
-    /// 
+    ///
     /// ```rust
     /// let memory = Memory::hybrid(Some(1000), true);
     /// ```
     pub fn hybrid(working_size: Option<usize>, enable_semantic: bool) -> Self {
         let basic_memory = BasicMemory::new(None, None);
-        
+
         // 创建工作内存（如果指定了大小）
         let working_memory = working_size.map(|size| {
             let config = WorkingMemoryConfig {
@@ -199,10 +200,11 @@ impl Memory {
                 content_type: Some("application/json".to_string()),
                 max_capacity: Some(size),
             };
-            create_working_memory(&config)
-                .unwrap_or_else(|_| {
-                    Box::new(crate::memory::working::BasicWorkingMemory::new(config.clone()))
-                })
+            create_working_memory(&config).unwrap_or_else(|_| {
+                Box::new(crate::memory::working::BasicWorkingMemory::new(
+                    config.clone(),
+                ))
+            })
         });
 
         Self {
@@ -211,7 +213,10 @@ impl Memory {
                 working: working_memory,
                 semantic: None, // 将在 with_llm() 中初始化
             },
-            memory_type: MemoryType::Hybrid { working_size, enable_semantic },
+            memory_type: MemoryType::Hybrid {
+                working_size,
+                enable_semantic,
+            },
         }
     }
 
@@ -221,15 +226,15 @@ impl Memory {
     }
 
     /// 为语义内存配置 LLM 提供者
-    /// 
+    ///
     /// 这个方法允许为语义内存提供 LLM 提供者来生成嵌入向量
-    /// 
+    ///
     /// # 参数
-    /// 
+    ///
     /// * `llm` - LLM 提供者
-    /// 
+    ///
     /// # 示例
-    /// 
+    ///
     /// ```rust
     /// let memory = Memory::semantic().with_llm(llm_provider);
     /// ```
@@ -252,11 +257,19 @@ impl Memory {
                     }),
                     ..Default::default()
                 };
-                
+
                 let semantic_memory = create_semantic_memory(&config, llm)?;
                 self.inner = MemoryImpl::Semantic(semantic_memory);
-            },
-            MemoryImpl::Hybrid { semantic, .. } if matches!(self.memory_type, MemoryType::Hybrid { enable_semantic: true, .. }) => {
+            }
+            MemoryImpl::Hybrid { semantic, .. }
+                if matches!(
+                    self.memory_type,
+                    MemoryType::Hybrid {
+                        enable_semantic: true,
+                        ..
+                    }
+                ) =>
+            {
                 // 为混合内存创建语义内存组件
                 let config = MemoryConfig {
                     namespace: Some("hybrid_semantic".to_string()),
@@ -273,14 +286,14 @@ impl Memory {
                     }),
                     ..Default::default()
                 };
-                
+
                 *semantic = Some(create_semantic_memory(&config, llm)?);
-            },
+            }
             _ => {
                 // 对于其他类型，不需要 LLM 提供者
             }
         }
-        
+
         Ok(self)
     }
 }
@@ -290,26 +303,26 @@ impl MemoryTrait for Memory {
     /// 存储消息到内存
     async fn store(&self, message: &Message) -> Result<()> {
         match &self.inner {
-            MemoryImpl::Basic(basic) => {
-                basic.store(message).await
-            },
-            MemoryImpl::Semantic(semantic) => {
-                semantic.add(message).await
-            },
+            MemoryImpl::Basic(basic) => basic.store(message).await,
+            MemoryImpl::Semantic(semantic) => semantic.add(message).await,
             MemoryImpl::Working(working) => {
                 // 将消息序列化为JSON值存储到工作内存
-                let message_value = serde_json::to_value(message)
-                    .map_err(crate::error::Error::Json)?;
+                let message_value =
+                    serde_json::to_value(message).map_err(crate::error::Error::Json)?;
                 working.set_value("last_message", message_value).await
-            },
-            MemoryImpl::Hybrid { basic, working, semantic } => {
+            }
+            MemoryImpl::Hybrid {
+                basic,
+                working,
+                semantic,
+            } => {
                 // 存储到基础内存
                 basic.store(message).await?;
 
                 // 存储到工作内存（如果存在）
                 if let Some(working) = working {
-                    let message_value = serde_json::to_value(message)
-                        .map_err(crate::error::Error::Json)?;
+                    let message_value =
+                        serde_json::to_value(message).map_err(crate::error::Error::Json)?;
                     working.set_value("last_message", message_value).await?;
                 }
 
@@ -326,9 +339,7 @@ impl MemoryTrait for Memory {
     /// 从内存检索消息
     async fn retrieve(&self, config: &MemoryConfig) -> Result<Vec<Message>> {
         match &self.inner {
-            MemoryImpl::Basic(basic) => {
-                basic.retrieve(config).await
-            },
+            MemoryImpl::Basic(basic) => basic.retrieve(config).await,
             MemoryImpl::Semantic(semantic) => {
                 // 从语义内存检索
                 if let Some(semantic_config) = &config.semantic_recall {
@@ -348,7 +359,7 @@ impl MemoryTrait for Memory {
                     // 如果没有语义配置，返回空结果
                     Ok(vec![])
                 }
-            },
+            }
             MemoryImpl::Working(working) => {
                 // 从工作内存检索最后的消息
                 if let Ok(Some(message_value)) = working.get_value("last_message").await {
@@ -360,8 +371,12 @@ impl MemoryTrait for Memory {
                 } else {
                     Ok(vec![])
                 }
-            },
-            MemoryImpl::Hybrid { basic, working: _, semantic } => {
+            }
+            MemoryImpl::Hybrid {
+                basic,
+                working: _,
+                semantic,
+            } => {
                 // 优先从语义内存检索，然后是基础内存
                 if let Some(semantic) = semantic {
                     if let Some(semantic_config) = &config.semantic_recall {
@@ -498,12 +513,12 @@ impl Memory {
             MemoryImpl::Working(working) => {
                 // 清空工作内存
                 working.clear().await
-            },
+            }
             _ => {
                 // 对于其他类型的内存，目前不支持清空操作
                 // 这是为了安全考虑，避免意外删除重要数据
                 Err(crate::error::Error::UnsupportedOperation(
-                    "清空操作仅支持工作内存".to_string()
+                    "清空操作仅支持工作内存".to_string(),
                 ))
             }
         }
@@ -696,12 +711,10 @@ impl CompositeMemoryBuilder {
 
         // 将 Box<dyn WorkingMemory> 转换为 Arc<dyn WorkingMemory>
         // 这里我们需要重新创建实例，因为 Box 和 Arc 不能直接转换
-        let working_memory_arc = if let Some(config) = self.working_config.clone() {
-            // 直接创建 BasicWorkingMemory 并包装为 Arc
-            Some(Arc::new(crate::memory::working::BasicWorkingMemory::new(config)) as Arc<dyn WorkingMemory>)
-        } else {
-            None
-        };
+        let working_memory_arc = self.working_config.clone().map(|config| {
+            Arc::new(crate::memory::working::BasicWorkingMemory::new(config))
+                as Arc<dyn WorkingMemory>
+        });
 
         // 创建语义内存（如果配置了）
         // 注意：这里需要实际的向量存储和嵌入提供商实例
@@ -712,13 +725,20 @@ impl CompositeMemoryBuilder {
         let basic_memory = BasicMemory::new(working_memory_arc.clone(), semantic_memory.clone());
 
         // 确定内存类型
-        let memory_type = match (self.working_config.is_some(), self.semantic_config.is_some()) {
+        let memory_type = match (
+            self.working_config.is_some(),
+            self.semantic_config.is_some(),
+        ) {
             (true, true) => MemoryType::Hybrid {
                 working_size: self.working_config.as_ref().and_then(|c| c.max_capacity),
                 enable_semantic: true,
             },
             (true, false) => MemoryType::Working {
-                size: self.working_config.as_ref().and_then(|c| c.max_capacity).unwrap_or(1000),
+                size: self
+                    .working_config
+                    .as_ref()
+                    .and_then(|c| c.max_capacity)
+                    .unwrap_or(1000),
             },
             (false, true) => MemoryType::Semantic,
             (false, false) => MemoryType::Basic,

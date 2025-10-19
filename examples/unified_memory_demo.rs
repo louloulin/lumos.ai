@@ -1,14 +1,14 @@
 //! LumosAI v2.0 统一内存系统演示
 //!
 //! 这个示例演示了第四周任务的成果：统一内存系统
-//! 
+//!
 //! 运行方式：
 //! ```bash
 //! cargo run --example unified_memory_demo
 //! ```
 
 use lumosai_core::error::Result;
-use lumosai_core::llm::types::{user_message, assistant_message};
+use lumosai_core::llm::types::{assistant_message, user_message};
 use lumosai_core::memory::UnifiedMemory;
 
 #[tokio::main]
@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
 async fn demo_basic_memory() -> Result<()> {
     // 创建基础内存 - 一行代码即可
     let memory = UnifiedMemory::basic();
-    
+
     println!("✅ 基础内存创建成功");
     println!("🎯 内存类型: {:?}", memory.memory_type());
 
@@ -70,8 +70,11 @@ async fn demo_basic_memory() -> Result<()> {
 
     for (i, message) in messages.iter().enumerate() {
         memory.add_message(message.clone()).await?;
-        println!("📝 已存储消息 {}: {}", i + 1,
-            message.content.chars().take(30).collect::<String>() + "...");
+        println!(
+            "📝 已存储消息 {}: {}",
+            i + 1,
+            message.content.chars().take(30).collect::<String>() + "..."
+        );
     }
 
     // 检索最近的消息
@@ -89,7 +92,7 @@ async fn demo_basic_memory() -> Result<()> {
 async fn demo_working_memory() -> Result<()> {
     // 创建工作内存，指定容量为100
     let memory = UnifiedMemory::working(100);
-    
+
     println!("✅ 工作内存创建成功 (容量: 100)");
     println!("🎯 内存类型: {:?}", memory.memory_type());
 
@@ -116,7 +119,10 @@ async fn demo_working_memory() -> Result<()> {
 
     // 再次检查是否为空
     let is_empty_after_clear = memory.is_empty().await?;
-    println!("❓ 清空后内存是否为空: {}", if is_empty_after_clear { "是" } else { "否" });
+    println!(
+        "❓ 清空后内存是否为空: {}",
+        if is_empty_after_clear { "是" } else { "否" }
+    );
 
     Ok(())
 }
@@ -125,7 +131,7 @@ async fn demo_working_memory() -> Result<()> {
 async fn demo_hybrid_memory() -> Result<()> {
     // 创建混合内存：工作内存大小为500，不启用语义内存
     let memory = UnifiedMemory::hybrid(Some(500), false);
-    
+
     println!("✅ 混合内存创建成功 (工作内存: 500, 语义内存: 禁用)");
     println!("🎯 内存类型: {:?}", memory.memory_type());
 
@@ -172,7 +178,7 @@ async fn demo_memory_stats() -> Result<()> {
     // 为每种内存添加测试数据
     for (name, memory) in &memories {
         println!("📝 为{}添加测试数据...", name);
-        
+
         for i in 1..=3 {
             let message = user_message(&format!("{}的测试消息{}", name, i));
             memory.add_message(message).await?;
@@ -181,10 +187,14 @@ async fn demo_memory_stats() -> Result<()> {
         // 显示统计信息
         let stats = memory.get_stats().await?;
         println!("📊 {}: {}", name, stats);
-        
+
         // 检查是否为空
         let is_empty = memory.is_empty().await?;
-        println!("❓ {}是否为空: {}\n", name, if is_empty { "是" } else { "否" });
+        println!(
+            "❓ {}是否为空: {}\n",
+            name,
+            if is_empty { "是" } else { "否" }
+        );
     }
 
     // 演示内存类型比较

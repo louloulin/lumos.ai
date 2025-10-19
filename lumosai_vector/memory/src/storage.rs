@@ -187,8 +187,7 @@ impl VectorStorage for MemoryVectorStorage {
             if let Some(max_vectors) = self.config.max_vectors_per_index {
                 if index.vector_count() >= max_vectors {
                     return Err(VectorError::ResourceLimitExceeded(format!(
-                        "Index {} has reached maximum capacity of {} vectors",
-                        index_name, max_vectors
+                        "Index {index_name} has reached maximum capacity of {max_vectors} vectors"
                     )));
                 }
             }
@@ -337,8 +336,7 @@ impl VectorStorage for MemoryVectorStorage {
             let current_usage_mb = self.memory_usage().await / (1024 * 1024);
             if current_usage_mb > threshold_mb as u64 * 2 {
                 return Err(VectorError::ResourceLimitExceeded(format!(
-                    "Memory usage {} MB exceeds critical threshold",
-                    current_usage_mb
+                    "Memory usage {current_usage_mb} MB exceeds critical threshold"
                 )));
             }
         }

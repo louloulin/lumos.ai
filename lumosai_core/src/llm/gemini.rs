@@ -204,20 +204,19 @@ impl LlmProvider for GeminiProvider {
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Gemini API error: {}",
-                error_text
+                "Gemini API error: {error_text}"
             )));
         }
 
         let response_json: GeminiResponse = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.candidates.is_empty() {
             return Err(Error::Parsing("No candidates in response".to_string()));
@@ -265,20 +264,19 @@ impl LlmProvider for GeminiProvider {
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Gemini API error: {}",
-                error_text
+                "Gemini API error: {error_text}"
             )));
         }
 
         let response_json: GeminiResponse = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.candidates.is_empty() {
             return Err(Error::Parsing("No candidates in response".to_string()));
@@ -323,20 +321,19 @@ impl LlmProvider for GeminiProvider {
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Gemini API error: {}",
-                error_text
+                "Gemini API error: {error_text}"
             )));
         }
 
         let response_json: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         let values = response_json["embedding"]["values"]
             .as_array()

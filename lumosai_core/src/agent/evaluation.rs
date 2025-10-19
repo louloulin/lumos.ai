@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use crate::agent::types::RuntimeContext;
 use crate::base::Base;
-use crate::error::Result;
 use crate::compat::Component;
+use crate::error::Result;
 use crate::logger::Logger;
 use crate::telemetry::TelemetrySink;
 
@@ -120,9 +120,9 @@ impl EvaluationMetric for RelevanceMetric {
         };
 
         let explanation = if score >= self.threshold {
-            Some(format!("Output is relevant (score: {:.3})", score))
+            Some(format!("Output is relevant (score: {score:.3})"))
         } else {
-            Some(format!("Output may not be relevant (score: {:.3})", score))
+            Some(format!("Output may not be relevant (score: {score:.3})"))
         };
 
         Ok(EvaluationResult {

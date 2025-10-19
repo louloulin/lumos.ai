@@ -4,10 +4,10 @@ mod tests {
 
     use crate::agent::types::{StepType, TokenUsage, ToolCall};
     use crate::agent::{assistant_message, AgentGenerateResult, AgentStep};
+    use crate::compat::{Component, Logger, TelemetrySink};
     use crate::error::{Error, Result};
     use crate::llm::Message;
     use crate::Agent;
-    use crate::compat::{Component, Logger, TelemetrySink};
     use serde_json::{json, Value};
     use std::collections::HashMap;
     use std::sync::Arc;

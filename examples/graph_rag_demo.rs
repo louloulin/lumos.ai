@@ -177,7 +177,7 @@ async fn demo_graph_traversal_retrieval() -> Result<(), Box<dyn std::error::Erro
 
     for (idx, query) in queries.iter().enumerate() {
         println!("\n🔎 查询 {}: {}", idx + 1, query);
-        
+
         let request = RetrievalRequest {
             query: query.to_string(),
             options: RetrievalOptions {
@@ -188,12 +188,13 @@ async fn demo_graph_traversal_retrieval() -> Result<(), Box<dyn std::error::Erro
         };
 
         let result = retriever.retrieve(&request).await?;
-        
+
         println!("  ✅ 检索到 {} 个相关文档:", result.documents.len());
         for (i, scored_doc) in result.documents.iter().enumerate() {
-            println!("    {}. [分数: {:.2}] {}", 
-                i + 1, 
-                scored_doc.score, 
+            println!(
+                "    {}. [分数: {:.2}] {}",
+                i + 1,
+                scored_doc.score,
                 &scored_doc.document.content[..80.min(scored_doc.document.content.len())]
             );
         }
@@ -210,4 +211,3 @@ async fn demo_graph_traversal_retrieval() -> Result<(), Box<dyn std::error::Erro
     println!();
     Ok(())
 }
-

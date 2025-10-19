@@ -192,8 +192,7 @@ pub mod agent {
     pub async fn simple(model: &str, instructions: &str) -> Result<String> {
         // 简化实现，返回一个描述字符串
         Ok(format!(
-            "Simple agent with model: {}, instructions: {}",
-            model, instructions
+            "Simple agent with model: {model}, instructions: {instructions}"
         ))
     }
 
@@ -204,8 +203,7 @@ pub mod agent {
         _tools: Vec<String>, // 简化为字符串列表
     ) -> Result<String> {
         Ok(format!(
-            "Agent with tools - model: {}, instructions: {}",
-            model, instructions
+            "Agent with tools - model: {model}, instructions: {instructions}"
         ))
     }
 
@@ -216,8 +214,7 @@ pub mod agent {
         _vector_storage: Arc<dyn std::fmt::Debug>,
     ) -> Result<String> {
         Ok(format!(
-            "RAG agent - model: {}, instructions: {}",
-            model, instructions
+            "RAG agent - model: {model}, instructions: {instructions}"
         ))
     }
 }
@@ -225,7 +222,10 @@ pub mod agent {
 /// 云服务便利函数
 pub mod cloud {
     use super::*;
-    use crate::compat::{CloudAdapter, AwsAdapter, AzureAdapter, GcpAdapter, DeploymentConfig, ResourceConfig, NetworkConfig, PortMapping};
+    use crate::compat::{
+        AwsAdapter, AzureAdapter, CloudAdapter, DeploymentConfig, GcpAdapter, NetworkConfig,
+        PortMapping, ResourceConfig,
+    };
 
     /// 创建AWS适配器
     pub fn aws() -> Result<Box<dyn CloudAdapter>> {
@@ -296,7 +296,10 @@ pub mod cloud {
             health_check: None,
         };
 
-        let result = adapter.deploy(&config).await.map_err(|e| crate::error::Error::Cloud(e.to_string()))?;
+        let result = adapter
+            .deploy(&config)
+            .await
+            .map_err(|e| crate::error::Error::Cloud(e.to_string()))?;
         Ok(result)
     }
 }

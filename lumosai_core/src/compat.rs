@@ -3,12 +3,13 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// 临时的组件类型枚举
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum Component {
+    #[default]
     Agent,
     Tool,
     Memory,
@@ -16,12 +17,6 @@ pub enum Component {
     Storage,
     Vector,
     Llm,
-}
-
-impl Default for Component {
-    fn default() -> Self {
-        Component::Agent
-    }
 }
 
 impl std::fmt::Display for Component {
@@ -39,18 +34,13 @@ impl std::fmt::Display for Component {
 }
 
 /// 临时的日志级别枚举
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum LogLevel {
     Debug,
+    #[default]
     Info,
     Warn,
     Error,
-}
-
-impl Default for LogLevel {
-    fn default() -> Self {
-        LogLevel::Info
-    }
 }
 
 /// 临时的日志器 trait
@@ -97,16 +87,29 @@ pub trait Storage: Send + Sync {
 #[async_trait]
 pub trait MetricsCollector: Send + Sync {
     async fn record_metric(&self, name: &str, value: f64);
-    async fn record_memory_operation(&self, metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    async fn record_tool_execution(&self, metrics: ToolMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    async fn record_agent_execution(&self, metrics: AgentMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn record_memory_operation(
+        &self,
+        metrics: MemoryMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn record_tool_execution(
+        &self,
+        metrics: ToolMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn record_agent_execution(
+        &self,
+        metrics: AgentMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// 临时的追踪收集器 trait
 #[async_trait]
 pub trait TraceCollector: Send + Sync {
     async fn start_trace(&self, name: &str) -> String;
-    async fn add_trace_step(&self, trace_id: &str, step: TraceStep) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn add_trace_step(
+        &self,
+        trace_id: &str,
+        step: TraceStep,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     async fn end_trace(&self, trace_id: &str);
 }
 
@@ -310,10 +313,6 @@ pub struct TelemetryTokenUsage {
     pub total_tokens: u32,
 }
 
-
-
-
-
 #[derive(Debug, Clone)]
 pub struct ExecutionContext {
     pub session_id: String,
@@ -336,9 +335,18 @@ pub struct Event {
 // 云适配器相关类型（临时）
 #[async_trait]
 pub trait CloudAdapter: Send + Sync {
-    async fn deploy(&self, config: &DeploymentConfig) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
-    async fn status(&self, deployment_id: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
-    async fn logs(&self, deployment_id: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn deploy(
+        &self,
+        config: &DeploymentConfig,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    async fn status(
+        &self,
+        deployment_id: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    async fn logs(
+        &self,
+        deployment_id: &str,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -376,11 +384,15 @@ pub struct PortMapping {
     pub protocol: String,
 }
 
-
-
 // 临时的实现
 pub struct InMemoryMetricsCollector {
     metrics: Arc<std::sync::Mutex<HashMap<String, MetricValue>>>,
+}
+
+impl Default for InMemoryMetricsCollector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl InMemoryMetricsCollector {
@@ -403,21 +415,36 @@ impl MetricsCollector for InMemoryMetricsCollector {
         }
     }
 
-    async fn record_memory_operation(&self, _metrics: MemoryMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_memory_operation(
+        &self,
+        _metrics: MemoryMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 
-    async fn record_tool_execution(&self, _metrics: ToolMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_tool_execution(
+        &self,
+        _metrics: ToolMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 
-    async fn record_agent_execution(&self, _metrics: AgentMetrics) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn record_agent_execution(
+        &self,
+        _metrics: AgentMetrics,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 }
 
 pub struct InMemoryTraceCollector {
     traces: Arc<std::sync::Mutex<Vec<TraceStep>>>,
+}
+
+impl Default for InMemoryTraceCollector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl InMemoryTraceCollector {
@@ -435,11 +462,21 @@ impl InMemoryTraceCollector {
 #[async_trait]
 impl TraceCollector for InMemoryTraceCollector {
     async fn start_trace(&self, _name: &str) -> String {
-        let trace_id = format!("trace_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
+        let trace_id = format!(
+            "trace_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+        );
         trace_id
     }
 
-    async fn add_trace_step(&self, _trace_id: &str, step: TraceStep) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn add_trace_step(
+        &self,
+        _trace_id: &str,
+        step: TraceStep,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if let Ok(mut traces) = self.traces.lock() {
             traces.push(step);
         }
@@ -476,45 +513,72 @@ impl GcpAdapter {
 
 #[async_trait]
 impl CloudAdapter for AwsAdapter {
-    async fn deploy(&self, _config: &DeploymentConfig) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn deploy(
+        &self,
+        _config: &DeploymentConfig,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         Ok("aws-deployment-id".to_string())
     }
 
-    async fn status(&self, _deployment_id: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn status(
+        &self,
+        _deployment_id: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         Ok("running".to_string())
     }
 
-    async fn logs(&self, _deployment_id: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn logs(
+        &self,
+        _deployment_id: &str,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(vec!["log line 1".to_string()])
     }
 }
 
 #[async_trait]
 impl CloudAdapter for AzureAdapter {
-    async fn deploy(&self, _config: &DeploymentConfig) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn deploy(
+        &self,
+        _config: &DeploymentConfig,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         Ok("azure-deployment-id".to_string())
     }
 
-    async fn status(&self, _deployment_id: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn status(
+        &self,
+        _deployment_id: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         Ok("running".to_string())
     }
 
-    async fn logs(&self, _deployment_id: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn logs(
+        &self,
+        _deployment_id: &str,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(vec!["log line 1".to_string()])
     }
 }
 
 #[async_trait]
 impl CloudAdapter for GcpAdapter {
-    async fn deploy(&self, _config: &DeploymentConfig) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn deploy(
+        &self,
+        _config: &DeploymentConfig,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         Ok("gcp-deployment-id".to_string())
     }
 
-    async fn status(&self, _deployment_id: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn status(
+        &self,
+        _deployment_id: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         Ok("running".to_string())
     }
 
-    async fn logs(&self, _deployment_id: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn logs(
+        &self,
+        _deployment_id: &str,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(vec!["log line 1".to_string()])
     }
 }

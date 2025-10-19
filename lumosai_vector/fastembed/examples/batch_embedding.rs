@@ -116,10 +116,7 @@ async fn await_streaming_example(data: &[String]) -> Result<(), Box<dyn std::err
     }
 
     let total_duration = start.elapsed();
-    println!(
-        "✅ Streaming complete: {} texts in {:?}",
-        total_processed, total_duration
-    );
+    println!("✅ Streaming complete: {total_processed} texts in {total_duration:?}");
     println!(
         "   Overall throughput: {:.1} texts/sec",
         total_processed as f64 / total_duration.as_secs_f64()
@@ -166,19 +163,16 @@ async fn await_parallel_comparison(data: &[String]) -> Result<(), Box<dyn std::e
     for handle in handles {
         match handle.await? {
             Ok(embeddings) => total_embeddings += embeddings.len(),
-            Err(e) => eprintln!("Chunk processing failed: {}", e),
+            Err(e) => eprintln!("Chunk processing failed: {e}"),
         }
     }
 
     let parallel_duration = start.elapsed();
 
-    println!(
-        "✅ Parallel: {} texts in {:?}",
-        total_embeddings, parallel_duration
-    );
+    println!("✅ Parallel: {total_embeddings} texts in {parallel_duration:?}");
 
     let speedup = sequential_duration.as_secs_f64() / parallel_duration.as_secs_f64();
-    println!("📈 Speedup: {:.2}x", speedup);
+    println!("📈 Speedup: {speedup:.2}x");
 
     Ok(())
 }
@@ -208,7 +202,7 @@ async fn await_model_comparison(data: &[String]) -> Result<(), Box<dyn std::erro
                 );
             }
             Err(e) => {
-                println!("⚠️  {}: Model not available ({})", name, e);
+                println!("⚠️  {name}: Model not available ({e})");
             }
         }
     }
@@ -217,7 +211,7 @@ async fn await_model_comparison(data: &[String]) -> Result<(), Box<dyn std::erro
 }
 
 fn generate_test_data(count: usize) -> Vec<String> {
-    let templates = vec![
+    let templates = [
         "The quick brown fox jumps over the lazy dog number {}.",
         "Machine learning model {} is processing natural language text.",
         "Vector database {} stores high-dimensional embeddings efficiently.",
@@ -261,7 +255,7 @@ impl PerformanceMetrics {
     }
 
     fn display(&self, name: &str) {
-        println!("📊 {} Performance:", name);
+        println!("📊 {name} Performance:");
         println!("   Total texts: {}", self.total_texts);
         println!("   Total time: {:?}", self.total_duration);
         println!("   Throughput: {:.1} texts/sec", self.throughput);

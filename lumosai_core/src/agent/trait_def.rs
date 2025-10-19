@@ -1,10 +1,10 @@
 //! Agent trait definition
 
+use crate::compat::{ListenOptions, VoiceOptions, VoiceProvider};
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use crate::compat::{VoiceProvider, VoiceOptions, ListenOptions};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -148,8 +148,7 @@ pub trait Agent: Base + Send + Sync {
             workflow.execute(input, context).await
         } else {
             Err(Error::NotFound(format!(
-                "Workflow '{}' not found",
-                workflow_name
+                "Workflow '{workflow_name}' not found"
             )))
         }
     }

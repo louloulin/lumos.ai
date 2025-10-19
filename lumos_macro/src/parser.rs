@@ -137,8 +137,7 @@ pub fn parse_agent_macro(input: &str) -> Result<AgentDef, String> {
         Ok((remaining, obj)) => {
             if !remaining.trim().is_empty() {
                 return Err(format!(
-                    "Unexpected content after agent definition: {}",
-                    remaining
+                    "Unexpected content after agent definition: {remaining}"
                 ));
             }
 
@@ -154,7 +153,7 @@ pub fn parse_agent_macro(input: &str) -> Result<AgentDef, String> {
                 tools,
             })
         }
-        Err(e) => Err(format!("Failed to parse agent macro: {:?}", e)),
+        Err(e) => Err(format!("Failed to parse agent macro: {e:?}")),
     }
 }
 
@@ -166,8 +165,7 @@ pub fn parse_tool_macro(input: &str) -> Result<ToolDef, String> {
         Ok((remaining, obj)) => {
             if !remaining.trim().is_empty() {
                 return Err(format!(
-                    "Unexpected content after tool definition: {}",
-                    remaining
+                    "Unexpected content after tool definition: {remaining}"
                 ));
             }
 
@@ -189,7 +187,7 @@ pub fn parse_tool_macro(input: &str) -> Result<ToolDef, String> {
                 handler,
             })
         }
-        Err(e) => Err(format!("Failed to parse tool macro: {:?}", e)),
+        Err(e) => Err(format!("Failed to parse tool macro: {e:?}")),
     }
 }
 
@@ -198,8 +196,8 @@ pub fn parse_tool_macro(input: &str) -> Result<ToolDef, String> {
 fn extract_string(obj: &HashMap<String, Value>, key: &str) -> Result<String, String> {
     match obj.get(key) {
         Some(Value::String(s)) => Ok(s.clone()),
-        Some(_) => Err(format!("Field '{}' must be a string", key)),
-        None => Err(format!("Missing required field '{}'", key)),
+        Some(_) => Err(format!("Field '{key}' must be a string")),
+        None => Err(format!("Missing required field '{key}'")),
     }
 }
 
@@ -207,11 +205,8 @@ fn extract_expression(obj: &HashMap<String, Value>, key: &str) -> Result<String,
     match obj.get(key) {
         Some(Value::Expression(e)) => Ok(e.clone()),
         Some(Value::Identifier(i)) => Ok(i.clone()),
-        Some(_) => Err(format!(
-            "Field '{}' must be an expression or identifier",
-            key
-        )),
-        None => Err(format!("Missing required field '{}'", key)),
+        Some(_) => Err(format!("Field '{key}' must be an expression or identifier")),
+        None => Err(format!("Missing required field '{key}'")),
     }
 }
 
@@ -227,7 +222,7 @@ fn extract_tool_list(obj: &HashMap<String, Value>, key: &str) -> Result<Vec<Stri
             }
             Ok(tools)
         }
-        Some(_) => Err(format!("Field '{}' must be an array", key)),
+        Some(_) => Err(format!("Field '{key}' must be an array")),
         None => Ok(Vec::new()), // 工具列表是可选的
     }
 }

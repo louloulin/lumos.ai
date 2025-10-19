@@ -261,12 +261,8 @@ pub mod filter {
     impl FilterEvaluator for StandardFilterEvaluator {
         fn evaluate(&self, filter: &FilterCondition, metadata: &Metadata) -> Result<bool> {
             match filter {
-                FilterCondition::Eq(field, value) => {
-                    Ok(metadata.get(field).map_or(false, |v| v == value))
-                }
-                FilterCondition::Ne(field, value) => {
-                    Ok(metadata.get(field).map_or(true, |v| v != value))
-                }
+                FilterCondition::Eq(field, value) => Ok(metadata.get(field) == Some(value)),
+                FilterCondition::Ne(field, value) => Ok(metadata.get(field) != Some(value)),
                 FilterCondition::Gt(field, value) => {
                     self.compare_numeric(metadata, field, value, |a, b| a > b)
                 }
@@ -280,10 +276,10 @@ pub mod filter {
                     self.compare_numeric(metadata, field, value, |a, b| a <= b)
                 }
                 FilterCondition::In(field, values) => {
-                    Ok(metadata.get(field).map_or(false, |v| values.contains(v)))
+                    Ok(metadata.get(field).is_some_and(|v| values.contains(v)))
                 }
                 FilterCondition::NotIn(field, values) => {
-                    Ok(metadata.get(field).map_or(true, |v| !values.contains(v)))
+                    Ok(metadata.get(field).is_none_or(|v| !values.contains(v)))
                 }
                 FilterCondition::Exists(field) => Ok(metadata.contains_key(field)),
                 FilterCondition::NotExists(field) => Ok(!metadata.contains_key(field)),

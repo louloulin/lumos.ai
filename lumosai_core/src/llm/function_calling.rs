@@ -107,7 +107,7 @@ impl FunctionCall {
 
     /// Parse the arguments as JSON
     pub fn parse_arguments(&self) -> Result<Value> {
-        serde_json::from_str(&self.arguments).map_err(|e| Error::Json(e))
+        serde_json::from_str(&self.arguments).map_err(Error::Json)
     }
 
     /// Parse the arguments into a HashMap
@@ -144,12 +144,9 @@ impl FunctionCall {
     {
         let args = self.parse_arguments()?;
         if let Some(value) = args.get(name) {
-            serde_json::from_value(value.clone()).map_err(|e| Error::Json(e))
+            serde_json::from_value(value.clone()).map_err(Error::Json)
         } else {
-            Err(Error::InvalidInput(format!(
-                "Parameter '{}' not found",
-                name
-            )))
+            Err(Error::InvalidInput(format!("Parameter '{name}' not found")))
         }
     }
 
@@ -164,7 +161,7 @@ impl FunctionCall {
                 Ok(None)
             } else {
                 Ok(Some(
-                    serde_json::from_value(value.clone()).map_err(|e| Error::Json(e))?,
+                    serde_json::from_value(value.clone()).map_err(Error::Json)?,
                 ))
             }
         } else {
@@ -176,8 +173,10 @@ impl FunctionCall {
 /// Represents a tool choice for OpenAI function calling
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum ToolChoice {
     /// Let the model choose whether to call functions
+    #[default]
     Auto,
     /// Force the model to not call any functions
     None,
@@ -185,12 +184,6 @@ pub enum ToolChoice {
     Required,
     /// Force the model to call a specific function
     Function { name: String },
-}
-
-impl Default for ToolChoice {
-    fn default() -> Self {
-        ToolChoice::Auto
-    }
 }
 
 /// Represents the result of a function call
@@ -325,8 +318,7 @@ pub mod utils {
                         if let Some(field_name) = req.as_str() {
                             if !obj.contains_key(field_name) {
                                 return Err(Error::InvalidInput(format!(
-                                    "Required field '{}' is missing",
-                                    field_name
+                                    "Required field '{field_name}' is missing"
                                 )));
                             }
                         }

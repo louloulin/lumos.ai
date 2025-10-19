@@ -2,35 +2,35 @@
 //!
 //! 提供企业级监控、安全、合规、多租户等高级功能。
 
-pub mod monitoring;
-pub mod security;
-pub mod compliance;
-pub mod multi_tenant;
-pub mod cost_tracking;
-pub mod sla_monitoring;
-pub mod incident_management;
-pub mod capacity_planning;
-pub mod anomaly_detection;
 pub mod alerting;
-pub mod reporting;
+pub mod anomaly_detection;
+pub mod capacity_planning;
+pub mod compliance;
 pub mod config;
+pub mod cost_tracking;
 pub mod error;
+pub mod incident_management;
+pub mod monitoring;
+pub mod multi_tenant;
+pub mod reporting;
+pub mod security;
+pub mod sla_monitoring;
 
 // Re-export main types
-pub use monitoring::{EnterpriseMonitoring, EnterpriseMetric, ComplianceMonitor};
-pub use security::{SecurityFramework, SecurityPolicy, ThreatDetectionEngine};
-pub use compliance::{ComplianceManager, AuditManager};
+pub use alerting::{AlertRule, AlertingSystem, NotificationChannel};
+pub use anomaly_detection::{AnomalyAlert, AnomalyDetector, MLAnomalyEngine};
+pub use capacity_planning::{CapacityMetrics, CapacityPlanner, ScalingRecommendation};
+pub use compliance::{AuditManager, ComplianceManager};
 pub use config::ComplianceStandard;
-pub use multi_tenant::{MultiTenantManager, Tenant, TenantStatus, TenantConfig, ResourceLimits};
-pub use cost_tracking::{CostTracker, CostMetrics, BillingManager};
-pub use sla_monitoring::{SLAMonitor, SLAMetrics, ServiceLevelAgreement};
-pub use incident_management::{IncidentManager, Incident, IncidentResponse};
-pub use capacity_planning::{CapacityPlanner, CapacityMetrics, ScalingRecommendation};
-pub use anomaly_detection::{AnomalyDetector, AnomalyAlert, MLAnomalyEngine};
-pub use alerting::{AlertingSystem, AlertRule, NotificationChannel};
-pub use reporting::{ReportGenerator, ComplianceReport, PerformanceReport};
 pub use config::EnterpriseConfig;
+pub use cost_tracking::{BillingManager, CostMetrics, CostTracker};
 pub use error::{EnterpriseError, Result};
+pub use incident_management::{Incident, IncidentManager, IncidentResponse};
+pub use monitoring::{ComplianceMonitor, EnterpriseMetric, EnterpriseMonitoring};
+pub use multi_tenant::{MultiTenantManager, ResourceLimits, Tenant, TenantConfig, TenantStatus};
+pub use reporting::{ComplianceReport, PerformanceReport, ReportGenerator};
+pub use security::{SecurityFramework, SecurityPolicy, ThreatDetectionEngine};
+pub use sla_monitoring::{SLAMetrics, SLAMonitor, ServiceLevelAgreement};
 
 /// 企业级监控快速设置
 ///

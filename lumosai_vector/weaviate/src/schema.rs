@@ -50,7 +50,7 @@ impl WeaviateClass {
     pub fn new(name: &str, dimension: usize) -> Self {
         Self {
             class: name.to_string(),
-            description: Some(format!("Vector index for {}", name)),
+            description: Some(format!("Vector index for {name}")),
             vector_index_type: "hnsw".to_string(),
             vector_index_config: serde_json::json!({
                 "distance": "cosine",

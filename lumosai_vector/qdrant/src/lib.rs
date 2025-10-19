@@ -89,7 +89,7 @@ mod tests {
         // Should either succeed or fail with connection error
         match storage {
             Ok(_) => println!("Successfully connected to Qdrant"),
-            Err(e) => println!("Failed to connect to Qdrant: {}", e),
+            Err(e) => println!("Failed to connect to Qdrant: {e}"),
         }
     }
 }

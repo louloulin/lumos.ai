@@ -59,7 +59,9 @@ pub use types::*;
 // Re-export core types for convenience
 pub use lumosai_vector_core::traits::VectorStorage;
 // Note: Avoid glob re-exports to prevent ambiguity
-pub use lumosai_vector_core::types::{Document, DocumentId, FilterCondition, SimilarityMetric, Vector};
+pub use lumosai_vector_core::types::{
+    Document, DocumentId, FilterCondition, SimilarityMetric, Vector,
+};
 
 /// Milvus client for managing connections and databases
 #[derive(Clone)]
@@ -127,8 +129,7 @@ impl MilvusConnection {
                     .await
                     .unwrap_or_else(|_| "Unknown error".to_string());
                 return Err(MilvusError::Authentication(format!(
-                    "Authentication failed: {}",
-                    error_text
+                    "Authentication failed: {error_text}"
                 )));
             }
         }
@@ -141,7 +142,7 @@ impl MilvusConnection {
         let mut builder = self.client.get(&self.config.endpoint);
 
         if let Some(ref token) = self.auth_token {
-            builder = builder.header("Authorization", format!("Bearer {}", token));
+            builder = builder.header("Authorization", format!("Bearer {token}"));
         }
 
         builder
@@ -152,7 +153,7 @@ impl MilvusConnection {
         let mut builder = self.client.post(url);
 
         if let Some(ref token) = self.auth_token {
-            builder = builder.header("Authorization", format!("Bearer {}", token));
+            builder = builder.header("Authorization", format!("Bearer {token}"));
         }
 
         builder
@@ -163,7 +164,7 @@ impl MilvusConnection {
         let mut builder = self.client.get(url);
 
         if let Some(ref token) = self.auth_token {
-            builder = builder.header("Authorization", format!("Bearer {}", token));
+            builder = builder.header("Authorization", format!("Bearer {token}"));
         }
 
         builder
@@ -174,7 +175,7 @@ impl MilvusConnection {
         let mut builder = self.client.delete(url);
 
         if let Some(ref token) = self.auth_token {
-            builder = builder.header("Authorization", format!("Bearer {}", token));
+            builder = builder.header("Authorization", format!("Bearer {token}"));
         }
 
         builder

@@ -52,7 +52,7 @@ impl Parse for SimpleAgentDef {
                 _ => {
                     return Err(syn::Error::new(
                         key.span(),
-                        format!("Unknown field '{}' in agent definition", key),
+                        format!("Unknown field '{key}' in agent definition"),
                     ));
                 }
             }

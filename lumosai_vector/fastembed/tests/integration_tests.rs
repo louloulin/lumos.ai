@@ -138,7 +138,7 @@ async fn test_large_batch_processing() {
 
     // Create a large batch to test chunking
     let texts: Vec<String> = (0..300)
-        .map(|i| format!("This is test sentence number {}.", i))
+        .map(|i| format!("This is test sentence number {i}."))
         .collect();
 
     let embeddings = provider.embed_batch(&texts).await.unwrap();

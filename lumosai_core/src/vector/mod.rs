@@ -104,7 +104,7 @@ impl From<lumosai_vector::SearchResult> for QueryResult {
             id: result.id,
             score: result.score,
             vector: result.vector,
-            metadata: result.metadata.map(|m| convert_metadata_to_json(m)),
+            metadata: result.metadata.map(convert_metadata_to_json),
         }
     }
 }
@@ -290,7 +290,7 @@ impl Default for VectorStorageConfig {
 pub fn create_vector_storage(
     config: Option<VectorStorageConfig>,
 ) -> Result<Box<dyn VectorStorage>> {
-    let config = config.unwrap_or_else(VectorStorageConfig::default);
+    let config = config.unwrap_or_default();
 
     match config {
         VectorStorageConfig::Memory {

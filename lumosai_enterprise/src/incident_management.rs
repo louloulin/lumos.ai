@@ -2,9 +2,9 @@
 //!
 //! 提供企业级事件管理和响应功能
 
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -109,7 +109,12 @@ impl IncidentManager {
     }
 
     /// 创建事件
-    pub async fn create_incident(&mut self, title: String, description: String, severity: IncidentSeverity) -> Result<Uuid> {
+    pub async fn create_incident(
+        &mut self,
+        title: String,
+        description: String,
+        severity: IncidentSeverity,
+    ) -> Result<Uuid> {
         let id = Uuid::new_v4();
         let incident = Incident {
             id,

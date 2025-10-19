@@ -37,20 +37,20 @@
 //! ```
 
 pub mod error;
-pub mod types;
-pub mod voice;
-pub mod vision;
 pub mod providers;
+pub mod types;
+pub mod vision;
+pub mod voice;
 
 // 重新导出核心类型
 pub use error::{MultimodalError, Result};
+pub use providers::{OpenAIVision, OpenAIVoice};
 pub use types::{
-    AudioFormat, ImageFormat, ImageSize, MultimodalMessage, MultimodalContent,
-    TranscriptionOptions, SynthesisOptions, VisionOptions, GenerationOptions,
+    AudioFormat, GenerationOptions, ImageFormat, ImageSize, MultimodalContent, MultimodalMessage,
+    SynthesisOptions, TranscriptionOptions, VisionOptions,
 };
-pub use voice::{VoiceProvider, VoiceCapabilities};
-pub use vision::{VisionProvider, VisionCapabilities};
-pub use providers::{OpenAIVoice, OpenAIVision};
+pub use vision::{VisionCapabilities, VisionProvider};
+pub use voice::{VoiceCapabilities, VoiceProvider};
 
 /// 多模态能力集成的版本信息
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

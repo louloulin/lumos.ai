@@ -183,8 +183,8 @@ impl CrossLangAgent {
 
     /// 生成响应
     pub fn generate(&self, input: &str) -> Result<CrossLangResponse> {
-        use lumosai_core::llm::{Message, Role};
         use lumosai_core::agent::types::AgentGenerateOptions;
+        use lumosai_core::llm::{Message, Role};
 
         let message = Message {
             role: Role::User,
@@ -220,8 +220,8 @@ impl CrossLangAgent {
 
     /// 异步生成响应
     pub async fn generate_async(&self, input: &str) -> Result<CrossLangResponse> {
-        use lumosai_core::llm::{Message, Role};
         use lumosai_core::agent::types::AgentGenerateOptions;
+        use lumosai_core::llm::{Message, Role};
 
         let message = Message {
             role: Role::User,

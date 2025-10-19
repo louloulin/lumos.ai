@@ -2,14 +2,13 @@
 //!
 //! 实现 Agent 团队协作、任务分配和编排，对标 CrewAI 的多 Agent 能力
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock, Semaphore};
+use tokio::sync::{RwLock, Semaphore};
 use uuid::Uuid;
 
-use super::communication::{AgentCommunicationManager, AgentMessage, AgentMessageType};
+use super::communication::AgentCommunicationManager;
 use super::Agent;
 use crate::error::{Error, Result};
 
@@ -217,9 +216,16 @@ impl Crew {
     }
 
     /// 添加 Agent 到团队
-    pub async fn add_agent(&self, agent_id: String, agent: Arc<dyn Agent>, role: AgentRole) -> Result<()> {
+    pub async fn add_agent(
+        &self,
+        agent_id: String,
+        agent: Arc<dyn Agent>,
+        role: AgentRole,
+    ) -> Result<()> {
         // 注册 Agent 到通信管理器
-        self.communication.register_agent(agent_id.clone(), agent.clone()).await?;
+        self.communication
+            .register_agent(agent_id.clone(), agent.clone())
+            .await?;
 
         // 添加到团队
         self.agents.write().await.insert(agent_id.clone(), agent);
@@ -240,7 +246,11 @@ impl Crew {
 
     /// 执行团队任务
     pub async fn kickoff(&self) -> Result<Vec<AgentTask>> {
-        tracing::info!("Crew {} starting execution in {:?} mode", self.name, self.mode);
+        tracing::info!(
+            "Crew {} starting execution in {:?} mode",
+            self.name,
+            self.mode
+        );
 
         match self.mode {
             CollaborationMode::Sequential => self.execute_sequential().await,
@@ -269,9 +279,7 @@ impl Crew {
 
         for task_id in task_queue {
             let crew = self.clone_arc();
-            let handle = tokio::spawn(async move {
-                crew.execute_task(&task_id).await
-            });
+            let handle = tokio::spawn(async move { crew.execute_task(&task_id).await });
             handles.push(handle);
         }
 
@@ -291,7 +299,9 @@ impl Crew {
     async fn execute_hierarchical(&self) -> Result<Vec<AgentTask>> {
         // 简化实现：选择第一个 Agent 作为管理者
         let agents = self.agents.read().await;
-        let manager_id = agents.keys().next()
+        let manager_id = agents
+            .keys()
+            .next()
             .ok_or_else(|| Error::InvalidInput("No agents in crew".to_string()))?
             .clone();
         drop(agents);
@@ -305,25 +315,32 @@ impl Crew {
     /// 执行单个任务
     async fn execute_task(&self, task_id: &str) -> Result<AgentTask> {
         // 获取信号量许可（限制并发）
-        let _permit = self.concurrency_limit.acquire().await
-            .map_err(|e| Error::Internal(format!("Failed to acquire semaphore: {}", e)))?;
+        let _permit = self
+            .concurrency_limit
+            .acquire()
+            .await
+            .map_err(|e| Error::Internal(format!("Failed to acquire semaphore: {e}")))?;
 
         // 第一步：检查依赖并收集任务信息
         let (description, dependencies) = {
             let tasks = self.tasks.read().await;
-            let task = tasks.iter()
+            let task = tasks
+                .iter()
                 .find(|t| t.id == task_id)
-                .ok_or_else(|| Error::NotFound(format!("Task {} not found", task_id)))?;
+                .ok_or_else(|| Error::NotFound(format!("Task {task_id} not found")))?;
 
             // 检查依赖
             for dep_id in &task.dependencies {
-                let dep_completed = tasks.iter()
+                let dep_completed = tasks
+                    .iter()
                     .find(|t| &t.id == dep_id)
                     .map(|t| t.status == TaskStatus::Completed)
                     .unwrap_or(false);
 
                 if !dep_completed {
-                    return Err(Error::InvalidInput(format!("Dependency task {} not completed", dep_id)));
+                    return Err(Error::InvalidInput(format!(
+                        "Dependency task {dep_id} not completed"
+                    )));
                 }
             }
 
@@ -333,9 +350,10 @@ impl Crew {
         // 第二步：标记为进行中并分配 Agent
         let agent_id = {
             let mut tasks = self.tasks.write().await;
-            let task = tasks.iter_mut()
+            let task = tasks
+                .iter_mut()
                 .find(|t| t.id == task_id)
-                .ok_or_else(|| Error::NotFound(format!("Task {} not found", task_id)))?;
+                .ok_or_else(|| Error::NotFound(format!("Task {task_id} not found")))?;
 
             task.mark_in_progress();
 
@@ -352,13 +370,14 @@ impl Crew {
         tracing::info!("Executing task {} with agent {}", task_id, agent_id);
 
         // 这里简化实现，实际应该调用 Agent 的 generate 方法
-        let result = format!("Task '{}' completed by agent {}", description, agent_id);
+        let result = format!("Task '{description}' completed by agent {agent_id}");
 
         // 第三步：更新任务状态
         let mut tasks = self.tasks.write().await;
-        let task = tasks.iter_mut()
+        let task = tasks
+            .iter_mut()
             .find(|t| t.id == task_id)
-            .ok_or_else(|| Error::NotFound(format!("Task {} not found", task_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Task {task_id} not found")))?;
 
         task.mark_completed(result);
         Ok(task.clone())
@@ -370,7 +389,9 @@ impl Crew {
 
         // 简单策略：选择第一个可用的 Agent
         // TODO: 实现更智能的负载均衡策略（基于任务优先级、Agent 负载等）
-        agents.keys().next()
+        agents
+            .keys()
+            .next()
             .cloned()
             .ok_or_else(|| Error::InvalidInput("No agents available".to_string()))
     }
@@ -397,9 +418,18 @@ impl Crew {
         let agents = self.agents.read().await;
 
         let total_tasks = tasks.len();
-        let completed_tasks = tasks.iter().filter(|t| t.status == TaskStatus::Completed).count();
-        let failed_tasks = tasks.iter().filter(|t| t.status == TaskStatus::Failed).count();
-        let in_progress_tasks = tasks.iter().filter(|t| t.status == TaskStatus::InProgress).count();
+        let completed_tasks = tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::Completed)
+            .count();
+        let failed_tasks = tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::Failed)
+            .count();
+        let in_progress_tasks = tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::InProgress)
+            .count();
 
         CrewStats {
             total_agents: agents.len(),
@@ -422,4 +452,3 @@ pub struct CrewStats {
     pub in_progress_tasks: usize,
     pub pending_tasks: usize,
 }
-

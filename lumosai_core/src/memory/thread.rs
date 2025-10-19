@@ -202,12 +202,12 @@ impl MemoryThread {
     pub fn is_owned_by(&self, resource_id: &str) -> bool {
         self.resource_id
             .as_ref()
-            .map_or(false, |rid| rid == resource_id)
+            .is_some_and(|rid| rid == resource_id)
     }
 
     /// Check if thread belongs to the given agent
     pub fn belongs_to_agent(&self, agent_id: &str) -> bool {
-        self.agent_id.as_ref().map_or(false, |aid| aid == agent_id)
+        self.agent_id.as_ref().is_some_and(|aid| aid == agent_id)
     }
 }
 
@@ -306,8 +306,7 @@ impl<S: MemoryThreadStorage> MemoryThreadManager<S> {
                 if let Some(resource_id) = resource_id {
                     if !thread.is_owned_by(resource_id) {
                         return Err(Error::AccessDenied(format!(
-                            "Thread {} is not owned by resource {}",
-                            thread_id, resource_id
+                            "Thread {thread_id} is not owned by resource {resource_id}"
                         )));
                     }
                 }
@@ -327,7 +326,7 @@ impl<S: MemoryThreadStorage> MemoryThreadManager<S> {
         let mut thread = self
             .get_thread(thread_id, resource_id)
             .await?
-            .ok_or_else(|| Error::NotFound(format!("Thread {} not found", thread_id)))?;
+            .ok_or_else(|| Error::NotFound(format!("Thread {thread_id} not found")))?;
 
         thread.update(params)?;
         self.storage.update_thread(&thread).await

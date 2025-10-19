@@ -45,9 +45,7 @@ async fn test_basic_connection(provider: &ZhipuProvider) -> Result<(), Box<dyn s
     options.max_tokens = Some(100);
 
     let start_time = Instant::now();
-    let result = provider
-        .generate("你好", &options)
-        .await;
+    let result = provider.generate("你好", &options).await;
     let duration = start_time.elapsed();
 
     match result {
@@ -74,7 +72,9 @@ async fn test_basic_connection(provider: &ZhipuProvider) -> Result<(), Box<dyn s
     Ok(())
 }
 
-async fn test_chinese_conversation(provider: &ZhipuProvider) -> Result<(), Box<dyn std::error::Error>> {
+async fn test_chinese_conversation(
+    provider: &ZhipuProvider,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🧪 测试2: 智谱 AI 中文对话能力...");
 
     let messages = vec![
@@ -121,7 +121,9 @@ async fn test_chinese_conversation(provider: &ZhipuProvider) -> Result<(), Box<d
     Ok(())
 }
 
-async fn test_english_conversation(provider: &ZhipuProvider) -> Result<(), Box<dyn std::error::Error>> {
+async fn test_english_conversation(
+    provider: &ZhipuProvider,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🧪 测试3: 智谱 AI 英文对话能力...");
 
     let result = provider

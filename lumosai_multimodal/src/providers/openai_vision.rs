@@ -1,7 +1,7 @@
 //! OpenAI 视觉处理提供商实现
 
 use async_trait::async_trait;
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tokio::fs;
@@ -114,17 +114,21 @@ impl OpenAIVision {
     /// 将图像文件转换为 base64 data URL
     async fn image_to_data_url(&self, image_path: &str) -> Result<String> {
         let image_data = fs::read(image_path).await?;
-        
+
         let ext = Path::new(image_path)
             .extension()
             .and_then(|e| e.to_str())
             .ok_or_else(|| MultimodalError::InvalidParameter("无法推断图像格式".to_string()))?;
-        
+
         let format = ImageFormat::from_extension(ext)
             .ok_or_else(|| MultimodalError::UnsupportedFormat(ext.to_string()))?;
 
         let base64_data = general_purpose::STANDARD.encode(&image_data);
-        Ok(format!("data:{};base64,{}", format.mime_type(), base64_data))
+        Ok(format!(
+            "data:{};base64,{}",
+            format.mime_type(),
+            base64_data
+        ))
     }
 }
 
@@ -326,10 +330,9 @@ mod tests {
     fn test_openai_vision_creation() {
         let vision = OpenAIVision::new("test-key");
         assert_eq!(vision.name(), "OpenAI");
-        
+
         let caps = vision.capabilities();
         assert!(caps.supports_understanding);
         assert!(caps.supports_generation);
     }
 }
-

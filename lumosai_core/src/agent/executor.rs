@@ -21,19 +21,19 @@ use crate::agent::types::{
 };
 use crate::agent::AgentConfig;
 use crate::base::{Base, BaseComponent, ComponentConfig};
+use crate::compat::{
+    AgentMetrics, Component, ExecutionContext, MetricsCollector, TelemetryTokenUsage,
+    TraceCollector, TraceStep, TraceStepType, VoiceProvider,
+};
 use crate::error::{Error, Result};
 use crate::llm::function_calling_utils;
 use crate::llm::{
     FunctionDefinition, LlmOptions, LlmProvider, Message, Role, ToolChoice as LlmToolChoice,
 };
-use crate::compat::{
-    Component, MetricsCollector, TraceCollector, VoiceProvider,
-    AgentMetrics, ExecutionContext, MetricValue, TraceStep, TraceStepType, TelemetryTokenUsage
-};
 use crate::logger::Logger;
-use crate::telemetry::TelemetrySink;
 use crate::memory::Memory;
 use crate::memory::{create_working_memory, WorkingMemory};
+use crate::telemetry::TelemetrySink;
 use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
 
 /// Basic agent implementation
@@ -89,7 +89,7 @@ impl BasicAgent {
             match create_working_memory(wm_config) {
                 Ok(wm) => Some(wm),
                 Err(e) => {
-                    eprintln!("Failed to initialize working memory: {}", e);
+                    eprintln!("Failed to initialize working memory: {e}");
                     None
                 }
             }
@@ -215,7 +215,7 @@ impl BasicAgent {
 
         // Check if we're using function calling mode
         let tools = self.tools.lock().ok();
-        let has_tools = tools.as_ref().map_or(false, |t| !t.is_empty());
+        let has_tools = tools.as_ref().is_some_and(|t| !t.is_empty());
         let use_function_calling = crate::llm::function_calling_utils::should_use_function_calling(
             self.enable_function_calling,
             self.llm.supports_function_calling(),
@@ -238,13 +238,13 @@ impl BasicAgent {
         );
 
         if use_function_calling {
-            self.logger().debug(
-                "Using function calling mode - omitting tool format from system message"
-            );
+            let _ = self
+                .logger()
+                .debug("Using function calling mode - omitting tool format from system message");
         } else if has_tools {
-            self.logger().debug(
-                "Using legacy regex mode - including tool format in system message"
-            );
+            let _ = self
+                .logger()
+                .debug("Using legacy regex mode - including tool format in system message");
         }
 
         Message {
@@ -267,7 +267,7 @@ impl BasicAgent {
         }
 
         // Use the utility function from llm module
-        function_calling_utils::tools_to_function_definitions(&*tools)
+        function_calling_utils::tools_to_function_definitions(&tools)
     }
 
     /// Parse function calls from OpenAI function calling response
@@ -283,7 +283,7 @@ impl BasicAgent {
                     // Validate arguments against function schema
                     let validation_result = function_calling_utils::validate_against_schema(
                         &serde_json::to_value(&arguments).unwrap_or(Value::Null),
-                        &function_definitions
+                        function_definitions
                             .iter()
                             .find(|def| def.name == func_call.name)
                             .map(|def| &def.parameters)
@@ -300,20 +300,16 @@ impl BasicAgent {
                                 name: func_call.name.clone(),
                                 arguments,
                             });
-                            self.logger().debug(
-                                &format!(
-                                    "Function call '{}' validated successfully",
-                                    func_call.name
-                                )
-                            );
+                            self.logger().debug(&format!(
+                                "Function call '{}' validated successfully",
+                                func_call.name
+                            ));
                         }
                         Err(e) => {
-                            self.logger().warn(
-                                &format!(
-                                    "Function call '{}' failed validation: {}",
-                                    func_call.name, e
-                                )
-                            );
+                            self.logger().warn(&format!(
+                                "Function call '{}' failed validation: {}",
+                                func_call.name, e
+                            ));
                             // Still add the call but log the validation failure
                             tool_calls.push(ToolCall {
                                 id: func_call
@@ -327,9 +323,8 @@ impl BasicAgent {
                     }
                 }
                 Err(e) => {
-                    self.logger().warn(
-                        &format!("Failed to parse function call arguments: {}", e)
-                    );
+                    self.logger()
+                        .warn(&format!("Failed to parse function call arguments: {e}"));
                 }
             }
         }
@@ -353,13 +348,15 @@ async fn call_llm_with_monitoring(
     // Record LLM call start in trace
     if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
         let mut llm_step = TraceStep::new(step_name.to_string(), TraceStepType::LlmCall);
-        llm_step
-            .metadata
-            .insert("messages_count".to_string(), serde_json::Value::Number(serde_json::Number::from(messages.len())));
+        llm_step.metadata.insert(
+            "messages_count".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(messages.len())),
+        );
         if let Some(model) = &options.model {
-            llm_step
-                .metadata
-                .insert("model".to_string(), serde_json::Value::String(model.clone()));
+            llm_step.metadata.insert(
+                "model".to_string(),
+                serde_json::Value::String(model.clone()),
+            );
         }
         let _ = trace_collector.add_trace_step(trace_id, llm_step).await;
     }
@@ -378,16 +375,17 @@ async fn call_llm_with_monitoring(
     // Record LLM call completion in trace
     if let (Some(trace_collector), Some(trace_id)) = (trace_collector, trace_id) {
         let mut completion_step = TraceStep::new(
-            format!("{} completed", step_name),
+            format!("{step_name} completed"),
             TraceStepType::DataProcessing,
         );
         completion_step.metadata.insert(
             "execution_time_ms".to_string(),
             serde_json::Value::Number(serde_json::Number::from(execution_time.as_millis() as u64)),
         );
-        completion_step
-            .metadata
-            .insert("response_length".to_string(), serde_json::Value::Number(serde_json::Number::from(response.len())));
+        completion_step.metadata.insert(
+            "response_length".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(response.len())),
+        );
         let _ = trace_collector
             .add_trace_step(trace_id, completion_step)
             .await;
@@ -434,9 +432,8 @@ impl Agent for BasicAgent {
 
     fn set_instructions(&mut self, instructions: String) {
         self.instructions = instructions;
-        self.logger().debug(
-            &format!("Instructions updated for agent '{}'", self.name)
-        );
+        self.logger()
+            .debug(&format!("Instructions updated for agent '{}'", self.name));
     }
 
     fn get_llm(&self) -> Arc<dyn LlmProvider> {
@@ -472,21 +469,21 @@ impl Agent for BasicAgent {
             Ok(guard) => guard,
             Err(poison_error) => {
                 eprintln!(
-                    "Tools mutex poisoned during add_tool, attempting recovery: {}",
-                    poison_error
+                    "Tools mutex poisoned during add_tool, attempting recovery: {poison_error}"
                 );
                 poison_error.into_inner()
             }
         };
 
         if tools.contains_key(&tool_name) {
-            return Err(Error::Tool(format!("Tool '{}' already exists", tool_name)));
+            return Err(Error::Tool(format!("Tool '{tool_name}' already exists")));
         }
 
         tools.insert(tool_name.clone(), tool);
-        self.logger().debug(
-            &format!("Tool '{}' added to agent '{}'", tool_name, self.name)
-        );
+        self.logger().debug(&format!(
+            "Tool '{}' added to agent '{}'",
+            tool_name, self.name
+        ));
 
         Ok(())
     }
@@ -496,21 +493,21 @@ impl Agent for BasicAgent {
             Ok(guard) => guard,
             Err(poison_error) => {
                 eprintln!(
-                    "Tools mutex poisoned during remove_tool, attempting recovery: {}",
-                    poison_error
+                    "Tools mutex poisoned during remove_tool, attempting recovery: {poison_error}"
                 );
                 poison_error.into_inner()
             }
         };
 
         if !tools.contains_key(tool_name) {
-            return Err(Error::NotFound(format!("Tool '{}' not found", tool_name)));
+            return Err(Error::NotFound(format!("Tool '{tool_name}' not found")));
         }
 
         tools.remove(tool_name);
-        self.logger().debug(
-            &format!("Tool '{}' removed from agent '{}'", tool_name, self.name)
-        );
+        self.logger().debug(&format!(
+            "Tool '{}' removed from agent '{}'",
+            tool_name, self.name
+        ));
 
         Ok(())
     }
@@ -528,8 +525,8 @@ impl Agent for BasicAgent {
 
         // Check if we're using function calling - if so, log warning and return empty
         if self.enable_function_calling && self.llm.supports_function_calling() {
-            self.logger().warn(
-                "parse_tool_calls called despite function calling being enabled");
+            self.logger()
+                .warn("parse_tool_calls called despite function calling being enabled");
             return Ok(Vec::new());
         }
 
@@ -539,7 +536,7 @@ impl Agent for BasicAgent {
             // Try to extract JSON code blocks
             let mut tool_calls = Vec::new();
             let json_regex = Regex::new(r"(?s)```json\s*\n?(.*?)\n?\s*```")
-                .map_err(|e| Error::Tool(format!("Failed to compile JSON regex: {}", e)))?;
+                .map_err(|e| Error::Tool(format!("Failed to compile JSON regex: {e}")))?;
 
             for cap in json_regex.captures_iter(response) {
                 let json_str = cap[1].trim();
@@ -584,22 +581,23 @@ impl Agent for BasicAgent {
                     }
                     Err(e) => {
                         self.logger()
-                            .warn(&format!("Failed to parse JSON code block: {}", e));
+                            .warn(&format!("Failed to parse JSON code block: {e}"));
                     }
                 }
             }
 
             if !tool_calls.is_empty() {
-                self.logger().info(
-                    &format!("Parsed {} tool calls from code blocks", tool_calls.len())
-                );
+                self.logger().info(&format!(
+                    "Parsed {} tool calls from code blocks",
+                    tool_calls.len()
+                ));
                 return Ok(tool_calls);
             }
         }
 
         // If JSON extraction didn't work, try the legacy regex pattern
         let re = Regex::new(r"Using the tool '([^']+)' with parameters: (\{[^}]+\})")
-            .map_err(|e| Error::Tool(format!("Failed to compile tool call regex: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to compile tool call regex: {e}")))?;
 
         let mut tool_calls = Vec::new();
 
@@ -617,16 +615,15 @@ impl Agent for BasicAgent {
                 }
                 Err(e) => {
                     self.logger()
-                        .warn(&format!("Failed to parse tool parameters: {}", e));
+                        .warn(&format!("Failed to parse tool parameters: {e}"));
                 }
             }
         }
 
         // Try additional pattern for function-style calls
         if tool_calls.is_empty() {
-            let fn_regex = Regex::new(r"(\w+)\(([^)]*)\)").map_err(|e| {
-                Error::Tool(format!("Failed to compile function call regex: {}", e))
-            })?;
+            let fn_regex = Regex::new(r"(\w+)\(([^)]*)\)")
+                .map_err(|e| Error::Tool(format!("Failed to compile function call regex: {e}")))?;
 
             for cap in fn_regex.captures_iter(response) {
                 let tool_name = cap[1].to_string();
@@ -705,12 +702,10 @@ impl Agent for BasicAgent {
         }
 
         if !tool_calls.is_empty() {
-            self.logger().info(
-                &format!(
-                    "Parsed {} tool calls using enhanced parsing methods",
-                    tool_calls.len()
-                )
-            );
+            self.logger().info(&format!(
+                "Parsed {} tool calls using enhanced parsing methods",
+                tool_calls.len()
+            ));
         }
 
         Ok(tool_calls)
@@ -725,10 +720,7 @@ impl Agent for BasicAgent {
                 Ok(guard) => guard,
                 Err(poison_error) => {
                     // Log the error and attempt recovery
-                    eprintln!(
-                        "Tools mutex poisoned, attempting recovery: {}",
-                        poison_error
-                    );
+                    eprintln!("Tools mutex poisoned, attempting recovery: {poison_error}");
                     poison_error.into_inner()
                 }
             };
@@ -747,7 +739,7 @@ impl Agent for BasicAgent {
         }; // MutexGuard is dropped here
 
         // Convert HashMap to JSON Value
-        let args_value = serde_json::to_value(&tool_call.arguments).map_err(|e| Error::Json(e))?;
+        let args_value = serde_json::to_value(&tool_call.arguments).map_err(Error::Json)?;
 
         // Create execution context and options
         let context = ToolExecutionContext::new().with_tool_call_id(tool_call.id.clone());
@@ -842,12 +834,9 @@ impl Agent for BasicAgent {
     ) -> Result<AgentGenerateResult> {
         // For now, delegate to regular generate method
         // TODO: Implement proper memory thread integration
-        self.logger().debug(
-            &format!(
-                "generate_with_memory called with thread_id: {:?}",
-                thread_id
-            )
-        );
+        self.logger().debug(&format!(
+            "generate_with_memory called with thread_id: {thread_id:?}"
+        ));
         self.generate(messages, options).await
     }
 
@@ -868,7 +857,7 @@ impl Agent for BasicAgent {
         // Initialize comprehensive monitoring
         let start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| Error::SystemTime(format!("Failed to get system time: {}", e)))?
+            .map_err(|e| Error::SystemTime(format!("Failed to get system time: {e}")))?
             .as_millis() as u64;
 
         // Create execution context for telemetry
@@ -884,12 +873,12 @@ impl Agent for BasicAgent {
         // Initialize agent metrics
         let mut agent_metrics = if self.metrics_collector.is_some() {
             Some(AgentMetrics::new(
-                1, // total_calls
-                0, // successful_calls
-                0, // failed_calls
-                0.0, // avg_response_time
+                1,                                             // total_calls
+                0,                                             // successful_calls
+                0,                                             // failed_calls
+                0.0,                                           // avg_response_time
                 crate::compat::TelemetryTokenUsage::default(), // token_usage
-                0, // execution_time_ms
+                0,                                             // execution_time_ms
             ))
         } else {
             None
@@ -901,7 +890,7 @@ impl Agent for BasicAgent {
                 .start_trace(&format!("agent_{}", self.name))
                 .await;
             self.logger()
-                .debug(&format!("Started execution trace: {}", id));
+                .debug(&format!("Started execution trace: {id}"));
             Some(id)
         } else {
             None
@@ -929,12 +918,10 @@ impl Agent for BasicAgent {
         }
 
         // Log the generation start
-        self.logger().debug(
-            &format!(
-                "Starting generation for agent '{}' (run_id: {})",
-                self.name, run_id
-            )
-        );
+        self.logger().debug(&format!(
+            "Starting generation for agent '{}' (run_id: {})",
+            self.name, run_id
+        ));
 
         // Create initial step
         let initial_step = AgentStep {
@@ -962,8 +949,9 @@ impl Agent for BasicAgent {
                 .map(|tools| tools.is_empty())
                 .unwrap_or(true);
 
-        self.logger().info(
-            &format!("Using function calling mode: {}", use_function_calling));
+        self.logger().info(&format!(
+            "Using function calling mode: {use_function_calling}"
+        ));
 
         // Record function calling mode in trace
         if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
@@ -991,13 +979,13 @@ impl Agent for BasicAgent {
             current_step += 1;
             let step_start_time = std::time::Instant::now();
 
-            self.logger().debug(
-                &format!("Starting step {} of {}", current_step, max_steps));
+            self.logger()
+                .debug(&format!("Starting step {current_step} of {max_steps}"));
 
             // Record step start in trace
             if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id) {
                 let mut step = TraceStep::new(
-                    format!("Step {} - LLM Generation", current_step),
+                    format!("Step {current_step} - LLM Generation"),
                     TraceStepType::LlmCall,
                 );
                 step.metadata.insert(
@@ -1054,7 +1042,7 @@ impl Agent for BasicAgent {
                         (&self.trace_collector, &trace_id)
                     {
                         let mut llm_step = TraceStep::new(
-                            format!("LLM call completed - step {}", current_step),
+                            format!("LLM call completed - step {current_step}"),
                             TraceStepType::LlmCall,
                         );
                         llm_step.duration_ms = llm_duration.as_millis() as u64;
@@ -1091,30 +1079,26 @@ impl Agent for BasicAgent {
                             metrics.tool_calls_count += tool_calls.len();
                         }
 
-                        self.logger().info(
-                            &format!("Executing {} function calls", tool_calls.len())
-                        );
+                        self.logger()
+                            .info(&format!("Executing {} function calls", tool_calls.len()));
 
                         for call in &tool_calls {
-                            self.logger().debug(
-                                &format!(
-                                    "Executing function call: {} with arguments: {}",
-                                    call.name,
-                                    serde_json::to_string_pretty(&call.arguments)
-                                        .unwrap_or_else(|_| "{}".to_string())
-                                )
-                            );
+                            self.logger().debug(&format!(
+                                "Executing function call: {} with arguments: {}",
+                                call.name,
+                                serde_json::to_string_pretty(&call.arguments)
+                                    .unwrap_or_else(|_| "{}".to_string())
+                            ));
 
                             let tool_start_time = std::time::Instant::now();
 
                             let result = match self.execute_tool_call(call).await {
                                 Ok(result) => {
                                     let execution_time = tool_start_time.elapsed();
-                                    self.logger().debug(
-                                        &format!(
-                                            "Function call '{}' completed in {:?}",
-                                            call.name, execution_time
-                                        ));
+                                    self.logger().debug(&format!(
+                                        "Function call '{}' completed in {:?}",
+                                        call.name, execution_time
+                                    ));
 
                                     // Record successful tool metrics
                                     if let Some(metrics_collector) = &self.metrics_collector {
@@ -1205,11 +1189,10 @@ impl Agent for BasicAgent {
                                         metrics.record_error();
                                     }
 
-                                    self.logger().error(
-                                        &format!(
-                                            "Function call '{}' failed after {:?}: {}",
-                                            call.name, execution_time, e
-                                        ));
+                                    self.logger().error(&format!(
+                                        "Function call '{}' failed after {:?}: {}",
+                                        call.name, execution_time, e
+                                    ));
 
                                     // Record failed tool metrics
                                     if let Some(metrics_collector) = &self.metrics_collector {
@@ -1274,7 +1257,7 @@ impl Agent for BasicAgent {
                                     ToolResult {
                                         call_id: call.id.clone(),
                                         name: call.name.clone(),
-                                        result: Value::String(format!("Error: {}", e)),
+                                        result: Value::String(format!("Error: {e}")),
                                         status: ToolResultStatus::Error,
                                     }
                                 }
@@ -1322,7 +1305,7 @@ impl Agent for BasicAgent {
                         // Add tool result messages
                         for result in &tool_results {
                             // Create tool message with proper metadata for function calling
-                            let mut tool_msg = tool_message(&result.result.to_string());
+                            let mut tool_msg = tool_message(result.result.to_string());
 
                             // Add tool_call_id to metadata for DeepSeek/OpenAI compatibility
                             let mut metadata = HashMap::new();
@@ -1346,7 +1329,7 @@ impl Agent for BasicAgent {
                                 name: None,
                             }),
                             tool_calls: tool_calls.clone(),
-                            tool_results: tool_results,
+                            tool_results,
                             metadata: HashMap::new(),
                         };
                         steps.push(step);
@@ -1387,7 +1370,7 @@ impl Agent for BasicAgent {
                 if let (Some(trace_collector), Some(trace_id)) = (&self.trace_collector, &trace_id)
                 {
                     let mut llm_step = TraceStep::new(
-                        format!("Legacy LLM call - step {}", current_step),
+                        format!("Legacy LLM call - step {current_step}"),
                         TraceStepType::LlmCall,
                     );
                     llm_step.duration_ms = step_start_time.elapsed().as_millis() as u64;
@@ -1428,7 +1411,7 @@ impl Agent for BasicAgent {
                                         tool_name: call.name.clone(),
                                         execution_time_ms: execution_time.as_millis() as u64,
                                         success: true,
-                                            error_message: None,
+                                        error_message: None,
                                         error: None,
                                         input_size_bytes: serde_json::to_string(&call.arguments)
                                             .unwrap_or_default()
@@ -1492,11 +1475,10 @@ impl Agent for BasicAgent {
                                     metrics.record_error();
                                 }
 
-                                self.logger().error(
-                                    &format!(
-                                        "Function call '{}' failed after {:?}: {}",
-                                        call.name, execution_time, e
-                                    ));
+                                self.logger().error(&format!(
+                                    "Function call '{}' failed after {:?}: {}",
+                                    call.name, execution_time, e
+                                ));
 
                                 // Record failed legacy tool metrics
                                 if let Some(metrics_collector) = &self.metrics_collector {
@@ -1504,7 +1486,7 @@ impl Agent for BasicAgent {
                                         tool_name: call.name.clone(),
                                         execution_time_ms: execution_time.as_millis() as u64,
                                         success: false,
-                                            error_message: Some(e.to_string()),
+                                        error_message: Some(e.to_string()),
                                         error: Some(e.to_string()),
                                         input_size_bytes: serde_json::to_string(&call.arguments)
                                             .unwrap_or_default()
@@ -1558,7 +1540,7 @@ impl Agent for BasicAgent {
                                 ToolResult {
                                     call_id: call.id.clone(),
                                     name: call.name.clone(),
-                                    result: Value::String(format!("Error: {}", e)),
+                                    result: Value::String(format!("Error: {e}")),
                                     status: ToolResultStatus::Error,
                                 }
                             }
@@ -1629,7 +1611,7 @@ impl Agent for BasicAgent {
         // Calculate total execution time
         let end_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| Error::SystemTime(format!("Failed to get end time: {}", e)))?
+            .map_err(|e| Error::SystemTime(format!("Failed to get end time: {e}")))?
             .as_millis() as u64;
         let total_execution_time = end_time - start_time;
 
@@ -1657,7 +1639,7 @@ impl Agent for BasicAgent {
             if let Some(metrics_collector) = &self.metrics_collector {
                 if let Err(e) = metrics_collector.record_agent_execution(metrics).await {
                     self.logger()
-                        .warn(&format!("Failed to record agent metrics: {}", e));
+                        .warn(&format!("Failed to record agent metrics: {e}"));
                 }
             }
         }
@@ -1694,13 +1676,13 @@ impl Agent for BasicAgent {
             }));
 
             let _ = trace_collector
-                .add_trace_step(&trace_id, completion_step)
+                .add_trace_step(trace_id, completion_step)
                 .await;
 
             // End the trace
-            trace_collector.end_trace(&trace_id).await;
+            trace_collector.end_trace(trace_id).await;
             self.logger()
-                .debug(&format!("Completed execution trace: {}", trace_id));
+                .debug(&format!("Completed execution trace: {trace_id}"));
         }
 
         // Create final step
@@ -1720,11 +1702,10 @@ impl Agent for BasicAgent {
         };
         steps.push(final_step);
 
-        self.logger().info(
-            &format!(
-                "Agent '{}' completed execution in {}ms with {} steps, {} tool calls, {} errors",
-                self.name, total_execution_time, current_step, total_tool_calls, total_errors
-            ));
+        self.logger().info(&format!(
+            "Agent '{}' completed execution in {}ms with {} steps, {} tool calls, {} errors",
+            self.name, total_execution_time, current_step, total_tool_calls, total_errors
+        ));
 
         Ok(AgentGenerateResult {
             response: final_response,
@@ -1745,7 +1726,7 @@ impl Agent for BasicAgent {
     ) -> Result<BoxStream<'a, Result<String>>> {
         let stream_start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| Error::SystemTime(format!("Failed to get stream start time: {}", e)))?
+            .map_err(|e| Error::SystemTime(format!("Failed to get stream start time: {e}")))?
             .as_millis() as u64;
 
         let run_id = options
@@ -1753,12 +1734,9 @@ impl Agent for BasicAgent {
             .clone()
             .unwrap_or_else(|| Uuid::new_v4().to_string());
 
-        self.logger().info(
-            &format!(
-                "Starting enhanced streaming generation (run_id: {})",
-                run_id
-            )
-        );
+        self.logger().info(&format!(
+            "Starting enhanced streaming generation (run_id: {run_id})"
+        ));
 
         // Use legacy streaming mode for now
         // TODO: Implement advanced streaming
@@ -1794,9 +1772,7 @@ impl Agent for BasicAgent {
         // Create improved streaming experience with smart chunking
         let response_chunks = self.create_smart_chunks(&result.response);
 
-        let stream = futures::stream::iter(response_chunks)
-            .map(|chunk| Ok(chunk))
-            .boxed();
+        let stream = futures::stream::iter(response_chunks).map(Ok).boxed();
 
         Ok(stream)
     }
@@ -1852,7 +1828,7 @@ impl Agent for BasicAgent {
             .map(|c| c.iter().collect::<String>())
             .collect::<Vec<_>>();
 
-        let stream = futures::stream::iter(chunks).map(|chunk| Ok(chunk)).boxed();
+        let stream = futures::stream::iter(chunks).map(Ok).boxed();
 
         Ok(stream)
     }
@@ -1950,9 +1926,7 @@ impl BasicAgent {
             .map(|c| c.iter().collect::<String>())
             .collect::<Vec<_>>();
 
-        let stream = futures::stream::iter(response_chunks)
-            .map(|chunk| Ok(chunk))
-            .boxed();
+        let stream = futures::stream::iter(response_chunks).map(Ok).boxed();
 
         Ok(stream)
     }
@@ -2008,7 +1982,7 @@ impl BasicAgent {
             .map(|c| c.iter().collect::<String>())
             .collect::<Vec<_>>();
 
-        let stream = futures::stream::iter(chunks).map(|chunk| Ok(chunk)).boxed();
+        let stream = futures::stream::iter(chunks).map(Ok).boxed();
 
         Ok(stream)
     }
@@ -2028,9 +2002,8 @@ impl BasicAgent {
             Some(wm) => wm.get_value(key).await,
             None => {
                 // Gracefully handle uninitialized memory by returning None
-                self.logger().warn(
-                    "Working memory not initialized, returning None for key"
-                );
+                self.logger()
+                    .warn("Working memory not initialized, returning None for key");
                 Ok(None)
             }
         }
@@ -2082,7 +2055,7 @@ impl BasicAgent {
         // Directly implement streaming logic to avoid recursion
         let stream_start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| Error::SystemTime(format!("Failed to get stream start time: {}", e)))?
+            .map_err(|e| Error::SystemTime(format!("Failed to get stream start time: {e}")))?
             .as_millis() as u64;
 
         let run_id = options
@@ -2090,12 +2063,9 @@ impl BasicAgent {
             .clone()
             .unwrap_or_else(|| Uuid::new_v4().to_string());
 
-        self.logger().info(
-            &format!(
-                "Starting enhanced streaming generation (run_id: {})",
-                run_id
-            )
-        );
+        self.logger().info(&format!(
+            "Starting enhanced streaming generation (run_id: {run_id})"
+        ));
 
         // Generate complete response first
         let result = self
@@ -2122,9 +2092,7 @@ impl BasicAgent {
         // Create improved streaming experience with smart chunking
         let response_chunks = self.create_smart_chunks(&result.response);
 
-        let stream = futures::stream::iter(response_chunks)
-            .map(|chunk| Ok(chunk))
-            .boxed();
+        let stream = futures::stream::iter(response_chunks).map(Ok).boxed();
 
         Ok(stream)
     }

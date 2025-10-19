@@ -78,7 +78,7 @@ impl VoiceProvider for OpenAIVoice {
                 "nova".to_string(),
                 "shimmer".to_string(),
             ],
-            max_audio_duration: Some(600), // 10 分钟
+            max_audio_duration: Some(600),         // 10 分钟
             max_file_size: Some(25 * 1024 * 1024), // 25 MB
         }
     }
@@ -96,7 +96,7 @@ impl VoiceProvider for OpenAIVoice {
             .extension()
             .and_then(|e| e.to_str())
             .ok_or_else(|| MultimodalError::InvalidParameter("无法推断文件格式".to_string()))?;
-        
+
         let format = AudioFormat::from_extension(ext)
             .ok_or_else(|| MultimodalError::UnsupportedFormat(ext.to_string()))?;
 
@@ -113,13 +113,16 @@ impl VoiceProvider for OpenAIVoice {
 
         // 构建 multipart form
         let file_part = Part::bytes(audio_data.to_vec())
-            .file_name(format!("audio.{}", match format {
-                AudioFormat::Mp3 => "mp3",
-                AudioFormat::Wav => "wav",
-                AudioFormat::Flac => "flac",
-                AudioFormat::M4a => "m4a",
-                AudioFormat::WebM => "webm",
-            }))
+            .file_name(format!(
+                "audio.{}",
+                match format {
+                    AudioFormat::Mp3 => "mp3",
+                    AudioFormat::Wav => "wav",
+                    AudioFormat::Flac => "flac",
+                    AudioFormat::M4a => "m4a",
+                    AudioFormat::WebM => "webm",
+                }
+            ))
             .mime_str(format.mime_type())?;
 
         let mut form = Form::new()
@@ -164,11 +167,7 @@ impl VoiceProvider for OpenAIVoice {
         Ok(result.text)
     }
 
-    async fn synthesize(
-        &self,
-        text: &str,
-        options: Option<SynthesisOptions>,
-    ) -> Result<Vec<u8>> {
+    async fn synthesize(&self, text: &str, options: Option<SynthesisOptions>) -> Result<Vec<u8>> {
         let opts = options.unwrap_or_default();
 
         #[derive(Serialize)]
@@ -232,7 +231,7 @@ mod tests {
     fn test_openai_voice_creation() {
         let voice = OpenAIVoice::new("test-key");
         assert_eq!(voice.name(), "OpenAI");
-        
+
         let caps = voice.capabilities();
         assert!(caps.supported_languages.contains(&"zh".to_string()));
         assert!(caps.supported_languages.contains(&"en".to_string()));
@@ -240,9 +239,7 @@ mod tests {
 
     #[test]
     fn test_custom_base_url() {
-        let voice = OpenAIVoice::new("test-key")
-            .with_base_url("https://custom.api.com/v1");
+        let voice = OpenAIVoice::new("test-key").with_base_url("https://custom.api.com/v1");
         assert_eq!(voice.base_url, "https://custom.api.com/v1");
     }
 }
-

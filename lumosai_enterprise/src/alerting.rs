@@ -2,8 +2,8 @@
 //!
 //! 提供企业级告警和通知功能
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::error::{EnterpriseError, Result};
 
@@ -95,7 +95,8 @@ impl AlertingSystem {
 
     /// 添加通知渠道
     pub async fn add_notification_channel(&mut self, channel: NotificationChannel) -> Result<()> {
-        self.notification_channels.insert(channel.id.clone(), channel);
+        self.notification_channels
+            .insert(channel.id.clone(), channel);
         Ok(())
     }
 

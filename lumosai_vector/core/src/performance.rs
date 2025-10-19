@@ -115,7 +115,7 @@ impl<T> ConnectionPool<T> {
 
         // 等待可用连接槽位
         let _permit = self.semaphore.acquire().await.map_err(|e| {
-            VectorError::ConnectionFailed(format!("Failed to acquire connection: {}", e))
+            VectorError::ConnectionFailed(format!("Failed to acquire connection: {e}"))
         })?;
 
         let mut connections = self.connections.write().await;
@@ -338,6 +338,12 @@ pub struct PerformanceMetrics {
     pub operations_per_second: f64,
     pub memory_usage_mb: f64,
     pub cpu_usage_percent: f64,
+}
+
+impl Default for PerformanceMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PerformanceMonitor {

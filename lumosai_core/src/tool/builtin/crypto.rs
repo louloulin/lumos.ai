@@ -14,18 +14,11 @@ use lumos_macro::tool;
 use serde_json::{json, Value};
 
 /// 计算哈希值（MD5, SHA256, SHA512）
-#[tool(
-    name = "hash",
-    description = "计算哈希值（MD5, SHA256, SHA512）"
-)]
-async fn hash(
-    input: String,
-    algorithm: String,
-    encoding: Option<String>,
-) -> Result<Value> {
+#[tool(name = "hash", description = "计算哈希值（MD5, SHA256, SHA512）")]
+async fn hash(input: String, algorithm: String, encoding: Option<String>) -> Result<Value> {
     let encoding = encoding.unwrap_or_else(|| "hex".to_string());
-    
-    let valid_algorithms = vec!["md5", "sha256", "sha512", "sha1"];
+
+    let valid_algorithms = ["md5", "sha256", "sha512", "sha1"];
     let algorithm_lower = algorithm.to_lowercase();
     if !valid_algorithms.contains(&algorithm_lower.as_str()) {
         return Ok(json!({
@@ -34,7 +27,7 @@ async fn hash(
         }));
     }
 
-    let valid_encodings = vec!["hex", "base64"];
+    let valid_encodings = ["hex", "base64"];
     let encoding_lower = encoding.to_lowercase();
     if !valid_encodings.contains(&encoding_lower.as_str()) {
         return Ok(json!({
@@ -73,10 +66,7 @@ async fn hash(
 }
 
 /// 对称加密（AES-256）
-#[tool(
-    name = "encrypt",
-    description = "对称加密（AES-256）"
-)]
+#[tool(name = "encrypt", description = "对称加密（AES-256）")]
 async fn encrypt(
     plaintext: String,
     key: String,
@@ -86,7 +76,7 @@ async fn encrypt(
     let algorithm = algorithm.unwrap_or_else(|| "aes-256-gcm".to_string());
     let encoding = encoding.unwrap_or_else(|| "base64".to_string());
 
-    let valid_algorithms = vec!["aes-256-gcm", "aes-256-cbc", "aes-128-gcm"];
+    let valid_algorithms = ["aes-256-gcm", "aes-256-cbc", "aes-128-gcm"];
     let algorithm_lower = algorithm.to_lowercase();
     if !valid_algorithms.contains(&algorithm_lower.as_str()) {
         return Ok(json!({
@@ -96,7 +86,11 @@ async fn encrypt(
     }
 
     // 验证密钥长度
-    let required_key_length = if algorithm_lower.contains("256") { 32 } else { 16 };
+    let required_key_length = if algorithm_lower.contains("256") {
+        32
+    } else {
+        16
+    };
     if key.len() < required_key_length {
         return Ok(json!({
             "success": false,
@@ -107,7 +101,11 @@ async fn encrypt(
     // Mock 实现：生成模拟的加密数据
     let ciphertext = "U2FsdGVkX1+vupppZksvRf5pq5g5XjFRlipRkwB0K1Y=";
     let iv = "1234567890abcdef";
-    let tag = if algorithm_lower.contains("gcm") { Some("fedcba0987654321") } else { None };
+    let tag = if algorithm_lower.contains("gcm") {
+        Some("fedcba0987654321")
+    } else {
+        None
+    };
 
     let mut result = json!({
         "success": true,
@@ -128,10 +126,7 @@ async fn encrypt(
 }
 
 /// 对称解密（AES-256）
-#[tool(
-    name = "decrypt",
-    description = "对称解密（AES-256）"
-)]
+#[tool(name = "decrypt", description = "对称解密（AES-256）")]
 async fn decrypt(
     ciphertext: String,
     key: String,
@@ -141,7 +136,7 @@ async fn decrypt(
 ) -> Result<Value> {
     let algorithm = algorithm.unwrap_or_else(|| "aes-256-gcm".to_string());
 
-    let valid_algorithms = vec!["aes-256-gcm", "aes-256-cbc", "aes-128-gcm"];
+    let valid_algorithms = ["aes-256-gcm", "aes-256-cbc", "aes-128-gcm"];
     let algorithm_lower = algorithm.to_lowercase();
     if !valid_algorithms.contains(&algorithm_lower.as_str()) {
         return Ok(json!({
@@ -151,7 +146,11 @@ async fn decrypt(
     }
 
     // 验证密钥长度
-    let required_key_length = if algorithm_lower.contains("256") { 32 } else { 16 };
+    let required_key_length = if algorithm_lower.contains("256") {
+        32
+    } else {
+        16
+    };
     if key.len() < required_key_length {
         return Ok(json!({
             "success": false,
@@ -189,10 +188,7 @@ async fn decrypt(
 }
 
 /// 生成安全密码
-#[tool(
-    name = "password_generator",
-    description = "生成安全密码"
-)]
+#[tool(name = "password_generator", description = "生成安全密码")]
 async fn password_generator(
     length: Option<i64>,
     include_uppercase: Option<bool>,
@@ -209,7 +205,7 @@ async fn password_generator(
     let exclude_ambiguous = exclude_ambiguous.unwrap_or(true);
 
     // 验证长度
-    if length < 8 || length > 128 {
+    if !(8..=128).contains(&length) {
         return Ok(json!({
             "success": false,
             "error": format!("密码长度必须在 8-128 之间，当前值: {}", length)
@@ -226,13 +222,21 @@ async fn password_generator(
 
     // Mock 实现：生成模拟的密码
     let password = "Kp9#mL2$xR5@nQ8!";
-    
+
     // 计算字符集大小
     let mut charset_size = 0;
-    if include_uppercase { charset_size += if exclude_ambiguous { 24 } else { 26 }; }
-    if include_lowercase { charset_size += if exclude_ambiguous { 24 } else { 26 }; }
-    if include_numbers { charset_size += if exclude_ambiguous { 8 } else { 10 }; }
-    if include_symbols { charset_size += 32; }
+    if include_uppercase {
+        charset_size += if exclude_ambiguous { 24 } else { 26 };
+    }
+    if include_lowercase {
+        charset_size += if exclude_ambiguous { 24 } else { 26 };
+    }
+    if include_numbers {
+        charset_size += if exclude_ambiguous { 8 } else { 10 };
+    }
+    if include_symbols {
+        charset_size += 32;
+    }
 
     // 计算熵（bits）
     let entropy = (length as f64) * (charset_size as f64).log2();
@@ -327,4 +331,3 @@ mod tests {
         assert!(result["entropy_bits"].as_str().is_some());
     }
 }
-

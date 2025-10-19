@@ -73,7 +73,10 @@ async fn demo_create_hybrid_retriever() -> Result<(), Box<dyn std::error::Error>
     println!("  - 向量检索权重: {}", config.vector_weight);
     println!("  - 关键词检索权重: {}", config.keyword_weight);
     println!("  - 最小分数阈值: {}", config.min_score_threshold);
-    println!("  - 每种方法最大候选数: {}", config.max_candidates_per_method);
+    println!(
+        "  - 每种方法最大候选数: {}",
+        config.max_candidates_per_method
+    );
     println!("  - 融合策略: WeightedSum");
 
     println!("\n💡 混合检索原理:");
@@ -112,21 +115,31 @@ async fn demo_weighted_sum_fusion() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("📊 向量检索结果:");
     for (id, score, content) in &vector_results {
-        println!("  {} [分数: {:.2}] {}", id, score, &content[..40.min(content.len())]);
+        println!(
+            "  {} [分数: {:.2}] {}",
+            id,
+            score,
+            &content[..40.min(content.len())]
+        );
     }
 
     println!("\n📊 关键词检索结果:");
     for (id, score, content) in &keyword_results {
-        println!("  {} [分数: {:.2}] {}", id, score, &content[..40.min(content.len())]);
+        println!(
+            "  {} [分数: {:.2}] {}",
+            id,
+            score,
+            &content[..40.min(content.len())]
+        );
     }
 
     // 计算融合分数
     let mut combined_scores: HashMap<&str, f32> = HashMap::new();
-    
+
     for (id, score, _) in &vector_results {
         combined_scores.insert(id, score * 0.7);
     }
-    
+
     for (id, score, _) in &keyword_results {
         let existing = combined_scores.get(id).unwrap_or(&0.0);
         combined_scores.insert(id, existing + score * 0.3);
@@ -160,17 +173,9 @@ async fn demo_reciprocal_rank_fusion() -> Result<(), Box<dyn std::error::Error>>
     println!();
 
     // 模拟排名结果
-    let vector_ranks = vec![
-        ("doc1", 1),
-        ("doc2", 2),
-        ("doc3", 3),
-    ];
+    let vector_ranks = vec![("doc1", 1), ("doc2", 2), ("doc3", 3)];
 
-    let keyword_ranks = vec![
-        ("doc1", 1),
-        ("doc4", 2),
-        ("doc2", 3),
-    ];
+    let keyword_ranks = vec![("doc1", 1), ("doc4", 2), ("doc2", 3)];
 
     println!("📊 向量检索排名:");
     for (id, rank) in &vector_ranks {
@@ -185,12 +190,12 @@ async fn demo_reciprocal_rank_fusion() -> Result<(), Box<dyn std::error::Error>>
     // 计算 RRF 分数
     let k = 60.0;
     let mut rrf_scores: HashMap<&str, f32> = HashMap::new();
-    
+
     for (id, rank) in &vector_ranks {
         let score = 1.0 / (k + *rank as f32);
         rrf_scores.insert(id, score);
     }
-    
+
     for (id, rank) in &keyword_ranks {
         let score = 1.0 / (k + *rank as f32);
         let existing = rrf_scores.get(id).unwrap_or(&0.0);
@@ -226,14 +231,10 @@ async fn demo_convex_combination_fusion() -> Result<(), Box<dyn std::error::Erro
     println!();
 
     // 模拟检索结果
-    let vector_results = vec![
-        ("doc1", 0.95),
-        ("doc2", 0.85),
-        ("doc3", 0.75),
-    ];
+    let vector_results = vec![("doc1", 0.95), ("doc2", 0.85), ("doc3", 0.75)];
 
     let keyword_results = vec![
-        ("doc1", 8.5),  // BM25 分数范围不同
+        ("doc1", 8.5), // BM25 分数范围不同
         ("doc4", 7.2),
         ("doc2", 6.8),
     ];
@@ -249,14 +250,22 @@ async fn demo_convex_combination_fusion() -> Result<(), Box<dyn std::error::Erro
     }
 
     // 归一化
-    let max_vector = vector_results.iter().map(|(_, s)| s).fold(0.0f32, |a, &b| a.max(b));
-    let max_keyword = keyword_results.iter().map(|(_, s)| s).fold(0.0f32, |a, &b| a.max(b));
+    let max_vector = vector_results
+        .iter()
+        .map(|(_, s)| s)
+        .fold(0.0f32, |a, &b| a.max(b));
+    let max_keyword = keyword_results
+        .iter()
+        .map(|(_, s)| s)
+        .fold(0.0f32, |a, &b| a.max(b));
 
-    let normalized_vector: Vec<_> = vector_results.iter()
+    let normalized_vector: Vec<_> = vector_results
+        .iter()
         .map(|(id, score)| (*id, score / max_vector))
         .collect();
 
-    let normalized_keyword: Vec<_> = keyword_results.iter()
+    let normalized_keyword: Vec<_> = keyword_results
+        .iter()
         .map(|(id, score)| (*id, score / max_keyword))
         .collect();
 
@@ -273,11 +282,11 @@ async fn demo_convex_combination_fusion() -> Result<(), Box<dyn std::error::Erro
     // 凸组合
     let alpha = 0.7;
     let mut combined_scores: HashMap<&str, f32> = HashMap::new();
-    
+
     for (id, score) in &normalized_vector {
         combined_scores.insert(id, alpha * score);
     }
-    
+
     for (id, score) in &normalized_keyword {
         let existing = combined_scores.get(id).unwrap_or(&0.0);
         combined_scores.insert(id, existing + (1.0 - alpha) * score);
@@ -300,4 +309,3 @@ async fn demo_convex_combination_fusion() -> Result<(), Box<dyn std::error::Erro
     println!();
     Ok(())
 }
-

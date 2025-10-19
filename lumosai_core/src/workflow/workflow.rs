@@ -99,7 +99,7 @@ impl WorkflowInstance {
 
             // 执行步骤
             if let Err(e) = self.execute_step(&step_id).await {
-                eprintln!("执行步骤 {} 失败: {}", step_id, e);
+                eprintln!("执行步骤 {step_id} 失败: {e}");
             }
 
             // 标记为已处理
@@ -154,7 +154,7 @@ impl WorkflowInstance {
         let node = match self.graph.nodes.get(step_id) {
             Some(node) => node.clone(),
             None => {
-                return Err(Error::Workflow(format!("未找到步骤: {}", step_id)));
+                return Err(Error::Workflow(format!("未找到步骤: {step_id}")));
             }
         };
 
@@ -417,7 +417,7 @@ impl WorkflowInstance {
 
         if attempts > max_attempts {
             return Ok(StepExecutorOutput::StepFailed {
-                error: format!("超过最大重试次数: {}", max_attempts),
+                error: format!("超过最大重试次数: {max_attempts}"),
             });
         }
 

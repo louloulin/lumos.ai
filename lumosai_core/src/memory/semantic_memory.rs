@@ -1,10 +1,10 @@
+use crate::compat::{Component, MemoryMetrics, MetricsCollector};
+use crate::logger::LogLevel;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use crate::compat::{Component, MetricsCollector, MemoryMetrics};
-use crate::logger::LogLevel;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
@@ -206,7 +206,7 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
             "get_all",
             execution_time,
             success,
-            Some(format!("entries_count:{}", entries_count)),
+            Some(format!("entries_count:{entries_count}")),
             data_size,
         )
         .await;
@@ -340,7 +340,7 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
             "search",
             execution_time,
             success,
-            Some(format!("query_results:{}", results_count)),
+            Some(format!("query_results:{results_count}")),
             Some(query_size),
         )
         .await;
@@ -349,10 +349,8 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
 
     /// 生成内容摘要
     async fn generate_summary(&self, content: &str) -> Result<String> {
-        let prompt = format!(
-            "Please summarize the following text in a concise manner:\n\n{}",
-            content
-        );
+        let prompt =
+            format!("Please summarize the following text in a concise manner:\n\n{content}");
         let options = LlmOptions::default();
         self.llm.generate(&prompt, &options).await
     }
@@ -432,7 +430,7 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
             if let Err(e) = collector.record_memory_operation(metrics).await {
                 // 记录日志但不影响主要操作
                 let logger = self.logger();
-                logger.error(&format!("Failed to record memory metrics: {}", e));
+                logger.error(&format!("Failed to record memory metrics: {e}"));
             }
         }
     }
@@ -597,8 +595,7 @@ pub fn create_semantic_memory(
                 Ok(Arc::new(SemanticMemoryAdapter::new(mem)))
             }
             _ => Err(Error::Configuration(format!(
-                "Unsupported memory store: {}",
-                store_id
+                "Unsupported memory store: {store_id}"
             ))),
         }
     } else {

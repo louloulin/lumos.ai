@@ -359,7 +359,7 @@ impl Tool for WebSearchTool {
             .unwrap_or(10);
 
         // Mock implementation - in a real implementation, this would call a search API
-        let results = vec![
+        let results = [
             json!({
                 "title": format!("Search result 1 for '{}'", query),
                 "url": "https://example.com/1",

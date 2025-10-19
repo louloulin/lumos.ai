@@ -90,7 +90,7 @@ mod tests {
         // Should either succeed or fail with connection error
         match storage {
             Ok(_) => println!("Successfully connected to Weaviate"),
-            Err(e) => println!("Failed to connect to Weaviate: {}", e),
+            Err(e) => println!("Failed to connect to Weaviate: {e}"),
         }
     }
 }

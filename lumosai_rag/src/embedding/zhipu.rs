@@ -240,14 +240,14 @@ impl EmbeddingProvider for CachedEmbeddingProvider {
         // 存入缓存
         {
             let mut cache = self.cache.write().await;
-            
+
             // 如果缓存已满，移除最旧的条目（简单的 FIFO 策略）
             if cache.len() >= self.max_cache_size {
                 if let Some(key) = cache.keys().next().cloned() {
                     cache.remove(&key);
                 }
             }
-            
+
             cache.insert(text.to_string(), embedding.clone());
         }
 
@@ -312,12 +312,12 @@ mod tests {
     #[tokio::test]
     async fn test_local_embedding_provider() {
         let provider = LocalEmbeddingProvider::new(128);
-        
+
         let text = "This is a test document";
         let embedding = provider.generate_embedding(text).await.unwrap();
-        
+
         assert_eq!(embedding.len(), 128);
-        
+
         // 验证归一化
         let norm: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((norm - 1.0).abs() < 1e-5);
@@ -327,17 +327,16 @@ mod tests {
     async fn test_cached_embedding_provider() {
         let inner = Box::new(LocalEmbeddingProvider::new(64));
         let provider = CachedEmbeddingProvider::new(inner, 10);
-        
+
         let text = "Test text";
-        
+
         // 第一次调用
         let embedding1 = provider.generate_embedding(text).await.unwrap();
         assert_eq!(provider.cache_size().await, 1);
-        
+
         // 第二次调用（应该从缓存获取）
         let embedding2 = provider.generate_embedding(text).await.unwrap();
         assert_eq!(embedding1, embedding2);
         assert_eq!(provider.cache_size().await, 1);
     }
 }
-

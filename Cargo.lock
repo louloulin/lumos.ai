@@ -7454,6 +7454,7 @@ dependencies = [
  "lumosai-vector-core",
  "lumosai_core",
  "lumosai_multimodal",
+ "lumosai_rag",
  "lumosai_vector",
  "redis",
  "reqwest 0.12.23",

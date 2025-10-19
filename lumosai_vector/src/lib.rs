@@ -207,7 +207,7 @@ pub mod utils {
         #[cfg(feature = "memory")]
         {
             let storage = create_memory_storage().await?;
-            return Ok(Box::new(storage));
+            Ok(Box::new(storage))
         }
 
         #[cfg(not(feature = "memory"))]

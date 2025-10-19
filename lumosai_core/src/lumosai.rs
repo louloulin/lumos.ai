@@ -3,10 +3,10 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use serde::{Deserialize, Serialize};
-use crate::compat::{Storage, Component, create_noop_logger};
-use crate::logger::{Logger, LogLevel, default_logger};
+use crate::compat::{Component, Storage};
+use crate::logger::{default_logger, LogLevel, Logger};
 use crate::telemetry::TelemetrySink;
+use serde::{Deserialize, Serialize};
 
 use crate::agent::trait_def::Agent;
 use crate::base::Base;
@@ -100,7 +100,7 @@ impl Lumosai {
             .map_err(|_| Error::Lock("无法锁定agents".to_string()))?;
 
         if agents.contains_key(&name) {
-            return Err(Error::AlreadyExists(format!("Agent '{}'已存在", name)));
+            return Err(Error::AlreadyExists(format!("Agent '{name}'已存在")));
         }
 
         agents.insert(name, agent);
@@ -117,7 +117,7 @@ impl Lumosai {
         agents
             .get(name)
             .cloned()
-            .ok_or_else(|| Error::NotFound(format!("Agent '{}'不存在", name)))
+            .ok_or_else(|| Error::NotFound(format!("Agent '{name}'不存在")))
     }
 
     /// 获取所有Agent
@@ -146,7 +146,7 @@ impl Lumosai {
             .map_err(|_| Error::Lock("无法锁定vectors".to_string()))?;
 
         if vectors.contains_key(&name) {
-            return Err(Error::AlreadyExists(format!("Vector '{}'已存在", name)));
+            return Err(Error::AlreadyExists(format!("Vector '{name}'已存在")));
         }
 
         vectors.insert(name, vector);
@@ -163,7 +163,7 @@ impl Lumosai {
         vectors
             .get(name)
             .cloned()
-            .ok_or_else(|| Error::NotFound(format!("Vector '{}'不存在", name)))
+            .ok_or_else(|| Error::NotFound(format!("Vector '{name}'不存在")))
     }
 
     /// 注册工作流
@@ -179,7 +179,7 @@ impl Lumosai {
             .map_err(|_| Error::Lock("无法锁定workflows".to_string()))?;
 
         if workflows.contains_key(&name) {
-            return Err(Error::AlreadyExists(format!("Workflow '{}'已存在", name)));
+            return Err(Error::AlreadyExists(format!("Workflow '{name}'已存在")));
         }
 
         workflows.insert(name, workflow);
@@ -196,7 +196,7 @@ impl Lumosai {
         workflows
             .get(name)
             .cloned()
-            .ok_or_else(|| Error::NotFound(format!("Workflow '{}'不存在", name)))
+            .ok_or_else(|| Error::NotFound(format!("Workflow '{name}'不存在")))
     }
 
     /// 设置存储

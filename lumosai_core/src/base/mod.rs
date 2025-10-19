@@ -2,12 +2,12 @@
 
 // use crate::compat::{create_logger, Component, LogLevel, Logger};
 // use crate::compat::{Event, TelemetrySink};
+use crate::compat::{Component, Event};
+use crate::logger::{default_logger, LogLevel, Logger};
+use crate::telemetry::TelemetrySink;
 use crate::types::Metadata;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::compat::{Component, Event};
-use crate::logger::{Logger, LogLevel, default_logger};
-use crate::telemetry::TelemetrySink;
 
 /// Component configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -101,7 +101,10 @@ impl std::fmt::Debug for BaseComponent {
             .field("name", &self.name)
             .field("component", &self.component)
             .field("logger", &"<Logger>")
-            .field("telemetry", &self.telemetry.as_ref().map(|_| "<TelemetrySink>"))
+            .field(
+                "telemetry",
+                &self.telemetry.as_ref().map(|_| "<TelemetrySink>"),
+            )
             .finish()
     }
 }
@@ -122,12 +125,10 @@ impl Base for BaseComponent {
     fn set_logger(&mut self, logger: Arc<dyn Logger>) {
         self.logger = logger;
         if let Some(name) = &self.name {
-            self.logger.debug(
-                &format!(
-                    "Logger updated [component={}] [name={}]",
-                    self.component, name
-                )
-            );
+            self.logger.debug(&format!(
+                "Logger updated [component={}] [name={}]",
+                self.component, name
+            ));
         }
     }
 
@@ -138,12 +139,10 @@ impl Base for BaseComponent {
     fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
         self.telemetry = Some(telemetry);
         if let Some(name) = &self.name {
-            self.logger.debug(
-                &format!(
-                    "Telemetry updated [component={}] [name={}]",
-                    self.component, name
-                )
-            );
+            self.logger.debug(&format!(
+                "Telemetry updated [component={}] [name={}]",
+                self.component, name
+            ));
         }
     }
 }

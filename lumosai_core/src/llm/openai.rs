@@ -196,24 +196,23 @@ impl LlmProvider for OpenAiProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "OpenAI API returned error status {}: {}",
-                status, text
+                "OpenAI API returned error status {status}: {text}"
             )));
         }
 
         // 解析响应
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {e}")))?;
 
         // 提取生成的文本
         let content = response["choices"][0]["message"]["content"]
@@ -270,24 +269,23 @@ impl LlmProvider for OpenAiProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "OpenAI API returned error status {}: {}",
-                status, text
+                "OpenAI API returned error status {status}: {text}"
             )));
         }
 
         // 解析响应
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {e}")))?;
 
         // 提取生成的文本
         let content = response["choices"][0]["message"]["content"]
@@ -328,24 +326,23 @@ impl LlmProvider for OpenAiProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {e}")))?;
 
         let status = res.status();
         let text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read OpenAI embedding response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read OpenAI embedding response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "OpenAI API returned error status {}: {}",
-                status, text
+                "OpenAI API returned error status {status}: {text}"
             )));
         }
 
         // 解析响应
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI embedding response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI embedding response: {e}")))?;
 
         // 提取嵌入向量
         let embedding = response["data"][0]["embedding"]
@@ -438,24 +435,23 @@ impl LlmProvider for OpenAiProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {e}")))?;
 
         let status = res.status();
         let response_text = res
             .text()
             .await
-            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "OpenAI API returned error status {}: {}",
-                status, response_text
+                "OpenAI API returned error status {status}: {response_text}"
             )));
         }
 
         // 解析响应
         let response: OpenAIResponse = serde_json::from_str(&response_text)
-            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {e}")))?;
 
         if response.choices.is_empty() {
             return Err(Error::Llm("No choices in OpenAI response".to_string()));

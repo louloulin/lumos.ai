@@ -19,10 +19,10 @@ async fn main() {
     // 测试 1: 图像信息分析
     println!("📊 测试 1: 图像信息分析");
     println!("{}", "-".repeat(80));
-    
+
     let tools = get_all_image_processing_tools();
     let info_tool = &tools[0];
-    
+
     println!("工具名称: {}", info_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", info_tool.description());
     println!();
@@ -46,7 +46,7 @@ async fn main() {
             println!("  颜色模式: {}", result["color_mode"]);
             println!("  宽高比: {}", result["aspect_ratio"]);
             println!("  像素数: {} MP", result["megapixels"]);
-            
+
             if let Some(metadata) = result.get("metadata") {
                 println!("\n  📷 元数据:");
                 println!("    相机: {}", metadata["camera"]);
@@ -58,15 +58,16 @@ async fn main() {
                 println!("    拍摄时间: {}", metadata["date_taken"]);
                 println!("    GPS: {}", metadata["gps"]["location"]);
             }
-            
+
             if let Some(colors) = result.get("color_analysis") {
                 println!("\n  🎨 颜色分析:");
                 println!("    主要颜色:");
                 if let Some(dominant) = colors["dominant_colors"].as_array() {
                     for (i, color) in dominant.iter().enumerate() {
-                        println!("      {}. {} ({}%)", 
-                            i + 1, 
-                            color["color"], 
+                        println!(
+                            "      {}. {} ({}%)",
+                            i + 1,
+                            color["color"],
                             color["percentage"]
                         );
                     }
@@ -84,22 +85,40 @@ async fn main() {
     // 测试 2: 图像格式转换
     println!("🔄 测试 2: 图像格式转换");
     println!("{}", "-".repeat(80));
-    
+
     let convert_tool = &tools[1];
-    
+
     println!("工具名称: {}", convert_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", convert_tool.description());
     println!();
 
     let conversions = vec![
-        ("PNG → JPEG", "/path/to/input.png", "/path/to/output.jpg", "jpeg", 90),
-        ("JPEG → WebP", "/path/to/input.jpg", "/path/to/output.webp", "webp", 85),
-        ("PNG → GIF", "/path/to/input.png", "/path/to/output.gif", "gif", 80),
+        (
+            "PNG → JPEG",
+            "/path/to/input.png",
+            "/path/to/output.jpg",
+            "jpeg",
+            90,
+        ),
+        (
+            "JPEG → WebP",
+            "/path/to/input.jpg",
+            "/path/to/output.webp",
+            "webp",
+            85,
+        ),
+        (
+            "PNG → GIF",
+            "/path/to/input.png",
+            "/path/to/output.gif",
+            "gif",
+            80,
+        ),
     ];
 
     for (desc, input, output, format, quality) in conversions {
         println!("转换: {}", desc);
-        
+
         let params = json!({
             "input_path": input,
             "output_path": output,
@@ -108,12 +127,21 @@ async fn main() {
             "preserve_metadata": true
         });
 
-        match convert_tool.execute(params, context.clone(), &options).await {
+        match convert_tool
+            .execute(params, context.clone(), &options)
+            .await
+        {
             Ok(result) => {
                 if result["success"] == true {
                     println!("  ✅ 转换成功:");
-                    println!("    输入: {} ({})", result["input_format"], result["input_size_mb"]);
-                    println!("    输出: {} ({})", result["output_format"], result["output_size_mb"]);
+                    println!(
+                        "    输入: {} ({})",
+                        result["input_format"], result["input_size_mb"]
+                    );
+                    println!(
+                        "    输出: {} ({})",
+                        result["output_format"], result["output_size_mb"]
+                    );
                     println!("    质量: {}", result["quality"]);
                     println!("    压缩比: {}", result["compression_ratio"]);
                     println!("    处理时间: {} ms", result["processing_time_ms"]);
@@ -129,9 +157,9 @@ async fn main() {
     // 测试 3: 图像压缩优化
     println!("🗜️  测试 3: 图像压缩优化");
     println!("{}", "-".repeat(80));
-    
+
     let compress_tool = &tools[2];
-    
+
     println!("工具名称: {}", compress_tool.name().unwrap_or("unknown"));
     println!("工具描述: {}", compress_tool.description());
     println!();
@@ -145,7 +173,7 @@ async fn main() {
                 "target_size_kb": 200,
                 "quality": 85,
                 "optimize": true
-            })
+            }),
         ),
         (
             "场景 2: 尺寸调整压缩",
@@ -156,7 +184,7 @@ async fn main() {
                 "max_height": 768,
                 "quality": 80,
                 "optimize": true
-            })
+            }),
         ),
         (
             "场景 3: 质量压缩",
@@ -165,29 +193,32 @@ async fn main() {
                 "output_path": "/path/to/quality_compressed.jpg",
                 "quality": 70,
                 "optimize": true
-            })
+            }),
         ),
     ];
 
     for (desc, params) in compression_scenarios {
         println!("{}", desc);
 
-        match compress_tool.execute(params, context.clone(), &options).await {
+        match compress_tool
+            .execute(params, context.clone(), &options)
+            .await
+        {
             Ok(result) => {
                 println!("  ✅ 压缩结果:");
-                println!("    原始大小: {} ({})", 
-                    result["original_dimensions"], 
-                    result["original_size_mb"]
+                println!(
+                    "    原始大小: {} ({})",
+                    result["original_dimensions"], result["original_size_mb"]
                 );
-                println!("    压缩后大小: {} ({})", 
-                    result["output_dimensions"], 
-                    result["compressed_size_mb"]
+                println!(
+                    "    压缩后大小: {} ({})",
+                    result["output_dimensions"], result["compressed_size_mb"]
                 );
                 println!("    压缩比: {}", result["compression_ratio"]);
                 println!("    质量: {}", result["quality_used"]);
                 println!("    优化: {}", result["optimize_enabled"]);
                 println!("    处理时间: {} ms", result["processing_time_ms"]);
-                
+
                 if let Some(suggestions) = result.get("suggestions") {
                     if let Some(arr) = suggestions.as_array() {
                         if !arr.is_empty() {
@@ -207,7 +238,7 @@ async fn main() {
     // 测试 4: 参数验证
     println!("🔍 测试 4: 参数验证");
     println!("{}", "-".repeat(80));
-    
+
     println!("测试 4.1: 无效的输出格式");
     let params = json!({
         "input_path": "/path/to/input.png",
@@ -215,7 +246,10 @@ async fn main() {
         "output_format": "bmp"
     });
 
-    match convert_tool.execute(params, context.clone(), &options).await {
+    match convert_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             if result["success"] == false {
                 println!("  ✅ 正确拒绝: {}", result["error"]);
@@ -235,7 +269,10 @@ async fn main() {
         "quality": 150
     });
 
-    match convert_tool.execute(params, context.clone(), &options).await {
+    match convert_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             if result["success"] == false {
                 println!("  ✅ 正确拒绝: {}", result["error"]);
@@ -250,14 +287,15 @@ async fn main() {
     // 测试 5: 批量获取工具
     println!("📦 测试 5: 获取所有图像处理工具");
     println!("{}", "-".repeat(80));
-    
+
     let all_tools = get_all_image_processing_tools();
     println!("总共 {} 个图像处理工具:\n", all_tools.len());
-    
+
     for (i, tool) in all_tools.iter().enumerate() {
-        println!("{}. {} - {}", 
-            i + 1, 
-            tool.name().unwrap_or("unknown"), 
+        println!(
+            "{}. {} - {}",
+            i + 1,
+            tool.name().unwrap_or("unknown"),
             tool.description()
         );
     }
@@ -284,4 +322,3 @@ async fn main() {
     println!("  - 支持批量处理和异步处理");
     println!("{}", "=".repeat(80));
 }
-

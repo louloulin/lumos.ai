@@ -1,11 +1,11 @@
 //! 多租户管理模块
-//! 
+//!
 //! 提供企业级多租户功能，包括租户隔离、资源管理、权限控制等。
 
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 
 use crate::error::{EnterpriseError, Result};
 
@@ -123,13 +123,13 @@ impl MultiTenantManager {
     /// 创建租户
     pub async fn create_tenant(&self, tenant: Tenant) -> Result<()> {
         let mut tenants = self.tenants.write().await;
-        
+
         if tenants.contains_key(&tenant.id) {
             return Err(EnterpriseError::TenantAlreadyExists {
                 tenant_id: tenant.id,
             });
         }
-        
+
         tenants.insert(tenant.id.clone(), tenant);
         Ok(())
     }
@@ -143,13 +143,13 @@ impl MultiTenantManager {
     /// 更新租户
     pub async fn update_tenant(&self, tenant: Tenant) -> Result<()> {
         let mut tenants = self.tenants.write().await;
-        
+
         if !tenants.contains_key(&tenant.id) {
             return Err(EnterpriseError::TenantNotFound {
                 tenant_id: tenant.id,
             });
         }
-        
+
         tenants.insert(tenant.id.clone(), tenant);
         Ok(())
     }
@@ -157,13 +157,13 @@ impl MultiTenantManager {
     /// 删除租户
     pub async fn delete_tenant(&self, tenant_id: &str) -> Result<()> {
         let mut tenants = self.tenants.write().await;
-        
+
         if !tenants.contains_key(tenant_id) {
             return Err(EnterpriseError::TenantNotFound {
                 tenant_id: tenant_id.to_string(),
             });
         }
-        
+
         tenants.remove(tenant_id);
         Ok(())
     }
@@ -197,7 +197,7 @@ impl MultiTenantManager {
     /// 验证租户权限
     pub async fn validate_tenant_access(&self, tenant_id: &str, resource: &str) -> Result<bool> {
         let tenant = self.get_tenant(tenant_id).await?;
-        
+
         match tenant {
             Some(t) if t.status == TenantStatus::Active => {
                 // 这里应该实现具体的权限检查逻辑

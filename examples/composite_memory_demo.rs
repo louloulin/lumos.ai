@@ -2,8 +2,8 @@
 //!
 //! 演示如何使用 CompositeMemory 构建器创建和配置统一的内存系统
 
-use lumosai_core::memory::{UnifiedMemory as Memory, Memory as MemoryTrait, MemoryConfig};
 use lumosai_core::llm::{Message as LlmMessage, Role};
+use lumosai_core::memory::{Memory as MemoryTrait, MemoryConfig, UnifiedMemory as Memory};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -101,7 +101,11 @@ async fn demo_working_memory() -> Result<(), Box<dyn std::error::Error>> {
     // 存储多条消息
     for i in 1..=5 {
         let message = LlmMessage {
-            role: if i % 2 == 1 { Role::User } else { Role::Assistant },
+            role: if i % 2 == 1 {
+                Role::User
+            } else {
+                Role::Assistant
+            },
             content: format!("消息 {}", i),
             name: None,
             metadata: None,
@@ -184,7 +188,11 @@ async fn demo_composite_with_processors() -> Result<(), Box<dyn std::error::Erro
 
     for (role, content) in messages {
         let message = LlmMessage {
-            role: if role == "用户" { Role::User } else { Role::Assistant },
+            role: if role == "用户" {
+                Role::User
+            } else {
+                Role::Assistant
+            },
             content: content.to_string(),
             name: None,
             metadata: None,
@@ -201,4 +209,3 @@ async fn demo_composite_with_processors() -> Result<(), Box<dyn std::error::Erro
     println!();
     Ok(())
 }
-

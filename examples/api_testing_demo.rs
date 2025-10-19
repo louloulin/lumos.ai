@@ -41,7 +41,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  方法: GET");
     println!("  期望状态码: 200");
 
-    match endpoint_tool.execute(params, context.clone(), &options).await {
+    match endpoint_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             println!("\n✅ 测试结果:");
             println!("  成功: {}", result["success"]);
@@ -78,7 +81,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  请求次数: 100");
     println!("  并发数: 10");
 
-    match performance_tool.execute(params, context.clone(), &options).await {
+    match performance_tool
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             println!("\n✅ 性能测试结果:");
             println!("  总请求数: {}", result["total_requests"]);
@@ -149,7 +155,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("总共 {} 个 API 测试工具:\n", all_tools.len());
 
     for (i, tool) in all_tools.iter().enumerate() {
-        println!("{}. {} - {}", i + 1, tool.name().unwrap_or("unknown"), tool.description());
+        println!(
+            "{}. {} - {}",
+            i + 1,
+            tool.name().unwrap_or("unknown"),
+            tool.description()
+        );
     }
 
     // ========================================================================
@@ -164,7 +175,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 缺少 url 参数
     });
 
-    match endpoint_test_tool().execute(invalid_params, context.clone(), &options).await {
+    match endpoint_test_tool()
+        .execute(invalid_params, context.clone(), &options)
+        .await
+    {
         Ok(_) => println!("  ⚠️  应该返回错误但没有"),
         Err(e) => println!("  ✅ 正确返回错误: {}", e),
     }
@@ -175,7 +189,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "method": "INVALID_METHOD"
     });
 
-    match endpoint_test_tool().execute(invalid_params, context.clone(), &options).await {
+    match endpoint_test_tool()
+        .execute(invalid_params, context.clone(), &options)
+        .await
+    {
         Ok(result) => println!("  ✅ 工具接受了参数: {}", result["method"]),
         Err(e) => println!("  ❌ 返回错误: {}", e),
     }
@@ -194,7 +211,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "concurrent": 1
     });
 
-    match performance_test_tool().execute(params, context.clone(), &options).await {
+    match performance_test_tool()
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             println!("  ✅ 成功处理 1 个请求");
             println!("     总请求数: {}", result["total_requests"]);
@@ -210,7 +230,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "concurrent": 100
     });
 
-    match performance_test_tool().execute(params, context.clone(), &options).await {
+    match performance_test_tool()
+        .execute(params, context.clone(), &options)
+        .await
+    {
         Ok(result) => {
             println!("  ✅ 成功处理 10000 个请求");
             println!("     总请求数: {}", result["total_requests"]);
@@ -240,4 +263,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

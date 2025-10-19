@@ -1,24 +1,21 @@
 //! 动态配置系统 - 对标 Mastra 的 DynamicArgument
 //!
 //! 实现运行时上下文感知的配置系统，支持静态值和动态闭包配置
-//! 
+//!
 //! # 设计目标
 //! - 对标 Mastra 的 DynamicArgument<T> 类型
 //! - 支持运行时上下文感知的配置解析
 //! - 提供类型安全的动态配置 API
 //! - 保持向后兼容性
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 
 use crate::error::{Error, Result};
-use crate::llm::{LlmProvider, Message};
-use crate::tool::Tool;
+use crate::llm::Message;
 
 /// 增强的运行时上下文 - 对标 Mastra RuntimeContext
 ///
@@ -65,12 +62,18 @@ pub enum DynamicArgument<T> {
     /// 静态值
     Static(T),
     /// 动态闭包 - 基于运行时上下文计算值
-    Dynamic(Box<dyn Fn(&EnhancedRuntimeContext) -> Pin<Box<dyn Future<Output = Result<T>> + Send>> + Send + Sync>),
+    Dynamic(
+        Box<
+            dyn Fn(&EnhancedRuntimeContext) -> Pin<Box<dyn Future<Output = Result<T>> + Send>>
+                + Send
+                + Sync,
+        >,
+    ),
 }
 
-impl<T> std::fmt::Debug for DynamicArgument<T> 
-where 
-    T: std::fmt::Debug 
+impl<T> std::fmt::Debug for DynamicArgument<T>
+where
+    T: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -101,7 +104,11 @@ pub struct DynamicConfigResolver;
 
 impl DynamicConfigResolver {
     /// 解析动态参数
-    pub async fn resolve<T>(&self, arg: &DynamicArgument<T>, context: &EnhancedRuntimeContext) -> Result<T>
+    pub async fn resolve<T>(
+        &self,
+        arg: &DynamicArgument<T>,
+        context: &EnhancedRuntimeContext,
+    ) -> Result<T>
     where
         T: Clone,
     {
@@ -115,17 +122,29 @@ impl DynamicConfigResolver {
     }
 
     /// 解析动态字符串参数
-    pub async fn resolve_string(&self, arg: &DynamicArgument<String>, context: &EnhancedRuntimeContext) -> Result<String> {
+    pub async fn resolve_string(
+        &self,
+        arg: &DynamicArgument<String>,
+        context: &EnhancedRuntimeContext,
+    ) -> Result<String> {
         self.resolve(arg, context).await
     }
 
     /// 解析动态模型参数
-    pub async fn resolve_model(&self, arg: &DynamicArgument<String>, context: &EnhancedRuntimeContext) -> Result<String> {
+    pub async fn resolve_model(
+        &self,
+        arg: &DynamicArgument<String>,
+        context: &EnhancedRuntimeContext,
+    ) -> Result<String> {
         self.resolve(arg, context).await
     }
 
     /// 解析动态工具列表
-    pub async fn resolve_tools(&self, arg: &DynamicArgument<Vec<String>>, context: &EnhancedRuntimeContext) -> Result<Vec<String>> {
+    pub async fn resolve_tools(
+        &self,
+        arg: &DynamicArgument<Vec<String>>,
+        context: &EnhancedRuntimeContext,
+    ) -> Result<Vec<String>> {
         self.resolve(arg, context).await
     }
 }
@@ -224,33 +243,39 @@ impl EnhancedRuntimeContext {
                 "calculator".to_string(),
                 "data_analyzer".to_string(),
             ],
-            _ => vec![
-                "web_search".to_string(),
-                "calculator".to_string(),
-            ],
+            _ => vec!["web_search".to_string(), "calculator".to_string()],
         }
     }
 
     /// 获取内存配置（基于复杂度和用户类型）
     pub fn get_memory_config(&self) -> HashMap<String, Value> {
         let mut config = HashMap::new();
-        
+
         match self.complexity {
             ComplexityLevel::Simple => {
                 config.insert("type".to_string(), Value::String("basic".to_string()));
-                config.insert("capacity".to_string(), Value::Number(serde_json::Number::from(100)));
-            },
+                config.insert(
+                    "capacity".to_string(),
+                    Value::Number(serde_json::Number::from(100)),
+                );
+            }
             ComplexityLevel::Complex => {
                 config.insert("type".to_string(), Value::String("semantic".to_string()));
-                config.insert("capacity".to_string(), Value::Number(serde_json::Number::from(500)));
-            },
+                config.insert(
+                    "capacity".to_string(),
+                    Value::Number(serde_json::Number::from(500)),
+                );
+            }
             ComplexityLevel::Expert => {
                 config.insert("type".to_string(), Value::String("hybrid".to_string()));
-                config.insert("capacity".to_string(), Value::Number(serde_json::Number::from(1000)));
+                config.insert(
+                    "capacity".to_string(),
+                    Value::Number(serde_json::Number::from(1000)),
+                );
                 config.insert("enable_semantic".to_string(), Value::Bool(true));
-            },
+            }
         }
-        
+
         config
     }
 }
@@ -273,7 +298,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::{Role, Message};
+    use crate::llm::{Message, Role};
 
     #[tokio::test]
     async fn test_enhanced_runtime_context() {
@@ -283,21 +308,27 @@ mod tests {
             .with_complexity(ComplexityLevel::Complex);
 
         context.set_variable("project".to_string(), Value::String("lumosai".to_string()));
-        
+
         assert_eq!(context.session_id, "session_123");
         assert_eq!(context.user_role, Some("developer".to_string()));
         assert_eq!(context.complexity, ComplexityLevel::Complex);
-        assert_eq!(context.get_variable("project"), Some(&Value::String("lumosai".to_string())));
+        assert_eq!(
+            context.get_variable("project"),
+            Some(&Value::String("lumosai".to_string()))
+        );
     }
 
     #[tokio::test]
     async fn test_dynamic_argument_static() {
         let context = EnhancedRuntimeContext::new("test".to_string());
         let resolver = DynamicConfigResolver;
-        
+
         let static_arg = static_arg("test_value".to_string());
-        let result = resolver.resolve_string(&static_arg, &context).await.unwrap();
-        
+        let result = resolver
+            .resolve_string(&static_arg, &context)
+            .await
+            .unwrap();
+
         assert_eq!(result, "test_value");
     }
 
@@ -306,28 +337,32 @@ mod tests {
         let context = EnhancedRuntimeContext::new("test".to_string())
             .with_user_role("admin".to_string())
             .with_complexity(ComplexityLevel::Expert);
-        
+
         let resolver = DynamicConfigResolver;
-        
+
         let dynamic_instructions = dynamic_arg(|ctx: &EnhancedRuntimeContext| async move {
-            Ok(format!("You are a {} assistant for {}", 
+            Ok(format!(
+                "You are a {} assistant for {}",
                 ctx.user_role.as_deref().unwrap_or("general"),
                 ctx.domain.as_deref().unwrap_or("general tasks")
             ))
         });
-        
-        let result = resolver.resolve_string(&dynamic_instructions, &context).await.unwrap();
+
+        let result = resolver
+            .resolve_string(&dynamic_instructions, &context)
+            .await
+            .unwrap();
         assert_eq!(result, "You are a admin assistant for general tasks");
     }
 
     #[tokio::test]
     async fn test_context_based_model_selection() {
         let resolver = DynamicConfigResolver;
-        
+
         // 简单任务使用轻量模型
         let simple_context = EnhancedRuntimeContext::new("test".to_string())
             .with_complexity(ComplexityLevel::Simple);
-        
+
         let model_selector = dynamic_arg(|ctx: &EnhancedRuntimeContext| async move {
             Ok(match ctx.complexity {
                 ComplexityLevel::Simple => "gpt-3.5-turbo".to_string(),
@@ -335,15 +370,21 @@ mod tests {
                 ComplexityLevel::Expert => "claude-3-opus".to_string(),
             })
         });
-        
-        let result = resolver.resolve_model(&model_selector, &simple_context).await.unwrap();
+
+        let result = resolver
+            .resolve_model(&model_selector, &simple_context)
+            .await
+            .unwrap();
         assert_eq!(result, "gpt-3.5-turbo");
-        
+
         // 专家级任务使用高级模型
         let expert_context = EnhancedRuntimeContext::new("test".to_string())
             .with_complexity(ComplexityLevel::Expert);
-        
-        let result = resolver.resolve_model(&model_selector, &expert_context).await.unwrap();
+
+        let result = resolver
+            .resolve_model(&model_selector, &expert_context)
+            .await
+            .unwrap();
         assert_eq!(result, "claude-3-opus");
     }
 }

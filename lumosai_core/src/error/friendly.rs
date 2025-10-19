@@ -184,7 +184,7 @@ impl FriendlyError {
         if !self.context.is_empty() {
             output.push_str("\n📋 Context:\n");
             for (key, value) in &self.context {
-                output.push_str(&format!("  • {}: {}\n", key, value));
+                output.push_str(&format!("  • {key}: {value}\n"));
             }
         }
 
@@ -192,7 +192,7 @@ impl FriendlyError {
         if !self.suggestions.is_empty() {
             output.push_str("\n💡 Suggestions:\n");
             for suggestion in &self.suggestions {
-                output.push_str(&format!("  • {}\n", suggestion));
+                output.push_str(&format!("  • {suggestion}\n"));
             }
         }
 
@@ -231,7 +231,7 @@ pub mod helpers {
     pub fn config_error(message: &str, config_path: Option<&str>) -> FriendlyError {
         let mut error = FriendlyError::new(
             Error::Configuration(message.to_string()),
-            format!("Configuration Error: {}", message),
+            format!("Configuration Error: {message}"),
         );
 
         if let Some(path) = config_path {
@@ -246,7 +246,7 @@ pub mod helpers {
     pub fn tool_error(tool_name: &str, message: &str, params: Option<&Value>) -> FriendlyError {
         let mut error = FriendlyError::new(
             Error::Tool(message.to_string()),
-            format!("Tool '{}' Error: {}", tool_name, message),
+            format!("Tool '{tool_name}' Error: {message}"),
         )
         .with_context("tool_name", tool_name);
 
@@ -262,7 +262,7 @@ pub mod helpers {
     pub fn agent_error(agent_name: &str, message: &str) -> FriendlyError {
         let mut error = FriendlyError::new(
             Error::Agent(message.to_string()),
-            format!("Agent '{}' Error: {}", agent_name, message),
+            format!("Agent '{agent_name}' Error: {message}"),
         )
         .with_context("agent_name", agent_name);
 
@@ -273,14 +273,14 @@ pub mod helpers {
     /// Create a network error with retry suggestions
     pub fn network_error(endpoint: &str, status_code: Option<u16>) -> FriendlyError {
         let message = if let Some(code) = status_code {
-            format!("Network request failed with status {}", code)
+            format!("Network request failed with status {code}")
         } else {
             "Network request failed".to_string()
         };
 
         let mut error = FriendlyError::new(
             Error::Network(message.clone()),
-            format!("Network Error: {}", message),
+            format!("Network Error: {message}"),
         )
         .with_context("endpoint", endpoint);
 

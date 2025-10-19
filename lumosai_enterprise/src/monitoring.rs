@@ -1,11 +1,11 @@
 //! 企业级监控和可观测性扩展
 
 use async_trait::async_trait;
-use prometheus::{Counter, Histogram, Gauge, Registry, Encoder, TextEncoder};
+use chrono::{DateTime, Duration, Utc};
+use prometheus::{Counter, Encoder, Gauge, Histogram, Registry, TextEncoder};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc, Duration};
 use uuid::Uuid;
 
 use crate::config::{EnterpriseConfig, PerformanceThresholds};
@@ -468,8 +468,10 @@ impl EnterpriseMonitoring {
         let metrics_registry = Arc::new(Registry::new());
 
         let compliance_monitor = Arc::new(ComplianceMonitor::new(&config).await?);
-        let performance_monitor = Arc::new(PerformanceMonitor::new(&config, metrics_registry.clone()).await?);
-        let business_metrics = Arc::new(BusinessMetricsCollector::new(metrics_registry.clone()).await?);
+        let performance_monitor =
+            Arc::new(PerformanceMonitor::new(&config, metrics_registry.clone()).await?);
+        let business_metrics =
+            Arc::new(BusinessMetricsCollector::new(metrics_registry.clone()).await?);
         let custom_metrics = Arc::new(RwLock::new(HashMap::new()));
         let alert_manager = Arc::new(AlertManager::new(&config).await?);
 
@@ -564,15 +566,24 @@ impl PerformanceMonitor {
         Ok(Self {
             thresholds: PerformanceThresholds::default(),
             metrics: PerformanceMetrics {
-                response_time_histogram: Arc::new(Histogram::with_opts(
-                    prometheus::HistogramOpts::new("response_time", "Response time histogram")
-                        .buckets(vec![0.1, 0.5, 1.0, 2.5, 5.0, 10.0])
-                ).unwrap()),
-                throughput_counter: Arc::new(Counter::new("throughput", "Throughput counter").unwrap()),
+                response_time_histogram: Arc::new(
+                    Histogram::with_opts(
+                        prometheus::HistogramOpts::new("response_time", "Response time histogram")
+                            .buckets(vec![0.1, 0.5, 1.0, 2.5, 5.0, 10.0]),
+                    )
+                    .unwrap(),
+                ),
+                throughput_counter: Arc::new(
+                    Counter::new("throughput", "Throughput counter").unwrap(),
+                ),
                 error_rate_counter: Arc::new(Counter::new("errors", "Error rate counter").unwrap()),
                 cpu_usage_gauge: Arc::new(Gauge::new("cpu_usage", "CPU usage gauge").unwrap()),
-                memory_usage_gauge: Arc::new(Gauge::new("memory_usage", "Memory usage gauge").unwrap()),
-                concurrent_connections_gauge: Arc::new(Gauge::new("connections", "Concurrent connections").unwrap()),
+                memory_usage_gauge: Arc::new(
+                    Gauge::new("memory_usage", "Memory usage gauge").unwrap(),
+                ),
+                concurrent_connections_gauge: Arc::new(
+                    Gauge::new("connections", "Concurrent connections").unwrap(),
+                ),
             },
             anomaly_detector: AnomalyDetector {
                 baseline_metrics: HashMap::new(),
@@ -594,10 +605,18 @@ impl BusinessMetricsCollector {
     async fn new(_registry: Arc<Registry>) -> Result<Self> {
         Ok(Self {
             revenue_metrics: RevenueMetrics {
-                monthly_recurring_revenue: Arc::new(Gauge::new("mrr", "Monthly Recurring Revenue").unwrap()),
-                annual_recurring_revenue: Arc::new(Gauge::new("arr", "Annual Recurring Revenue").unwrap()),
-                customer_lifetime_value: Arc::new(Gauge::new("clv", "Customer Lifetime Value").unwrap()),
-                customer_acquisition_cost: Arc::new(Gauge::new("cac", "Customer Acquisition Cost").unwrap()),
+                monthly_recurring_revenue: Arc::new(
+                    Gauge::new("mrr", "Monthly Recurring Revenue").unwrap(),
+                ),
+                annual_recurring_revenue: Arc::new(
+                    Gauge::new("arr", "Annual Recurring Revenue").unwrap(),
+                ),
+                customer_lifetime_value: Arc::new(
+                    Gauge::new("clv", "Customer Lifetime Value").unwrap(),
+                ),
+                customer_acquisition_cost: Arc::new(
+                    Gauge::new("cac", "Customer Acquisition Cost").unwrap(),
+                ),
             },
             usage_metrics: UsageMetrics {
                 active_users: Arc::new(Gauge::new("active_users", "Active Users").unwrap()),
@@ -606,10 +625,14 @@ impl BusinessMetricsCollector {
                 feature_usage: Arc::new(RwLock::new(HashMap::new())),
             },
             customer_metrics: CustomerMetrics {
-                customer_satisfaction: Arc::new(Gauge::new("csat", "Customer Satisfaction").unwrap()),
+                customer_satisfaction: Arc::new(
+                    Gauge::new("csat", "Customer Satisfaction").unwrap(),
+                ),
                 churn_rate: Arc::new(Gauge::new("churn_rate", "Churn Rate").unwrap()),
                 net_promoter_score: Arc::new(Gauge::new("nps", "Net Promoter Score").unwrap()),
-                support_tickets: Arc::new(Counter::new("support_tickets", "Support Tickets").unwrap()),
+                support_tickets: Arc::new(
+                    Counter::new("support_tickets", "Support Tickets").unwrap(),
+                ),
             },
         })
     }

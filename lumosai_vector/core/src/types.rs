@@ -66,8 +66,10 @@ impl From<bool> for MetadataValue {
 /// Similarity metrics for vector comparison
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default)]
 pub enum SimilarityMetric {
     /// Cosine similarity (normalized dot product)
+    #[default]
     Cosine,
     /// Euclidean distance (L2 norm)
     Euclidean,
@@ -77,12 +79,6 @@ pub enum SimilarityMetric {
     Manhattan,
     /// Hamming distance (for binary vectors)
     Hamming,
-}
-
-impl Default for SimilarityMetric {
-    fn default() -> Self {
-        SimilarityMetric::Cosine
-    }
 }
 
 /// Filter conditions for querying vectors

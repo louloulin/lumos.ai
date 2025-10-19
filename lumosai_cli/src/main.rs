@@ -17,9 +17,7 @@ async fn main() -> CliResult<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::New(args) | Commands::Create(args) => {
-            commands::create::run_new(args).await
-        }
+        Commands::New(args) | Commands::Create(args) => commands::create::run_new(args).await,
         Commands::Test(args) => commands::build::run_test(args).await,
         Commands::Build(args) => commands::build::run_build(args).await,
         Commands::Deploy(args) => commands::deploy::run_deploy(args).await,

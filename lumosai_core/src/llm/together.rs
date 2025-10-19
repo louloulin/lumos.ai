@@ -197,24 +197,23 @@ impl LlmProvider for TogetherProvider {
 
         let response = self
             .client
-            .post(&format!("{}/v1/completions", self.config.base_url))
+            .post(format!("{}/v1/completions", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Together API error: {}",
-                error_text
+                "Together API error: {error_text}"
             )));
         }
 
         let response_json: TogetherResponse = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.choices.is_empty() {
             return Err(Error::Parsing("No choices in response".to_string()));
@@ -252,24 +251,23 @@ impl LlmProvider for TogetherProvider {
 
         let response = self
             .client
-            .post(&format!("{}/v1/chat/completions", self.config.base_url))
+            .post(format!("{}/v1/chat/completions", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Together API error: {}",
-                error_text
+                "Together API error: {error_text}"
             )));
         }
 
         let response_json: TogetherResponse = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.choices.is_empty() {
             return Err(Error::Parsing("No choices in response".to_string()));
@@ -303,24 +301,23 @@ impl LlmProvider for TogetherProvider {
 
         let response = self
             .client
-            .post(&format!("{}/v1/embeddings", self.config.base_url))
+            .post(format!("{}/v1/embeddings", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Together API error: {}",
-                error_text
+                "Together API error: {error_text}"
             )));
         }
 
         let response_json: TogetherEmbeddingResponse = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.data.is_empty() {
             return Err(Error::Parsing("No embedding data in response".to_string()));

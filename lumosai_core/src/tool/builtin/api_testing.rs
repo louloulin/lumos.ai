@@ -82,10 +82,7 @@ use std::time::{Duration, Instant};
 /// # Ok(())
 /// # }
 /// ```
-#[tool(
-    name = "endpoint_test",
-    description = "测试 API 端点的可用性和响应"
-)]
+#[tool(name = "endpoint_test", description = "测试 API 端点的可用性和响应")]
 async fn endpoint_test(
     url: String,
     method: String,
@@ -197,7 +194,7 @@ async fn performance_test(
     let failed_requests = 0;
 
     // 模拟响应时间数据
-    let response_times = vec![10, 12, 15, 11, 13, 14, 16, 12, 11, 15]; // 毫秒
+    let response_times = [10, 12, 15, 11, 13, 14, 16, 12, 11, 15]; // 毫秒
     let avg_response_time = response_times.iter().sum::<u64>() / response_times.len() as u64;
     let min_response_time = *response_times.iter().min().unwrap();
     let max_response_time = *response_times.iter().max().unwrap();
@@ -278,10 +275,7 @@ async fn performance_test(
 /// # Ok(())
 /// # }
 /// ```
-#[tool(
-    name = "load_test",
-    description = "测试 API 在高负载下的表现"
-)]
+#[tool(name = "load_test", description = "测试 API 在高负载下的表现")]
 async fn load_test(
     url: String,
     method: String,
@@ -340,4 +334,3 @@ pub fn get_all_api_testing_tools() -> Vec<Box<dyn crate::tool::Tool>> {
         load_test_tool(),
     ]
 }
-

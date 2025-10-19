@@ -179,11 +179,10 @@ where
         options: &ToolExecutionOptions,
     ) -> Result<Value> {
         // Log the tool execution
-        self.logger().debug(
-            &format!(
-                "Executing tool [id={}] [thread_id={:?}]",
-                self.id, context.thread_id
-            ));
+        self.logger().debug(&format!(
+            "Executing tool [id={}] [thread_id={:?}]",
+            self.id, context.thread_id
+        ));
 
         // Check if abort is requested
         if context.is_abort_requested() {

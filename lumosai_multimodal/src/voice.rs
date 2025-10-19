@@ -1,8 +1,8 @@
 //! 语音处理 trait 定义
 
-use async_trait::async_trait;
 use crate::error::Result;
-use crate::types::{TranscriptionOptions, SynthesisOptions, AudioFormat};
+use crate::types::{AudioFormat, SynthesisOptions, TranscriptionOptions};
+use async_trait::async_trait;
 
 /// 语音处理能力
 #[derive(Debug, Clone)]
@@ -68,11 +68,7 @@ pub trait VoiceProvider: Send + Sync {
     ///
     /// # 返回
     /// 音频数据（字节）
-    async fn synthesize(
-        &self,
-        text: &str,
-        options: Option<SynthesisOptions>,
-    ) -> Result<Vec<u8>>;
+    async fn synthesize(&self, text: &str, options: Option<SynthesisOptions>) -> Result<Vec<u8>>;
 
     /// 文本转语音（保存到文件）
     ///
@@ -142,4 +138,3 @@ mod tests {
         assert_eq!(caps.supported_formats.len(), 2);
     }
 }
-

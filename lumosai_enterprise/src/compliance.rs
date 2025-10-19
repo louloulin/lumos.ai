@@ -1,10 +1,10 @@
 //! 企业级合规管理
 
 use async_trait::async_trait;
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::config::{ComplianceConfig, ComplianceStandard};
 use crate::error::Result;
@@ -571,7 +571,10 @@ impl ComplianceManager {
     }
 
     /// 检查合规性
-    pub async fn check_compliance(&self, context: ComplianceContext) -> Result<Vec<ComplianceCheckResult>> {
+    pub async fn check_compliance(
+        &self,
+        context: ComplianceContext,
+    ) -> Result<Vec<ComplianceCheckResult>> {
         self.compliance_checker.check_all_standards(&context).await
     }
 
@@ -581,7 +584,11 @@ impl ComplianceManager {
     }
 
     /// 评估策略
-    pub async fn evaluate_policy(&self, policy_id: &str, context: &HashMap<String, String>) -> Result<PolicyEvaluationResult> {
+    pub async fn evaluate_policy(
+        &self,
+        policy_id: &str,
+        context: &HashMap<String, String>,
+    ) -> Result<PolicyEvaluationResult> {
         self.policy_engine.evaluate_policy(policy_id, context).await
     }
 }
@@ -600,8 +607,14 @@ impl AuditManager {
     }
 
     async fn record_event(&mut self, event: AuditEvent) -> Result<()> {
-        let trail_key = event.user_id.clone().unwrap_or_else(|| "system".to_string());
-        self.audit_trails.entry(trail_key).or_insert_with(Vec::new).push(event);
+        let trail_key = event
+            .user_id
+            .clone()
+            .unwrap_or_else(|| "system".to_string());
+        self.audit_trails
+            .entry(trail_key)
+            .or_insert_with(Vec::new)
+            .push(event);
         Ok(())
     }
 }
@@ -616,7 +629,11 @@ impl PolicyEngine {
         })
     }
 
-    async fn evaluate_policy(&self, _policy_id: &str, _context: &HashMap<String, String>) -> Result<PolicyEvaluationResult> {
+    async fn evaluate_policy(
+        &self,
+        _policy_id: &str,
+        _context: &HashMap<String, String>,
+    ) -> Result<PolicyEvaluationResult> {
         // 简化实现
         Ok(PolicyEvaluationResult {
             policy_id: "test_policy".to_string(),
@@ -649,7 +666,10 @@ impl ComplianceChecker {
         })
     }
 
-    async fn check_all_standards(&self, _context: &ComplianceContext) -> Result<Vec<ComplianceCheckResult>> {
+    async fn check_all_standards(
+        &self,
+        _context: &ComplianceContext,
+    ) -> Result<Vec<ComplianceCheckResult>> {
         // 简化实现
         Ok(Vec::new())
     }

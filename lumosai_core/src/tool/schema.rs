@@ -188,8 +188,7 @@ fn validate_with_json_schema(schema: &Value, instance: &Value) -> Result<()> {
                         if let Some(field_str) = field.as_str() {
                             if !instance_obj.contains_key(field_str) {
                                 return Err(crate::error::Error::ValidationError(format!(
-                                    "Required field '{}' is missing in output",
-                                    field_str
+                                    "Required field '{field_str}' is missing in output"
                                 )));
                             }
                         }

@@ -6,7 +6,10 @@
 //! - 错误分类和严重性级别
 //! - 结构化错误输出
 
-use lumosai_core::error::{Error, friendly::{FriendlyError, helpers}};
+use lumosai_core::error::{
+    friendly::{helpers, FriendlyError},
+    Error,
+};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("1️⃣ 配置错误演示:");
     let config_error = helpers::config_error(
         "缺少必需的 API 密钥 'openai_api_key'",
-        Some("/path/to/config.toml")
+        Some("/path/to/config.toml"),
     );
     println!("{}\n", config_error);
 
@@ -27,27 +30,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "a": 10,
         "b": 0
     });
-    let tool_error = helpers::tool_error(
-        "calculator",
-        "除零错误：不能除以零",
-        Some(&tool_params)
-    );
+    let tool_error = helpers::tool_error("calculator", "除零错误：不能除以零", Some(&tool_params));
     println!("{}\n", tool_error);
 
     // 3. Agent 错误演示
     println!("3️⃣ Agent 错误演示:");
-    let agent_error = helpers::agent_error(
-        "data_analyst",
-        "无法访问所需的数据源"
-    );
+    let agent_error = helpers::agent_error("data_analyst", "无法访问所需的数据源");
     println!("{}\n", agent_error);
 
     // 4. 网络错误演示
     println!("4️⃣ 网络错误演示:");
-    let network_error = helpers::network_error(
-        "https://api.openai.com/v1/chat/completions",
-        Some(429)
-    );
+    let network_error =
+        helpers::network_error("https://api.openai.com/v1/chat/completions", Some(429));
     println!("{}\n", network_error);
 
     // 5. 自定义友好错误演示
@@ -76,7 +70,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (i, error) in errors.iter().enumerate() {
-        println!("错误 {}: 代码={}, 分类={:?}, 严重性={:?}",
+        println!(
+            "错误 {}: 代码={}, 分类={:?}, 严重性={:?}",
             i + 1,
             error.error_code(),
             error.category,
@@ -123,14 +118,11 @@ mod tests {
 
     #[test]
     fn test_custom_error_building() {
-        let error = FriendlyError::new(
-            Error::Agent("测试".to_string()),
-            "测试消息".to_string(),
-        )
-        .with_context("key1", "value1")
-        .with_context("key2", 42)
-        .with_suggestion("建议1")
-        .with_suggestion("建议2");
+        let error = FriendlyError::new(Error::Agent("测试".to_string()), "测试消息".to_string())
+            .with_context("key1", "value1")
+            .with_context("key2", 42)
+            .with_suggestion("建议1")
+            .with_suggestion("建议2");
 
         assert_eq!(error.context.len(), 2);
         assert_eq!(error.suggestions.len(), 2);

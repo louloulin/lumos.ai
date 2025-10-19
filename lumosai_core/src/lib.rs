@@ -38,8 +38,8 @@ pub mod vector;
 
 // 核心模块导出
 pub use agent::{
-    create_basic_agent, Agent, AgentBuilder, AgentConfig, AgentFactory, AgentGenerateOptions, AgentStreamOptions,
-    BasicAgent,
+    create_basic_agent, Agent, AgentBuilder, AgentConfig, AgentFactory, AgentGenerateOptions,
+    AgentStreamOptions, BasicAgent,
 };
 pub use config::*;
 pub use error::{Error, Result};

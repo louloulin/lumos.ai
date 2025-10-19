@@ -112,11 +112,7 @@ use tokio::fs;
     name = "file_reader_v2",
     description = "读取文件内容，支持编码和大小限制"
 )]
-async fn read_file(
-    path: String,
-    encoding: Option<String>,
-    max_size: Option<u64>,
-) -> Result<Value> {
+async fn read_file(path: String, encoding: Option<String>, max_size: Option<u64>) -> Result<Value> {
     let encoding = encoding.unwrap_or_else(|| "utf-8".to_string());
     let max_size = max_size.unwrap_or(1048576); // 1MB default
 
@@ -131,9 +127,10 @@ async fn read_file(
     }
 
     // 检查文件大小
-    let metadata = fs::metadata(&path).await
-        .map_err(|e| Error::Tool(format!("Failed to read file metadata: {}", e)))?;
-    
+    let metadata = fs::metadata(&path)
+        .await
+        .map_err(|e| Error::Tool(format!("Failed to read file metadata: {e}")))?;
+
     if metadata.len() > max_size {
         return Ok(json!({
             "success": false,
@@ -145,8 +142,9 @@ async fn read_file(
     }
 
     // 读取文件内容
-    let content = fs::read_to_string(&path).await
-        .map_err(|e| Error::Tool(format!("Failed to read file: {}", e)))?;
+    let content = fs::read_to_string(&path)
+        .await
+        .map_err(|e| Error::Tool(format!("Failed to read file: {e}")))?;
 
     Ok(json!({
         "success": true,
@@ -228,21 +226,24 @@ async fn write_file(
     // 创建父目录
     if create_dirs {
         if let Some(parent) = file_path.parent() {
-            fs::create_dir_all(parent).await
-                .map_err(|e| Error::Tool(format!("Failed to create directories: {}", e)))?;
+            fs::create_dir_all(parent)
+                .await
+                .map_err(|e| Error::Tool(format!("Failed to create directories: {e}")))?;
         }
     }
 
     // 创建备份
     if create_backup && file_path.exists() {
-        let backup_path = format!("{}.backup", path);
-        fs::copy(&path, &backup_path).await
-            .map_err(|e| Error::Tool(format!("Failed to create backup: {}", e)))?;
+        let backup_path = format!("{path}.backup");
+        fs::copy(&path, &backup_path)
+            .await
+            .map_err(|e| Error::Tool(format!("Failed to create backup: {e}")))?;
     }
 
     // 写入文件
-    fs::write(&path, &content).await
-        .map_err(|e| Error::Tool(format!("Failed to write file: {}", e)))?;
+    fs::write(&path, &content)
+        .await
+        .map_err(|e| Error::Tool(format!("Failed to write file: {e}")))?;
 
     Ok(json!({
         "success": true,
@@ -292,21 +293,26 @@ async fn list_directory(
     let mut total_dirs = 0;
 
     // 简化实现 - 实际应用中会使用 walkdir 或类似库
-    let mut read_dir = fs::read_dir(&path).await
-        .map_err(|e| Error::Tool(format!("Failed to read directory: {}", e)))?;
+    let mut read_dir = fs::read_dir(&path)
+        .await
+        .map_err(|e| Error::Tool(format!("Failed to read directory: {e}")))?;
 
-    while let Some(entry) = read_dir.next_entry().await
-        .map_err(|e| Error::Tool(format!("Failed to read directory entry: {}", e)))? {
-        
+    while let Some(entry) = read_dir
+        .next_entry()
+        .await
+        .map_err(|e| Error::Tool(format!("Failed to read directory entry: {e}")))?
+    {
         let file_name = entry.file_name().to_string_lossy().to_string();
-        
+
         // 跳过隐藏文件
         if !show_hidden && file_name.starts_with('.') {
             continue;
         }
 
-        let metadata = entry.metadata().await
-            .map_err(|e| Error::Tool(format!("Failed to read metadata: {}", e)))?;
+        let metadata = entry
+            .metadata()
+            .await
+            .map_err(|e| Error::Tool(format!("Failed to read metadata: {e}")))?;
 
         let is_dir = metadata.is_dir();
         let size = if is_dir { 0 } else { metadata.len() };
@@ -353,10 +359,7 @@ async fn list_directory(
 }
 
 /// 文件信息工具 - 使用宏实现
-#[tool(
-    name = "file_info_v2",
-    description = "获取文件或目录的详细信息"
-)]
+#[tool(name = "file_info_v2", description = "获取文件或目录的详细信息")]
 async fn get_file_info(
     path: String,
     check_permissions: Option<bool>,
@@ -374,8 +377,9 @@ async fn get_file_info(
         }));
     }
 
-    let metadata = fs::metadata(&path).await
-        .map_err(|e| Error::Tool(format!("Failed to read metadata: {}", e)))?;
+    let metadata = fs::metadata(&path)
+        .await
+        .map_err(|e| Error::Tool(format!("Failed to read metadata: {e}")))?;
 
     let mut info = json!({
         "success": true,
@@ -429,10 +433,7 @@ async fn get_file_info(
 // ============================================================================
 
 /// HTTP GET 请求工具
-#[tool(
-    name = "http_get",
-    description = "发送 HTTP GET 请求并返回响应"
-)]
+#[tool(name = "http_get", description = "发送 HTTP GET 请求并返回响应")]
 async fn http_get(
     url: String,
     headers: Option<Value>,
@@ -468,10 +469,7 @@ async fn http_get(
 }
 
 /// HTTP POST 请求工具
-#[tool(
-    name = "http_post",
-    description = "发送 HTTP POST 请求并返回响应"
-)]
+#[tool(name = "http_post", description = "发送 HTTP POST 请求并返回响应")]
 async fn http_post(
     url: String,
     body: Value,
@@ -520,7 +518,7 @@ async fn api_call(
     let method = method.to_uppercase();
 
     // 验证 HTTP 方法
-    let valid_methods = vec!["GET", "POST", "PUT", "DELETE", "PATCH"];
+    let valid_methods = ["GET", "POST", "PUT", "DELETE", "PATCH"];
     if !valid_methods.contains(&method.as_str()) {
         return Ok(json!({
             "success": false,
@@ -562,42 +560,32 @@ async fn api_call(
 // ============================================================================
 
 /// JSON 解析工具
-#[tool(
-    name = "json_parser",
-    description = "解析 JSON 字符串并验证格式"
-)]
-async fn parse_json(
-    json_string: String,
-    validate_schema: Option<bool>,
-) -> Result<Value> {
+#[tool(name = "json_parser", description = "解析 JSON 字符串并验证格式")]
+async fn parse_json(json_string: String, validate_schema: Option<bool>) -> Result<Value> {
     let validate = validate_schema.unwrap_or(false);
 
     // 尝试解析 JSON
     match serde_json::from_str::<Value>(&json_string) {
-        Ok(parsed) => {
-            Ok(json!({
-                "success": true,
-                "parsed": parsed,
-                "type": match &parsed {
-                    Value::Object(_) => "object",
-                    Value::Array(_) => "array",
-                    Value::String(_) => "string",
-                    Value::Number(_) => "number",
-                    Value::Bool(_) => "boolean",
-                    Value::Null => "null",
-                },
-                "validated": validate,
-                "timestamp": chrono::Utc::now().to_rfc3339()
-            }))
-        },
-        Err(e) => {
-            Ok(json!({
-                "success": false,
-                "error": format!("JSON parse error: {}", e),
-                "input": json_string,
-                "timestamp": chrono::Utc::now().to_rfc3339()
-            }))
-        }
+        Ok(parsed) => Ok(json!({
+            "success": true,
+            "parsed": parsed,
+            "type": match &parsed {
+                Value::Object(_) => "object",
+                Value::Array(_) => "array",
+                Value::String(_) => "string",
+                Value::Number(_) => "number",
+                Value::Bool(_) => "boolean",
+                Value::Null => "null",
+            },
+            "validated": validate,
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        })),
+        Err(e) => Ok(json!({
+            "success": false,
+            "error": format!("JSON parse error: {}", e),
+            "input": json_string,
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        })),
     }
 }
 
@@ -606,23 +594,21 @@ async fn parse_json(
     name = "text_processor",
     description = "处理文本，支持大小写转换、修剪、替换等操作"
 )]
-async fn process_text(
-    text: String,
-    operation: String,
-    options: Option<Value>,
-) -> Result<Value> {
+async fn process_text(text: String, operation: String, options: Option<Value>) -> Result<Value> {
     let result = match operation.as_str() {
         "uppercase" => text.to_uppercase(),
         "lowercase" => text.to_lowercase(),
         "trim" => text.trim().to_string(),
         "reverse" => text.chars().rev().collect(),
-        "length" => return Ok(json!({
-            "success": true,
-            "operation": operation,
-            "result": text.len(),
-            "original_text": text,
-            "timestamp": chrono::Utc::now().to_rfc3339()
-        })),
+        "length" => {
+            return Ok(json!({
+                "success": true,
+                "operation": operation,
+                "result": text.len(),
+                "original_text": text,
+                "timestamp": chrono::Utc::now().to_rfc3339()
+            }))
+        }
         "replace" => {
             if let Some(opts) = options {
                 let from = opts.get("from").and_then(|v| v.as_str()).unwrap_or("");
@@ -635,7 +621,7 @@ async fn process_text(
                     "operation": operation
                 }));
             }
-        },
+        }
         _ => {
             return Ok(json!({
                 "success": false,
@@ -659,16 +645,12 @@ async fn process_text(
     name = "data_converter",
     description = "在不同数据格式之间转换 (JSON, CSV, YAML 等)"
 )]
-async fn convert_data(
-    data: String,
-    from_format: String,
-    to_format: String,
-) -> Result<Value> {
+async fn convert_data(data: String, from_format: String, to_format: String) -> Result<Value> {
     let from = from_format.to_lowercase();
     let to = to_format.to_lowercase();
 
     // 验证格式
-    let valid_formats = vec!["json", "csv", "yaml", "xml"];
+    let valid_formats = ["json", "csv", "yaml", "xml"];
     if !valid_formats.contains(&from.as_str()) || !valid_formats.contains(&to.as_str()) {
         return Ok(json!({
             "success": false,
@@ -705,20 +687,12 @@ pub fn get_macro_file_tools() -> Vec<Box<dyn crate::tool::Tool>> {
 
 /// 获取所有宏驱动的网络请求工具
 pub fn get_macro_network_tools() -> Vec<Box<dyn crate::tool::Tool>> {
-    vec![
-        http_get_tool(),
-        http_post_tool(),
-        api_call_tool(),
-    ]
+    vec![http_get_tool(), http_post_tool(), api_call_tool()]
 }
 
 /// 获取所有宏驱动的数据处理工具
 pub fn get_macro_data_tools() -> Vec<Box<dyn crate::tool::Tool>> {
-    vec![
-        parse_json_tool(),
-        process_text_tool(),
-        convert_data_tool(),
-    ]
+    vec![parse_json_tool(), process_text_tool(), convert_data_tool()]
 }
 
 /// 获取所有宏驱动的工具

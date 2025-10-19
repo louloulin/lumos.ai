@@ -194,12 +194,12 @@ impl CollaborationSession {
         let event = AgentEvent::StateChanged {
             agent_id: agent_id.to_string(),
             old_state: "unknown".to_string(), // 简化实现
-            new_state: format!("{:?}", state),
+            new_state: format!("{state:?}"),
             timestamp: Utc::now(),
         };
 
         if let Err(e) = self.event_bus.publish(event).await {
-            eprintln!("Failed to publish state change event: {}", e);
+            eprintln!("Failed to publish state change event: {e}");
         }
 
         // 更新时间戳
@@ -332,8 +332,7 @@ impl BasicOrchestrator {
                             )
                             .await;
                         return Err(Error::Agent(format!(
-                            "Agent {} failed: {}",
-                            agent_id, error_msg
+                            "Agent {agent_id} failed: {error_msg}"
                         )));
                     }
                 }
@@ -409,7 +408,7 @@ impl BasicOrchestrator {
                     }
                 },
                 Err(e) => {
-                    return Err(Error::Agent(format!("Task join error: {}", e)));
+                    return Err(Error::Agent(format!("Task join error: {e}")));
                 }
             }
         }
@@ -485,10 +484,7 @@ impl AgentOrchestrator for BasicOrchestrator {
             let session = session_arc.lock().await;
             Ok(session.get_results().await)
         } else {
-            Err(Error::NotFound(format!(
-                "Session not found: {}",
-                session_id
-            )))
+            Err(Error::NotFound(format!("Session not found: {session_id}")))
         }
     }
 }

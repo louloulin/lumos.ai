@@ -1,9 +1,9 @@
+use crate::compat::Component;
 use async_trait::async_trait;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
-use crate::compat::Component;
 
 use super::context::ToolExecutionContext;
 use super::schema::{ToolExecutionOptions, ToolSchema};
@@ -117,11 +117,10 @@ impl Tool for FunctionTool {
         options: &ToolExecutionOptions,
     ) -> Result<Value> {
         // Log the tool execution
-        self.logger().debug(
-            &format!(
-                "Executing function tool [id={}] [thread_id={:?}]",
-                self.id, context.thread_id
-            ));
+        self.logger().debug(&format!(
+            "Executing function tool [id={}] [thread_id={:?}]",
+            self.id, context.thread_id
+        ));
 
         // Check if abort is requested
         if context.is_abort_requested() {
@@ -289,7 +288,7 @@ pub mod utils {
             .iter()
             .find(|f| f.name == function_name)
             .ok_or_else(|| {
-                crate::Error::InvalidInput(format!("Unknown function: {}", function_name))
+                crate::Error::InvalidInput(format!("Unknown function: {function_name}"))
             })?;
 
         // Basic validation - could be enhanced with full JSON schema validation
@@ -308,8 +307,7 @@ pub mod utils {
                     if let Some(field_name) = required_field.as_str() {
                         if !args_obj.contains_key(field_name) {
                             return Err(crate::Error::InvalidInput(format!(
-                                "Missing required field: {}",
-                                field_name
+                                "Missing required field: {field_name}"
                             )));
                         }
                     }

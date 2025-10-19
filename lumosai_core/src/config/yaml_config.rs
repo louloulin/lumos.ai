@@ -140,7 +140,7 @@ impl YamlConfig {
     /// Load configuration from YAML file
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = std::fs::read_to_string(path)
-            .map_err(|e| Error::Configuration(format!("Failed to read YAML config file: {}", e)))?;
+            .map_err(|e| Error::Configuration(format!("Failed to read YAML config file: {e}")))?;
 
         Self::from_str(&content)
     }
@@ -148,20 +148,20 @@ impl YamlConfig {
     /// Parse configuration from YAML string
     pub fn from_str(content: &str) -> Result<Self> {
         serde_yaml::from_str(content)
-            .map_err(|e| Error::Configuration(format!("Failed to parse YAML config: {}", e)))
+            .map_err(|e| Error::Configuration(format!("Failed to parse YAML config: {e}")))
     }
 
     /// Save configuration to YAML file
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let content = self.to_string()?;
         std::fs::write(path, content)
-            .map_err(|e| Error::Configuration(format!("Failed to write YAML config file: {}", e)))
+            .map_err(|e| Error::Configuration(format!("Failed to write YAML config file: {e}")))
     }
 
     /// Convert configuration to YAML string
     pub fn to_string(&self) -> Result<String> {
         serde_yaml::to_string(self)
-            .map_err(|e| Error::Configuration(format!("Failed to serialize YAML config: {}", e)))
+            .map_err(|e| Error::Configuration(format!("Failed to serialize YAML config: {e}")))
     }
 
     /// Validate configuration
@@ -185,14 +185,12 @@ impl YamlConfig {
                 }
                 if agent.model.is_empty() {
                     return Err(Error::Configuration(format!(
-                        "Agent '{}' must have a model",
-                        name
+                        "Agent '{name}' must have a model"
                     )));
                 }
                 if agent.instructions.is_empty() {
                     return Err(Error::Configuration(format!(
-                        "Agent '{}' must have instructions",
-                        name
+                        "Agent '{name}' must have instructions"
                     )));
                 }
             }
@@ -208,8 +206,7 @@ impl YamlConfig {
                 }
                 if workflow.steps.is_empty() {
                     return Err(Error::Configuration(format!(
-                        "Workflow '{}' must have at least one step",
-                        name
+                        "Workflow '{name}' must have at least one step"
                     )));
                 }
 
@@ -218,8 +215,7 @@ impl YamlConfig {
                     // At least one of agent, tool, or workflow must be specified
                     if step.agent.is_none() && step.tool.is_none() && step.workflow.is_none() {
                         return Err(Error::Configuration(format!(
-                            "Workflow '{}' step {} must specify an agent, tool, or workflow",
-                            name, i
+                            "Workflow '{name}' step {i} must specify an agent, tool, or workflow"
                         )));
                     }
 
@@ -227,8 +223,7 @@ impl YamlConfig {
                     if let Some(agent_name) = &step.agent {
                         if agent_name.is_empty() {
                             return Err(Error::Configuration(format!(
-                                "Workflow '{}' step {} agent name cannot be empty",
-                                name, i
+                                "Workflow '{name}' step {i} agent name cannot be empty"
                             )));
                         }
                     }
@@ -237,8 +232,7 @@ impl YamlConfig {
                     if let Some(tool_name) = &step.tool {
                         if tool_name.is_empty() {
                             return Err(Error::Configuration(format!(
-                                "Workflow '{}' step {} tool name cannot be empty",
-                                name, i
+                                "Workflow '{name}' step {i} tool name cannot be empty"
                             )));
                         }
                     }
@@ -247,8 +241,7 @@ impl YamlConfig {
                     if let Some(workflow_id) = &step.workflow {
                         if workflow_id.is_empty() {
                             return Err(Error::Configuration(format!(
-                                "Workflow '{}' step {} workflow ID cannot be empty",
-                                name, i
+                                "Workflow '{name}' step {i} workflow ID cannot be empty"
                             )));
                         }
                     }

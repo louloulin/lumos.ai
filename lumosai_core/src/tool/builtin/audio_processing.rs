@@ -93,7 +93,7 @@ async fn audio_convert(
     let bit_rate = bit_rate.unwrap_or(192);
     let sample_rate = sample_rate.unwrap_or(44100);
 
-    let valid_formats = vec!["mp3", "wav", "aac", "flac"];
+    let valid_formats = ["mp3", "wav", "aac", "flac"];
     let output_format_lower = output_format.to_lowercase();
     if !valid_formats.contains(&output_format_lower.as_str()) {
         return Ok(json!({
@@ -102,7 +102,7 @@ async fn audio_convert(
         }));
     }
 
-    if bit_rate < 32 || bit_rate > 320 {
+    if !(32..=320).contains(&bit_rate) {
         return Ok(json!({
             "success": false,
             "error": format!("比特率必须在 32-320 kbps 之间，当前值: {}", bit_rate)
@@ -126,9 +126,15 @@ async fn audio_convert(
     };
 
     let compression_ratio = if output_size > input_size {
-        format!("+{:.1}%", (output_size as f64 / input_size as f64 - 1.0) * 100.0)
+        format!(
+            "+{:.1}%",
+            (output_size as f64 / input_size as f64 - 1.0) * 100.0
+        )
     } else {
-        format!("{:.1}%", (1.0 - output_size as f64 / input_size as f64) * 100.0)
+        format!(
+            "{:.1}%",
+            (1.0 - output_size as f64 / input_size as f64) * 100.0
+        )
     };
 
     Ok(json!({
@@ -160,7 +166,7 @@ async fn audio_process(
     end_time: Option<i64>,
     noise_reduction: Option<bool>,
 ) -> Result<Value> {
-    let valid_operations = vec!["volume", "trim", "denoise", "normalize"];
+    let valid_operations = ["volume", "trim", "denoise", "normalize"];
     let operation_lower = operation.to_lowercase();
     if !valid_operations.contains(&operation_lower.as_str()) {
         return Ok(json!({
@@ -180,7 +186,7 @@ async fn audio_process(
     match operation_lower.as_str() {
         "volume" => {
             let volume_db = volume_db.unwrap_or(0);
-            if volume_db < -20 || volume_db > 20 {
+            if !(-20..=20).contains(&volume_db) {
                 return Ok(json!({
                     "success": false,
                     "error": format!("音量调整必须在 -20 到 +20 dB 之间，当前值: {}", volume_db)
@@ -275,4 +281,3 @@ mod tests {
         assert_eq!(result["volume_adjustment_db"], 5);
     }
 }
-

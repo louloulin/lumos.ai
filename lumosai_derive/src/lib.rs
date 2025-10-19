@@ -127,33 +127,30 @@ fn parse_function_attributes(attrs: &[Attribute]) -> syn::Result<(String, String
 
     for attr in attrs {
         if attr.path().is_ident("function") {
-            match &attr.meta {
-                Meta::List(list) => {
-                    // Parse name and description from attribute arguments
-                    let nested = list.parse_args_with(
-                        syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
-                    )?;
-                    for meta in nested {
-                        match meta {
-                            Meta::NameValue(nv) if nv.path.is_ident("name") => {
-                                if let syn::Expr::Lit(lit) = &nv.value {
-                                    if let syn::Lit::Str(lit_str) = &lit.lit {
-                                        function_name = Some(lit_str.value());
-                                    }
+            if let Meta::List(list) = &attr.meta {
+                // Parse name and description from attribute arguments
+                let nested = list.parse_args_with(
+                    syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+                )?;
+                for meta in nested {
+                    match meta {
+                        Meta::NameValue(nv) if nv.path.is_ident("name") => {
+                            if let syn::Expr::Lit(lit) = &nv.value {
+                                if let syn::Lit::Str(lit_str) = &lit.lit {
+                                    function_name = Some(lit_str.value());
                                 }
                             }
-                            Meta::NameValue(nv) if nv.path.is_ident("description") => {
-                                if let syn::Expr::Lit(lit) = &nv.value {
-                                    if let syn::Lit::Str(lit_str) = &lit.lit {
-                                        function_description = Some(lit_str.value());
-                                    }
-                                }
-                            }
-                            _ => {}
                         }
+                        Meta::NameValue(nv) if nv.path.is_ident("description") => {
+                            if let syn::Expr::Lit(lit) = &nv.value {
+                                if let syn::Lit::Str(lit_str) = &lit.lit {
+                                    function_description = Some(lit_str.value());
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 }
-                _ => {}
             }
         }
     }

@@ -49,14 +49,12 @@ pub mod vector_utils {
         for (i, &value) in vector.iter().enumerate() {
             if value.is_nan() {
                 return Err(VectorError::InvalidVector(format!(
-                    "NaN value at index {}",
-                    i
+                    "NaN value at index {i}"
                 )));
             }
             if value.is_infinite() {
                 return Err(VectorError::InvalidVector(format!(
-                    "Infinite value at index {}",
-                    i
+                    "Infinite value at index {i}"
                 )));
             }
         }
@@ -187,7 +185,7 @@ pub mod perf_utils {
 
         /// Estimate memory usage of a vector
         pub fn vector_memory_usage<T>(v: &[T]) -> usize {
-            v.len() * std::mem::size_of::<T>() + std::mem::size_of::<Vec<T>>()
+            std::mem::size_of_val(v) + std::mem::size_of::<Vec<T>>()
         }
 
         /// Convert bytes to human-readable format

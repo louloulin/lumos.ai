@@ -163,11 +163,7 @@ async fn demo_sequential_execution() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(80));
 
     // 创建团队
-    let crew = Crew::new(
-        "Content Team".to_string(),
-        CollaborationMode::Sequential,
-        1,
-    );
+    let crew = Crew::new("Content Team".to_string(), CollaborationMode::Sequential, 1);
 
     // 添加 Agent
     let llm = Arc::new(MockLlmProvider::new(vec!["Done".to_string()]));
@@ -218,7 +214,12 @@ async fn demo_sequential_execution() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n✅ 执行完成！结果:");
     for (i, task) in results.iter().enumerate() {
-        println!("  {}. {} - 状态: {:?}", i + 1, task.description, task.status);
+        println!(
+            "  {}. {} - 状态: {:?}",
+            i + 1,
+            task.description,
+            task.status
+        );
         if let Some(result) = &task.result {
             println!("     结果: {}", result);
         }
@@ -285,7 +286,12 @@ async fn demo_parallel_execution() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n✅ 执行完成！结果:");
     for (i, task) in results.iter().enumerate() {
-        println!("  {}. {} - 状态: {:?}", i + 1, task.description, task.status);
+        println!(
+            "  {}. {} - 状态: {:?}",
+            i + 1,
+            task.description,
+            task.status
+        );
     }
 
     println!("\n💡 并行执行优势:");
@@ -367,7 +373,12 @@ async fn demo_hierarchical_execution() -> Result<(), Box<dyn std::error::Error>>
 
     println!("\n✅ 执行完成！结果:");
     for (i, task) in results.iter().enumerate() {
-        println!("  {}. {} - 状态: {:?}", i + 1, task.description, task.status);
+        println!(
+            "  {}. {} - 状态: {:?}",
+            i + 1,
+            task.description,
+            task.status
+        );
     }
 
     println!("\n💡 层级执行特点:");
@@ -378,4 +389,3 @@ async fn demo_hierarchical_execution() -> Result<(), Box<dyn std::error::Error>>
 
     Ok(())
 }
-

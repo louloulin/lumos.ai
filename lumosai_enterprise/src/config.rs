@@ -1,9 +1,9 @@
 //! 企业级功能配置管理
 
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::collections::HashMap;
 use crate::error::{EnterpriseError, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 /// 企业级功能配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -631,6 +631,9 @@ mod tests {
         // 加载配置
         let loaded_config = EnterpriseConfig::from_file(temp_file.path()).unwrap();
         assert_eq!(config.database_url, loaded_config.database_url);
-        assert_eq!(config.compliance_monitoring_enabled, loaded_config.compliance_monitoring_enabled);
+        assert_eq!(
+            config.compliance_monitoring_enabled,
+            loaded_config.compliance_monitoring_enabled
+        );
     }
 }

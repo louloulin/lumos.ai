@@ -181,9 +181,9 @@ lumosai_core = { path = "lumosai_core" }
 lumosai_vector = { path = "lumosai_vector", features = ["memory"], optional = true }
 lumosai-vector-core = { path = "lumosai_vector/core" }
 lumosai_multimodal = { path = "lumosai_multimodal" }
+lumosai_rag = { path = "lumosai_rag" }
 # 暂时移除其他依赖
 # lumosai_evals = { path = "lumosai_evals" }
-# lumosai_rag = { path = "lumosai_rag" }
 # lumosai_network = { path = "lumosai_network" }
 # lumosai_ui = { path = "lumosai_ui", optional = true }
 lumos_macro = { path = "lumos_macro" }

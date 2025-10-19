@@ -811,7 +811,7 @@ pub async fn run_new(args: CreateArgs) -> CliResult<()> {
         None => Input::new()
             .with_prompt("项目名称")
             .interact()
-            .map_err(|e| CliError::Other(e.to_string()))?
+            .map_err(|e| CliError::Other(e.to_string()))?,
     };
 
     // 选择模板
@@ -824,7 +824,7 @@ pub async fn run_new(args: CreateArgs) -> CliResult<()> {
                 "rag-system",
                 "multi-agent",
                 "research-assistant",
-                "workflow-automation"
+                "workflow-automation",
             ];
 
             let selection = Select::new()
@@ -853,7 +853,10 @@ pub async fn run_new(args: CreateArgs) -> CliResult<()> {
     copy_template(&template, &project_path, &project_name).await?;
 
     println!("\n{} 项目创建成功！", "✅".bright_green());
-    println!("📁 项目路径: {}", project_path.display().to_string().bright_cyan());
+    println!(
+        "📁 项目路径: {}",
+        project_path.display().to_string().bright_cyan()
+    );
     println!("\n下一步:");
     println!("  cd {}", project_name);
     println!("  cargo run");
@@ -878,16 +881,14 @@ async fn copy_template(template: &str, project_path: &Path, project_name: &str) 
     // 更新 Cargo.toml 中的项目名称
     let cargo_toml_path = project_path.join("Cargo.toml");
     if cargo_toml_path.exists() {
-        let content = fs::read_to_string(&cargo_toml_path)
-            .map_err(|e| CliError::Io(e))?;
+        let content = fs::read_to_string(&cargo_toml_path).map_err(|e| CliError::Io(e))?;
 
         let updated_content = content.replace(
             &format!("name = \"{}\"", template),
-            &format!("name = \"{}\"", project_name)
+            &format!("name = \"{}\"", project_name),
         );
 
-        fs::write(&cargo_toml_path, updated_content)
-            .map_err(|e| CliError::Io(e))?;
+        fs::write(&cargo_toml_path, updated_content).map_err(|e| CliError::Io(e))?;
     }
 
     Ok(())
@@ -907,8 +908,7 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> CliResult<()> {
         if src_path.is_dir() {
             copy_dir_recursive(&src_path, &dst_path)?;
         } else {
-            fs::copy(&src_path, &dst_path)
-                .map_err(|e| CliError::Io(e))?;
+            fs::copy(&src_path, &dst_path).map_err(|e| CliError::Io(e))?;
         }
     }
 

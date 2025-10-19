@@ -129,24 +129,23 @@ impl LlmProvider for CohereProvider {
 
         let response = self
             .client
-            .post(&format!("{}/v1/generate", self.config.base_url))
+            .post(format!("{}/v1/generate", self.config.base_url))
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Cohere API error: {}",
-                error_text
+                "Cohere API error: {error_text}"
             )));
         }
 
         let response_json: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         let text = response_json["generations"][0]["text"]
             .as_str()
@@ -185,24 +184,23 @@ impl LlmProvider for CohereProvider {
 
         let response = self
             .client
-            .post(&format!("{}/v1/embed", self.config.base_url))
+            .post(format!("{}/v1/embed", self.config.base_url))
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Cohere API error: {}",
-                error_text
+                "Cohere API error: {error_text}"
             )));
         }
 
         let response_json: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         let embeddings = response_json["embeddings"][0]
             .as_array()

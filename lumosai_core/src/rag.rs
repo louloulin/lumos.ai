@@ -137,6 +137,12 @@ pub struct QueryConfig {
     pub filter: Option<String>,
 }
 
+impl Default for QueryConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QueryConfig {
     pub fn new() -> Self {
         Self {
@@ -273,8 +279,7 @@ impl RagPipeline for BasicRagPipeline {
                 let path = Path::new(&dir_path);
                 if !path.exists() || !path.is_dir() {
                     return Err(crate::error::Error::InvalidInput(format!(
-                        "Directory not found: {}",
-                        dir_path
+                        "Directory not found: {dir_path}"
                     )));
                 }
 
@@ -300,15 +305,13 @@ impl RagPipeline for BasicRagPipeline {
             DocumentSource::Url(url) => {
                 // 简单实现，实际项目中可能需要使用reqwest等库
                 Err(crate::error::Error::Other(format!(
-                    "URL document source not implemented yet: {}",
-                    url
+                    "URL document source not implemented yet: {url}"
                 )))
             }
             DocumentSource::Database(connection_string) => {
                 // 简单实现，实际项目中需要连接数据库
                 Err(crate::error::Error::Other(format!(
-                    "Database document source not implemented yet: {}",
-                    connection_string
+                    "Database document source not implemented yet: {connection_string}"
                 )))
             }
         }
@@ -379,7 +382,7 @@ fn split_text_into_documents(text: &str) -> Vec<crate::vector::Document> {
         .iter()
         .enumerate()
         .filter(|(_, p)| !p.trim().is_empty())
-        .map(|(i, p)| crate::vector::Document::new(format!("doc_{}", i), p.trim().to_string()))
+        .map(|(i, p)| crate::vector::Document::new(format!("doc_{i}"), p.trim().to_string()))
         .collect()
 }
 

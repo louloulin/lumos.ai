@@ -210,19 +210,11 @@ impl Default for GenerationOptions {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MultimodalContent {
     /// 文本内容
-    Text {
-        text: String,
-    },
+    Text { text: String },
     /// 图像 URL
-    ImageUrl {
-        url: String,
-        detail: Option<String>,
-    },
+    ImageUrl { url: String, detail: Option<String> },
     /// 音频数据
-    Audio {
-        data: Vec<u8>,
-        format: AudioFormat,
-    },
+    Audio { data: Vec<u8>, format: AudioFormat },
 }
 
 /// 多模态消息
@@ -239,9 +231,7 @@ impl MultimodalMessage {
     pub fn text(role: impl Into<String>, text: impl Into<String>) -> Self {
         Self {
             role: role.into(),
-            content: vec![MultimodalContent::Text {
-                text: text.into(),
-            }],
+            content: vec![MultimodalContent::Text { text: text.into() }],
         }
     }
 
@@ -265,9 +255,7 @@ impl MultimodalMessage {
         Self {
             role: role.into(),
             content: vec![
-                MultimodalContent::Text {
-                    text: text.into(),
-                },
+                MultimodalContent::Text { text: text.into() },
                 MultimodalContent::ImageUrl {
                     url: url.into(),
                     detail: Some("auto".to_string()),
@@ -276,4 +264,3 @@ impl MultimodalMessage {
         }
     }
 }
-

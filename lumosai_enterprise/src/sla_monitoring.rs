@@ -2,9 +2,9 @@
 //!
 //! 提供服务级别协议监控和管理功能
 
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::error::{EnterpriseError, Result};
@@ -167,7 +167,9 @@ impl SLAMonitor {
         let service_name = metrics.service_name.clone();
 
         // 检查是否有SLA违约
-        let sla_opt = self.sla_definitions.values()
+        let sla_opt = self
+            .sla_definitions
+            .values()
             .find(|s| s.service_name == service_name)
             .cloned();
 
@@ -180,7 +182,11 @@ impl SLAMonitor {
     }
 
     /// 检查SLA违约
-    async fn check_violations(&mut self, sla: &ServiceLevelAgreement, metrics: &SLAMetrics) -> Result<()> {
+    async fn check_violations(
+        &mut self,
+        sla: &ServiceLevelAgreement,
+        metrics: &SLAMetrics,
+    ) -> Result<()> {
         // 检查可用性
         if metrics.availability < sla.availability_target {
             let violation = SLAViolation {
@@ -208,7 +214,8 @@ impl SLAMonitor {
                 actual_value: metrics.avg_response_time,
                 violation_time: metrics.measured_at,
                 duration: metrics.measurement_period,
-                severity: self.calculate_severity(sla.response_time_target, metrics.avg_response_time),
+                severity: self
+                    .calculate_severity(sla.response_time_target, metrics.avg_response_time),
             };
             self.violations.push(violation);
         }
@@ -266,7 +273,9 @@ impl SLAMonitor {
     /// 获取SLA违约记录
     pub async fn get_violations(&self, service_name: Option<&str>) -> Result<Vec<SLAViolation>> {
         if let Some(name) = service_name {
-            Ok(self.violations.iter()
+            Ok(self
+                .violations
+                .iter()
                 .filter(|v| v.service_name == name)
                 .cloned()
                 .collect())
@@ -277,14 +286,27 @@ impl SLAMonitor {
 
     /// 获取SLA合规性报告
     pub async fn get_compliance_report(&self, service_name: &str) -> Result<SLAComplianceReport> {
-        let sla = self.sla_definitions.values()
+        let sla = self
+            .sla_definitions
+            .values()
             .find(|s| s.service_name == service_name)
-            .ok_or_else(|| EnterpriseError::SlaMonitoring(format!("SLA not found for service: {}", service_name)))?;
+            .ok_or_else(|| {
+                EnterpriseError::SlaMonitoring(format!(
+                    "SLA not found for service: {}",
+                    service_name
+                ))
+            })?;
 
-        let metrics = self.sla_metrics.get(service_name)
-            .ok_or_else(|| EnterpriseError::SlaMonitoring(format!("No metrics found for service: {}", service_name)))?;
+        let metrics = self.sla_metrics.get(service_name).ok_or_else(|| {
+            EnterpriseError::SlaMonitoring(format!(
+                "No metrics found for service: {}",
+                service_name
+            ))
+        })?;
 
-        let violations = self.violations.iter()
+        let violations = self
+            .violations
+            .iter()
             .filter(|v| v.service_name == service_name)
             .cloned()
             .collect();
@@ -410,10 +432,10 @@ mod tests {
         // 更新指标（违约情况）
         let bad_metrics = SLAMetrics {
             service_name: "web_service".to_string(),
-            availability: 98.0, // 低于99.9%
+            availability: 98.0,       // 低于99.9%
             avg_response_time: 300.0, // 高于200ms
-            error_rate: 2.0, // 高于1%
-            throughput: 800.0, // 低于1000
+            error_rate: 2.0,          // 高于1%
+            throughput: 800.0,        // 低于1000
             measured_at: Utc::now(),
             measurement_period: chrono::Duration::minutes(1),
         };

@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
+use crate::compat::Component;
 use crate::error::Result;
 use crate::llm::{LlmProvider, Message};
-use crate::compat::Component;
 use crate::memory::{Memory, MemoryConfig};
 use crate::vector::VectorStorage;
 
@@ -268,7 +268,7 @@ impl EnhancedMemory {
 
         self.base
             .logger()
-            .debug(&format!("Stored memory entry: {}", entry_id));
+            .debug(&format!("Stored memory entry: {entry_id}"));
         Ok(())
     }
 

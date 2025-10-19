@@ -197,7 +197,7 @@ async fn image_convert(
     let preserve_metadata = preserve_metadata.unwrap_or(true);
 
     // 验证输出格式
-    let valid_formats = vec!["png", "jpeg", "jpg", "webp", "gif"];
+    let valid_formats = ["png", "jpeg", "jpg", "webp", "gif"];
     let output_format_lower = output_format.to_lowercase();
     if !valid_formats.contains(&output_format_lower.as_str()) {
         return Ok(json!({
@@ -207,7 +207,7 @@ async fn image_convert(
     }
 
     // 验证质量参数
-    if quality < 1 || quality > 100 {
+    if !(1..=100).contains(&quality) {
         return Ok(json!({
             "success": false,
             "error": format!("质量参数必须在 1-100 之间，当前值: {}", quality)
@@ -238,7 +238,10 @@ async fn image_convert(
     };
 
     let compression_ratio = if output_size > 0 {
-        format!("{:.1}%", (1.0 - output_size as f64 / input_size as f64) * 100.0)
+        format!(
+            "{:.1}%",
+            (1.0 - output_size as f64 / input_size as f64) * 100.0
+        )
     } else {
         "0.0%".to_string()
     };
@@ -319,7 +322,7 @@ async fn image_compress(
     let optimize = optimize.unwrap_or(true);
 
     // 验证质量参数
-    if quality < 1 || quality > 100 {
+    if !(1..=100).contains(&quality) {
         return Ok(json!({
             "success": false,
             "error": format!("质量参数必须在 1-100 之间，当前值: {}", quality)
@@ -332,19 +335,29 @@ async fn image_compress(
     let original_size = 2097152; // 2 MB
 
     // 计算输出尺寸
-    let (output_width, output_height) = if let (Some(max_w), Some(max_h)) = (max_width, max_height) {
+    let (output_width, output_height) = if let (Some(max_w), Some(max_h)) = (max_width, max_height)
+    {
         // 保持宽高比缩放
         let width_ratio = max_w as f64 / original_width as f64;
         let height_ratio = max_h as f64 / original_height as f64;
         let scale = width_ratio.min(height_ratio).min(1.0);
 
-        ((original_width as f64 * scale) as i64, (original_height as f64 * scale) as i64)
+        (
+            (original_width as f64 * scale) as i64,
+            (original_height as f64 * scale) as i64,
+        )
     } else if let Some(max_w) = max_width {
         let scale = (max_w as f64 / original_width as f64).min(1.0);
-        ((original_width as f64 * scale) as i64, (original_height as f64 * scale) as i64)
+        (
+            (original_width as f64 * scale) as i64,
+            (original_height as f64 * scale) as i64,
+        )
     } else if let Some(max_h) = max_height {
         let scale = (max_h as f64 / original_height as f64).min(1.0);
-        ((original_width as f64 * scale) as i64, (original_height as f64 * scale) as i64)
+        (
+            (original_width as f64 * scale) as i64,
+            (original_height as f64 * scale) as i64,
+        )
     } else {
         (original_width, original_height)
     };
@@ -354,7 +367,8 @@ async fn image_compress(
 
     // 根据尺寸调整计算大小变化
     if output_width < original_width || output_height < original_height {
-        let pixel_ratio = (output_width * output_height) as f64 / (original_width * original_height) as f64;
+        let pixel_ratio =
+            (output_width * output_height) as f64 / (original_width * original_height) as f64;
         compressed_size = (compressed_size as f64 * pixel_ratio) as i64;
     }
 
@@ -376,7 +390,10 @@ async fn image_compress(
     }
 
     let compression_ratio = if compressed_size > 0 {
-        format!("{:.1}%", (1.0 - compressed_size as f64 / original_size as f64) * 100.0)
+        format!(
+            "{:.1}%",
+            (1.0 - compressed_size as f64 / original_size as f64) * 100.0
+        )
     } else {
         "0.0%".to_string()
     };
@@ -407,7 +424,8 @@ async fn image_compress(
     }
 
     if output_width == original_width && output_height == original_height {
-        suggestions.push("未调整图像尺寸，建议设置 max_width 或 max_height 以进一步压缩".to_string());
+        suggestions
+            .push("未调整图像尺寸，建议设置 max_width 或 max_height 以进一步压缩".to_string());
     }
 
     if quality > 90 {
@@ -515,7 +533,10 @@ mod tests {
 
         let result = tool.execute(params, exec_context, &options).await.unwrap();
         assert_eq!(result["success"], false);
-        assert!(result["error"].as_str().unwrap().contains("不支持的输出格式"));
+        assert!(result["error"]
+            .as_str()
+            .unwrap()
+            .contains("不支持的输出格式"));
     }
 
     #[tokio::test]
@@ -536,4 +557,3 @@ mod tests {
         assert_eq!(result["quality_used"], 80);
     }
 }
-

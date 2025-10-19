@@ -10,10 +10,7 @@ use lumosai_vector_core::{
     traits::VectorStorage,
     types::{Document, IndexConfig, SimilarityMetric},
 };
-use lumosai_vector_milvus::{
-    config::{ConsistencyLevel, IndexType},
-    MilvusConfigBuilder, MilvusStorage,
-};
+use lumosai_vector_milvus::{config::ConsistencyLevel, MilvusConfigBuilder, MilvusStorage};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -38,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             storage
         }
         Err(e) => {
-            println!("❌ Failed to create Milvus storage: {}", e);
+            println!("❌ Failed to create Milvus storage: {e}");
             println!("💡 Make sure Milvus is running on localhost:19530");
             return Ok(());
         }
@@ -75,22 +72,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (name, dimension, metric, description) in &collections {
-        println!("\n📋 Creating collection: {}", name);
+        println!("\n📋 Creating collection: {name}");
 
         let index_config = IndexConfig::new(*name, *dimension)
-            .with_metric(metric.clone())
+            .with_metric(*metric)
             .with_option("description", *description);
 
         match storage.create_index(index_config).await {
-            Ok(_) => println!(
-                "✅ Collection '{}' created ({}D, {:?})",
-                name, dimension, metric
-            ),
+            Ok(_) => println!("✅ Collection '{name}' created ({dimension}D, {metric:?})"),
             Err(e) => {
                 if e.to_string().contains("already exists") {
-                    println!("ℹ️  Collection '{}' already exists", name);
+                    println!("ℹ️  Collection '{name}' already exists");
                 } else {
-                    println!("❌ Failed to create collection '{}': {}", name, e);
+                    println!("❌ Failed to create collection '{name}': {e}");
                 }
             }
         }
@@ -106,7 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            println!("❌ Failed to list collections: {}", e);
+            println!("❌ Failed to list collections: {e}");
         }
     }
 
@@ -115,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (name, expected_dim, metric, _) in &collections {
         match storage.describe_index(name).await {
             Ok(info) => {
-                println!("\n📄 Collection: {}", name);
+                println!("\n📄 Collection: {name}");
                 println!("   - Dimension: {}", info.dimension);
                 println!("   - Metric: {:?}", info.metric);
                 println!("   - Vector count: {}", info.vector_count);
@@ -133,7 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(e) => {
-                println!("❌ Failed to get info for collection '{}': {}", name, e);
+                println!("❌ Failed to get info for collection '{name}': {e}");
             }
         }
     }
@@ -142,7 +136,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n💾 Inserting sample data into collections...");
 
     for (name, dimension, _, _) in &collections {
-        println!("\n📝 Inserting data into '{}'...", name);
+        println!("\n📝 Inserting data into '{name}'...");
 
         let documents = generate_sample_documents(*dimension, 10);
 
@@ -151,7 +145,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("✅ Inserted {} documents into '{}'", ids.len(), name);
             }
             Err(e) => {
-                println!("❌ Failed to insert into '{}': {}", name, e);
+                println!("❌ Failed to insert into '{name}': {e}");
             }
         }
     }
@@ -164,7 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔍 Testing search performance across collections...");
 
     for (name, dimension, metric, _) in &collections {
-        println!("\n🎯 Testing search in '{}'...", name);
+        println!("\n🎯 Testing search in '{name}'...");
 
         let query_vector = generate_sample_embedding(*dimension, 42);
         let search_request = lumosai_vector_core::types::SearchRequest {
@@ -192,7 +186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(e) => {
-                println!("❌ Search failed: {}", e);
+                println!("❌ Search failed: {e}");
             }
         }
     }
@@ -203,15 +197,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (name, _, _, _) in &collections {
         match storage.describe_index(name).await {
             Ok(info) => {
-                println!("\n📈 Statistics for '{}':", name);
+                println!("\n📈 Statistics for '{name}':");
                 println!("   - Documents: {}", info.vector_count);
 
                 let size_mb = info.size_bytes as f64 / (1024.0 * 1024.0);
-                println!("   - Storage: {:.2} MB", size_mb);
+                println!("   - Storage: {size_mb:.2} MB");
 
                 if info.vector_count > 0 {
                     let avg_size = info.size_bytes as f64 / info.vector_count as f64;
-                    println!("   - Avg doc size: {:.0} bytes", avg_size);
+                    println!("   - Avg doc size: {avg_size:.0} bytes");
                 }
 
                 // Calculate efficiency metrics
@@ -224,11 +218,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
 
                 if efficiency > 0.0 {
-                    println!("   - Storage efficiency: {:.1}%", efficiency);
+                    println!("   - Storage efficiency: {efficiency:.1}%");
                 }
             }
             Err(e) => {
-                println!("❌ Failed to get statistics for '{}': {}", name, e);
+                println!("❌ Failed to get statistics for '{name}': {e}");
             }
         }
     }
@@ -268,7 +262,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(e) => {
-                println!("❌ Search in '{}' failed: {}", collection_name, e);
+                println!("❌ Search in '{collection_name}' failed: {e}");
             }
         }
     }
@@ -280,7 +274,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🏥 Performing health check...");
     match storage.health_check().await {
         Ok(_) => println!("✅ All collections are healthy"),
-        Err(e) => println!("❌ Health check failed: {}", e),
+        Err(e) => println!("❌ Health check failed: {e}"),
     }
 
     // Backend information
@@ -294,10 +288,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🧹 Cleanup Options:");
     println!("   To clean up test collections, you can run:");
     for (name, _, _, _) in &collections {
-        println!(
-            "   - Delete '{}': storage.delete_index(\"{}\").await",
-            name, name
-        );
+        println!("   - Delete '{name}': storage.delete_index(\"{name}\").await");
     }
 
     println!("\n🎉 Collection management example completed successfully!");
@@ -315,10 +306,10 @@ fn generate_sample_documents(dimension: usize, count: usize) -> Vec<Document> {
     let mut documents = Vec::with_capacity(count);
 
     for i in 0..count {
-        let content = format!("Sample document {} with dimension {}", i, dimension);
+        let content = format!("Sample document {i} with dimension {dimension}");
         let embedding = generate_sample_embedding(dimension, i as u64);
 
-        let document = Document::new(&format!("doc_{}_{}", dimension, i), &content)
+        let document = Document::new(format!("doc_{dimension}_{i}"), &content)
             .with_embedding(embedding)
             .with_metadata("dimension", dimension as i64)
             .with_metadata("index", i as i64)

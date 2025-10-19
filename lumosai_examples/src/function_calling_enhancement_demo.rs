@@ -9,10 +9,10 @@ use lumosai_core::agent::executor::BasicAgent;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{Agent, AgentConfig};
 use lumosai_core::base::{Base, BaseComponent, ComponentConfig};
+use lumosai_core::compat::{Component, Event};
 use lumosai_core::llm::function_calling::{FunctionCall, FunctionDefinition, ToolChoice};
 use lumosai_core::llm::provider::FunctionCallingResponse;
 use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role};
-use lumosai_core::compat::{Component, Event};
 use lumosai_core::logger::Logger;
 use lumosai_core::telemetry::TelemetrySink;
 use lumosai_core::tool::{
@@ -217,7 +217,12 @@ pub struct MockLogger;
 
 #[async_trait]
 impl Logger for MockLogger {
-    async fn log(&self, level: lumosai_core::logger::LogLevel, message: &str, _metadata: Option<serde_json::Value>) {
+    async fn log(
+        &self,
+        level: lumosai_core::logger::LogLevel,
+        message: &str,
+        _metadata: Option<serde_json::Value>,
+    ) {
         println!("[{:?}] {}", level, message);
     }
 }
@@ -228,7 +233,12 @@ pub struct MockTelemetry;
 
 #[async_trait]
 impl TelemetrySink for MockTelemetry {
-    async fn record_metric(&self, _name: &str, _value: f64, _tags: Option<std::collections::HashMap<String, String>>) {
+    async fn record_metric(
+        &self,
+        _name: &str,
+        _value: f64,
+        _tags: Option<std::collections::HashMap<String, String>>,
+    ) {
         // No-op for testing
     }
 

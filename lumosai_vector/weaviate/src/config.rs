@@ -111,7 +111,7 @@ impl WeaviateConfig {
     /// Validate the configuration
     pub fn validate(&self) -> WeaviateResult<()> {
         // Validate URL
-        Url::parse(&self.url).map_err(|e| WeaviateError::Config(format!("Invalid URL: {}", e)))?;
+        Url::parse(&self.url).map_err(|e| WeaviateError::Config(format!("Invalid URL: {e}")))?;
 
         // Validate batch size
         if self.batch_size == 0 {
@@ -133,7 +133,7 @@ impl WeaviateConfig {
     /// Get the full class name with prefix
     pub fn class_name(&self, name: &str) -> String {
         if let Some(prefix) = &self.class_prefix {
-            format!("{}_{}", prefix, name)
+            format!("{prefix}_{name}")
         } else {
             name.to_string()
         }

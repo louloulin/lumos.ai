@@ -63,8 +63,7 @@ pub fn create_json_parser_tool() -> FunctionTool {
                 Ok(parsed) => {
                     let extracted_data = if let Some(path) = path {
                         // Simple path extraction (in real implementation would use jsonpath)
-                        if path.starts_with("$.") {
-                            let key = &path[2..];
+                        if let Some(key) = path.strip_prefix("$.") {
                             parsed.get(key).cloned().unwrap_or(Value::Null)
                         } else {
                             parsed.clone()
@@ -186,7 +185,7 @@ pub fn create_csv_parser_tool() -> FunctionTool {
                             let header = headers
                                 .get(j)
                                 .cloned()
-                                .unwrap_or_else(|| format!("col_{}", j));
+                                .unwrap_or_else(|| format!("col_{j}"));
                             row.insert(header, value.trim().to_string());
                         }
                         rows.push(row);
@@ -199,7 +198,7 @@ pub fn create_csv_parser_tool() -> FunctionTool {
                         let values: Vec<&str> = line.split(delimiter).collect();
                         let mut row = HashMap::new();
                         for (j, value) in values.iter().enumerate() {
-                            row.insert(format!("col_{}", j), value.trim().to_string());
+                            row.insert(format!("col_{j}"), value.trim().to_string());
                         }
                         rows.push(row);
                     }
@@ -599,7 +598,7 @@ pub fn create_data_validator_tool() -> FunctionTool {
                 let array = data.as_array().unwrap();
                 for (index, item) in array.iter().enumerate() {
                     if !item.is_object() {
-                        errors.push(format!("Item at index {} is not an object", index));
+                        errors.push(format!("Item at index {index} is not an object"));
                     }
                 }
             }
@@ -710,7 +709,7 @@ pub fn create_data_cleaner_tool() -> FunctionTool {
                         items_modified += 1;
                     }
                     _ => {
-                        operations_applied.push(format!("Applied custom operation: {}", operation));
+                        operations_applied.push(format!("Applied custom operation: {operation}"));
                     }
                 }
             }

@@ -1,10 +1,10 @@
 //! Memory processors for filtering and transforming messages
 
-use async_trait::async_trait;
-use std::sync::Arc;
 use crate::compat::Component;
 use crate::logger::Logger;
 use crate::telemetry::TelemetrySink;
+use async_trait::async_trait;
+use std::sync::Arc;
 
 use crate::base::Base;
 use crate::llm::Message;
@@ -103,14 +103,12 @@ impl MemoryProcessor for MessageLimitProcessor {
         let start_index = messages.len() - self.max_messages;
         let limited_messages = messages[start_index..].to_vec();
 
-        self.logger.debug(
-            &format!(
-                "Limited messages from {} to {} (max: {})",
-                messages.len(),
-                limited_messages.len(),
-                self.max_messages
-            )
-        );
+        self.logger.debug(&format!(
+            "Limited messages from {} to {} (max: {})",
+            messages.len(),
+            limited_messages.len(),
+            self.max_messages
+        ));
 
         Ok(limited_messages)
     }
@@ -178,14 +176,12 @@ impl MemoryProcessor for RoleFilterProcessor {
             .filter(|msg| self.allowed_roles.contains(&msg.role))
             .collect();
 
-        self.logger.debug(
-            &format!(
-                "Filtered messages from {} to {} (allowed roles: {:?})",
-                original_count,
-                filtered_messages.len(),
-                self.allowed_roles
-            )
-        );
+        self.logger.debug(&format!(
+            "Filtered messages from {} to {} (allowed roles: {:?})",
+            original_count,
+            filtered_messages.len(),
+            self.allowed_roles
+        ));
 
         Ok(filtered_messages)
     }
@@ -261,13 +257,11 @@ impl MemoryProcessor for DeduplicationProcessor {
             }
         }
 
-        self.logger.debug(
-            &format!(
-                "Deduplicated messages from {} to {}",
-                original_count,
-                deduplicated_messages.len()
-            )
-        );
+        self.logger.debug(&format!(
+            "Deduplicated messages from {} to {}",
+            original_count,
+            deduplicated_messages.len()
+        ));
 
         Ok(deduplicated_messages)
     }

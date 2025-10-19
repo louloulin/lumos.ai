@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use lumosai_core::{
-    create_memory_vector_storage, Base, Lumosai, LumosaiConfig, SimilarityMetric,
-};
 use lumosai_core::logger::LogLevel;
+use lumosai_core::{create_memory_vector_storage, Base, Lumosai, LumosaiConfig, SimilarityMetric};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

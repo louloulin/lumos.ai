@@ -56,7 +56,7 @@ fn test_tool_creation_functions() -> Result<()> {
         ("csv_parser", csv_parser()),
         ("web_scraper", web_scraper()),
         ("web_search", web_search()),
-        ("datetime", datetime()),  // 使用实际存在的函数名
+        ("datetime", datetime()), // 使用实际存在的函数名
         ("uuid_generator", uuid_generator()),
         ("statistics", statistics()),
         ("json_api", json_api()),

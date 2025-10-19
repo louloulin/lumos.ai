@@ -179,24 +179,23 @@ impl LlmProvider for OllamaProvider {
 
         let response = self
             .client
-            .post(&format!("{}/api/generate", self.config.base_url))
+            .post(format!("{}/api/generate", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Ollama API error: {}",
-                error_text
+                "Ollama API error: {error_text}"
             )));
         }
 
         let response_json: OllamaResponse = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         response_json
             .response
@@ -219,24 +218,23 @@ impl LlmProvider for OllamaProvider {
 
         let response = self
             .client
-            .post(&format!("{}/api/chat", self.config.base_url))
+            .post(format!("{}/api/chat", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Ollama API error: {}",
-                error_text
+                "Ollama API error: {error_text}"
             )));
         }
 
         let response_json: OllamaResponse = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         response_json
             .message
@@ -258,17 +256,16 @@ impl LlmProvider for OllamaProvider {
 
         let response = self
             .client
-            .post(&format!("{}/api/generate", self.config.base_url))
+            .post(format!("{}/api/generate", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Ollama API error: {}",
-                error_text
+                "Ollama API error: {error_text}"
             )));
         }
 
@@ -276,8 +273,8 @@ impl LlmProvider for OllamaProvider {
             .bytes_stream()
             .map(|chunk_result| {
                 chunk_result
-                    .map_err(|e| Error::Network(format!("Stream error: {}", e)))
-                    .and_then(|chunk| {
+                    .map_err(|e| Error::Network(format!("Stream error: {e}")))
+                    .map(|chunk| {
                         let text = String::from_utf8_lossy(&chunk);
                         for line in text.lines() {
                             if line.trim().is_empty() {
@@ -287,13 +284,13 @@ impl LlmProvider for OllamaProvider {
                             match serde_json::from_str::<OllamaResponse>(line) {
                                 Ok(response) => {
                                     if let Some(content) = response.response {
-                                        return Ok(content);
+                                        return content;
                                     }
                                 }
                                 Err(_) => continue,
                             }
                         }
-                        Ok(String::new())
+                        String::new()
                     })
             })
             .filter(|result| {
@@ -314,24 +311,23 @@ impl LlmProvider for OllamaProvider {
 
         let response = self
             .client
-            .post(&format!("{}/api/embeddings", self.config.base_url))
+            .post(format!("{}/api/embeddings", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(Error::LlmProvider(format!(
-                "Ollama API error: {}",
-                error_text
+                "Ollama API error: {error_text}"
             )));
         }
 
         let response_json: OllamaEmbeddingResponse = response
             .json()
             .await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         Ok(response_json.embedding)
     }

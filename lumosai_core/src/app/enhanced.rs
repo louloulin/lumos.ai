@@ -210,7 +210,7 @@ impl EnhancedApp {
     /// Set vector storage
     pub fn set_vector_storage(&mut self, storage: Arc<dyn VectorStorage>) {
         self.vector_storage = Some(storage);
-        self.base.logger().info("Vector storage set");
+        let _ = self.base.logger().info("Vector storage set");
     }
 
     /// Get vector storage
@@ -276,23 +276,24 @@ impl EnhancedApp {
 
     /// Start application
     pub async fn start(&self) -> Result<()> {
-        self.base
+        let _ = self
+            .base
             .logger()
             .info(&format!("Starting application '{}'", self.config.name));
 
         // Here you can add startup logic, such as initializing connections, warming up models, etc.
 
-        self.base.logger().info("Application started successfully");
+        let _ = self.base.logger().info("Application started successfully");
         Ok(())
     }
 
     /// Stop application
     pub async fn stop(&self) -> Result<()> {
-        self.base.logger().info("Stopping application");
+        let _ = self.base.logger().info("Stopping application");
 
         // Here you can add cleanup logic
 
-        self.base.logger().info("Application stopped");
+        let _ = self.base.logger().info("Application stopped");
         Ok(())
     }
 }

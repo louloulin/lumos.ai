@@ -50,7 +50,8 @@ pub trait Base: Send + Sync {
                 name: event_name.to_string(),
                 data: serde_json::to_value(data).unwrap_or_default(),
             };
-            telemetry.record_event(event_name, serde_json::to_value(event).unwrap_or_default());
+            let _ =
+                telemetry.record_event(event_name, serde_json::to_value(event).unwrap_or_default());
         }
     }
 }
@@ -125,7 +126,7 @@ impl Base for BaseComponent {
     fn set_logger(&mut self, logger: Arc<dyn Logger>) {
         self.logger = logger;
         if let Some(name) = &self.name {
-            self.logger.debug(&format!(
+            let _ = self.logger.debug(&format!(
                 "Logger updated [component={}] [name={}]",
                 self.component, name
             ));
@@ -139,7 +140,7 @@ impl Base for BaseComponent {
     fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
         self.telemetry = Some(telemetry);
         if let Some(name) = &self.name {
-            self.logger.debug(&format!(
+            let _ = self.logger.debug(&format!(
                 "Telemetry updated [component={}] [name={}]",
                 self.component, name
             ));

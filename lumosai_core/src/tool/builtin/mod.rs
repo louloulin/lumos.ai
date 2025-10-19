@@ -91,8 +91,13 @@ impl Default for DataProcessingConfig {
 
 // Import the new tool modules
 pub mod ai;
+pub mod api_testing;
+pub mod audio_processing;
+pub mod code_analysis;
 pub mod communication;
+pub mod crypto;
 pub mod data;
+pub mod image_processing;
 pub mod database;
 pub mod file;
 pub mod macro_tools;

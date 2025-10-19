@@ -14,7 +14,7 @@ use crate::llm::Message;
 use crate::agent::Agent;
 
 /// Agent通信消息类型
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AgentMessageType {
     /// 请求消息
     Request,

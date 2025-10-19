@@ -3,6 +3,8 @@
 pub mod api_consistency;
 pub mod builder;
 pub mod chain;
+pub mod collaboration;
+pub mod communication;
 pub mod config;
 pub mod config_validator;
 pub mod convenience;
@@ -102,6 +104,14 @@ pub use orchestration::{
 
 // Re-export events
 pub use events::{EventBus, EventFilter, EventHandler, LogEventHandler, MetricsEventHandler};
+
+// Re-export communication and collaboration
+pub use communication::{
+    AgentCommunicationManager, AgentMessage, AgentMessageType, CommunicationConfig,
+};
+pub use collaboration::{
+    AgentRole as CrewAgentRole, AgentTask, CollaborationMode, Crew, CrewStats, TaskStatus,
+};
 
 // 暂时移除模块化代理组件的重新导出
 // pub use modular::{

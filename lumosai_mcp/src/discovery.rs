@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
-use url::Url;
 
 use crate::{EnhancedMCPManager, MCPConfiguration, MCPError, Result, ServerDefinition};
 
@@ -101,12 +100,12 @@ impl MCPServerRegistry {
 
         let mut entries = fs::read_dir(&dir_path)
             .await
-            .map_err(|e| MCPError::IOError(format!("Failed to read directory: {}", e)))?;
+            .map_err(|e| MCPError::IOError(format!("Failed to read directory: {e}")))?;
 
         while let Some(entry) = entries
             .next_entry()
             .await
-            .map_err(|e| MCPError::IOError(format!("Failed to read directory entry: {}", e)))?
+            .map_err(|e| MCPError::IOError(format!("Failed to read directory entry: {e}")))?
         {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
@@ -116,15 +115,14 @@ impl MCPServerRegistry {
                         loaded_count += 1;
                     }
                     Err(e) => {
-                        eprintln!("⚠️  Failed to load server config from {:?}: {}", path, e);
+                        eprintln!("⚠️  Failed to load server config from {path:?}: {e}");
                     }
                 }
             }
         }
 
         println!(
-            "📁 Loaded {} MCP server configurations from {:?}",
-            loaded_count, dir_path
+            "📁 Loaded {loaded_count} MCP server configurations from {dir_path:?}"
         );
         Ok(loaded_count)
     }
@@ -133,10 +131,10 @@ impl MCPServerRegistry {
     async fn load_server_config(&self, path: &PathBuf) -> Result<ServerConfig> {
         let content = fs::read_to_string(path)
             .await
-            .map_err(|e| MCPError::IOError(format!("Failed to read config file: {}", e)))?;
+            .map_err(|e| MCPError::IOError(format!("Failed to read config file: {e}")))?;
 
         let config: ServerConfig = serde_json::from_str(&content)
-            .map_err(|e| MCPError::DeserializationError(format!("Invalid config format: {}", e)))?;
+            .map_err(|e| MCPError::DeserializationError(format!("Invalid config format: {e}")))?;
 
         Ok(config)
     }
@@ -150,7 +148,7 @@ impl MCPServerRegistry {
         discovered_count += self.discover_local_servers().await?;
         discovered_count += self.discover_npm_servers().await?;
 
-        println!("🔍 Auto-discovered {} MCP servers", discovered_count);
+        println!("🔍 Auto-discovered {discovered_count} MCP servers");
         Ok(discovered_count)
     }
 
@@ -319,16 +317,16 @@ impl MCPServerRegistry {
                 match self.connect_server(name, config).await {
                     Ok(()) => {
                         connected_count += 1;
-                        println!("✅ Connected to MCP server '{}'", name);
+                        println!("✅ Connected to MCP server '{name}'");
                     }
                     Err(e) => {
-                        eprintln!("❌ Failed to connect to MCP server '{}': {}", name, e);
+                        eprintln!("❌ Failed to connect to MCP server '{name}': {e}");
                     }
                 }
             }
         }
 
-        println!("🔗 Connected to {} MCP servers", connected_count);
+        println!("🔗 Connected to {connected_count} MCP servers");
         Ok(connected_count)
     }
 
@@ -337,7 +335,7 @@ impl MCPServerRegistry {
         let server_def = self.convert_to_server_definition(config)?;
         let mcp_config = MCPConfiguration::new(
             [(name.to_string(), server_def)].into_iter().collect(),
-            Some(format!("mcp-{}", name)),
+            Some(format!("mcp-{name}")),
         );
 
         self.manager
@@ -413,13 +411,13 @@ impl MCPServerRegistry {
     /// Save registry to file
     pub async fn save_to_file(&self, path: PathBuf) -> Result<()> {
         let json = serde_json::to_string_pretty(&self.servers)
-            .map_err(|e| MCPError::DeserializationError(format!("Failed to serialize: {}", e)))?;
+            .map_err(|e| MCPError::DeserializationError(format!("Failed to serialize: {e}")))?;
 
         fs::write(&path, json)
             .await
-            .map_err(|e| MCPError::IOError(format!("Failed to write file: {}", e)))?;
+            .map_err(|e| MCPError::IOError(format!("Failed to write file: {e}")))?;
 
-        println!("💾 Saved MCP server registry to {:?}", path);
+        println!("💾 Saved MCP server registry to {path:?}");
         Ok(())
     }
 }

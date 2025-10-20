@@ -102,7 +102,7 @@ impl EmbeddingProvider for ZhipuEmbeddingProvider {
             .json(&request)
             .send()
             .await
-            .map_err(|e| RagError::Embedding(format!("HTTP request failed: {}", e)))?;
+            .map_err(|e| RagError::Embedding(format!("HTTP request failed: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -110,15 +110,14 @@ impl EmbeddingProvider for ZhipuEmbeddingProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(RagError::Embedding(format!(
-                "API request failed: {}",
-                error_text
+                "API request failed: {error_text}"
             )));
         }
 
         let result: ZhipuEmbeddingResponse = response
             .json()
             .await
-            .map_err(|e| RagError::Embedding(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| RagError::Embedding(format!("Failed to parse response: {e}")))?;
 
         // 按索引排序并提取嵌入向量
         let mut embeddings: Vec<_> = result.data.into_iter().collect();

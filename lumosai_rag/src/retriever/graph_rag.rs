@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::{
-    error::{RagError, Result},
+    error::Result,
     retriever::Retriever,
     types::{Document, RetrievalRequest, RetrievalResult, ScoredDocument},
 };
@@ -289,7 +289,7 @@ impl GraphRagRetriever {
         let mut entity_names = HashSet::new();
 
         for word in words {
-            if word.chars().next().map_or(false, |c| c.is_uppercase()) {
+            if word.chars().next().is_some_and(|c| c.is_uppercase()) {
                 let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric());
                 if clean_word.len() > 2 {
                     entity_names.insert(clean_word.to_string());
@@ -414,7 +414,7 @@ impl GraphRagRetriever {
         let mut entities = Vec::new();
 
         for word in words {
-            if word.chars().next().map_or(false, |c| c.is_uppercase()) {
+            if word.chars().next().is_some_and(|c| c.is_uppercase()) {
                 let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric());
                 if clean_word.len() > 2 {
                     entities.push(clean_word.to_string());

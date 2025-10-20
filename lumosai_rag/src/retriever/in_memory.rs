@@ -141,8 +141,7 @@ impl VectorStore for InMemoryVectorStore {
 
         if documents.remove(document_id).is_none() {
             return Err(RagError::VectorStore(format!(
-                "Document not found: {}",
-                document_id
+                "Document not found: {document_id}"
             )));
         }
 

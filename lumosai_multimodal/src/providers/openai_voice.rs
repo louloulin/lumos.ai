@@ -158,8 +158,7 @@ impl VoiceProvider for OpenAIVoice {
         if !response.status().is_success() {
             let error_text = response.text().await?;
             return Err(MultimodalError::ApiError(format!(
-                "Whisper API 调用失败: {}",
-                error_text
+                "Whisper API 调用失败: {error_text}"
             )));
         }
 
@@ -202,8 +201,7 @@ impl VoiceProvider for OpenAIVoice {
         if !response.status().is_success() {
             let error_text = response.text().await?;
             return Err(MultimodalError::ApiError(format!(
-                "TTS API 调用失败: {}",
-                error_text
+                "TTS API 调用失败: {error_text}"
             )));
         }
 

@@ -287,7 +287,8 @@ impl LlmProvider for TogetherProvider {
         options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // For now, return a simple stream with the full response
-        // TODO: Implement proper streaming when needed
+        // Note: Proper streaming would require Together AI's streaming API
+        // This is a fallback implementation that returns the complete response at once
         let response = self.generate(prompt, options).await?;
         let stream = futures::stream::once(async move { Ok(response) });
         Ok(Box::pin(stream))

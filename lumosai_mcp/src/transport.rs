@@ -76,7 +76,7 @@ impl Transport for StdioTransport {
         // Spawn the process
         let mut child = tokio::process::Command::from(cmd)
             .spawn()
-            .map_err(|e| MCPError::ConnectionError(format!("Failed to spawn process: {}", e)))?;
+            .map_err(|e| MCPError::ConnectionError(format!("Failed to spawn process: {e}")))?;
 
         // Get stdio handles
         let stdin = child
@@ -105,7 +105,7 @@ impl Transport for StdioTransport {
         // Spawn a task to read from the stream and send to the channel
         tokio::spawn(async move {
             let stream = lines_stream
-                .map_err(|e| MCPError::ConnectionError(format!("Failed to read line: {}", e)))
+                .map_err(|e| MCPError::ConnectionError(format!("Failed to read line: {e}")))
                 .and_then(|line| async move {
                     serde_json::from_str::<MCPMessage>(&line)
                         .map_err(|e| MCPError::DeserializationError(e.to_string()))
@@ -166,15 +166,15 @@ impl Transport for StdioTransport {
                 .write_all(message_json.as_bytes())
                 .await
                 .map_err(|e| {
-                    MCPError::ConnectionError(format!("Failed to write to stdin: {}", e))
+                    MCPError::ConnectionError(format!("Failed to write to stdin: {e}"))
                 })?;
             stdin.write_all(b"\n").await.map_err(|e| {
-                MCPError::ConnectionError(format!("Failed to write newline to stdin: {}", e))
+                MCPError::ConnectionError(format!("Failed to write newline to stdin: {e}"))
             })?;
             stdin
                 .flush()
                 .await
-                .map_err(|e| MCPError::ConnectionError(format!("Failed to flush stdin: {}", e)))?;
+                .map_err(|e| MCPError::ConnectionError(format!("Failed to flush stdin: {e}")))?;
 
             Ok(())
         } else {
@@ -334,7 +334,7 @@ impl Transport for SSETransport {
                         Err(e) => Some(Err(MCPError::DeserializationError(e.to_string()))),
                     }
                 }
-                Err(e) => Some(Err(MCPError::Other(format!("SSE error: {}", e)))),
+                Err(e) => Some(Err(MCPError::Other(format!("SSE error: {e}")))),
             }
         });
 

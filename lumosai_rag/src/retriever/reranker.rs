@@ -274,6 +274,12 @@ pub struct ChainReranker {
     rerankers: Vec<Box<dyn Reranker>>,
 }
 
+impl Default for ChainReranker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChainReranker {
     /// 创建新的组合重排序器
     pub fn new() -> Self {

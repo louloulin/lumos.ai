@@ -101,7 +101,7 @@ impl MCPClient {
         headers: Option<HashMap<String, String>>,
     ) -> Result<Self> {
         let url = Url::parse(url)
-            .map_err(|e| MCPError::ConfigurationError(format!("Invalid URL: {}", e)))?;
+            .map_err(|e| MCPError::ConfigurationError(format!("Invalid URL: {e}")))?;
 
         let server_params = SSEServerParameters {
             url,
@@ -157,8 +157,7 @@ impl MCPClient {
             }
             _ => {
                 return Err(MCPError::ProtocolError(format!(
-                    "Expected InitializeResult, got {:?}",
-                    response
+                    "Expected InitializeResult, got {response:?}"
                 )))
             }
         }
@@ -223,8 +222,7 @@ impl MCPClient {
             }
             MCPMessage::Error { error } => Err(MCPError::ServerError(error)),
             _ => Err(MCPError::ProtocolError(format!(
-                "Expected ListResourcesResult, got {:?}",
-                response
+                "Expected ListResourcesResult, got {response:?}"
             ))),
         }
     }
@@ -270,8 +268,7 @@ impl MCPClient {
             MCPMessage::ExecuteToolError { error } => Err(MCPError::ToolExecutionError(error)),
             MCPMessage::Error { error } => Err(MCPError::ServerError(error)),
             _ => Err(MCPError::ProtocolError(format!(
-                "Expected ExecuteToolResult, got {:?}",
-                response
+                "Expected ExecuteToolResult, got {response:?}"
             ))),
         }
     }
@@ -483,7 +480,7 @@ impl Tool for MCPToolWrapper {
                     }
                 }
             }
-            Err(e) => Err(CoreError::Tool(format!("Tool execution error: {:?}", e))),
+            Err(e) => Err(CoreError::Tool(format!("Tool execution error: {e:?}"))),
         }
     }
 

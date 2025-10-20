@@ -269,7 +269,8 @@ impl LlmProvider for DeepSeekProvider {
         options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // For now, implement a simple chunked response
-        // TODO: Implement proper streaming using SSE (Server-Sent Events)
+        // Note: Proper streaming would require DeepSeek's SSE API support
+        // This is a fallback implementation that returns the complete response at once
         let result = self.generate(prompt, options).await?;
 
         // Split the result into chunks for simulation

@@ -296,7 +296,8 @@ impl LlmProvider for GeminiProvider {
         options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // For now, return a simple stream with the full response
-        // TODO: Implement proper streaming when needed
+        // Note: Proper streaming implementation would require Gemini's streaming API
+        // This is a fallback implementation that returns the complete response at once
         let response = self.generate(prompt, options).await?;
         let stream = futures::stream::once(async move { Ok(response) });
         Ok(Box::pin(stream))
@@ -363,7 +364,8 @@ impl LlmProvider for GeminiProvider {
         options: &LlmOptions,
     ) -> Result<FunctionCallingResponse> {
         // For now, fallback to regular generation
-        // TODO: Implement proper function calling support
+        // Note: Proper function calling would require Gemini's function calling API
+        // This fallback ignores function definitions and returns standard text response
         let content = self.generate_with_messages(messages, options).await?;
         Ok(FunctionCallingResponse {
             content: Some(content),

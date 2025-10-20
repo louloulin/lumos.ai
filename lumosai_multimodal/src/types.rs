@@ -104,7 +104,7 @@ impl ImageSize {
             ImageSize::Large => "1024x1024".to_string(),
             ImageSize::LandscapeHD => "1792x1024".to_string(),
             ImageSize::PortraitHD => "1024x1792".to_string(),
-            ImageSize::Custom(w, h) => format!("{}x{}", w, h),
+            ImageSize::Custom(w, h) => format!("{w}x{h}"),
         }
     }
 }

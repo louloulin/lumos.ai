@@ -63,8 +63,7 @@ impl MCPConfiguration {
         // Get server configuration
         let server_def = self.servers.get(server_name).ok_or_else(|| {
             MCPError::ResourceNotFoundError(format!(
-                "Server '{}' not found in configuration",
-                server_name
+                "Server '{server_name}' not found in configuration"
             ))
         })?;
 
@@ -88,8 +87,7 @@ impl MCPConfiguration {
             ServerDefinition::SSE { url, request_init } => {
                 let url_parsed = Url::parse(url).map_err(|e| {
                     MCPError::ConfigurationError(format!(
-                        "Invalid URL for server '{}': {}",
-                        server_name, e
+                        "Invalid URL for server '{server_name}': {e}"
                     ))
                 })?;
 

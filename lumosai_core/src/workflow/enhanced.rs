@@ -560,9 +560,10 @@ impl Workflow for EnhancedWorkflow {
         _input: Value,
         _context: &RuntimeContext,
     ) -> Result<Box<dyn futures::Stream<Item = Result<Value>> + Send + Unpin>> {
-        // TODO: Implement streaming execution
+        // Note: Streaming execution would require real-time workflow step streaming
+        // This is a complex feature that needs proper event streaming infrastructure
         Err(Error::Unsupported(
-            "Streaming execution not yet implemented".to_string(),
+            "Streaming execution not yet implemented - requires workflow event streaming".to_string(),
         ))
     }
 

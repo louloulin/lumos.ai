@@ -15,6 +15,12 @@ pub trait DocumentChunker: Send + Sync {
 /// Enhanced document chunker supporting multiple strategies
 pub struct EnhancedChunker;
 
+impl Default for EnhancedChunker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnhancedChunker {
     pub fn new() -> Self {
         Self
@@ -113,7 +119,7 @@ impl EnhancedChunker {
     ) -> Result<Vec<Document>> {
         let chunks = if is_separator_regex {
             let regex = Regex::new(separator)
-                .map_err(|e| RagError::DocumentChunking(format!("Invalid regex: {}", e)))?;
+                .map_err(|e| RagError::DocumentChunking(format!("Invalid regex: {e}")))?;
             regex
                 .split(&document.content)
                 .map(|s| s.to_string())
@@ -229,7 +235,7 @@ impl EnhancedChunker {
     ) -> Result<Vec<Document>> {
         // Parse JSON and chunk by objects/arrays
         let json_value: serde_json::Value = serde_json::from_str(&document.content)
-            .map_err(|e| RagError::DocumentChunking(format!("Invalid JSON: {}", e)))?;
+            .map_err(|e| RagError::DocumentChunking(format!("Invalid JSON: {e}")))?;
 
         let chunks = self.chunk_json_value(&json_value, config.chunk_size)?;
         self.create_chunk_documents(document, chunks)
@@ -273,7 +279,7 @@ impl EnhancedChunker {
 
         let splits: Vec<String> = if is_separator_regex {
             let regex = Regex::new(separator)
-                .map_err(|e| RagError::DocumentChunking(format!("Invalid regex: {}", e)))?;
+                .map_err(|e| RagError::DocumentChunking(format!("Invalid regex: {e}")))?;
             regex.split(text).map(|s| s.to_string()).collect()
         } else {
             text.split(separator).map(|s| s.to_string()).collect()
@@ -300,7 +306,7 @@ impl EnhancedChunker {
             }
         }
 
-        Ok(self.merge_chunks(final_chunks, config)?)
+        self.merge_chunks(final_chunks, config)
     }
 
     /// Force split text by characters when no separators work
@@ -468,8 +474,8 @@ impl EnhancedChunker {
             let mut is_header = false;
 
             for header_tag in headers {
-                if line.contains(&format!("<{}>", header_tag))
-                    || line.contains(&format!("<{} ", header_tag))
+                if line.contains(&format!("<{header_tag}>"))
+                    || line.contains(&format!("<{header_tag} "))
                 {
                     if !current_chunk.is_empty() {
                         chunks.push(current_chunk.clone());
@@ -480,12 +486,11 @@ impl EnhancedChunker {
                 }
             }
 
-            if return_each_line && !is_header {
-                if !current_chunk.is_empty() {
+            if return_each_line && !is_header
+                && !current_chunk.is_empty() {
                     chunks.push(current_chunk.clone());
                     current_chunk.clear();
                 }
-            }
 
             current_chunk.push_str(line);
             current_chunk.push('\n');
@@ -515,8 +520,8 @@ impl EnhancedChunker {
             let mut _is_section_start = false;
 
             for section_tag in sections {
-                if line.contains(&format!("<{}>", section_tag))
-                    || line.contains(&format!("<{} ", section_tag))
+                if line.contains(&format!("<{section_tag}>"))
+                    || line.contains(&format!("<{section_tag} "))
                 {
                     if !current_chunk.is_empty() {
                         chunks.push(current_chunk.clone());
@@ -547,15 +552,15 @@ impl EnhancedChunker {
             serde_json::Value::Object(obj) => {
                 for (key, val) in obj {
                     let val_str = serde_json::to_string_pretty(val).map_err(|e| {
-                        RagError::DocumentChunking(format!("JSON serialization error: {}", e))
+                        RagError::DocumentChunking(format!("JSON serialization error: {e}"))
                     })?;
 
                     if val_str.len() <= max_size {
-                        chunks.push(format!("{}: {}", key, val_str));
+                        chunks.push(format!("{key}: {val_str}"));
                     } else {
                         let sub_chunks = self.chunk_json_value(val, max_size)?;
                         for sub_chunk in sub_chunks {
-                            chunks.push(format!("{}: {}", key, sub_chunk));
+                            chunks.push(format!("{key}: {sub_chunk}"));
                         }
                     }
                 }
@@ -563,22 +568,22 @@ impl EnhancedChunker {
             serde_json::Value::Array(arr) => {
                 for (i, val) in arr.iter().enumerate() {
                     let val_str = serde_json::to_string_pretty(val).map_err(|e| {
-                        RagError::DocumentChunking(format!("JSON serialization error: {}", e))
+                        RagError::DocumentChunking(format!("JSON serialization error: {e}"))
                     })?;
 
                     if val_str.len() <= max_size {
-                        chunks.push(format!("[{}]: {}", i, val_str));
+                        chunks.push(format!("[{i}]: {val_str}"));
                     } else {
                         let sub_chunks = self.chunk_json_value(val, max_size)?;
                         for sub_chunk in sub_chunks {
-                            chunks.push(format!("[{}]: {}", i, sub_chunk));
+                            chunks.push(format!("[{i}]: {sub_chunk}"));
                         }
                     }
                 }
             }
             _ => {
                 let val_str = serde_json::to_string_pretty(value).map_err(|e| {
-                    RagError::DocumentChunking(format!("JSON serialization error: {}", e))
+                    RagError::DocumentChunking(format!("JSON serialization error: {e}"))
                 })?;
                 chunks.push(val_str);
             }

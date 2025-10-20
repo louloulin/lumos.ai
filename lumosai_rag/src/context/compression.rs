@@ -18,6 +18,12 @@ pub struct DeduplicationCompressor {
     similarity_threshold: f32,
 }
 
+impl Default for DeduplicationCompressor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DeduplicationCompressor {
     pub fn new() -> Self {
         Self {
@@ -192,6 +198,12 @@ impl ContextCompressor for SummarizationCompressor {
 pub struct HybridCompressor {
     deduplicator: DeduplicationCompressor,
     extractor: ExtractionCompressor,
+}
+
+impl Default for HybridCompressor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HybridCompressor {

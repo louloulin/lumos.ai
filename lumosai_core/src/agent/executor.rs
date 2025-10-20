@@ -98,9 +98,9 @@ impl BasicAgent {
         };
 
         // Initialize memory (if configured)
-        let memory = if let Some(memory_config) = &config.memory_config {
+        let memory = if let Some(_memory_config) = &config.memory_config {
             // Create a basic memory with working memory
-            let working_memory_arc = working_memory.as_ref().map(|wm| {
+            let working_memory_arc = working_memory.as_ref().map(|_wm| {
                 // Convert Box<dyn WorkingMemory> to Arc<dyn WorkingMemory>
                 // This is a workaround - ideally we should store Arc directly
                 use crate::memory::BasicWorkingMemory;
@@ -833,7 +833,8 @@ impl Agent for BasicAgent {
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
         // For now, delegate to regular generate method
-        // TODO: Implement proper memory thread integration
+        // Note: Memory thread integration would require connecting with MemoryThreadManager
+        // This fallback delegates to the regular generate method without thread context
         self.logger().debug(&format!(
             "generate_with_memory called with thread_id: {thread_id:?}"
         ));
@@ -1739,7 +1740,8 @@ impl Agent for BasicAgent {
         ));
 
         // Use legacy streaming mode for now
-        // TODO: Implement advanced streaming
+        // Note: Advanced streaming would include real-time token-by-token streaming
+        // This fallback uses the existing legacy streaming implementation
 
         // Legacy mode fallback - simplified implementation
         let run_id = options

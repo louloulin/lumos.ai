@@ -18,6 +18,12 @@ pub trait ContextWindow: Send + Sync {
 /// Fixed window implementation
 pub struct FixedWindow;
 
+impl Default for FixedWindow {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FixedWindow {
     pub fn new() -> Self {
         Self
@@ -194,7 +200,7 @@ impl ContextWindow for HierarchicalWindow {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        for (_i, doc) in sorted_docs.iter().enumerate() {
+        for doc in sorted_docs.iter() {
             // Move to next level if current level is full
             while current_level < self.levels.len() && result.len() >= self.levels[current_level] {
                 current_level += 1;

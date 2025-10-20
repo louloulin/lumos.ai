@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use lumosai_core::base::Base;
 use lumosai_core::compat::Component as LogComponent;
-use lumosai_core::error::{Error as CoreError, Result as CoreResult};
-use lumosai_core::logger::{default_logger, LogLevel, Logger};
+use lumosai_core::error::Error as CoreError;
+use lumosai_core::logger::{default_logger, Logger};
 use lumosai_core::telemetry::TelemetrySink;
 use lumosai_core::tool::{
     ParameterSchema, SchemaFormat, Tool as LumosTool, ToolExecutionContext, ToolExecutionOptions,
@@ -102,8 +102,7 @@ impl MCPToolAdapter {
 
                 if is_required && !param_map.contains_key(param_name) {
                     return Err(CoreError::Tool(format!(
-                        "Required parameter '{}' is missing",
-                        param_name
+                        "Required parameter '{param_name}' is missing"
                     )));
                 }
 
@@ -204,8 +203,7 @@ impl LumosTool for MCPToolAdapter {
             Err(mcp_error) => {
                 // Convert MCP error to Core error
                 Err(CoreError::Tool(format!(
-                    "MCP tool execution failed: {}",
-                    mcp_error
+                    "MCP tool execution failed: {mcp_error}"
                 )))
             }
         }

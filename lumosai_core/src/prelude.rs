@@ -320,49 +320,49 @@ mod tests {
         assert_eq!(agent.get_instructions(), "You are helpful");
     }
 
-    // TODO: Implement these specialized agent quick functions
-    // #[tokio::test]
-    // async fn test_prelude_web_agent_quick() {
-    //     let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    // 专业化 Agent 快速函数测试
+    #[tokio::test]
+    async fn test_prelude_web_agent() {
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
-    //     let agent = web_agent_quick("web_helper", "You can browse the web")
-    //         .model(llm)
-    //         .build()
-    //         .expect("Failed to create web agent");
+        let agent = web_agent("web_helper", "You can browse the web")
+            .model(llm)
+            .build()
+            .expect("Failed to create web agent");
 
-    //     assert_eq!(agent.get_name(), "web_helper");
-    //     assert_eq!(agent.get_instructions(), "You can browse the web");
-    //     // Should have web tools
-    //     assert!(agent.get_tools().len() > 0);
-    // }
+        assert_eq!(agent.get_name(), "web_helper");
+        assert_eq!(agent.get_instructions(), "You can browse the web");
+        // Should have web tools
+        assert!(agent.get_tools().len() > 0);
+    }
 
-    // #[tokio::test]
-    // async fn test_prelude_file_agent_quick() {
-    //     let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    #[tokio::test]
+    async fn test_prelude_file_agent() {
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
-    //     let agent = file_agent_quick("file_helper", "You can manage files")
-    //         .model(llm)
-    //         .build()
-    //         .expect("Failed to create file agent");
+        let agent = file_agent("file_helper", "You can manage files")
+            .model(llm)
+            .build()
+            .expect("Failed to create file agent");
 
-    //     assert_eq!(agent.get_name(), "file_helper");
-    //     assert_eq!(agent.get_instructions(), "You can manage files");
-    //     // Should have file tools
-    //     assert!(agent.get_tools().len() > 0);
-    // }
+        assert_eq!(agent.get_name(), "file_helper");
+        assert_eq!(agent.get_instructions(), "You can manage files");
+        // Should have file tools
+        assert!(agent.get_tools().len() > 0);
+    }
 
-    // #[tokio::test]
-    // async fn test_prelude_data_agent_quick() {
-    //     let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    #[tokio::test]
+    async fn test_prelude_data_agent() {
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
-    //     let agent = data_agent_quick("data_helper", "You can process data")
-    //         .model(llm)
-    //         .build()
-    //         .expect("Failed to create data agent");
+        let agent = data_agent("data_helper", "You can process data")
+            .model(llm)
+            .build()
+            .expect("Failed to create data agent");
 
-    //     assert_eq!(agent.get_name(), "data_helper");
-    //     assert_eq!(agent.get_instructions(), "You can process data");
-    //     // Should have data and math tools
-    //     assert!(agent.get_tools().len() > 0);
-    // }
+        assert_eq!(agent.get_name(), "data_helper");
+        assert_eq!(agent.get_instructions(), "You can process data");
+        // Should have data and math tools
+        assert!(agent.get_tools().len() > 0);
+    }
 }

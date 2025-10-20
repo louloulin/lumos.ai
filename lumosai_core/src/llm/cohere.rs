@@ -169,7 +169,8 @@ impl LlmProvider for CohereProvider {
         options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // For now, return a simple stream with the full response
-        // TODO: Implement proper streaming when Cohere supports it
+        // Note: Proper streaming would require Cohere's streaming API support
+        // This is a fallback implementation that returns the complete response at once
         let response = self.generate(prompt, options).await?;
         let stream = futures::stream::once(async move { Ok(response) });
         Ok(Box::pin(stream))

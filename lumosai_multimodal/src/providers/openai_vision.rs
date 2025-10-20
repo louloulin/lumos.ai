@@ -203,8 +203,7 @@ impl VisionProvider for OpenAIVision {
         if !response.status().is_success() {
             let error_text = response.text().await?;
             return Err(MultimodalError::ApiError(format!(
-                "GPT-4V API 调用失败: {}",
-                error_text
+                "GPT-4V API 调用失败: {error_text}"
             )));
         }
 
@@ -266,8 +265,7 @@ impl VisionProvider for OpenAIVision {
         if !response.status().is_success() {
             let error_text = response.text().await?;
             return Err(MultimodalError::ApiError(format!(
-                "GPT-4V API 调用失败: {}",
-                error_text
+                "GPT-4V API 调用失败: {error_text}"
             )));
         }
 
@@ -312,8 +310,7 @@ impl VisionProvider for OpenAIVision {
         if !response.status().is_success() {
             let error_text = response.text().await?;
             return Err(MultimodalError::ApiError(format!(
-                "DALL-E API 调用失败: {}",
-                error_text
+                "DALL-E API 调用失败: {error_text}"
             )));
         }
 

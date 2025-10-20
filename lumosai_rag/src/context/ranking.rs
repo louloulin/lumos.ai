@@ -17,6 +17,12 @@ pub trait DocumentRanker: Send + Sync {
 /// Relevance-based ranking (uses existing scores)
 pub struct RelevanceRanker;
 
+impl Default for RelevanceRanker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RelevanceRanker {
     pub fn new() -> Self {
         Self
@@ -37,6 +43,12 @@ impl DocumentRanker for RelevanceRanker {
 
 /// Recency-based ranking (requires timestamp metadata)
 pub struct RecencyRanker;
+
+impl Default for RecencyRanker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl RecencyRanker {
     pub fn new() -> Self {
@@ -87,6 +99,12 @@ impl DocumentRanker for RecencyRanker {
 /// Length-based ranking (shorter documents first)
 pub struct LengthRanker;
 
+impl Default for LengthRanker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LengthRanker {
     pub fn new() -> Self {
         Self
@@ -107,6 +125,12 @@ impl DocumentRanker for LengthRanker {
 
 /// Custom ranking (placeholder for user-defined ranking)
 pub struct CustomRanker;
+
+impl Default for CustomRanker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl CustomRanker {
     pub fn new() -> Self {

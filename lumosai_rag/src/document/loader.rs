@@ -50,14 +50,13 @@ impl DocumentLoader for FileLoader {
 
         if !path.exists() {
             return Err(RagError::DocumentLoading(format!(
-                "File not found: {}",
-                source
+                "File not found: {source}"
             )));
         }
 
         let content = fs::read_to_string(&path)
             .await
-            .map_err(|e| RagError::DocumentLoading(format!("Failed to read file: {}", e)))?;
+            .map_err(|e| RagError::DocumentLoading(format!("Failed to read file: {e}")))?;
 
         let mut metadata = Metadata::new();
         metadata.source = Some(source.to_string());
@@ -80,7 +79,7 @@ fn system_time_to_date_time(time: SystemTime) -> Result<DateTime<Utc>> {
     // First convert to duration since UNIX_EPOCH
     let duration_since_epoch = time
         .duration_since(SystemTime::UNIX_EPOCH)
-        .map_err(|e| RagError::DocumentLoading(format!("Failed to convert time: {}", e)))?;
+        .map_err(|e| RagError::DocumentLoading(format!("Failed to convert time: {e}")))?;
 
     // Convert to seconds and nanoseconds
     let secs = duration_since_epoch.as_secs();

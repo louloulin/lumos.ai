@@ -476,28 +476,29 @@ mod tests {
         // Clean up
         storage.delete_index("test_factory").await.unwrap();
 
-        #[cfg(feature = "vector_sqlite")]
-        {
-            // SQLite features temporarily disabled
-            // let sqlite_config = VectorStorageConfig::Sqlite {
-            //     db_path: "".to_string(),
-            //     in_memory: true,
-            // };
+            // SQLite features temporarily disabled - full test section commented
+        // #[cfg(feature = "vector_sqlite")]
+        // {
+        //     // SQLite features temporarily disabled
+        //     let sqlite_config = VectorStorageConfig::Sqlite {
+        //         db_path: "".to_string(),
+        //         in_memory: true,
+        //     };
 
-            // let sqlite_storage = create_vector_storage(Some(sqlite_config)).unwrap();
+        //     let sqlite_storage = create_vector_storage(Some(sqlite_config)).unwrap();
 
-            // // Create test index
-            // sqlite_storage
-            //     .create_index("sqlite_test", 3, None)
-            //     .await
-            //     .unwrap();
+        //     // Create test index
+        //     sqlite_storage
+        //         .create_index("sqlite_test", 3, None)
+        //         .await
+        //         .unwrap();
 
-            // // Verify index was created
-            // let indexes = sqlite_storage.list_indexes().await.unwrap();
-            // assert!(indexes.contains(&"sqlite_test".to_string()));
+        //     // Verify index was created
+        //     let indexes = sqlite_storage.list_indexes().await.unwrap();
+        //     assert!(indexes.contains(&"sqlite_test".to_string()));
 
-            // // Clean up
-            // sqlite_storage.delete_index("sqlite_test").await.unwrap();
-        }
+        //     // Clean up
+        //     sqlite_storage.delete_index("sqlite_test").await.unwrap();
+        // }
     }
 }

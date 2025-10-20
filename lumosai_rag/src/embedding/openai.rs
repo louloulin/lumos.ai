@@ -99,7 +99,7 @@ impl EmbeddingProvider for OpenAIEmbeddingProvider {
             .json(&request)
             .send()
             .await
-            .map_err(|e| RagError::Embedding(format!("API request failed: {}", e)))?;
+            .map_err(|e| RagError::Embedding(format!("API request failed: {e}")))?;
 
         let status = response.status();
         if !status.is_success() {
@@ -109,15 +109,14 @@ impl EmbeddingProvider for OpenAIEmbeddingProvider {
                 .unwrap_or_else(|_| "Failed to get error response".to_string());
 
             return Err(RagError::Embedding(format!(
-                "API error: {}, details: {}",
-                status, error_text
+                "API error: {status}, details: {error_text}"
             )));
         }
 
         let embedding_response: EmbeddingResponse = response
             .json()
             .await
-            .map_err(|e| RagError::Embedding(format!("Failed to parse API response: {}", e)))?;
+            .map_err(|e| RagError::Embedding(format!("Failed to parse API response: {e}")))?;
 
         // Sort by index to ensure order matches the input
         let mut data = embedding_response.data;

@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::{interval, timeout};
 
-use crate::types::{MCPMessage, Resource, ServerCapabilities, Tool, ToolDefinition};
+use crate::types::{Tool, ToolDefinition};
 use crate::{MCPClient, MCPConfiguration, MCPError, Result};
 
 /// Enhanced MCP manager with connection pooling and advanced features
@@ -202,7 +202,7 @@ impl EnhancedMCPManager {
                         all_tools.insert(name.clone(), tools);
                     }
                     Err(e) => {
-                        eprintln!("Failed to get tools for client {}: {}", name, e);
+                        eprintln!("Failed to get tools for client {name}: {e}");
                         // Update health status
                         self.mark_client_unhealthy(name, &e.to_string()).await;
                     }
@@ -225,9 +225,7 @@ impl EnhancedMCPManager {
 
         // Fetch from client - convert HashMap to Vec
         let tools_map = client.tools().await?;
-        let tools: Vec<Tool> = tools_map
-            .into_iter()
-            .map(|(name, _tool)| {
+        let tools: Vec<Tool> = tools_map.into_keys().map(|name| {
                 // Create a simple Tool struct for now
                 Tool {
                     name,
@@ -411,8 +409,7 @@ impl EnhancedMCPManager {
                     }
                     Err(e) => {
                         eprintln!(
-                            "❌ Failed to discover tools from server '{}': {}",
-                            server_name, e
+                            "❌ Failed to discover tools from server '{server_name}': {e}"
                         );
                         self.mark_client_unhealthy(server_name, &e.to_string())
                             .await;
@@ -468,12 +465,10 @@ impl EnhancedMCPManager {
         client: &MCPClient,
     ) -> Result<Vec<ToolDefinition>> {
         let tools_map = client.tools().await?;
-        let tools: Vec<ToolDefinition> = tools_map
-            .into_iter()
-            .map(|(name, _tool)| {
+        let tools: Vec<ToolDefinition> = tools_map.into_keys().map(|name| {
                 ToolDefinition {
                     name: name.clone(),
-                    description: format!("Tool '{}' from MCP server '{}'", name, server_name),
+                    description: format!("Tool '{name}' from MCP server '{server_name}'"),
                     parameters: vec![], // Will be populated from actual tool schema
                     return_schema: None,
                 }
@@ -504,22 +499,19 @@ impl EnhancedMCPManager {
         match self.connect_client(&server_name).await {
             Ok(()) => {
                 println!(
-                    "✅ Successfully registered and connected to MCP server '{}'",
-                    server_name
+                    "✅ Successfully registered and connected to MCP server '{server_name}'"
                 );
 
                 // Perform initial tool discovery
                 if let Err(e) = self.discover_tools_from_server_by_name(&server_name).await {
                     eprintln!(
-                        "⚠️  Initial tool discovery failed for '{}': {}",
-                        server_name, e
+                        "⚠️  Initial tool discovery failed for '{server_name}': {e}"
                     );
                 }
             }
             Err(e) => {
                 eprintln!(
-                    "⚠️  Failed to connect to MCP server '{}': {}",
-                    server_name, e
+                    "⚠️  Failed to connect to MCP server '{server_name}': {e}"
                 );
                 // Mark as unhealthy but keep registered for retry
                 self.mark_client_unhealthy(&server_name, &e.to_string())
@@ -596,7 +588,7 @@ impl EnhancedMCPManager {
 
                     if attempts < self.config.max_retry_attempts {
                         // Exponential backoff
-                        let delay = Duration::from_millis(100 * (2_u64.pow(attempts as u32 - 1)));
+                        let delay = Duration::from_millis(100 * (2_u64.pow(attempts - 1)));
                         tokio::time::sleep(delay).await;
                     }
                 }
@@ -652,11 +644,10 @@ impl EnhancedMCPManager {
 
         // Find all servers that have this tool
         for (server_name, tools) in all_tools {
-            if tools.iter().any(|tool| tool.name == tool_name) {
-                if self.is_client_healthy(&server_name).await {
+            if tools.iter().any(|tool| tool.name == tool_name)
+                && self.is_client_healthy(&server_name).await {
                     candidates.push(server_name);
                 }
-            }
         }
 
         if candidates.is_empty() {
@@ -698,8 +689,7 @@ impl EnhancedMCPManager {
         }
 
         Err(MCPError::ToolNotFound(format!(
-            "No alternative server found for tool '{}'",
-            tool_name
+            "No alternative server found for tool '{tool_name}'"
         )))
     }
 
@@ -754,10 +744,7 @@ impl EnhancedMCPManager {
 
         if let Some(client) = client {
             // Simple ping test
-            match timeout(Duration::from_secs(5), client.tools()).await {
-                Ok(Ok(_)) => true,
-                _ => false,
-            }
+            matches!(timeout(Duration::from_secs(5), client.tools()).await, Ok(Ok(_)))
         } else {
             false
         }
@@ -785,8 +772,7 @@ impl EnhancedMCPManager {
         // TODO: Implement actual subscription via MCP protocol
         // This would involve sending a SubscribeResource message
         println!(
-            "📡 Subscribed to resource '{}' on server '{}'",
-            resource_uri, server_name
+            "📡 Subscribed to resource '{resource_uri}' on server '{server_name}'"
         );
 
         Ok(())
@@ -819,8 +805,7 @@ impl EnhancedMCPManager {
 
         // TODO: Implement actual unsubscription via MCP protocol
         println!(
-            "📡 Unsubscribed from resource '{}' on server '{}'",
-            resource_uri, server_name
+            "📡 Unsubscribed from resource '{resource_uri}' on server '{server_name}'"
         );
 
         Ok(())
@@ -840,7 +825,7 @@ impl EnhancedMCPManager {
 
         // Create futures for all requests
         for (tool_name, params) in requests.into_iter() {
-            let self_clone = self.clone();
+            let self_clone = self;
             let future = async move { self_clone.execute_mcp_tool(&tool_name, params).await };
             futures.push(future);
         }
@@ -882,7 +867,7 @@ impl EnhancedMCPManager {
                 server_name.clone(),
                 ServerStatus {
                     name: server_name.clone(),
-                    health: health,
+                    health,
                     tool_count,
                     subscription_count,
                     last_activity: Instant::now(), // TODO: Track actual last activity
@@ -907,12 +892,11 @@ impl EnhancedMCPManager {
                 let task = tokio::spawn(async move {
                     match Self::refresh_tools_for_server(&server_name, &client, &tool_cache).await {
                         Ok(count) => {
-                            println!("🔄 Refreshed {} tools for server '{}'", count, server_name);
+                            println!("🔄 Refreshed {count} tools for server '{server_name}'");
                         }
                         Err(e) => {
                             eprintln!(
-                                "❌ Failed to refresh tools for server '{}': {}",
-                                server_name, e
+                                "❌ Failed to refresh tools for server '{server_name}': {e}"
                             );
                         }
                     }
@@ -935,11 +919,9 @@ impl EnhancedMCPManager {
         tool_cache: &Arc<RwLock<HashMap<String, Vec<Tool>>>>,
     ) -> Result<usize> {
         let tools_map = client.tools().await?;
-        let tools: Vec<Tool> = tools_map
-            .into_iter()
-            .map(|(name, _tool)| Tool {
+        let tools: Vec<Tool> = tools_map.into_keys().map(|name| Tool {
                 name: name.clone(),
-                description: format!("Tool '{}' from MCP server '{}'", name, server_name),
+                description: format!("Tool '{name}' from MCP server '{server_name}'"),
                 input_schema: None,
             })
             .collect();
@@ -993,7 +975,7 @@ impl EnhancedMCPManager {
                         if let Err(e) =
                             Self::refresh_tools_for_server(&server_name, &client, &tool_cache).await
                         {
-                            eprintln!("🔄 Cache refresh failed for '{}': {}", server_name, e);
+                            eprintln!("🔄 Cache refresh failed for '{server_name}': {e}");
                         }
                     }
                 }

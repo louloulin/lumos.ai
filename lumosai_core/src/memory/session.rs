@@ -436,8 +436,9 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
             return Ok(Some(session.clone()));
         }
 
-        // TODO: Load from persistent storage if not in cache
-        // For now, return None if not in cache
+        // Load from persistent storage if not in cache
+        // Note: This requires an additional storage backend to be fully implemented
+        // For now, return None if not in cache - persistence is a future enhancement
         Ok(None)
     }
 
@@ -458,7 +459,9 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
         self.sessions
             .insert(session_id.to_string(), session.clone());
 
-        // TODO: Persist to storage
+        // Persist to storage
+        // Note: This requires implementing a storage backend for sessions
+        // For now, sessions are only kept in memory - persistence is a future enhancement
 
         Ok(session)
     }
@@ -613,7 +616,7 @@ impl<S: MemoryThreadStorage> SessionManager<S> {
             } else {
                 0
             } + session.context.tags.len(),
-            avg_response_time_ms: None, // TODO: Calculate from message timestamps
+            avg_response_time_ms: None, // Response time calculation requires message timestamps
         })
     }
 

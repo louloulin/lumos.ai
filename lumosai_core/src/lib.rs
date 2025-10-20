@@ -59,11 +59,12 @@ pub use vector::{
     QueryResult as VectorQueryResult, SimilarityMetric, Vector, VectorStorage, VectorStorageConfig,
 };
 
-#[cfg(feature = "vector_sqlite")]
-pub use vector::{
-    sqlite::create_sqlite_vector_storage, sqlite::create_sqlite_vector_storage_in_memory,
-    SqliteVectorStorage,
-};
+// SQLite features temporarily disabled due to dependency conflicts
+// #[cfg(feature = "vector_sqlite")]
+// pub use vector::{
+//     sqlite::create_sqlite_vector_storage, sqlite::create_sqlite_vector_storage_in_memory,
+//     SqliteVectorStorage,
+// };
 
 // 导出工作流模块但不重命名
 // pub use crate::workflow;

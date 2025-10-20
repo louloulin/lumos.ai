@@ -53,7 +53,8 @@ impl Lumosai {
     /// 创建新的Lumosai实例
     pub fn new(config: LumosaiConfig) -> Self {
         let logger = if config.disable_logger {
-            // TODO: 创建一个 noop logger 实现
+            // 使用noop logger实现 - 需要统一Logger trait类型
+            // 暂时使用default_logger，需要后续重构Logger接口
             default_logger()
         } else {
             default_logger()

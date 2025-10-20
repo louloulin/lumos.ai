@@ -267,10 +267,10 @@ impl LlmProvider for ClaudeProvider {
         &self,
         messages: &[Message],
         functions: &[FunctionDefinition],
-        tool_choice: &ToolChoice,
+        _tool_choice: &ToolChoice,
         options: &LlmOptions,
     ) -> Result<FunctionCallingResponse> {
-        self.call_function(messages, functions, tool_choice, options)
+        self.call_function(messages, functions, _tool_choice, options)
             .await
     }
 }
@@ -360,7 +360,7 @@ impl ClaudeProvider {
         &self,
         messages: &[Message],
         functions: &[FunctionDefinition],
-        tool_choice: &ToolChoice,
+        _tool_choice: &ToolChoice,
         options: &LlmOptions,
     ) -> Result<FunctionCallingResponse> {
         // Claude的函数调用实现

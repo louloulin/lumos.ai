@@ -8,8 +8,8 @@
 //! - 状态管理
 //! - 错误处理
 
+use lumosai_core::agent::trait_def::AgentStatus; // 使用 trait_def 中的 AgentStatus
 use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
-use lumosai_core::agent::trait_def::AgentStatus;  // 使用 trait_def 中的 AgentStatus
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 
@@ -290,4 +290,3 @@ fn test_agent_special_characters() {
     assert_eq!(agent.get_name(), special_name);
     assert_eq!(agent.get_instructions(), special_instructions);
 }
-

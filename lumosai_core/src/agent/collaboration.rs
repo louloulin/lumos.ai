@@ -322,7 +322,7 @@ impl Crew {
             .map_err(|e| Error::Internal(format!("Failed to acquire semaphore: {e}")))?;
 
         // 第一步：检查依赖并收集任务信息
-        let (description, dependencies) = {
+        let (description, _dependencies) = {
             let tasks = self.tasks.read().await;
             let task = tasks
                 .iter()

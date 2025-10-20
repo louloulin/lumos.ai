@@ -9,8 +9,8 @@
 
 use lumosai_core::llm::{Message, MockLlmProvider, Role};
 use lumosai_core::memory::{
-    BasicMemory, Memory, MemoryConfig, UnifiedMemory, WorkingMemory, WorkingMemoryConfig,
-    create_working_memory,
+    create_working_memory, BasicMemory, Memory, MemoryConfig, UnifiedMemory, WorkingMemory,
+    WorkingMemoryConfig,
 };
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -212,12 +212,7 @@ fn test_message_creation() {
 #[test]
 fn test_message_different_roles() {
     let user_msg = Message::new(Role::User, "User message".to_string(), None, None);
-    let assistant_msg = Message::new(
-        Role::Assistant,
-        "Assistant message".to_string(),
-        None,
-        None,
-    );
+    let assistant_msg = Message::new(Role::Assistant, "Assistant message".to_string(), None, None);
     let system_msg = Message::new(Role::System, "System message".to_string(), None, None);
 
     assert_eq!(user_msg.role, Role::User);
@@ -315,4 +310,3 @@ async fn test_working_memory_update() {
     let value = memory.get_value("key").await.unwrap();
     assert_eq!(value, Some(Value::String("updated".to_string())));
 }
-

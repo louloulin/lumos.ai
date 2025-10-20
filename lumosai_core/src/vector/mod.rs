@@ -221,11 +221,12 @@ pub fn create_memory_vector_storage() -> MemoryVectorStorage {
 /// Simple embedding module
 pub mod embedding;
 
-#[cfg(feature = "vector_sqlite")]
-pub mod sqlite;
+// SQLite features temporarily disabled due to dependency conflicts
+// #[cfg(feature = "vector_sqlite")]
+// pub mod sqlite;
 
-#[cfg(feature = "vector_sqlite")]
-pub use self::sqlite::SqliteVectorStorage;
+// #[cfg(feature = "vector_sqlite")]
+// pub use self::sqlite::SqliteVectorStorage;
 
 /// Vector storage configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,14 +238,14 @@ pub enum VectorStorageConfig {
         /// 内存容量
         capacity: Option<usize>,
     },
-    /// SQLite vector storage
-    #[cfg(feature = "vector_sqlite")]
-    Sqlite {
-        /// Path to SQLite database file
-        db_path: String,
-        /// Whether to use in-memory SQLite database
-        in_memory: bool,
-    },
+    /// SQLite vector storage (temporarily disabled)
+    // #[cfg(feature = "vector_sqlite")]
+    // Sqlite {
+    //     /// Path to SQLite database file
+    //     db_path: String,
+    //     /// Whether to use in-memory SQLite database
+    //     in_memory: bool,
+    // },
     /// Qdrant vector storage
     Qdrant {
         /// Qdrant server URL
@@ -477,26 +478,26 @@ mod tests {
 
         #[cfg(feature = "vector_sqlite")]
         {
-            // Test SQLite in-memory storage
-            let sqlite_config = VectorStorageConfig::Sqlite {
-                db_path: "".to_string(),
-                in_memory: true,
-            };
+            // SQLite features temporarily disabled
+            // let sqlite_config = VectorStorageConfig::Sqlite {
+            //     db_path: "".to_string(),
+            //     in_memory: true,
+            // };
 
-            let sqlite_storage = create_vector_storage(Some(sqlite_config)).unwrap();
+            // let sqlite_storage = create_vector_storage(Some(sqlite_config)).unwrap();
 
-            // Create test index
-            sqlite_storage
-                .create_index("sqlite_test", 3, None)
-                .await
-                .unwrap();
+            // // Create test index
+            // sqlite_storage
+            //     .create_index("sqlite_test", 3, None)
+            //     .await
+            //     .unwrap();
 
-            // Verify index was created
-            let indexes = sqlite_storage.list_indexes().await.unwrap();
-            assert!(indexes.contains(&"sqlite_test".to_string()));
+            // // Verify index was created
+            // let indexes = sqlite_storage.list_indexes().await.unwrap();
+            // assert!(indexes.contains(&"sqlite_test".to_string()));
 
-            // Clean up
-            sqlite_storage.delete_index("sqlite_test").await.unwrap();
+            // // Clean up
+            // sqlite_storage.delete_index("sqlite_test").await.unwrap();
         }
     }
 }

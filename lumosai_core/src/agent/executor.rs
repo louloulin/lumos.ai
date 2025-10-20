@@ -1724,7 +1724,7 @@ impl Agent for BasicAgent {
         messages: &'a [Message],
         options: &'a AgentStreamOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
-        let stream_start_time = SystemTime::now()
+        let _stream_start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| Error::SystemTime(format!("Failed to get stream start time: {e}")))?
             .as_millis() as u64;
@@ -2053,7 +2053,7 @@ impl BasicAgent {
         options: &'a AgentStreamOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // Directly implement streaming logic to avoid recursion
-        let stream_start_time = SystemTime::now()
+        let _stream_start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| Error::SystemTime(format!("Failed to get stream start time: {e}")))?
             .as_millis() as u64;

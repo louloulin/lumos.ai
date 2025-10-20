@@ -101,8 +101,9 @@ pub use lumosai_vector_qdrant as qdrant;
 #[cfg(feature = "weaviate")]
 pub use lumosai_vector_weaviate as weaviate;
 
-#[cfg(feature = "postgres")]
-pub use lumosai_vector_postgres as postgres;
+// PostgreSQL feature temporarily disabled
+// #[cfg(feature = "postgres")]
+// pub use lumosai_vector_postgres as postgres;
 
 #[cfg(feature = "fastembed")]
 pub use lumosai_vector_fastembed as fastembed;
@@ -123,8 +124,9 @@ pub mod prelude {
     #[cfg(feature = "weaviate")]
     pub use crate::weaviate::WeaviateVectorStorage;
 
-    #[cfg(feature = "postgres")]
-    pub use crate::postgres::PostgresVectorStorage;
+    // PostgreSQL feature temporarily disabled
+    // #[cfg(feature = "postgres")]
+    // pub use crate::postgres::PostgresVectorStorage;
 }
 
 /// Utility functions for working with vector storage
@@ -151,13 +153,13 @@ pub mod utils {
         crate::weaviate::WeaviateVectorStorage::new(url).await
     }
 
-    /// Create a PostgreSQL storage instance
-    #[cfg(feature = "postgres")]
-    pub async fn create_postgres_storage(
-        database_url: &str,
-    ) -> Result<crate::postgres::PostgresVectorStorage> {
-        crate::postgres::PostgresVectorStorage::new(database_url).await
-    }
+    /// Create a PostgreSQL storage instance (temporarily disabled)
+    // #[cfg(feature = "postgres")]
+    // pub async fn create_postgres_storage(
+    //     database_url: &str,
+    // ) -> Result<crate::postgres::PostgresVectorStorage> {
+    //     crate::postgres::PostgresVectorStorage::new(database_url).await
+    // }
 
     /// Auto-detect and create the best available storage backend
     /// Returns a memory storage instance as the default implementation
@@ -169,19 +171,19 @@ pub mod utils {
     }
 
     /// Create the best available storage backend based on environment
-    #[cfg(any(feature = "memory", feature = "postgres"))]
+    #[cfg(feature = "memory")]
     pub async fn create_best_available_storage() -> Result<Box<dyn std::any::Any + Send + Sync>> {
         // Try different backends in order of preference
 
-        // Try PostgreSQL first if DATABASE_URL is set
-        #[cfg(feature = "postgres")]
-        {
-            if let Ok(database_url) = std::env::var("DATABASE_URL") {
-                if let Ok(storage) = create_postgres_storage(&database_url).await {
-                    return Ok(Box::new(storage));
-                }
-            }
-        }
+        // PostgreSQL feature temporarily disabled
+        // #[cfg(feature = "postgres")]
+        // {
+        //     if let Ok(database_url) = std::env::var("DATABASE_URL") {
+        //         if let Ok(storage) = create_postgres_storage(&database_url).await {
+        //             return Ok(Box::new(storage));
+        //         }
+        //     }
+        // }
 
         // Try Qdrant if QDRANT_URL is set
         #[cfg(feature = "qdrant")]

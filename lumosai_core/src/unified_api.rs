@@ -265,7 +265,7 @@ pub mod cloud {
 
     /// 快速部署应用
     pub async fn deploy(app_name: &str, image: &str, provider: Option<&str>) -> Result<String> {
-        let adapter = if let Some(p) = provider {
+        let adapter = if let Some(_p) = provider {
             cloud::auto()?
         } else {
             auto()?

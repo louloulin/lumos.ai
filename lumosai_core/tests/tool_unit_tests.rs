@@ -209,9 +209,12 @@ async fn test_tool_with_output_schema() {
         }
     });
 
-    let tool = GenericTool::new("output_test", "Test output schema", schema, |_params, _ctx| {
-        Ok(json!({"result": "success"}))
-    })
+    let tool = GenericTool::new(
+        "output_test",
+        "Test output schema",
+        schema,
+        |_params, _ctx| Ok(json!({"result": "success"})),
+    )
     .with_output_schema(output_schema.clone());
 
     assert_eq!(tool.output_schema(), Some(output_schema));
@@ -281,13 +284,18 @@ async fn test_tool_different_data_types() {
         },
     ]);
 
-    let tool = GenericTool::new("type_test", "Test different types", schema, |params, _ctx| {
-        Ok(json!({
-            "string": params["string_val"],
-            "number": params["number_val"],
-            "boolean": params["bool_val"]
-        }))
-    });
+    let tool = GenericTool::new(
+        "type_test",
+        "Test different types",
+        schema,
+        |params, _ctx| {
+            Ok(json!({
+                "string": params["string_val"],
+                "number": params["number_val"],
+                "boolean": params["bool_val"]
+            }))
+        },
+    );
 
     let context = ToolExecutionContext::new();
     let options = ToolExecutionOptions::default();
@@ -307,9 +315,12 @@ async fn test_tool_different_data_types() {
 #[tokio::test]
 async fn test_tool_no_parameters() {
     let schema = ToolSchema::new(vec![]);
-    let tool = GenericTool::new("no_params", "Tool with no parameters", schema, |_params, _ctx| {
-        Ok(json!({"message": "Hello, World!"}))
-    });
+    let tool = GenericTool::new(
+        "no_params",
+        "Tool with no parameters",
+        schema,
+        |_params, _ctx| Ok(json!({"message": "Hello, World!"})),
+    );
 
     let context = ToolExecutionContext::new();
     let options = ToolExecutionOptions::default();
@@ -318,4 +329,3 @@ async fn test_tool_no_parameters() {
     let result = tool.execute(params, context, &options).await.unwrap();
     assert_eq!(result["message"], json!("Hello, World!"));
 }
-

@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **LumosAI** 是一个企业级AI应用开发框架，使用 Rust 作为核心，结合 TypeScript/JavaScript 构建前端界面。该项目支持 RAG 系统、多 Agent 协作、工作流编排等企业级 AI 应用功能。
 
+当前版本：v0.2.0（开发中），v0.1.4（稳定发布版）
+
 ### 文档编写原则
 - 避免使用营销性词汇（如 "powerful", "built-in", "complete", "out-of-the-box"）
 - 避免过度热情的号召性用语（如 "Check out", "Learn more", "Explore"）
@@ -15,9 +17,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 开发环境设置
 
 ### 前置要求
-- Rust 1.75+
+- Rust 1.75+ （推荐使用最新稳定版）
 - Node.js 18+
-- pnpm 8+
+- pnpm 8+ 或 bun （项目使用 bun 作为包管理器）
+- Git
 
 ### 环境初始化
 ```bash
@@ -58,37 +61,62 @@ cargo nextest run              # 并行测试运行器
 
 ### 前端开发 (package.json)
 ```bash
-pnpm dev                       # 启动开发服务器
-pnpm dev:ui                   # UI 开发模式
-pnpm build:ui                 # 构建 UI
-pnpm build:all                # 构建所有包
-pnpm test                     # 运行前端测试
+# 使用 bun（推荐）
+bun run dev                   # 启动开发服务器
+bun run dev:ui               # UI 开发模式
+bun run build:ui             # 构建 UI
+bun run build:all            # 构建所有包
+
+# 使用 pnpm
+pnpm dev                     # 启动开发服务器
+pnpm dev:ui                  # UI 开发模式
+pnpm build:ui                # 构建 UI
+pnpm build:all               # 构建所有包
+pnpm test                    # 运行前端测试
 ```
 
 ## 项目架构
 
 ### Workspace 结构
-项目采用 Cargo workspace 管理 20 个核心包（实际成员以 Cargo.toml 为准）：
+项目采用 Cargo workspace 管理多个核心包（实际成员以根目录 Cargo.toml 为准）：
 
+**当前活跃包 (22个)**：
 ```
 lumosai/
-├── lumosai_core/              # 核心框架 (Agent, RAG, 工作流)
-├── lumosai_cli/               # 命令行工具
-├── lumosai_ui/                # Web UI (Dioxus + Axum)
-├── lumosai_ui/web-server/     # Web UI 服务器
+├── lumosai_core/              # 核心框架 (Agent, Workflow, Tool, Memory, LLM)
 ├── lumosai_vector/            # 向量数据库抽象层
+│   ├── core/                  # 向量存储核心接口
+│   ├── memory/                # 内存向量存储
+│   ├── lancedb/               # LanceDB 集成
+│   ├── fastembed/             # FastEmbed 集成
+│   ├── milvus/                # Milvus 集成
+│   ├── qdrant/                # Qdrant 集成
+│   ├── weaviate/              # Weaviate 集成
+│   └── postgres/              # PostgreSQL 集成
 ├── lumosai_rag/               # RAG 系统实现
-├── lumosai_network/           # 网络通信层
+├── lumosai_cli/               # 命令行工具
 ├── lumosai_mcp/               # Model Context Protocol
-├── lumosai_bindings/          # 多语言绑定 (Python, Node.js, WASM)
+├── lumosai_network/           # 网络通信层
 ├── lumosai_enterprise/        # 企业级功能
 ├── lumosai_evals/             # 评估框架
-├── lumosai_marketplace/       # 市场功能
 ├── lumosai_examples/          # 示例代码
 ├── lumos_macro/              # 宏定义
 ├── lumosai_derive/           # 派生宏
+├── lumosai_multimodal/       # 多模态支持
+├── lumosai_bindings/         # 多语言绑定
+├── lumosai_auth/             # 认证模块
+├── lumosai_security/         # 安全模块
+├── lumosai_telemetry/        # 监控模块
+├── lumosai_voice/            # 语音模块
+├── lumosai_cloud/            # 云服务集成
 └── mastra/                   # 独立的 TypeScript monorepo
 ```
+
+**暂时排除的包**：
+- `lumosai_ui/` 和 `lumosai_ui/web-server/` (UI 相关包有 LabelRole 错误)
+- `lumosai_vector/postgres/` (依赖问题)
+- `lumosai_marketplace/` (复杂性)
+- `lumosai_ai_extensions/` (重构中)
 
 ### 分层架构
 ```
@@ -101,12 +129,32 @@ API层: REST API + GraphQL + WebSocket API
 
 ### 核心模块职责
 
-**lumosai_core**: 框架核心，定义 Agent、Workflow、Tool 等基础 trait 和类型
-**lumosai_vector**: 向量数据库抽象层，支持 Qdrant、Weaviate、PostgreSQL 等多种后端
-**lumosai_rag**: RAG 系统实现，包含文档处理、嵌入生成、检索算法
-**lumosai_mcp**: Model Context Protocol 实现，支持模型上下文协议
-**lumosai_enterprise**: 企业级功能，包含认证、授权、多租户、监控等
-**lumosai_ui**: 基于 Dioxus 的 Web UI 框架
+**lumosai_core**: 框架核心，经过 v2.0 重构后包含 8 个核心模块：
+- `agent`: Agent 核心功能（构建器、配置、执行器、协作）
+- `workflow`: 工作流引擎（步骤、执行引擎、构建器）  
+- `tool`: 工具系统（注册表、上下文、内置工具集）
+- `memory`: 内存管理（工作内存、语义内存、会话管理）
+- `llm`: LLM 抽象（OpenAI、Anthropic、Qwen、Zhipu 等提供商）
+- `config`: 配置管理（YAML 配置、验证器）
+- `error`: 错误处理（友好错误、分类错误）
+- `prelude`: 便捷导入
+
+**lumosai_vector**: 向量数据库抽象层，支持多种后端：
+- 内存存储（用于开发和测试）
+- LanceDB（高性能向量数据库）
+- Qdrant、Weaviate、Milvus、PostgreSQL
+
+**lumosai_rag**: RAG 系统实现，包含：
+- 文档处理（PDF、Markdown、网页）
+- 智能分块（递归、语义分块）
+- 嵌入生成（OpenAI、Zhipu 提供商）
+- 混合检索（语义 + 关键词匹配）
+
+**lumosai_mcp**: Model Context Protocol 实现
+
+**lumosai_enterprise**: 企业级功能（认证、授权、多租户、监控）
+
+**lumosai_cli**: 命令行工具，支持 `dev`、`build`、`run`、`ui` 等子命令
 
 ## 开发规范
 
@@ -197,21 +245,19 @@ pnpm docs:build
 ```
 
 ### 示例项目
-示例代码位于 `examples/` 目录，包含 12 个核心示例：
-- basic_agent - 基本 Agent 使用
-- rag_system - RAG 系统配置
-- tool_integration - 工具集成
-- memory_system - 内存系统
-- vector_storage - 向量存储
-- streaming_response - 流式响应
-- multi_agent_workflow - 多 Agent 工作流
-- enhanced_features_demo - 增强功能演示
-- performance_benchmark - 性能基准测试
-- auth_demo - 认证演示
-- monitoring_demo_simple - 监控演示
-- simplified_api_complete_demo - 完整 API 演示
+示例代码位于 `examples/` 目录，包含 50+ 个示例文件，涵盖：
+- **基础示例**: basic_agent, rag_system, tool_integration, memory_system
+- **高级示例**: multi_agent_workflow, enhanced_features_demo, performance_benchmark
+- **验证示例**: *_validation.rs (各种功能的验证测试)
+- **演示示例**: auth_demo, monitoring_demo_simple, simplified_api_complete_demo
+- **工具示例**: tool_macro_demo, unified_memory_demo, friendly_errors_demo
 
 运行示例：`cargo run --example <example_name>`
+
+**重要示例**：
+- `simplified_api_complete_demo.rs`: 完整 API 演示（⭐⭐⭐⭐⭐）
+- `enhanced_features_demo.rs`: 增强功能演示（⭐⭐⭐）
+- `performance_benchmark.rs`: 性能基准测试（⭐⭐⭐）
 
 ## 贡献指南
 
@@ -224,8 +270,11 @@ pnpm docs:build
 - 使用 `cargo-release` 进行版本管理
 - 遵循语义化版本控制
 - 发布前必须运行完整测试套件
-- 版本号定义在根目录 Cargo.toml 中（当前版本：0.1.4）
-- 使用 release.toml 配置发布参数
+- 版本号定义：
+  - 开发版本：v0.2.0（根目录 Cargo.toml）
+  - 稳定版本：v0.1.4（README.md 中引用）
+- 使用 `release.toml` 配置发布参数
+- 发布脚本：`./scripts/release.sh`
 
 ## 测试架构
 
@@ -246,3 +295,53 @@ pnpm docs:build
 - 性能基线：300秒（性能测试超时时间）
 - 测试报告：生成在 `target/test-reports/` 目录
 - 覆盖率报告：生成在 `target/coverage/` 目录
+
+## 架构洞察和开发模式
+
+### 项目状态
+- **当前分支**: lumosai-simple（开发分支）
+- **主分支**: main（用于 PR 合并）
+- **最近提交**: 已完成 46 个新测试，P0-3 任务进行中
+
+### 核心设计模式
+1. **分层抽象**: 核心 trait 定义在 lumosai_core，具体实现在各个专门包中
+2. **插件化架构**: 通过 trait 实现可插拔的组件（LLM 提供商、向量数据库等）
+3. **宏驱动开发**: 使用过程宏简化工具创建和配置（`#[tool]` 宏）
+4. **渐进式 API**: 提供从简单到复杂的三层 API 设计
+
+### 依赖管理策略
+- 使用 Arrow 生态系统（54.0.0 版本）进行数据处理
+- LanceDB（0.18.0）用于向量存储
+- 严格控制 zstd 版本以避免冲突
+- Workspace 统一管理依赖版本
+
+### 构建系统特点
+- 支持特性门控（features）编译
+- 排除问题包以保持构建稳定性
+- 优化的 release 配置（lto=true, codegen-units=1）
+- 支持调试信息的 release-with-debug profile
+
+## 常见开发场景
+
+### 添加新的 LLM 提供商
+1. 在 `lumosai_core/src/llm/` 下创建新的提供商文件
+2. 实现 `LlmProvider` trait
+3. 在 `mod.rs` 中导出
+4. 在 `providers.rs` 中注册
+
+### 添加新的工具
+1. 使用 `#[tool]` 宏创建工具函数
+2. 或者在 `lumosai_core/src/tool/builtin/` 下添加新工具
+3. 在 `mod.rs` 中注册工具
+
+### 调试技巧
+```bash
+# 启用详细日志
+RUST_LOG=debug cargo run --example basic_agent
+
+# 检查特定包的编译
+cargo check -p lumosai_core
+
+# 运行特定测试
+cargo test --test agent_tests -- --nocapture
+```

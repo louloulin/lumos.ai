@@ -378,7 +378,13 @@ impl AgentBuilder {
 
     /// Add system operation tools
     pub fn with_system_tools(self) -> Self {
-        // TODO: Implement system tools when available
+        // System tools implementation roadmap:
+        // 1. File system operations: read_file, write_file, list_directory, create_folder
+        // 2. Process management: run_command, kill_process, list_processes  
+        // 3. System monitoring: cpu_usage, memory_usage, disk_space
+        // 4. Network tools: http_request, ping, port_scan
+        // 5. Security tools: file_permissions, user_info, environment_variables
+        // Note: Implement with proper security sandboxing and permission checks
         self
     }
 

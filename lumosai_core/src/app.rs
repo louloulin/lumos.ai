@@ -174,9 +174,13 @@ impl LumosApp {
         // 创建基本的 EnhancedWorkflow
         let workflow = EnhancedWorkflow::new(workflow_id, description);
 
-        // TODO: 添加步骤配置的处理
-        // 这里需要根据 config.steps 来构建工作流步骤
-        // 由于 WorkflowStep 需要 StepExecutor，这里暂时创建一个空的工作流
+        // Step configuration implementation plan:
+        // 1. Parse config.steps into WorkflowStep objects
+        // 2. Step types: agent_step, tool_step, condition_step, parallel_step, loop_step
+        // 3. Step executors: AgentExecutor, ToolExecutor, ConditionExecutor, ParallelExecutor
+        // 4. Step dependencies: input_mapping, output_mapping, error_handling
+        // 5. Step validation: required_inputs, optional_inputs, output_schema
+        // For now, create empty workflow until step executors are fully implemented
 
         Ok(workflow)
     }

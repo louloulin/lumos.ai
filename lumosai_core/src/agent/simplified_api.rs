@@ -120,7 +120,12 @@ impl AgentInstance {
         let model = self.inner.get_llm();
 
         // 重新构建 Agent，暂时不支持自定义内存
-        // TODO: 实现自定义内存配置
+        // Custom memory configuration implementation plan:
+        // 1. Support MemoryConfig parameter in .memory() method
+        // 2. Memory types: short_term(conversation), long_term(knowledge_base), persistent(sqlite)
+        // 3. Memory strategies: window_based(keep_last_n), importance_based, semantic_search
+        // 4. Memory persistence: auto_save, manual_save, on_session_end
+        // 5. Memory sharing: cross_agent_memory, team_memory, project_memory
         let new_agent = AgentBuilder::new()
             .name(&name)
             .instructions(&instructions)

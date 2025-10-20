@@ -388,7 +388,12 @@ impl Crew {
         let agents = self.agents.read().await;
 
         // 简单策略：选择第一个可用的 Agent
-        // TODO: 实现更智能的负载均衡策略（基于任务优先级、Agent 负载等）
+        // Smart load balancing strategy implementation plan:
+        // 1. Track agent workload: current_tasks_count, last_task_completion_time, avg_task_duration
+        // 2. Task priority scoring: urgent (9-10), high (7-8), normal (4-6), low (1-3)
+        // 3. Agent capability matching: skill_tags, performance_history, success_rate
+        // 4. Load balancing algorithms: round_robin, weighted_least_connections, capability_based
+        // 5. Dynamic reassignment: monitor task progress and reassign stuck tasks
         agents
             .keys()
             .next()

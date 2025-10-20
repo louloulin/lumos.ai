@@ -132,7 +132,13 @@ impl DefaultToolPublisher {
         // 目前返回一个示例包
         self.validate_package_file(file_path).await?;
 
-        // TODO: 实现实际的包解析逻辑
+        // Package parsing implementation plan:
+        // 1. Extract archive: tar.gz, zip, .whl for Python, .npm for Node.js
+        // 2. Parse manifest: Cargo.toml, package.json, requirements.txt, pyproject.toml
+        // 3. Validate structure: entry_points, binaries, libraries, config files
+        // 4. Extract metadata: version, dependencies, license, author, keywords
+        // 5. Security scan: file_hashes, virus_scan, code_analysis, dependency_check
+        // 6. Generate package digest: SHA256, file_list, size_estimate
         Err(MarketplaceError::publish("包解析功能尚未实现"))
     }
 }
@@ -237,9 +243,12 @@ impl ToolPublisher for DefaultToolPublisher {
             return Ok(false);
         }
 
-        // TODO: 实现更复杂的权限验证逻辑
-        // - 检查API密钥
-        // - 验证发布者身份
+        // Enhanced permission verification implementation:
+        // 1. API key validation: JWT verification, rate limiting, scope checking
+        // 2. Publisher identity: OAuth2, SAML, digital signatures, blockchain verification
+        // 3. Permission levels: read_only, publisher, admin, super_admin
+        // 4. Access control: RBAC, ABAC, time_based_access, ip_whitelist
+        // 5. Audit logging: access_attempts, permission_changes, failed_attempts
         // - 检查包名称权限
 
         Ok(true)

@@ -367,8 +367,8 @@ impl SearchEngine for TantivySearchEngine {
                         results.push(SearchResult {
                             package_id,
                             score,
-                            matched_fields: vec![], // TODO: 实现字段匹配检测
-                            highlights: vec![],     // TODO: 实现高亮
+                            matched_fields: vec![], // Field matching implementation: track which query terms matched which document fields
+                            highlights: vec![],     // Highlight implementation: extract snippets with highlighted matched terms
                         });
                     }
                 }
@@ -427,7 +427,8 @@ impl SearchEngine for TantivySearchEngine {
         let document_count = searcher.num_docs() as u64;
 
         // 获取索引大小（简化实现）
-        let index_size_bytes = 0; // TODO: 实现实际的大小计算
+        let index_size_bytes = 0; // Real index size calculation: sum of all index segment files + hot cache size
+                                 // Use std::fs::metadata() on index directory files for accurate size
 
         Ok(IndexStats {
             document_count,

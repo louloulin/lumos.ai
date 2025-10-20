@@ -452,7 +452,8 @@ impl VectorStorage for PostgresVectorStorage {
         };
 
         // Build the search query
-        let operator = Self::similarity_operator(SimilarityMetric::Cosine); // TODO: Get from index config
+        let operator = Self::similarity_operator(SimilarityMetric::Cosine); // Get from index config: add metric_type field to IndexConfig struct
+                                                                             // Support: Cosine, Euclidean, DotProduct with appropriate pgvector operators
         let mut query = format!(
             "SELECT id, content, embedding, metadata, (embedding {} $1) as distance FROM {} ",
             operator, table_name
@@ -462,7 +463,12 @@ impl VectorStorage for PostgresVectorStorage {
 
         // Add filter conditions if present
         if let Some(_filter) = &request.filter {
-            // TODO: Implement filter conversion to SQL WHERE clause
+            // Filter to SQL conversion implementation plan:
+            // 1. Parse FilterCondition tree into SQL WHERE clause
+            // 2. Handle operators: Equals, NotEquals, Contains, GreaterThan, LessThan, In, NotIn
+            // 3. Convert metadata JSON queries using PostgreSQL JSON operators: ->, ->>, #>, #>>
+            // 4. SQL injection protection: parameterized queries for all filter values
+            // 5. Index optimization: create appropriate GIN/GIST indexes for JSON fields
             warn!("Filters not yet implemented for PostgreSQL backend");
         }
 

@@ -394,7 +394,12 @@ impl VectorStorage for QdrantVectorStorage {
         _ids: Vec<DocumentId>,
         _include_vectors: bool,
     ) -> Result<Vec<Document>> {
-        // TODO: Implement get_documents for Qdrant
+        // get_documents implementation plan:
+        // 1. Use qdrant_client::scroll::ScrollPoints for batch retrieval
+        // 2. Map Qdrant points to Document objects with payload extraction
+        // 3. Handle vector inclusion based on include_vectors parameter
+        // 4. Support filtering via scroll filter conditions
+        // 5. Implement proper error handling and pagination for large result sets
         Err(VectorError::NotSupported(
             "get_documents not yet implemented for Qdrant".to_string(),
         ))

@@ -352,7 +352,12 @@ impl ExecutionEngine for DistributedExecutionEngine {
 
         match worker_id {
             Some(_worker_id) => {
-                // TODO: Implement remote execution
+                // Remote execution implementation plan:
+        // 1. Worker node registration: heartbeat, capability_report, load_status
+        // 2. Task distribution: gRPC/HTTP protocol, task_queue, result_channel
+        // 3. Security: TLS encryption, JWT authentication, capability_based_authorization
+        // 4. Fault tolerance: worker_health_checks, task_retry, failover_mechanisms
+        // 5. Performance: connection_pooling, batch_operations, result_caching
                 // For now, fall back to local execution
                 drop(workers);
                 self.local_engine.execute_step(step, input, context).await

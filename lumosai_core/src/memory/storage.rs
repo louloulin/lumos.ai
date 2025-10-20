@@ -77,7 +77,8 @@ impl InMemoryThreadStorage {
             }
         }
 
-        // TODO: Check metadata filter when Message supports metadata
+        // Note: Metadata filter will be implemented when Message struct supports metadata fields
+        // Future enhancement: Add metadata: HashMap<String, Value> field to Message struct
 
         true
     }
@@ -212,7 +213,12 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
             filtered_messages.truncate(limit);
         }
 
-        // TODO: Handle cursor-based pagination
+        // Cursor-based pagination implementation note:
+        // To support cursor-based pagination, we need:
+        // 1. Add cursor field to GetMessagesParams (Option<String>)
+        // 2. Use message_id or stored_at as cursor
+        // 3. Implement binary search for cursor positioning in large datasets
+        // 4. Return pagination metadata (has_next_page, next_cursor)
 
         Ok(filtered_messages
             .into_iter()
@@ -354,7 +360,7 @@ mod tests {
 
         let thread = MemoryThread::new(super::super::thread::CreateThreadParams {
             id: Some("test-thread".to_string()),
-            title: "Test Thread".to_string()),
+            title: "Test Thread".to_string(),
             agent_id: None,
             resource_id: None,
             metadata: None,

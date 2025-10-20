@@ -391,8 +391,12 @@ async fn create_package(
     State(_marketplace): State<Arc<ToolMarketplace>>,
     Json(_package): Json<ToolPackage>,
 ) -> Result<Json<ApiResponse<()>>, StatusCode> {
-    // TODO: 实现工具包创建逻辑
-    // 需要认证和权限验证
+    // Package creation implementation roadmap:
+    // 1. Authentication: JWT verification, API key validation, rate limiting
+    // 2. Input validation: schema validation, duplicate detection, metadata verification
+    // 3. File processing: archive upload, virus scanning, size limits, format validation
+    // 4. Database operations: transaction creation, atomic commits, rollback handling
+    // 5. Notification system: success emails, webhook calls, indexing updates
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 
@@ -402,8 +406,12 @@ async fn update_package(
     Path(_id): Path<Uuid>,
     Json(_package): Json<ToolPackage>,
 ) -> Result<Json<ApiResponse<()>>, StatusCode> {
-    // TODO: 实现工具包更新逻辑
-    // 需要认证和权限验证
+    // Package update implementation roadmap:
+    // 1. Authorization: ownership verification, admin privilege check, edit_history_validation
+    // 2. Version management: semantic versioning, changelog requirement, compatibility_check
+    // 3. Dependency analysis: downstream_impact_assessment, breaking_change_detection
+    // 4. Rollback capability: backup_creation, revert_window, transaction_safety
+    // 5. Communication pipeline: subscriber_notifications, documentation_updates
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 
@@ -412,8 +420,12 @@ async fn delete_package(
     State(_marketplace): State<Arc<ToolMarketplace>>,
     Path(_id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<()>>, StatusCode> {
-    // TODO: 实现工具包删除逻辑
-    // 需要认证和权限验证
+    // Package deletion implementation roadmap:
+    // 1. Security checks: ownership_confirmation, admin_override, dependency_verification
+    // 2. Impact analysis: downloaders_notification, downstream_projects_warning
+    // 3. Soft deletion: grace_period, recovery_option, audit_trail_preservation
+    // 4. Hard deletion: scheduled_cleanup, storage_optimization, index_removal
+    // 5. Compliance: data_retention_policy, legal_requirements, archival_procedures
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 

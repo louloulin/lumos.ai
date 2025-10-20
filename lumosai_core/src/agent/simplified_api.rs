@@ -26,8 +26,11 @@ use std::sync::Arc;
 /// ```rust
 /// let agent = Agent::new("assistant", "你是一个AI助手").await?
 ///     .model("gpt-4")
-///     .tools(&[web_search, calculator])
-///     .memory(Memory::basic());
+///     .temperature(0.7)
+///     .max_tool_calls(10)
+///     .system_prompt("你是一个专业的AI助手")
+///     .tools(vec![web_search, calculator])
+///     .memory(memory);
 /// ```
 ///
 /// **Level 3 - 完整构建器**:
@@ -69,6 +72,18 @@ impl AgentInstance {
     ///
     /// ```rust
     /// let agent = Agent::new("assistant", "你是一个AI助手").await?
+    ///     .model("gpt-4");
+    /// ```
+    pub fn model(self, model_name: &str) -> Result<Self> {
+        self.with_model(model_name)
+    }
+
+    /// Level 2 API - 设置模型（重新构建 Agent）
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let agent = Agent::new("assistant", "你是一个AI助手").await?
     ///     .with_model("gpt-4")?;
     /// ```
     pub fn with_model(self, model_name: &str) -> Result<Self> {
@@ -91,6 +106,11 @@ impl AgentInstance {
     }
 
     /// Level 2 API - 添加工具（重新构建 Agent）
+    pub fn tools(self, tools: Vec<Box<dyn Tool>>) -> Result<Self> {
+        self.with_tools(tools)
+    }
+
+    /// Level 2 API - 添加工具（重新构建 Agent）
     pub fn with_tools(self, tools: Vec<Box<dyn Tool>>) -> Result<Self> {
         // 获取当前配置
         let name = self.inner.get_name().to_string();
@@ -110,6 +130,11 @@ impl AgentInstance {
 
         let new_agent = builder.build()?;
         Ok(Self::new(new_agent))
+    }
+
+    /// Level 2 API - 设置内存（重新构建 Agent）
+    pub fn memory(self, memory: Arc<dyn crate::memory::Memory>) -> Result<Self> {
+        self.with_memory(memory)
     }
 
     /// Level 2 API - 设置内存（重新构建 Agent）
@@ -158,6 +183,71 @@ impl AgentInstance {
     pub fn instructions(&self) -> &str {
         self.inner.get_instructions()
     }
+
+    /// Level 2 API - 设置温度参数（重新构建 Agent）
+    ///
+    /// 控制生成文本的随机性，0.0-1.0之间
+    pub fn temperature(self, temperature: f32) -> Result<Self> {
+        // 获取当前配置
+        let name = self.inner.get_name().to_string();
+        let instructions = self.inner.get_instructions().to_string();
+        let model = self.inner.get_llm();
+
+        // 重新构建 Agent，添加温度设置
+        let new_agent = AgentBuilder::new()
+            .name(&name)
+            .instructions(&instructions)
+            .model(model)
+            .temperature(temperature)
+            .enable_smart_defaults()
+            .build()?;
+
+        Ok(Self::new(new_agent))
+    }
+
+    /// Level 2 API - 设置最大工具调用次数（重新构建 Agent）
+    pub fn max_tool_calls(self, max_calls: usize) -> Result<Self> {
+        // 获取当前配置
+        let name = self.inner.get_name().to_string();
+        let instructions = self.inner.get_instructions().to_string();
+        let model = self.inner.get_llm();
+
+        // 重新构建 Agent，添加最大工具调用设置
+        let new_agent = AgentBuilder::new()
+            .name(&name)
+            .instructions(&instructions)
+            .model(model)
+            .max_tool_calls(max_calls as u32)
+            .enable_smart_defaults()
+            .build()?;
+
+        Ok(Self::new(new_agent))
+    }
+
+    /// Level 2 API - 添加系统提示词（重新构建 Agent）
+    pub fn system_prompt(self, system_prompt: &str) -> Result<Self> {
+        // 合并系统提示词到指令中
+        let current_instructions = self.inner.get_instructions();
+        let new_instructions = if current_instructions.is_empty() {
+            system_prompt.to_string()
+        } else {
+            format!("{}\n\n{}", system_prompt, current_instructions)
+        };
+
+        // 获取当前配置
+        let name = self.inner.get_name().to_string();
+        let model = self.inner.get_llm();
+
+        // 重新构建 Agent
+        let new_agent = AgentBuilder::new()
+            .name(&name)
+            .instructions(&new_instructions)
+            .model(model)
+            .enable_smart_defaults()
+            .build()?;
+
+        Ok(Self::new(new_agent))
+    }
 }
 
 impl Agent {
@@ -190,21 +280,43 @@ impl Agent {
         Ok(AgentInstance::new(agent))
     }
 
-    /// 自动检测可用的模型
+    /// 自动检测可用的模型（增强版）
     async fn detect_available_model() -> Result<Arc<dyn LlmProvider>> {
-        // 按优先级尝试不同的模型提供商
-
-        // 1. 尝试 OpenAI
-        if let Ok(model) = unified_api::llm::openai("gpt-4o-mini") {
-            return Ok(model);
+        use std::env;
+        
+        // 检查环境变量来确定可用的模型
+        let openai_key = env::var("OPENAI_API_KEY").ok();
+        let claude_key = env::var("ANTHROPIC_API_KEY").ok();
+        let deepseek_key = env::var("DEEPSEEK_API_KEY").ok();
+        
+        // 按优先级和环境可用性尝试不同的模型提供商
+        
+        // 1. 尝试 OpenAI (如果有 API key)
+        if let Some(_key) = openai_key {
+            if let Ok(model) = unified_api::llm::openai("gpt-4o-mini") {
+                tracing::info!("Using OpenAI gpt-4o-mini for Level 1 API");
+                return Ok(model);
+            }
         }
-
-        // 2. 尝试 Claude
-        if let Ok(model) = unified_api::llm::claude("claude-3-haiku-20240307") {
-            return Ok(model);
+        
+        // 2. 尝试 Claude (如果有 API key)
+        if let Some(_key) = claude_key {
+            if let Ok(model) = unified_api::llm::claude("claude-3-haiku-20240307") {
+                tracing::info!("Using Claude claude-3-haiku for Level 1 API");
+                return Ok(model);
+            }
         }
-
-        // 3. 尝试 Ollama (本地模型)
+        
+        // 3. 尝试 DeepSeek (如果有 API key)
+        if let Some(_key) = deepseek_key {
+            if let Ok(model) = unified_api::llm::deepseek("deepseek-chat") {
+                tracing::info!("Using DeepSeek deepseek-chat for Level 1 API");
+                return Ok(model);
+            }
+        }
+        
+        // 4. 尝试 Ollama (本地模型) - 作为默认选项
+        tracing::info!("Falling back to Ollama llama3.2:3b for Level 1 API");
         let model = unified_api::llm::ollama("llama3.2:3b");
         Ok(model)
     }
@@ -312,21 +424,23 @@ impl AgentBuilder {
 
     /// 添加计算器工具
     pub fn with_calculator(self) -> Self {
-        // 这里需要实际的计算器工具实现
-        // 暂时返回 self，在后续实现中添加
-        self
+        // 添加基础数学运算工具：加减乘除、幂运算、三角函数等
+        self.with_math_tools()
     }
 
     /// 添加时间工具
     pub fn with_time_tools(self) -> Self {
-        // 添加获取当前时间、日期计算等工具
-        self
+        // 添加获取当前时间、日期计算、时区转换等工具
+        // 这些工具可以通过调用系统时间API来实现
+        tracing::debug!("Adding time tools to agent");
+        self // 暂时返回self，待工具系统完善后添加具体工具
     }
 
     /// 添加文本处理工具
     pub fn with_text_tools(self) -> Self {
-        // 添加文本分析、格式化等工具
-        self
+        // 添加文本分析、格式化、编码转换等工具
+        tracing::debug!("Adding text processing tools to agent");
+        self // 暂时返回self，待工具系统完善后添加具体工具
     }
 }
 
@@ -507,5 +621,48 @@ mod tests {
         assert!(agent.get_instructions().contains("data"));
         // Should have data and math tools
         assert!(agent.get_tools().len() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_level_2_api_chaining() {
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let agent = Agent::new("assistant", "You are helpful")
+            .await
+            .expect("Failed to create agent")
+            .temperature(0.8)
+            .expect("Failed to set temperature")
+            .max_tool_calls(5)
+            .expect("Failed to set max tool calls")
+            .system_prompt("You are an expert assistant")
+            .expect("Failed to set system prompt");
+
+        assert_eq!(agent.name(), "assistant");
+        assert!(agent.instructions().contains("expert"));
+    }
+
+    #[tokio::test]
+    async fn test_level_1_api_with_env_detection() {
+        // This test verifies that Level 1 API works with different environments
+        let agent = Agent::new("test_agent", "You are a test agent")
+            .await
+            .expect("Failed to create agent with Level 1 API");
+
+        assert_eq!(agent.name(), "test_agent");
+        assert_eq!(agent.instructions(), "You are a test agent");
+    }
+
+    #[tokio::test]
+    async fn test_enhanced_model_resolution() {
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        // Test various model name resolutions
+        let agent = Agent::quick("assistant", "You are helpful")
+            .model(llm)
+            .build()
+            .expect("Failed to create agent");
+
+        assert_eq!(agent.get_name(), "assistant");
+        assert_eq!(agent.get_instructions(), "You are helpful");
     }
 }

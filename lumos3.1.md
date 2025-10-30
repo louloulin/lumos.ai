@@ -385,6 +385,254 @@ impl InverseConwayStrategy {
 }
 ```
 
+**6. 敏捷/Scrum 协作模式**
+
+敏捷软件开发方法论提供了迭代式、增量式的协作框架。
+
+**Scrum 核心实践**:
+```
+Sprint Planning（冲刺计划）
+├─ 目标：定义 Sprint 目标和任务
+├─ 参与者：Product Owner, Scrum Master, Team
+├─ 输出：Sprint Backlog
+└─ AI 对应：任务分解、工作量估算、Agent 分配
+
+Daily Standup（每日站会）
+├─ 目标：同步进度，识别障碍
+├─ 三个问题：昨天做了什么？今天计划做什么？有什么障碍？
+├─ 时间限制：15分钟
+└─ AI 对应：Agent 状态同步、阻塞检测、快速重新规划
+
+Sprint Review（冲刺评审）
+├─ 目标：展示成果，收集反馈
+├─ 参与者：Team + Stakeholders
+├─ 输出：Product Increment
+└─ AI 对应：结果验证、质量评估、用户反馈整合
+
+Sprint Retrospective（冲刺回顾）
+├─ 目标：反思过程，持续改进
+├─ 问题：什么做得好？什么需要改进？下次如何改进？
+├─ 输出：Action Items
+└─ AI 对应：性能分析、策略优化、学习更新
+```
+
+**AI Agent 实现**:
+```rust
+pub struct ScrumBasedAgentTeam {
+    product_backlog: PriorityQueue<Task>,
+    sprint_backlog: Vec<Task>,
+    sprint_duration: Duration,
+    team_velocity: f64,
+}
+
+impl ScrumBasedAgentTeam {
+    // Sprint Planning
+    pub async fn plan_sprint(&mut self) -> Result<SprintPlan> {
+        // 1. 选择高优先级任务
+        let capacity = self.calculate_team_capacity();
+        let selected_tasks = self.select_tasks_for_sprint(capacity)?;
+
+        // 2. 分解任务
+        let decomposed = self.decompose_tasks(&selected_tasks).await?;
+
+        // 3. 分配给 Agent
+        let assignments = self.assign_tasks_to_agents(&decomposed)?;
+
+        Ok(SprintPlan {
+            goal: self.define_sprint_goal(&selected_tasks),
+            tasks: decomposed,
+            assignments,
+            duration: self.sprint_duration,
+        })
+    }
+
+    // Daily Standup
+    pub async fn daily_standup(&self) -> StandupReport {
+        let agents = self.get_all_agents();
+        let mut report = StandupReport::new();
+
+        for agent in agents {
+            let status = agent.get_status().await;
+            report.add_agent_status(AgentStatus {
+                agent_id: agent.id,
+                completed_yesterday: status.completed_tasks,
+                planned_today: status.planned_tasks,
+                blockers: status.blockers,
+            });
+        }
+
+        // 识别需要协调的问题
+        report.identify_coordination_needs();
+        report
+    }
+
+    // Sprint Retrospective
+    pub async fn retrospective(&mut self) -> RetrospectiveInsights {
+        let metrics = self.collect_sprint_metrics().await;
+
+        RetrospectiveInsights {
+            what_went_well: self.identify_successes(&metrics),
+            what_needs_improvement: self.identify_issues(&metrics),
+            action_items: self.generate_improvements(&metrics),
+            velocity_update: self.update_velocity(&metrics),
+        }
+    }
+}
+```
+
+**7. 心智理论（Theory of Mind, ToM）**
+
+心智理论是理解他人信念、意图、知识和情感的能力，是高级协作的基础。
+
+**ToM 的四个层次**:
+```
+Level 0: 无心智理论
+├─ 特征：无法理解他人的心理状态
+└─ AI 对应：简单的反应式 Agent
+
+Level 1: 一阶心智理论
+├─ 特征：理解他人有不同的信念和知识
+├─ 示例："Alice 认为盒子里有糖果"
+└─ AI 对应：Agent 能推理其他 Agent 的知识状态
+
+Level 2: 二阶心智理论
+├─ 特征：理解他人对第三方的信念
+├─ 示例："Alice 认为 Bob 相信盒子里有糖果"
+└─ AI 对应：Agent 能推理 Agent 间的相互理解
+
+Level 3+: 高阶心智理论
+├─ 特征：递归理解多层嵌套的信念
+├─ 示例："Alice 认为 Bob 知道 Carol 相信..."
+└─ AI 对应：复杂的多 Agent 推理和欺骗检测
+```
+
+**AI Agent 实现**:
+```rust
+pub struct TheoryOfMindModule {
+    // 其他 Agent 的信念模型
+    belief_models: HashMap<AgentId, BeliefState>,
+
+    // 意图识别器
+    intention_recognizer: IntentionRecognizer,
+
+    // 知识状态追踪
+    knowledge_tracker: KnowledgeTracker,
+}
+
+impl TheoryOfMindModule {
+    // 一阶 ToM：推理其他 Agent 的信念
+    pub fn infer_belief(&self, agent_id: AgentId, proposition: &Proposition) -> Belief {
+        let belief_state = self.belief_models.get(&agent_id)
+            .expect("Unknown agent");
+
+        // 基于观察到的行为推理信念
+        belief_state.query(proposition)
+    }
+
+    // 二阶 ToM：推理 Agent A 对 Agent B 的信念
+    pub fn infer_nested_belief(
+        &self,
+        agent_a: AgentId,
+        agent_b: AgentId,
+        proposition: &Proposition
+    ) -> Belief {
+        // Agent A 认为 Agent B 相信什么
+        let a_model_of_b = self.belief_models.get(&agent_a)
+            .and_then(|state| state.get_model_of_agent(agent_b))
+            .expect("No nested model");
+
+        a_model_of_b.query(proposition)
+    }
+
+    // 意图识别
+    pub fn recognize_intention(&mut self, agent_id: AgentId, actions: &[Action]) -> Intention {
+        self.intention_recognizer.infer_from_actions(agent_id, actions)
+    }
+
+    // 知识差距检测
+    pub fn detect_knowledge_gap(&self, agent_id: AgentId, required_knowledge: &Knowledge) -> bool {
+        let agent_knowledge = self.knowledge_tracker.get_knowledge(agent_id);
+        !agent_knowledge.contains(required_knowledge)
+    }
+}
+```
+
+**8. 人类协作的关键成功因素**
+
+基于组织行为学研究，高效团队协作的关键因素：
+
+```
+心理安全（Psychological Safety）
+├─ 定义：团队成员感到可以安全地承担风险
+├─ 表现：敢于提问、承认错误、提出异议
+├─ AI 对应：错误容忍机制、多样化建议、异议表达
+└─ 实现：允许 Agent 提出替代方案，不惩罚失败
+
+清晰的目标（Clear Goals）
+├─ 定义：团队对目标有共同理解
+├─ 表现：SMART 目标（具体、可衡量、可达成、相关、有时限）
+├─ AI 对应：明确的任务定义、成功标准、优先级
+└─ 实现：结构化任务描述、可验证的完成条件
+
+相互依赖（Interdependence）
+├─ 定义：成员需要彼此才能完成任务
+├─ 表现：任务分工、技能互补、资源共享
+├─ AI 对应：任务依赖图、Agent 专业化、资源协调
+└─ 实现：显式依赖建模、协作激励机制
+
+有效沟通（Effective Communication）
+├─ 定义：信息及时、准确、完整地传递
+├─ 表现：主动分享、积极倾听、清晰表达
+├─ AI 对应：结构化消息、上下文感知、反馈机制
+└─ 实现：标准化通信协议、消息优先级、确认机制
+
+适应性（Adaptability）
+├─ 定义：团队能够应对变化和不确定性
+├─ 表现：灵活调整、快速学习、创新解决
+├─ AI 对应：动态重规划、在线学习、策略调整
+└─ 实现：监控-评估-调整循环、元学习能力
+```
+
+**AI Agent 协作质量评估框架**:
+```rust
+pub struct CollaborationQualityMetrics {
+    // 心理安全指标
+    error_tolerance_rate: f64,
+    alternative_proposal_frequency: f64,
+
+    // 目标清晰度
+    goal_alignment_score: f64,
+    task_understanding_consistency: f64,
+
+    // 相互依赖
+    task_coupling_degree: f64,
+    resource_sharing_efficiency: f64,
+
+    // 沟通有效性
+    message_clarity_score: f64,
+    information_completeness: f64,
+    response_timeliness: Duration,
+
+    // 适应性
+    replanning_frequency: f64,
+    learning_rate: f64,
+    strategy_diversity: f64,
+}
+
+impl CollaborationQualityMetrics {
+    pub fn overall_quality_score(&self) -> f64 {
+        // 加权平均
+        0.2 * self.psychological_safety_score()
+            + 0.2 * self.goal_clarity_score()
+            + 0.2 * self.interdependence_score()
+            + 0.2 * self.communication_effectiveness_score()
+            + 0.2 * self.adaptability_score()
+    }
+}
+```
+
+---
+
 #### 新兴通信协议
 
 **1. Model Context Protocol (MCP)** - Anthropic, 2024年11月
@@ -3595,5 +3843,646 @@ impl CodebuffWorkflow {
 > - ✅ 整合 Anthropic 六大 Agent 设计模式
 > - ✅ 整合 Codebuff 三 Agent 编码架构
 > - ✅ 整合 2024-2025 安全研究发现
+> - ✅ 整合人类协作模式（Tuckman、SMM、TMS、ToM、Conway's Law、Scrum）
 > - ✅ 更新所有任务优先级和时间估算
+
+---
+
+## 附录 H: 人类协作模式在 AI Agent 系统中的应用
+
+### H.1 从人类团队到 AI Agent 团队的映射
+
+本附录详细说明如何将人类协作的成功模式应用到 AI Agent 系统设计中。
+
+#### H.1.1 Tuckman 模型的 Agent 实现
+
+**完整的团队生命周期管理系统**:
+
+```rust
+pub struct AgentTeamLifecycle {
+    current_stage: TeamStage,
+    team_members: Vec<AgentId>,
+    stage_metrics: StageMetrics,
+    transition_criteria: HashMap<TeamStage, TransitionCriteria>,
+}
+
+pub enum TeamStage {
+    Forming {
+        discovery_progress: f64,
+        capability_exchange_complete: bool,
+    },
+    Storming {
+        conflicts_identified: Vec<Conflict>,
+        resolution_attempts: usize,
+    },
+    Norming {
+        protocols_established: Vec<Protocol>,
+        consensus_level: f64,
+    },
+    Performing {
+        efficiency_score: f64,
+        autonomy_level: f64,
+    },
+    Adjourning {
+        results_collected: bool,
+        lessons_learned: Vec<Lesson>,
+    },
+}
+
+impl AgentTeamLifecycle {
+    // 形成期：Agent 相互发现和角色分配
+    pub async fn forming_phase(&mut self) -> Result<()> {
+        // 1. 能力声明和交换
+        for agent_id in &self.team_members {
+            let capabilities = self.query_capabilities(agent_id).await?;
+            self.register_capabilities(agent_id, capabilities)?;
+        }
+
+        // 2. 初始角色分配
+        let role_assignments = self.assign_initial_roles()?;
+        self.broadcast_role_assignments(role_assignments).await?;
+
+        // 3. 建立基本通信通道
+        self.setup_communication_channels().await?;
+
+        // 4. 检查是否可以进入下一阶段
+        if self.check_forming_complete() {
+            self.transition_to_storming().await?;
+        }
+
+        Ok(())
+    }
+
+    // 震荡期：处理冲突和协商
+    pub async fn storming_phase(&mut self) -> Result<()> {
+        // 1. 识别任务冲突
+        let conflicts = self.detect_conflicts().await?;
+
+        // 2. 优先级协商
+        for conflict in conflicts {
+            let resolution = self.negotiate_conflict(conflict).await?;
+            self.apply_resolution(resolution)?;
+        }
+
+        // 3. 资源分配调整
+        self.rebalance_resources().await?;
+
+        // 4. 检查冲突是否解决
+        if self.conflicts_resolved() {
+            self.transition_to_norming().await?;
+        }
+
+        Ok(())
+    }
+
+    // 规范期：建立协作规范
+    pub async fn norming_phase(&mut self) -> Result<()> {
+        // 1. 定义通信协议
+        let protocols = self.establish_protocols().await?;
+
+        // 2. 创建共享心智模型
+        let shared_model = self.build_shared_mental_model().await?;
+        self.synchronize_mental_model(shared_model).await?;
+
+        // 3. 建立知识共享机制
+        self.setup_knowledge_sharing().await?;
+
+        // 4. 检查规范是否稳定
+        if self.norms_established() {
+            self.transition_to_performing().await?;
+        }
+
+        Ok(())
+    }
+
+    // 执行期：高效协作
+    pub async fn performing_phase(&mut self) -> Result<()> {
+        // 1. 自主任务执行
+        let tasks = self.get_pending_tasks();
+        let results = self.execute_tasks_autonomously(tasks).await?;
+
+        // 2. 动态协调
+        self.coordinate_dynamically().await?;
+
+        // 3. 性能监控和优化
+        let metrics = self.collect_performance_metrics().await?;
+        self.optimize_based_on_metrics(metrics)?;
+
+        // 4. 检查任务是否完成
+        if self.all_tasks_complete() {
+            self.transition_to_adjourning().await?;
+        }
+
+        Ok(())
+    }
+
+    // 解散期：总结和学习
+    pub async fn adjourning_phase(&mut self) -> Result<TeamSummary> {
+        // 1. 收集结果
+        let results = self.collect_all_results().await?;
+
+        // 2. 提取经验教训
+        let lessons = self.extract_lessons_learned().await?;
+
+        // 3. 更新全局知识库
+        self.update_global_knowledge(lessons.clone()).await?;
+
+        // 4. 释放资源
+        self.release_resources().await?;
+
+        Ok(TeamSummary {
+            results,
+            lessons,
+            performance_metrics: self.stage_metrics.clone(),
+        })
+    }
+}
+```
+
+#### H.1.2 共享心智模型的实现
+
+**三层心智模型同步系统**:
+
+```rust
+pub struct SharedMentalModelSystem {
+    // 全局模型
+    global_model: Arc<RwLock<GlobalMentalModel>>,
+
+    // 局部模型（每个 Agent 的视角）
+    local_models: HashMap<AgentId, LocalMentalModel>,
+
+    // 同步策略
+    sync_strategy: SyncStrategy,
+}
+
+pub struct GlobalMentalModel {
+    // 任务模型
+    task_graph: TaskGraph,
+    task_dependencies: DependencyGraph,
+    success_criteria: Vec<Criterion>,
+
+    // 团队模型
+    agent_registry: AgentRegistry,
+    role_matrix: RoleMatrix,
+    communication_topology: CommunicationTopology,
+
+    // 工具模型
+    tool_catalog: ToolCatalog,
+    tool_usage_patterns: UsagePatternLibrary,
+    tool_selection_rules: Vec<SelectionRule>,
+}
+
+pub struct LocalMentalModel {
+    agent_id: AgentId,
+
+    // 对全局模型的理解
+    perceived_task_graph: TaskGraph,
+    perceived_team_structure: TeamStructure,
+    perceived_tool_availability: ToolSet,
+
+    // 局部特定信息
+    local_context: Context,
+    local_goals: Vec<Goal>,
+    local_constraints: Vec<Constraint>,
+}
+
+impl SharedMentalModelSystem {
+    // 定期同步
+    pub async fn periodic_sync(&mut self) -> Result<SyncReport> {
+        let mut report = SyncReport::new();
+
+        // 1. 收集所有局部模型
+        let local_models: Vec<_> = self.local_models.values().collect();
+
+        // 2. 识别不一致
+        let inconsistencies = self.detect_inconsistencies(&local_models)?;
+        report.add_inconsistencies(inconsistencies.clone());
+
+        // 3. 解决不一致
+        for inconsistency in inconsistencies {
+            let resolution = self.resolve_inconsistency(inconsistency).await?;
+            report.add_resolution(resolution.clone());
+
+            // 更新全局模型
+            self.apply_resolution_to_global(resolution)?;
+        }
+
+        // 4. 广播更新
+        self.broadcast_global_updates().await?;
+
+        Ok(report)
+    }
+
+    // 检测不一致
+    fn detect_inconsistencies(&self, local_models: &[&LocalMentalModel]) -> Result<Vec<Inconsistency>> {
+        let mut inconsistencies = Vec::new();
+
+        // 任务理解不一致
+        for model in local_models {
+            if !self.task_understanding_consistent(model)? {
+                inconsistencies.push(Inconsistency::TaskUnderstanding {
+                    agent_id: model.agent_id,
+                    expected: self.global_model.read().unwrap().task_graph.clone(),
+                    actual: model.perceived_task_graph.clone(),
+                });
+            }
+        }
+
+        // 角色理解不一致
+        for model in local_models {
+            if !self.role_understanding_consistent(model)? {
+                inconsistencies.push(Inconsistency::RoleUnderstanding {
+                    agent_id: model.agent_id,
+                    // ... 详细信息
+                });
+            }
+        }
+
+        Ok(inconsistencies)
+    }
+}
+```
+
+#### H.1.3 交互记忆系统（TMS）的实现
+
+**完整的分布式知识管理系统**:
+
+```rust
+pub struct TransactiveMemorySystem {
+    // 专业化：领域 -> 专家 Agent 映射
+    expertise_directory: HashMap<Domain, Vec<ExpertAgent>>,
+
+    // 可信度：Agent 在各领域的信誉
+    credibility_matrix: HashMap<AgentId, HashMap<Domain, CredibilityScore>>,
+
+    // 协调：知识检索和更新协议
+    knowledge_graph: DistributedKnowledgeGraph,
+    retrieval_protocol: RetrievalProtocol,
+    update_protocol: UpdateProtocol,
+}
+
+pub struct ExpertAgent {
+    agent_id: AgentId,
+    domain: Domain,
+    expertise_level: f64,
+    specialization_history: Vec<SpecializationEvent>,
+}
+
+pub struct CredibilityScore {
+    current_score: f64,
+    historical_performance: Vec<PerformanceRecord>,
+    peer_ratings: Vec<PeerRating>,
+    last_updated: Timestamp,
+}
+
+impl TransactiveMemorySystem {
+    // 查询：谁知道什么
+    pub fn who_knows_what(&self, query: &KnowledgeQuery) -> Vec<AgentId> {
+        // 1. 识别相关领域
+        let relevant_domains = self.identify_relevant_domains(query);
+
+        // 2. 查找每个领域的专家
+        let mut experts = Vec::new();
+        for domain in relevant_domains {
+            if let Some(domain_experts) = self.expertise_directory.get(&domain) {
+                experts.extend(domain_experts.iter().map(|e| e.agent_id));
+            }
+        }
+
+        // 3. 按可信度排序
+        experts.sort_by_key(|agent_id| {
+            let avg_credibility = self.average_credibility(*agent_id, &relevant_domains);
+            -(avg_credibility * 1000.0) as i64
+        });
+
+        experts
+    }
+
+    // 知识检索
+    pub async fn retrieve_knowledge(&self, query: &KnowledgeQuery) -> Result<Knowledge> {
+        // 1. 找到最佳专家
+        let experts = self.who_knows_what(query);
+        let best_expert = experts.first()
+            .ok_or(Error::NoExpertFound)?;
+
+        // 2. 向专家查询
+        let knowledge = self.query_expert(*best_expert, query).await?;
+
+        // 3. 验证知识质量
+        let quality = self.assess_knowledge_quality(&knowledge)?;
+
+        // 4. 如果质量不足，尝试其他专家
+        if quality < 0.7 && experts.len() > 1 {
+            let alternative_knowledge = self.query_expert(experts[1], query).await?;
+
+            // 合并或选择更好的答案
+            return Ok(self.merge_knowledge(knowledge, alternative_knowledge)?);
+        }
+
+        Ok(knowledge)
+    }
+
+    // 更新专业化
+    pub fn update_specialization(&mut self, agent_id: AgentId, domain: Domain, performance: f64) {
+        // 1. 更新可信度
+        self.update_credibility(agent_id, domain.clone(), performance);
+
+        // 2. 如果表现优秀，加入专家目录
+        if performance > 0.8 {
+            let expert = ExpertAgent {
+                agent_id,
+                domain: domain.clone(),
+                expertise_level: performance,
+                specialization_history: vec![SpecializationEvent {
+                    timestamp: Timestamp::now(),
+                    performance,
+                }],
+            };
+
+            self.expertise_directory
+                .entry(domain)
+                .or_default()
+                .push(expert);
+        }
+
+        // 3. 如果表现不佳，从专家目录移除
+        if performance < 0.5 {
+            if let Some(experts) = self.expertise_directory.get_mut(&domain) {
+                experts.retain(|e| e.agent_id != agent_id);
+            }
+        }
+    }
+}
+```
+
+### H.2 Anthropic 多 Agent 研究系统的实践经验
+
+基于 Anthropic 2025年6月发布的《How we built our multi-agent research system》，我们总结了以下关键经验：
+
+#### H.2.1 多 Agent 系统的核心优势
+
+**1. Token 使用是性能的主要驱动因素**
+
+Anthropic 的分析显示，在 BrowseComp 评估中：
+- Token 使用量解释了 80% 的性能差异
+- 工具调用次数和模型选择是另外两个关键因素
+- 多 Agent 系统通过分布式上下文窗口有效扩展 Token 使用
+
+**实践启示**:
+```rust
+pub struct TokenBudgetManager {
+    total_budget: usize,
+    agent_allocations: HashMap<AgentId, usize>,
+    usage_tracking: HashMap<AgentId, usize>,
+}
+
+impl TokenBudgetManager {
+    // 动态分配 Token 预算
+    pub fn allocate_budget(&mut self, task_complexity: f64) -> HashMap<AgentId, usize> {
+        // 根据任务复杂度调整预算
+        let adjusted_budget = (self.total_budget as f64 * task_complexity) as usize;
+
+        // 分配给各个 Agent
+        let num_agents = self.agent_allocations.len();
+        let per_agent = adjusted_budget / num_agents;
+
+        self.agent_allocations.iter()
+            .map(|(id, _)| (*id, per_agent))
+            .collect()
+    }
+}
+```
+
+**2. 并行化是速度的关键**
+
+Anthropic 的系统使用两种并行化：
+- Lead Agent 并行创建 3-5 个 Subagent
+- Subagent 并行调用 3+ 个工具
+
+这使研究时间减少了 90%。
+
+**实践启示**:
+```rust
+pub struct ParallelExecutionEngine {
+    max_parallel_agents: usize,
+    max_parallel_tools_per_agent: usize,
+}
+
+impl ParallelExecutionEngine {
+    pub async fn execute_research(&self, query: &str) -> Result<ResearchResult> {
+        // 1. Lead Agent 分解任务
+        let subtasks = self.decompose_query(query).await?;
+
+        // 2. 并行创建 Subagent
+        let subagents: Vec<_> = subtasks.into_iter()
+            .take(self.max_parallel_agents)
+            .map(|task| self.spawn_subagent(task))
+            .collect();
+
+        // 3. 等待所有 Subagent 完成
+        let results = futures::future::join_all(subagents).await;
+
+        // 4. 合并结果
+        self.merge_results(results)
+    }
+}
+```
+
+**3. 多 Agent 系统的成本权衡**
+
+- Agent 使用约 4× 聊天的 Token
+- 多 Agent 系统使用约 15× 聊天的 Token
+- 适用于高价值任务，需要权衡成本和性能
+
+#### H.2.2 Prompt 工程的关键原则
+
+**1. 像 Agent 一样思考**
+
+使用 Console 模拟 Agent 行为，观察每一步：
+- 识别失败模式（继续搜索已有结果、冗长查询、错误工具选择）
+- 建立准确的 Agent 心智模型
+- 使最有影响力的改变变得明显
+
+**2. 教会 Orchestrator 如何委托**
+
+Lead Agent 需要给 Subagent 详细的任务描述：
+- 目标
+- 输出格式
+- 工具和来源指导
+- 清晰的任务边界
+
+**3. 根据查询复杂度扩展工作量**
+
+在 Prompt 中嵌入扩展规则：
+- 简单事实查找：1 个 Agent，3-10 次工具调用
+- 直接比较：2-4 个 Subagent，每个 10-15 次调用
+- 复杂研究：10+ 个 Subagent，明确分工
+
+**4. 工具设计和选择至关重要**
+
+- 工具描述质量直接影响 Agent 性能
+- 使用 Agent 测试和改进工具描述
+- 工具测试 Agent 可以将任务完成时间减少 40%
+
+**5. 引导思考过程**
+
+- Extended Thinking 作为可控的草稿纸
+- Lead Agent 使用思考规划方法
+- Subagent 使用交错思考评估工具结果
+
+#### H.2.3 评估策略
+
+**1. 从小样本开始**
+
+- 早期开发阶段，20 个测试用例足够
+- 效果大时（30% → 80%），小样本即可发现
+- 不要延迟创建评估
+
+**2. LLM-as-Judge 的正确使用**
+
+使用单个 LLM 调用评估多个维度：
+- 事实准确性
+- 引用准确性
+- 完整性
+- 来源质量
+- 工具效率
+
+输出 0.0-1.0 分数和通过/失败判断。
+
+**3. 人工评估捕获自动化遗漏的问题**
+
+人工测试发现：
+- 幻觉答案
+- 系统故障
+- 来源选择偏差（SEO 内容农场 vs 权威来源）
+
+### H.3 LumosAI 的人类协作启发式改进计划
+
+基于以上分析，我们为 LumosAI 制定以下改进计划：
+
+#### H.3.1 新增 P0 任务
+
+**P0-9: 实现团队生命周期管理（2周）**
+
+```rust
+// 位置：lumosai_core/src/agent/team_lifecycle.rs
+pub struct TeamLifecycleManager {
+    lifecycle: AgentTeamLifecycle,
+    stage_transitions: Vec<StageTransition>,
+}
+
+// 验收标准：
+// - 实现 Tuckman 五阶段模型
+// - 自动检测阶段转换条件
+// - 记录每个阶段的性能指标
+// - 通过 10+ 个团队生命周期测试
+```
+
+**P0-10: 实现共享心智模型同步（2周）**
+
+```rust
+// 位置：lumosai_core/src/agent/shared_mental_model.rs
+pub struct SharedMentalModelSystem {
+    global_model: GlobalMentalModel,
+    local_models: HashMap<AgentId, LocalMentalModel>,
+    sync_protocol: SyncProtocol,
+}
+
+// 验收标准：
+// - 三层模型（任务、团队、工具）
+// - 自动检测和解决不一致
+// - 定期同步机制
+// - 通过 15+ 个同步测试
+```
+
+#### H.3.2 新增 P1 任务
+
+**P1-9: 实现交互记忆系统（3周）**
+
+```rust
+// 位置：lumosai_core/src/memory/transactive_memory.rs
+pub struct TransactiveMemorySystem {
+    expertise_directory: ExpertiseDirectory,
+    credibility_matrix: CredibilityMatrix,
+    knowledge_graph: DistributedKnowledgeGraph,
+}
+
+// 验收标准：
+// - 专业化、可信度、协调三大机制
+// - 动态专家发现和评分
+// - 知识检索优化
+// - 通过 20+ 个 TMS 测试
+```
+
+**P1-10: 实现心智理论模块（3周）**
+
+```rust
+// 位置：lumosai_core/src/agent/theory_of_mind.rs
+pub struct TheoryOfMindModule {
+    belief_models: HashMap<AgentId, BeliefState>,
+    intention_recognizer: IntentionRecognizer,
+    knowledge_tracker: KnowledgeTracker,
+}
+
+// 验收标准：
+// - 一阶和二阶 ToM 推理
+// - 意图识别
+// - 知识差距检测
+// - 通过 15+ 个 ToM 测试
+```
+
+#### H.3.3 新增 P2 任务
+
+**P2-4: 实现 Scrum 风格的迭代协作（4周）**
+
+```rust
+// 位置：lumosai_core/src/workflow/scrum_workflow.rs
+pub struct ScrumBasedAgentTeam {
+    product_backlog: PriorityQueue<Task>,
+    sprint_backlog: Vec<Task>,
+    sprint_duration: Duration,
+    team_velocity: f64,
+}
+
+// 验收标准：
+// - Sprint Planning、Daily Standup、Review、Retrospective
+// - 速度追踪和预测
+// - 持续改进机制
+// - 通过 10+ 个 Sprint 模拟
+```
+
+**P2-5: 实现 Conway's Law 感知的架构优化（4周）**
+
+```rust
+// 位置：lumosai_core/src/agent/conway_optimizer.rs
+pub struct ConwayLawOptimizer {
+    desired_architecture: ArchitecturePattern,
+    current_team_structure: TeamStructure,
+    optimization_strategy: OptimizationStrategy,
+}
+
+// 验收标准：
+// - 分析架构和团队结构的对齐度
+// - 生成重组建议
+// - 逆向 Conway 策略
+// - 通过 5+ 个架构优化案例
+```
+
+### H.4 更新后的生产就绪度评分
+
+整合人类协作模式后，LumosAI 的预期评分：
+
+| 维度 | 当前 | M1 (2个月) | M2 (6个月) | M3 (12个月) | 目标 |
+|------|------|-----------|-----------|------------|------|
+| 多智能体协作 | 6.0 | 7.5 | 8.5 | 9.5 | 9.5 |
+| 团队生命周期管理 | 0.0 | 7.0 | 8.5 | 9.0 | 9.0 |
+| 共享心智模型 | 0.0 | 6.5 | 8.0 | 9.0 | 9.0 |
+| 交互记忆系统 | 0.0 | 0.0 | 7.5 | 8.5 | 8.5 |
+| 心智理论推理 | 0.0 | 0.0 | 7.0 | 8.5 | 8.5 |
+| 协作质量评估 | 0.0 | 6.0 | 7.5 | 8.5 | 8.5 |
+| **整体评分** | **5.8** | **7.9** | **9.0** | **9.7** | **9.7** |
+
+---
+
+**分析完成！建议立即开始执行 Phase 1 的 P0 任务！** 🚀
 

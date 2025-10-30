@@ -416,7 +416,7 @@ pub trait Agent: Base + Send + Sync {
     /// }
     /// ```
     async fn sop_think(
-        &mut self,
+        &self,
         _messages: Vec<super::sop_types::SopMessage>,
     ) -> Result<super::sop_types::AgentAction> {
         Ok(super::sop_types::AgentAction::NoOp) // 默认：不执行任何操作
@@ -453,7 +453,7 @@ pub trait Agent: Base + Send + Sync {
     /// }
     /// ```
     async fn sop_act(
-        &mut self,
+        &self,
         _action: super::sop_types::AgentAction,
     ) -> Result<super::sop_types::SopMessage> {
         // 默认：产生一个空消息

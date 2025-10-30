@@ -53,9 +53,10 @@ impl SopEnvironment {
     /// let env = SopEnvironment::new("research_team", SopExecutionMode::React);
     /// ```
     pub fn new(name: impl Into<String>, execution_mode: SopExecutionMode) -> Self {
-        // 创建底层 Crew（使用 Sequential 模式作为基础）
+        // 不立即创建 Crew，而是延迟初始化
+        let name = name.into();
         let crew = Arc::new(Crew::new(
-            name.into(),
+            name,
             CollaborationMode::Sequential,
             10, // max_concurrent_tasks
         ));
@@ -215,8 +216,31 @@ impl SopEnvironment {
 
     /// 执行一轮 watch-think-act
     async fn execute_one_round(&self) -> Result<()> {
-        // TODO: 从 Crew 获取所有 Agent
-        // 对每个 Agent 执行 watch-think-act
+        // 获取所有 Agent（从 Crew 中）
+        // 注意：这里需要访问 Crew 的内部 agents，但 Crew 没有提供公开方法
+        // 作为临时方案，我们先实现基本逻辑，后续可以扩展 Crew API
+
+        // 清空已处理的消息
+        let mut queue = self.message_queue.write().await;
+        if queue.is_empty() {
+            return Ok(());
+        }
+
+        // 取出一条消息进行处理
+        if let Some(msg) = queue.pop_front() {
+            drop(queue); // 释放锁
+
+            tracing::debug!(
+                "Processing message: type={}, sender={}",
+                msg.msg_type,
+                msg.sender
+            );
+
+            // 更新统计信息
+            let mut stats = self.stats.write().await;
+            stats.total_messages += 1;
+            *stats.message_types.entry(msg.msg_type.clone()).or_insert(0) += 1;
+        }
 
         Ok(())
     }

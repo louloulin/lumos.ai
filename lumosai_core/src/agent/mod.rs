@@ -23,6 +23,7 @@ pub mod runtime_context;
 pub mod session;
 pub mod simplified_api;
 pub mod sop_environment;
+pub mod sop_simple;
 pub mod sop_types;
 pub mod streaming;
 pub mod trait_def;
@@ -79,6 +80,7 @@ pub use types::{
 
 // Re-export SOP types and environment
 pub use sop_environment::SopEnvironment;
+pub use sop_simple::SimpleSopEnvironment;
 pub use sop_types::{AgentAction, SopExecutionMode, SopMessage, SopStats};
 
 // Re-export evaluation types

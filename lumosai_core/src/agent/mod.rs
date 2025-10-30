@@ -17,6 +17,7 @@ pub mod feature_completion;
 pub mod mastra_compat;
 pub mod message_utils;
 pub mod model_resolver;
+pub mod operators; // 新增：Agent 操作符支持
 pub mod orchestration;
 pub mod performance;
 pub mod runtime_context;
@@ -82,6 +83,9 @@ pub use types::{
 pub use sop_environment::SopEnvironment;
 pub use sop_simple::SimpleSopEnvironment;
 pub use sop_types::{AgentAction, SopExecutionMode, SopMessage, SopStats};
+
+// Re-export operators
+pub use operators::{delegate, parallel, pipe, AgentDelegation, AgentParallel, AgentPipeline};
 
 // Re-export evaluation types
 pub use evaluation::{

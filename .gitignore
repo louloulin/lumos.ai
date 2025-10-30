@@ -13,7 +13,7 @@ pnpm-debug.log*
 lerna-debug.log*
 .pnp/
 .pnp.js
-
+source/
 # Bun 相关
 bun.lockb
 bun-debug.log*

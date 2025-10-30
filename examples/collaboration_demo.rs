@@ -2,11 +2,11 @@
 //!
 //! 展示智能负载均衡和任务分配功能
 
-use lumosai_core::agent::collaboration::{Crew, AgentTask, AgentRole, CollaborationMode};
+use lumosai_core::agent::collaboration::{AgentRole, AgentTask, CollaborationMode, Crew};
 use lumosai_core::agent::simplified_api::Agent;
 use lumosai_core::llm::MockLlmProvider;
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,7 +40,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "负责数据分析和报告生成".to_string(),
                 "专业的数据分析师，擅长数据处理和可视化".to_string(),
             )
-            .with_skills(vec!["数据分析".to_string(), "报告生成".to_string(), "Python".to_string()]),
+            .with_skills(vec![
+                "数据分析".to_string(),
+                "报告生成".to_string(),
+                "Python".to_string(),
+            ]),
         ),
         (
             "software_engineer",
@@ -49,7 +53,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "负责代码开发和实现".to_string(),
                 "经验丰富的软件工程师，精通多种编程语言".to_string(),
             )
-            .with_skills(vec!["Rust".to_string(), "TypeScript".to_string(), "系统设计".to_string()]),
+            .with_skills(vec![
+                "Rust".to_string(),
+                "TypeScript".to_string(),
+                "系统设计".to_string(),
+            ]),
         ),
         (
             "technical_writer",
@@ -58,7 +66,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "负责文档编写和维护".to_string(),
                 "专业的技术写手，擅长创作清晰易懂的技术文档".to_string(),
             )
-            .with_skills(vec!["文档编写".to_string(), "Markdown".to_string(), "API文档".to_string()]),
+            .with_skills(vec![
+                "文档编写".to_string(),
+                "Markdown".to_string(),
+                "API文档".to_string(),
+            ]),
         ),
         (
             "qa_engineer",
@@ -67,7 +79,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "负责测试和质量保证".to_string(),
                 "细心的QA工程师，确保产品质量".to_string(),
             )
-            .with_skills(vec!["测试".to_string(), "自动化测试".to_string(), "质量保证".to_string()]),
+            .with_skills(vec![
+                "测试".to_string(),
+                "自动化测试".to_string(),
+                "质量保证".to_string(),
+            ]),
         ),
     ];
 
@@ -79,7 +95,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .model(llm.clone())
             .build()?;
 
-        crew.add_agent(agent_id.to_string(), Arc::new(agent), role).await?;
+        crew.add_agent(agent_id.to_string(), Arc::new(agent), role)
+            .await?;
         println!("✅ 已添加 Agent: {}", agent_id);
     }
 
@@ -109,20 +126,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut metadata = HashMap::new();
         match i {
             0 => {
-                metadata.insert("required_skills".to_string(), serde_json::to_value(vec!["数据分析", "报告生成", "Python"])?);
-                metadata.insert("domain".to_string(), serde_json::to_value("数据分析".to_string())?);
+                metadata.insert(
+                    "required_skills".to_string(),
+                    serde_json::to_value(vec!["数据分析", "报告生成", "Python"])?,
+                );
+                metadata.insert(
+                    "domain".to_string(),
+                    serde_json::to_value("数据分析".to_string())?,
+                );
             }
             1 => {
-                metadata.insert("required_skills".to_string(), serde_json::to_value(vec!["Rust", "系统设计"])?);
-                metadata.insert("domain".to_string(), serde_json::to_value("软件开发".to_string())?);
+                metadata.insert(
+                    "required_skills".to_string(),
+                    serde_json::to_value(vec!["Rust", "系统设计"])?,
+                );
+                metadata.insert(
+                    "domain".to_string(),
+                    serde_json::to_value("软件开发".to_string())?,
+                );
             }
             2 => {
-                metadata.insert("required_skills".to_string(), serde_json::to_value(vec!["文档编写", "Markdown", "API文档"])?);
-                metadata.insert("domain".to_string(), serde_json::to_value("技术写作".to_string())?);
+                metadata.insert(
+                    "required_skills".to_string(),
+                    serde_json::to_value(vec!["文档编写", "Markdown", "API文档"])?,
+                );
+                metadata.insert(
+                    "domain".to_string(),
+                    serde_json::to_value("技术写作".to_string())?,
+                );
             }
             3 => {
-                metadata.insert("required_skills".to_string(), serde_json::to_value(vec!["测试", "自动化测试"])?);
-                metadata.insert("domain".to_string(), serde_json::to_value("质量保证".to_string())?);
+                metadata.insert(
+                    "required_skills".to_string(),
+                    serde_json::to_value(vec!["测试", "自动化测试"])?,
+                );
+                metadata.insert(
+                    "domain".to_string(),
+                    serde_json::to_value("质量保证".to_string())?,
+                );
             }
             _ => {}
         }

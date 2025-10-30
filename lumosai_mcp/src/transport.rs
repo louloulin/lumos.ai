@@ -165,9 +165,7 @@ impl Transport for StdioTransport {
             stdin
                 .write_all(message_json.as_bytes())
                 .await
-                .map_err(|e| {
-                    MCPError::ConnectionError(format!("Failed to write to stdin: {e}"))
-                })?;
+                .map_err(|e| MCPError::ConnectionError(format!("Failed to write to stdin: {e}")))?;
             stdin.write_all(b"\n").await.map_err(|e| {
                 MCPError::ConnectionError(format!("Failed to write newline to stdin: {e}"))
             })?;

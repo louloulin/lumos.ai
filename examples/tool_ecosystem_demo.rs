@@ -44,9 +44,9 @@ async fn demo_tool_categories() -> Result<()> {
     println!("=== 场景 1: 工具分类总览 ===\n");
 
     let categories = get_tool_categories();
-    
+
     println!("✅ LumosAI 工具生态包含 {} 个核心分类:\n", categories.len());
-    
+
     for (category, tools) in categories.iter() {
         println!("📁 {}: {} 个工具", category, tools.len());
         for tool in tools.iter() {
@@ -234,4 +234,3 @@ async fn demo_tool_registry() -> Result<()> {
 
     Ok(())
 }
-

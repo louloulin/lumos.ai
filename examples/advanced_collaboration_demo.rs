@@ -3,9 +3,8 @@
 //! 展示智能任务分解、依赖关系管理和高级调度功能
 
 use lumosai_core::agent::collaboration::{
-    Crew, AgentTask, AgentRole, CollaborationMode,
-    IntelligentTaskDecomposer, AdvancedScheduler, SchedulingStrategy, DependencyGraph,
-    TaskDecomposer
+    AdvancedScheduler, AgentRole, AgentTask, CollaborationMode, Crew, DependencyGraph,
+    IntelligentTaskDecomposer, SchedulingStrategy, TaskDecomposer,
 };
 use lumosai_core::agent::simplified_api::Agent;
 use lumosai_core::llm::MockLlmProvider;
@@ -40,19 +39,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let complex_tasks = vec![
         (
             "构建完整的电商系统",
-            "开发一个全功能的电商平台，包括用户管理、商品管理、订单处理、支付集成等功能"
+            "开发一个全功能的电商平台，包括用户管理、商品管理、订单处理、支付集成等功能",
         ),
         (
-            "进行市场竞品分析", 
-            "深入研究主要竞争对手的产品功能、定价策略、市场份额、用户评价等，生成详细的分析报告"
+            "进行市场竞品分析",
+            "深入研究主要竞争对手的产品功能、定价策略、市场份额、用户评价等，生成详细的分析报告",
         ),
         (
             "优化数据库性能",
-            "分析当前数据库性能瓶颈，实施优化方案，提升查询效率和数据处理能力"
+            "分析当前数据库性能瓶颈，实施优化方案，提升查询效率和数据处理能力",
         ),
         (
             "准备产品发布",
-            "准备产品发布的各项工作，包括文档、测试、部署、培训等"
+            "准备产品发布的各项工作，包括文档、测试、部署、培训等",
         ),
     ];
 
@@ -77,7 +76,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("📋 生成子任务数: {}", subtasks.len());
 
         for (j, subtask) in subtasks.iter().enumerate() {
-            println!("  {}. {} (优先级: {})", j + 1, subtask.description, subtask.priority);
+            println!(
+                "  {}. {} (优先级: {})",
+                j + 1,
+                subtask.description,
+                subtask.priority
+            );
         }
     }
 
@@ -130,7 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (parent, child) in &dependencies {
         let parent_id = format!("task_{}", parent);
         let child_id = format!("task_{}", child);
-        
+
         use lumosai_core::agent::collaboration::{SubTaskRelation, TaskRelationType};
         let relation = SubTaskRelation {
             parent_id: parent_id.clone(),
@@ -196,9 +200,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for (strategy, name) in scheduling_strategies {
         println!("\n🎛️  策略: {}", name);
-        
+
         let scheduler = AdvancedScheduler::new(strategy.clone());
-        
+
         // 添加任务到调度器
         let demo_tasks = vec![
             ("紧急需求分析", 10),
@@ -210,8 +214,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ];
 
         for (task_desc, priority) in &demo_tasks {
-            let task = AgentTask::new(task_desc.to_string())
-                .with_priority(*priority);
+            let task = AgentTask::new(task_desc.to_string()).with_priority(*priority);
             if scheduler.add_task(&task).await.is_ok() {
                 println!("  ✅ 添加任务: {} (优先级: {})", task_desc, priority);
             }
@@ -220,21 +223,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 模拟任务执行
         println!("  🚀 开始执行任务...");
         let mut completed_count = 0;
-        
+
         while !scheduler.is_all_completed().await {
             if let Some(next_task_id) = scheduler.get_next_task().await {
                 scheduler.mark_task_started(&next_task_id).await;
                 println!("    🏃 执行任务: {}", next_task_id.replace("task_", ""));
-                
+
                 // 模拟任务执行时间
                 tokio::time::sleep(Duration::from_millis(100)).await;
-                
+
                 scheduler.mark_task_completed(&next_task_id).await;
                 completed_count += 1;
             } else {
                 break;
             }
-            
+
             if completed_count >= demo_tasks.len() {
                 break;
             }
@@ -254,11 +257,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("===========================");
 
     // 创建支持任务分解的高级Crew
-    let advanced_crew = Crew::new(
-        "高级开发团队".to_string(),
-        CollaborationMode::Parallel,
-        3,
-    );
+    let advanced_crew = Crew::new("高级开发团队".to_string(), CollaborationMode::Parallel, 3);
 
     // 添加专业Agent
     let agents_data = vec![
@@ -268,7 +267,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "系统架构师".to_string(),
                 "负责系统架构设计和技术选型".to_string(),
                 "经验丰富的系统架构师，擅长复杂系统设计".to_string(),
-            ).with_skills(vec!["架构设计".to_string(), "技术选型".to_string(), "性能优化".to_string()]),
+            )
+            .with_skills(vec![
+                "架构设计".to_string(),
+                "技术选型".to_string(),
+                "性能优化".to_string(),
+            ]),
         ),
         (
             "fullstack_developer",
@@ -276,7 +280,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "全栈开发者".to_string(),
                 "负责前后端开发和系统集成".to_string(),
                 "技术全面的全栈工程师".to_string(),
-            ).with_skills(vec!["前端开发".to_string(), "后端开发".to_string(), "数据库".to_string()]),
+            )
+            .with_skills(vec![
+                "前端开发".to_string(),
+                "后端开发".to_string(),
+                "数据库".to_string(),
+            ]),
         ),
         (
             "data_engineer",
@@ -284,7 +293,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "数据工程师".to_string(),
                 "负责数据处理和分析".to_string(),
                 "专业数据工程师，精通大数据处理".to_string(),
-            ).with_skills(vec!["数据处理".to_string(), "数据分析".to_string(), "ETL".to_string()]),
+            )
+            .with_skills(vec![
+                "数据处理".to_string(),
+                "数据分析".to_string(),
+                "ETL".to_string(),
+            ]),
         ),
     ];
 
@@ -296,20 +310,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .model(llm.clone())
             .build()?;
 
-        advanced_crew.add_agent(agent_id.to_string(), Arc::new(agent), role).await?;
+        advanced_crew
+            .add_agent(agent_id.to_string(), Arc::new(agent), role)
+            .await?;
         println!("✅ 添加Agent: {}", agent_id);
     }
 
     // 添加复杂项目任务
-    let complex_project_task = AgentTask::new(
-        "开发智能数据分析平台".to_string()
-    )
-    .with_expected_output(
-        "完整的数据分析平台，包括数据收集、处理、分析、可视化等功能".to_string()
-    )
-    .with_priority(9);
+    let complex_project_task = AgentTask::new("开发智能数据分析平台".to_string())
+        .with_expected_output(
+            "完整的数据分析平台，包括数据收集、处理、分析、可视化等功能".to_string(),
+        )
+        .with_priority(9);
 
-    println!("\n🎯 添加复杂项目任务: {}", complex_project_task.description);
+    println!(
+        "\n🎯 添加复杂项目任务: {}",
+        complex_project_task.description
+    );
 
     // 分解复杂任务
     let subtasks = decomposer.decompose_task(&complex_project_task).await?;

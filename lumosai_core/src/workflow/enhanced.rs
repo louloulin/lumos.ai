@@ -563,7 +563,8 @@ impl Workflow for EnhancedWorkflow {
         // Note: Streaming execution would require real-time workflow step streaming
         // This is a complex feature that needs proper event streaming infrastructure
         Err(Error::Unsupported(
-            "Streaming execution not yet implemented - requires workflow event streaming".to_string(),
+            "Streaming execution not yet implemented - requires workflow event streaming"
+                .to_string(),
         ))
     }
 

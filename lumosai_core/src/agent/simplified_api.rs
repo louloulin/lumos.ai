@@ -283,14 +283,14 @@ impl Agent {
     /// 自动检测可用的模型（增强版）
     async fn detect_available_model() -> Result<Arc<dyn LlmProvider>> {
         use std::env;
-        
+
         // 检查环境变量来确定可用的模型
         let openai_key = env::var("OPENAI_API_KEY").ok();
         let claude_key = env::var("ANTHROPIC_API_KEY").ok();
         let deepseek_key = env::var("DEEPSEEK_API_KEY").ok();
-        
+
         // 按优先级和环境可用性尝试不同的模型提供商
-        
+
         // 1. 尝试 OpenAI (如果有 API key)
         if let Some(_key) = openai_key {
             if let Ok(model) = unified_api::llm::openai("gpt-4o-mini") {
@@ -298,7 +298,7 @@ impl Agent {
                 return Ok(model);
             }
         }
-        
+
         // 2. 尝试 Claude (如果有 API key)
         if let Some(_key) = claude_key {
             if let Ok(model) = unified_api::llm::claude("claude-3-haiku-20240307") {
@@ -306,7 +306,7 @@ impl Agent {
                 return Ok(model);
             }
         }
-        
+
         // 3. 尝试 DeepSeek (如果有 API key)
         if let Some(_key) = deepseek_key {
             if let Ok(model) = unified_api::llm::deepseek("deepseek-chat") {
@@ -314,7 +314,7 @@ impl Agent {
                 return Ok(model);
             }
         }
-        
+
         // 4. 尝试 Ollama (本地模型) - 作为默认选项
         tracing::info!("Falling back to Ollama llama3.2:3b for Level 1 API");
         let model = unified_api::llm::ollama("llama3.2:3b");

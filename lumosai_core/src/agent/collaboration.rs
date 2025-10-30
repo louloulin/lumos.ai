@@ -2,14 +2,14 @@
 //!
 //! 实现 Agent 团队协作、任务分配和编排，对标 CrewAI 的多 Agent 能力
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use tokio::sync::{RwLock, Semaphore};
 use uuid::Uuid;
-use async_trait::async_trait;
 
-use super::communication::{AgentCommunicationManager, AgentInfo, AgentStatus, AgentLoadInfo};
+use super::communication::{AgentCommunicationManager, AgentInfo, AgentLoadInfo, AgentStatus};
 use super::Agent;
 use crate::error::{Error, Result};
 
@@ -181,18 +181,19 @@ impl AgentMetrics {
         self.current_tasks_count = self.current_tasks_count.saturating_sub(1);
         self.last_task_completion_time = Some(chrono::Utc::now().timestamp());
         self.total_completed_tasks += 1;
-        
+
         // 更新性能历史
         self.performance_history.push(duration_ms);
         if self.performance_history.len() > 10 {
             self.performance_history.remove(0);
         }
-        
+
         // 重新计算平均持续时间
         if !self.performance_history.is_empty() {
-            self.avg_task_duration = self.performance_history.iter().sum::<i64>() as f64 / self.performance_history.len() as f64;
+            self.avg_task_duration = self.performance_history.iter().sum::<i64>() as f64
+                / self.performance_history.len() as f64;
         }
-        
+
         // 重新计算成功率
         let total_tasks = self.total_completed_tasks + self.total_failed_tasks;
         if total_tasks > 0 {
@@ -204,7 +205,7 @@ impl AgentMetrics {
     pub fn fail_task(&mut self) {
         self.current_tasks_count = self.current_tasks_count.saturating_sub(1);
         self.total_failed_tasks += 1;
-        
+
         // 重新计算成功率
         let total_tasks = self.total_completed_tasks + self.total_failed_tasks;
         if total_tasks > 0 {
@@ -220,9 +221,9 @@ impl AgentMetrics {
         } else {
             0.0
         };
-        
+
         let performance_factor = 1.0 / (self.avg_task_duration / 1000.0).max(0.1);
-        
+
         self.success_rate * (1.0 - task_load_factor) * 0.6 + performance_factor * 0.4
     }
 
@@ -361,14 +362,22 @@ impl Crew {
 
         // 添加到团队
         self.agents.write().await.insert(agent_id.clone(), agent);
-        self.roles.write().await.insert(agent_id.clone(), role.clone());
-        
+        self.roles
+            .write()
+            .await
+            .insert(agent_id.clone(), role.clone());
+
         // 初始化性能指标
         let mut metrics = AgentMetrics::new();
         metrics.skill_tags = role.skills.clone();
         self.metrics.write().await.insert(agent_id.clone(), metrics);
 
-        tracing::info!("Agent {} added to crew {} with {} skills", agent_id, self.name, role.skills.len());
+        tracing::info!(
+            "Agent {} added to crew {} with {} skills",
+            agent_id,
+            self.name,
+            role.skills.len()
+        );
         Ok(())
     }
 
@@ -506,7 +515,7 @@ impl Crew {
         // 执行任务并监控性能
         tracing::info!("Executing task {} with agent {}", task_id, agent_id);
         let start_time = std::time::Instant::now();
-        
+
         // 更新 Agent 指标 - 任务开始
         {
             let mut metrics = self.metrics.write().await;
@@ -533,26 +542,24 @@ impl Crew {
                     task.metadata
                 )
             } else {
-                format!("任务描述: {}\n期望输出: 无\n优先级: 5\n元数据: {{}}", description)
+                format!(
+                    "任务描述: {}\n期望输出: 无\n优先级: 5\n元数据: {{}}",
+                    description
+                )
             };
 
-            use crate::llm::{Message, Role};
             use crate::agent::types::AgentGenerateOptions;
+            use crate::llm::{Message, Role};
 
             // 构建任务消息
-            let task_message = Message::new(
-                Role::User,
-                task_prompt.clone(),
-                None,
-                None
-            );
+            let task_message = Message::new(Role::User, task_prompt.clone(), None, None);
             let messages = vec![task_message];
             let options = AgentGenerateOptions::default();
 
             match agent.generate(&messages, &options).await {
                 Ok(response) => {
                     let duration = start_time.elapsed().as_millis() as i64;
-                    
+
                     // 更新 Agent 指标 - 任务成功完成
                     {
                         let mut metrics = self.metrics.write().await;
@@ -560,13 +567,13 @@ impl Crew {
                             agent_metrics.complete_task(duration);
                         }
                     }
-                    
+
                     tracing::info!("Task {} completed successfully in {}ms", task_id, duration);
                     response.response.clone()
                 }
                 Err(e) => {
                     let duration = start_time.elapsed().as_millis() as i64;
-                    
+
                     // 更新 Agent 指标 - 任务失败
                     {
                         let mut metrics = self.metrics.write().await;
@@ -574,9 +581,12 @@ impl Crew {
                             agent_metrics.fail_task();
                         }
                     }
-                    
+
                     tracing::error!("Task {} failed in {}ms: {}", task_id, duration, e);
-                    return Err(Error::Agent(format!("Agent {} failed to execute task: {}", agent_id, e)));
+                    return Err(Error::Agent(format!(
+                        "Agent {} failed to execute task: {}",
+                        agent_id, e
+                    )));
                 }
             }
         } else {
@@ -608,22 +618,25 @@ impl Crew {
             // 获取Agent的性能指标
             if let Some(agent_metrics) = metrics.get(agent_id) {
                 let agent_role = roles.get(agent_id);
-                
+
                 // 1. 计算负载分数（分数越高，越适合分配任务）
                 let load_score = agent_metrics.load_score();
-                
+
                 // 2. 任务优先级评分
                 let priority_score = self.calculate_priority_score(task.priority);
-                
+
                 // 3. 技能匹配评分
-                let skill_match_score = self.calculate_skill_match_score(&task.metadata, agent_role, agent_metrics);
-                
+                let skill_match_score =
+                    self.calculate_skill_match_score(&task.metadata, agent_role, agent_metrics);
+
                 // 4. 综合评分
-                let total_score = load_score * 0.4 + priority_score * 0.3 + skill_match_score as f64 * 0.3;
-                
+                let total_score =
+                    load_score * 0.4 + priority_score * 0.3 + skill_match_score as f64 * 0.3;
+
                 // 5. 检查Agent是否可用（没有超过最大并发数）
-                let is_available = agent_metrics.current_tasks_count < agent_metrics.max_concurrent_tasks();
-                
+                let is_available =
+                    agent_metrics.current_tasks_count < agent_metrics.max_concurrent_tasks();
+
                 if is_available && total_score > best_score {
                     best_score = total_score;
                     best_agent_id = Some(agent_id.clone());
@@ -631,9 +644,8 @@ impl Crew {
             }
         }
 
-        best_agent_id.ok_or_else(|| {
-            Error::InvalidInput("No suitable agent available for task".to_string())
-        })
+        best_agent_id
+            .ok_or_else(|| Error::InvalidInput("No suitable agent available for task".to_string()))
     }
 
     /// 计算任务优先级分数
@@ -653,7 +665,7 @@ impl Crew {
 
     /// 计算技能匹配分数
     fn calculate_skill_match_score(
-        &self, 
+        &self,
         task_metadata: &HashMap<String, serde_json::Value>,
         agent_role: Option<&AgentRole>,
         agent_metrics: &AgentMetrics,
@@ -670,7 +682,7 @@ impl Crew {
 
         // 检查任务要求的技能（从metadata中提取）
         let required_skills = self.extract_required_skills(task_metadata);
-        
+
         if required_skills.is_empty() {
             return 0.7; // 如果任务没有技能要求，给予中等分数
         }
@@ -687,16 +699,19 @@ impl Crew {
     }
 
     /// 从任务元数据中提取所需技能
-    fn extract_required_skills(&self, metadata: &HashMap<String, serde_json::Value>) -> Vec<String> {
+    fn extract_required_skills(
+        &self,
+        metadata: &HashMap<String, serde_json::Value>,
+    ) -> Vec<String> {
         let mut skills = Vec::new();
-        
+
         // 从元数据中查找技能相关的字段
         if let Some(skill_value) = metadata.get("required_skills") {
             if let Ok(skill_array) = serde_json::from_value::<Vec<String>>(skill_value.clone()) {
                 skills.extend(skill_array);
             }
         }
-        
+
         // 从元数据中查找其他可能的技能字段
         if let Some(abilities) = metadata.get("abilities") {
             if let Ok(ability_array) = serde_json::from_value::<Vec<String>>(abilities.clone()) {
@@ -879,13 +894,16 @@ impl DependencyGraph {
     /// 添加任务节点
     pub fn add_task(&mut self, task_id: String) {
         if !self.nodes.contains_key(&task_id) {
-            self.nodes.insert(task_id.clone(), DependencyNode {
-                task_id: task_id.clone(),
-                in_degree: 0,
-                out_degree: 0,
-                dependencies: Vec::new(),
-                dependents: Vec::new(),
-            });
+            self.nodes.insert(
+                task_id.clone(),
+                DependencyNode {
+                    task_id: task_id.clone(),
+                    in_degree: 0,
+                    out_degree: 0,
+                    dependencies: Vec::new(),
+                    dependents: Vec::new(),
+                },
+            );
         }
     }
 
@@ -897,10 +915,10 @@ impl DependencyGraph {
 
         // 检查是否会创建循环依赖
         if self.would_create_cycle(&relation.parent_id, &relation.child_id) {
-            return Err(Error::InvalidInput(
-                format!("Adding dependency would create a cycle: {} -> {}", 
-                       relation.parent_id, relation.child_id)
-            ));
+            return Err(Error::InvalidInput(format!(
+                "Adding dependency would create a cycle: {} -> {}",
+                relation.parent_id, relation.child_id
+            )));
         }
 
         // 更新节点信息
@@ -926,7 +944,12 @@ impl DependencyGraph {
     }
 
     /// DFS检测路径
-    fn has_path_dfs(&self, current: &str, target: &str, visited: &mut std::collections::HashSet<String>) -> bool {
+    fn has_path_dfs(
+        &self,
+        current: &str,
+        target: &str,
+        visited: &mut std::collections::HashSet<String>,
+    ) -> bool {
         if current == target {
             return true;
         }
@@ -987,7 +1010,9 @@ impl DependencyGraph {
         // 检查是否有循环依赖
         if result.len() != self.nodes.len() {
             self.has_cycle = true;
-            return Err(Error::InvalidInput("Cycle detected in task dependencies".to_string()));
+            return Err(Error::InvalidInput(
+                "Cycle detected in task dependencies".to_string(),
+            ));
         }
 
         self.topological_order = result.clone();
@@ -1019,7 +1044,11 @@ impl DependencyGraph {
     }
 
     /// DFS查找最长路径
-    fn dfs_longest_path(&self, current: &str, memo: &mut HashMap<String, Option<Vec<String>>>) -> Option<Vec<String>> {
+    fn dfs_longest_path(
+        &self,
+        current: &str,
+        memo: &mut HashMap<String, Option<Vec<String>>>,
+    ) -> Option<Vec<String>> {
         if let Some(result) = memo.get(current) {
             return result.clone();
         }
@@ -1057,7 +1086,7 @@ impl DependencyGraph {
         } else {
             return;
         };
-        
+
         for dependent in dependents {
             if let Some(dep_node) = self.nodes.get_mut(&dependent) {
                 dep_node.in_degree = dep_node.in_degree.saturating_sub(1);
@@ -1080,13 +1109,18 @@ impl DependencyGraph {
     fn calculate_max_depth(&self) -> usize {
         let mut max_depth = 0;
         for task_id in self.nodes.keys() {
-            max_depth = max_depth.max(self.calculate_depth(task_id, &mut std::collections::HashSet::new()));
+            max_depth =
+                max_depth.max(self.calculate_depth(task_id, &mut std::collections::HashSet::new()));
         }
         max_depth
     }
 
     /// 计算节点的深度
-    fn calculate_depth(&self, current: &str, visited: &mut std::collections::HashSet<String>) -> usize {
+    fn calculate_depth(
+        &self,
+        current: &str,
+        visited: &mut std::collections::HashSet<String>,
+    ) -> usize {
         if visited.contains(current) {
             return 0; // 避免循环
         }
@@ -1120,12 +1154,16 @@ pub struct GraphStats {
 pub trait TaskDecomposer: Send + Sync {
     /// 分解复杂任务
     async fn decompose_task(&self, task: &AgentTask) -> Result<Vec<AgentTask>>;
-    
+
     /// 分析任务复杂度
     fn analyze_complexity(&self, task: &AgentTask) -> TaskComplexity;
-    
+
     /// 选择分解策略
-    fn select_strategy(&self, task: &AgentTask, complexity: TaskComplexity) -> DecompositionStrategy;
+    fn select_strategy(
+        &self,
+        task: &AgentTask,
+        complexity: TaskComplexity,
+    ) -> DecompositionStrategy;
 }
 
 /// 智能任务分解器
@@ -1156,7 +1194,7 @@ impl IntelligentTaskDecomposer {
             llm_provider,
             decomposition_rules: HashMap::new(),
         };
-        
+
         decomposer.init_default_patterns();
         decomposer
     }
@@ -1164,79 +1202,101 @@ impl IntelligentTaskDecomposer {
     /// 初始化默认分解模式
     fn init_default_patterns(&mut self) {
         // 数据分析任务模式
-        self.decomposition_rules.insert("数据分析".to_string(), DecompositionPattern {
-            keywords: vec!["分析".to_string(), "数据".to_string(), "报告".to_string()],
-            strategy: DecompositionStrategy::Sequential,
-            subtask_templates: vec![
-                "收集和清理数据".to_string(),
-                "探索性数据分析".to_string(),
-                "深度分析和建模".to_string(),
-                "生成分析报告".to_string(),
-                "验证结果".to_string(),
-            ],
-            dependency_templates: vec![
-                (0, 1, TaskRelationType::StrongDependency),
-                (1, 2, TaskRelationType::StrongDependency),
-                (2, 3, TaskRelationType::StrongDependency),
-                (3, 4, TaskRelationType::WeakDependency),
-            ],
-        });
+        self.decomposition_rules.insert(
+            "数据分析".to_string(),
+            DecompositionPattern {
+                keywords: vec!["分析".to_string(), "数据".to_string(), "报告".to_string()],
+                strategy: DecompositionStrategy::Sequential,
+                subtask_templates: vec![
+                    "收集和清理数据".to_string(),
+                    "探索性数据分析".to_string(),
+                    "深度分析和建模".to_string(),
+                    "生成分析报告".to_string(),
+                    "验证结果".to_string(),
+                ],
+                dependency_templates: vec![
+                    (0, 1, TaskRelationType::StrongDependency),
+                    (1, 2, TaskRelationType::StrongDependency),
+                    (2, 3, TaskRelationType::StrongDependency),
+                    (3, 4, TaskRelationType::WeakDependency),
+                ],
+            },
+        );
 
         // 软件开发任务模式
-        self.decomposition_rules.insert("软件开发".to_string(), DecompositionPattern {
-            keywords: vec!["开发".to_string(), "编程".to_string(), "实现".to_string(), "代码".to_string()],
-            strategy: DecompositionStrategy::Hybrid,
-            subtask_templates: vec![
-                "需求分析和技术设计".to_string(),
-                "环境搭建和配置".to_string(),
-                "核心功能开发".to_string(),
-                "单元测试编写".to_string(),
-                "集成测试".to_string(),
-                "文档编写".to_string(),
-                "代码审查和优化".to_string(),
-                "部署准备".to_string(),
-            ],
-            dependency_templates: vec![
-                (0, 2, TaskRelationType::StrongDependency),
-                (1, 2, TaskRelationType::StrongDependency),
-                (2, 3, TaskRelationType::StrongDependency),
-                (2, 4, TaskRelationType::WeakDependency),
-                (3, 5, TaskRelationType::WeakDependency),
-                (4, 6, TaskRelationType::WeakDependency),
-                (5, 7, TaskRelationType::WeakDependency),
-                (6, 7, TaskRelationType::StrongDependency),
-            ],
-        });
+        self.decomposition_rules.insert(
+            "软件开发".to_string(),
+            DecompositionPattern {
+                keywords: vec![
+                    "开发".to_string(),
+                    "编程".to_string(),
+                    "实现".to_string(),
+                    "代码".to_string(),
+                ],
+                strategy: DecompositionStrategy::Hybrid,
+                subtask_templates: vec![
+                    "需求分析和技术设计".to_string(),
+                    "环境搭建和配置".to_string(),
+                    "核心功能开发".to_string(),
+                    "单元测试编写".to_string(),
+                    "集成测试".to_string(),
+                    "文档编写".to_string(),
+                    "代码审查和优化".to_string(),
+                    "部署准备".to_string(),
+                ],
+                dependency_templates: vec![
+                    (0, 2, TaskRelationType::StrongDependency),
+                    (1, 2, TaskRelationType::StrongDependency),
+                    (2, 3, TaskRelationType::StrongDependency),
+                    (2, 4, TaskRelationType::WeakDependency),
+                    (3, 5, TaskRelationType::WeakDependency),
+                    (4, 6, TaskRelationType::WeakDependency),
+                    (5, 7, TaskRelationType::WeakDependency),
+                    (6, 7, TaskRelationType::StrongDependency),
+                ],
+            },
+        );
 
         // 研究任务模式
-        self.decomposition_rules.insert("研究".to_string(), DecompositionPattern {
-            keywords: vec!["研究".to_string(), "调研".to_string(), "分析".to_string(), "探索".to_string()],
-            strategy: DecompositionStrategy::Parallel,
-            subtask_templates: vec![
-                "文献综述".to_string(),
-                "市场调研".to_string(),
-                "技术调研".to_string(),
-                "竞品分析".to_string(),
-                "用户调研".to_string(),
-                "专家访谈".to_string(),
-                "综合分析和总结".to_string(),
-            ],
-            dependency_templates: vec![
-                (0, 6, TaskRelationType::WeakDependency),
-                (1, 6, TaskRelationType::WeakDependency),
-                (2, 6, TaskRelationType::WeakDependency),
-                (3, 6, TaskRelationType::WeakDependency),
-                (4, 6, TaskRelationType::WeakDependency),
-                (5, 6, TaskRelationType::StrongDependency),
-            ],
-        });
+        self.decomposition_rules.insert(
+            "研究".to_string(),
+            DecompositionPattern {
+                keywords: vec![
+                    "研究".to_string(),
+                    "调研".to_string(),
+                    "分析".to_string(),
+                    "探索".to_string(),
+                ],
+                strategy: DecompositionStrategy::Parallel,
+                subtask_templates: vec![
+                    "文献综述".to_string(),
+                    "市场调研".to_string(),
+                    "技术调研".to_string(),
+                    "竞品分析".to_string(),
+                    "用户调研".to_string(),
+                    "专家访谈".to_string(),
+                    "综合分析和总结".to_string(),
+                ],
+                dependency_templates: vec![
+                    (0, 6, TaskRelationType::WeakDependency),
+                    (1, 6, TaskRelationType::WeakDependency),
+                    (2, 6, TaskRelationType::WeakDependency),
+                    (3, 6, TaskRelationType::WeakDependency),
+                    (4, 6, TaskRelationType::WeakDependency),
+                    (5, 6, TaskRelationType::StrongDependency),
+                ],
+            },
+        );
     }
 
     /// 匹配分解模式
     fn find_matching_pattern(&self, task: &AgentTask) -> Option<&DecompositionPattern> {
-        let task_text = format!("{} {}", task.description, 
-            task.expected_output.as_deref().unwrap_or(""));
-        
+        let task_text = format!(
+            "{} {}",
+            task.description,
+            task.expected_output.as_deref().unwrap_or("")
+        );
+
         for (_pattern_name, pattern) in &self.decomposition_rules {
             for keyword in &pattern.keywords {
                 if task_text.contains(keyword) {
@@ -1244,40 +1304,56 @@ impl IntelligentTaskDecomposer {
                 }
             }
         }
-        
+
         None
     }
 
     /// 基于模板创建子任务
-    fn create_subtasks_from_template(&self, parent_task: &AgentTask, pattern: &DecompositionPattern) -> Vec<AgentTask> {
+    fn create_subtasks_from_template(
+        &self,
+        parent_task: &AgentTask,
+        pattern: &DecompositionPattern,
+    ) -> Vec<AgentTask> {
         let mut subtasks = Vec::new();
-        
+
         for (index, template) in pattern.subtask_templates.iter().enumerate() {
-            let subtask_description = format!("{} - 子任务{}: {}", 
-                parent_task.description, index + 1, template);
-            
+            let subtask_description = format!(
+                "{} - 子任务{}: {}",
+                parent_task.description,
+                index + 1,
+                template
+            );
+
             let mut subtask = AgentTask::new(subtask_description)
                 .with_expected_output(format!("完成{}的成果", template))
                 .with_priority(parent_task.priority)
                 .with_dependency(parent_task.id.clone());
-                
+
             // 继承父任务的相关元数据
             subtask.metadata = parent_task.metadata.clone();
-            subtask.metadata.insert("parent_task_id".to_string(), 
-                serde_json::Value::String(parent_task.id.clone()));
-            subtask.metadata.insert("subtask_index".to_string(), 
-                serde_json::Value::Number(index.into()));
-            
+            subtask.metadata.insert(
+                "parent_task_id".to_string(),
+                serde_json::Value::String(parent_task.id.clone()),
+            );
+            subtask.metadata.insert(
+                "subtask_index".to_string(),
+                serde_json::Value::Number(index.into()),
+            );
+
             subtasks.push(subtask);
         }
-        
+
         subtasks
     }
 
     /// 创建依赖关系
-    fn create_dependencies_from_template(&self, subtasks: &[AgentTask], pattern: &DecompositionPattern) -> Vec<SubTaskRelation> {
+    fn create_dependencies_from_template(
+        &self,
+        subtasks: &[AgentTask],
+        pattern: &DecompositionPattern,
+    ) -> Vec<SubTaskRelation> {
         let mut dependencies = Vec::new();
-        
+
         for (from_idx, to_idx, relation_type) in &pattern.dependency_templates {
             if *from_idx < subtasks.len() && *to_idx < subtasks.len() {
                 dependencies.push(SubTaskRelation {
@@ -1288,7 +1364,7 @@ impl IntelligentTaskDecomposer {
                 });
             }
         }
-        
+
         dependencies
     }
 }
@@ -1297,7 +1373,7 @@ impl IntelligentTaskDecomposer {
 impl TaskDecomposer for IntelligentTaskDecomposer {
     async fn decompose_task(&self, task: &AgentTask) -> Result<Vec<AgentTask>> {
         let complexity = self.analyze_complexity(task);
-        
+
         // 简单任务不需要分解
         if matches!(complexity, TaskComplexity::Simple) {
             return Ok(vec![task.clone()]);
@@ -1306,8 +1382,11 @@ impl TaskDecomposer for IntelligentTaskDecomposer {
         // 尝试匹配已知模式
         if let Some(pattern) = self.find_matching_pattern(task) {
             let subtasks = self.create_subtasks_from_template(task, pattern);
-            tracing::info!("Task {} decomposed into {} subtasks using pattern", 
-                task.id, subtasks.len());
+            tracing::info!(
+                "Task {} decomposed into {} subtasks using pattern",
+                task.id,
+                subtasks.len()
+            );
             return Ok(subtasks);
         }
 
@@ -1323,11 +1402,12 @@ impl TaskDecomposer for IntelligentTaskDecomposer {
         // 基于关键词和长度判断复杂度
         let word_count = full_text.split_whitespace().count();
         let complexity_indicators = [
-            "分析", "设计", "开发", "实现", "研究", "调研", "报告", "系统", "架构",
-            "优化", "重构", "测试", "部署", "集成", "迁移", "转换"
+            "分析", "设计", "开发", "实现", "研究", "调研", "报告", "系统", "架构", "优化", "重构",
+            "测试", "部署", "集成", "迁移", "转换",
         ];
 
-        let indicator_count = complexity_indicators.iter()
+        let indicator_count = complexity_indicators
+            .iter()
             .filter(|&&indicator| full_text.contains(indicator))
             .count();
 
@@ -1339,7 +1419,11 @@ impl TaskDecomposer for IntelligentTaskDecomposer {
         }
     }
 
-    fn select_strategy(&self, task: &AgentTask, complexity: TaskComplexity) -> DecompositionStrategy {
+    fn select_strategy(
+        &self,
+        task: &AgentTask,
+        complexity: TaskComplexity,
+    ) -> DecompositionStrategy {
         // 如果有匹配的模式，使用模式的策略
         if let Some(pattern) = self.find_matching_pattern(task) {
             return pattern.strategy.clone();
@@ -1357,7 +1441,11 @@ impl TaskDecomposer for IntelligentTaskDecomposer {
 
 impl IntelligentTaskDecomposer {
     /// 使用LLM进行任务分解
-    async fn llm_decompose_task(&self, task: &AgentTask, complexity: TaskComplexity) -> Result<Vec<AgentTask>> {
+    async fn llm_decompose_task(
+        &self,
+        task: &AgentTask,
+        complexity: TaskComplexity,
+    ) -> Result<Vec<AgentTask>> {
         let _prompt = format!(
             "请将以下任务分解为具体的子任务：\n\n任务描述: {}\n期望输出: {}\n优先级: {}\n\n复杂度等级: {:?}\n\n请提供：\n1. 3-8个子任务\n2. 每个子任务的简要描述\n3. 子任务之间的依赖关系\n\n请以JSON格式回复，包含subtasks和dependencies两个数组。\n\n例如：\n{{\n  \"subtasks\": [\n    {{\"description\": \"子任务1描述\", \"priority\": 8}},\n    {{\"description\": \"子任务2描述\", \"priority\": 7}}\n  ],\n  \"dependencies\": [\n    {{\"from\": 0, \"to\": 1, \"type\": \"strong\"}}\n  ]\n}}",
             task.description,
@@ -1446,7 +1534,7 @@ impl AdvancedScheduler {
         // 重新计算拓扑排序
         drop(graph);
         self.rebuild_task_queue().await?;
-        
+
         tracing::info!("Task {} added to scheduler", task.id);
         Ok(())
     }

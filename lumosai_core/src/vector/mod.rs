@@ -476,7 +476,7 @@ mod tests {
         // Clean up
         storage.delete_index("test_factory").await.unwrap();
 
-            // SQLite features temporarily disabled - full test section commented
+        // SQLite features temporarily disabled - full test section commented
         // #[cfg(feature = "vector_sqlite")]
         // {
         //     // SQLite features temporarily disabled

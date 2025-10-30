@@ -225,7 +225,9 @@ impl EnhancedMCPManager {
 
         // Fetch from client - convert HashMap to Vec
         let tools_map = client.tools().await?;
-        let tools: Vec<Tool> = tools_map.into_keys().map(|name| {
+        let tools: Vec<Tool> = tools_map
+            .into_keys()
+            .map(|name| {
                 // Create a simple Tool struct for now
                 Tool {
                     name,
@@ -408,9 +410,7 @@ impl EnhancedMCPManager {
                         );
                     }
                     Err(e) => {
-                        eprintln!(
-                            "❌ Failed to discover tools from server '{server_name}': {e}"
-                        );
+                        eprintln!("❌ Failed to discover tools from server '{server_name}': {e}");
                         self.mark_client_unhealthy(server_name, &e.to_string())
                             .await;
                     }
@@ -465,7 +465,9 @@ impl EnhancedMCPManager {
         client: &MCPClient,
     ) -> Result<Vec<ToolDefinition>> {
         let tools_map = client.tools().await?;
-        let tools: Vec<ToolDefinition> = tools_map.into_keys().map(|name| {
+        let tools: Vec<ToolDefinition> = tools_map
+            .into_keys()
+            .map(|name| {
                 ToolDefinition {
                     name: name.clone(),
                     description: format!("Tool '{name}' from MCP server '{server_name}'"),
@@ -498,21 +500,15 @@ impl EnhancedMCPManager {
         // Attempt initial connection
         match self.connect_client(&server_name).await {
             Ok(()) => {
-                println!(
-                    "✅ Successfully registered and connected to MCP server '{server_name}'"
-                );
+                println!("✅ Successfully registered and connected to MCP server '{server_name}'");
 
                 // Perform initial tool discovery
                 if let Err(e) = self.discover_tools_from_server_by_name(&server_name).await {
-                    eprintln!(
-                        "⚠️  Initial tool discovery failed for '{server_name}': {e}"
-                    );
+                    eprintln!("⚠️  Initial tool discovery failed for '{server_name}': {e}");
                 }
             }
             Err(e) => {
-                eprintln!(
-                    "⚠️  Failed to connect to MCP server '{server_name}': {e}"
-                );
+                eprintln!("⚠️  Failed to connect to MCP server '{server_name}': {e}");
                 // Mark as unhealthy but keep registered for retry
                 self.mark_client_unhealthy(&server_name, &e.to_string())
                     .await;
@@ -645,9 +641,10 @@ impl EnhancedMCPManager {
         // Find all servers that have this tool
         for (server_name, tools) in all_tools {
             if tools.iter().any(|tool| tool.name == tool_name)
-                && self.is_client_healthy(&server_name).await {
-                    candidates.push(server_name);
-                }
+                && self.is_client_healthy(&server_name).await
+            {
+                candidates.push(server_name);
+            }
         }
 
         if candidates.is_empty() {
@@ -744,7 +741,10 @@ impl EnhancedMCPManager {
 
         if let Some(client) = client {
             // Simple ping test
-            matches!(timeout(Duration::from_secs(5), client.tools()).await, Ok(Ok(_)))
+            matches!(
+                timeout(Duration::from_secs(5), client.tools()).await,
+                Ok(Ok(_))
+            )
         } else {
             false
         }
@@ -771,9 +771,7 @@ impl EnhancedMCPManager {
 
         // TODO: Implement actual subscription via MCP protocol
         // This would involve sending a SubscribeResource message
-        println!(
-            "📡 Subscribed to resource '{resource_uri}' on server '{server_name}'"
-        );
+        println!("📡 Subscribed to resource '{resource_uri}' on server '{server_name}'");
 
         Ok(())
     }
@@ -804,9 +802,7 @@ impl EnhancedMCPManager {
         }
 
         // TODO: Implement actual unsubscription via MCP protocol
-        println!(
-            "📡 Unsubscribed from resource '{resource_uri}' on server '{server_name}'"
-        );
+        println!("📡 Unsubscribed from resource '{resource_uri}' on server '{server_name}'");
 
         Ok(())
     }
@@ -895,9 +891,7 @@ impl EnhancedMCPManager {
                             println!("🔄 Refreshed {count} tools for server '{server_name}'");
                         }
                         Err(e) => {
-                            eprintln!(
-                                "❌ Failed to refresh tools for server '{server_name}': {e}"
-                            );
+                            eprintln!("❌ Failed to refresh tools for server '{server_name}': {e}");
                         }
                     }
                 });
@@ -919,7 +913,9 @@ impl EnhancedMCPManager {
         tool_cache: &Arc<RwLock<HashMap<String, Vec<Tool>>>>,
     ) -> Result<usize> {
         let tools_map = client.tools().await?;
-        let tools: Vec<Tool> = tools_map.into_keys().map(|name| Tool {
+        let tools: Vec<Tool> = tools_map
+            .into_keys()
+            .map(|name| Tool {
                 name: name.clone(),
                 description: format!("Tool '{name}' from MCP server '{server_name}'"),
                 input_schema: None,

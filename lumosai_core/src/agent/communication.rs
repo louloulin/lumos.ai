@@ -2,16 +2,16 @@
 //!
 //! 提供Agent之间的消息传递、协作和协调功能
 
+use base64;
+use chrono;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, VecDeque};
-use std::sync::Arc;
 use std::hash::Hash;
+use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
-use chrono;
-use rand::Rng;
-use base64;
 
 use crate::agent::Agent;
 use crate::error::{Error, Result};
@@ -101,25 +101,25 @@ pub struct AgentLoadInfo {
 pub enum CommunicationError {
     #[error("Agent不存在: {0}")]
     AgentNotFound(String),
-    
+
     #[error("消息无效: {0}")]
     InvalidMessage(String),
-    
+
     #[error("会话不存在: {0}")]
     SessionNotFound(String),
-    
+
     #[error("Agent未激活: {0}")]
     AgentNotActive(String),
-    
+
     #[error("路由失败: {0}")]
     RoutingFailed(String),
-    
+
     #[error("订阅失败: {0}")]
     SubscriptionError(String),
-    
+
     #[error("队列为满")]
     QueueFull,
-    
+
     #[error("内部错误: {0}")]
     Internal(String),
 }
@@ -342,7 +342,7 @@ impl AgentMessage {
             requires_response: false,
             persist: self.persist,
         };
-        
+
         response
     }
 
@@ -367,7 +367,8 @@ impl AgentMessage {
 
     /// 设置期望输出（兼容任务系统）
     pub fn with_expected_output(mut self, output: String) -> Self {
-        self.metadata.insert("expected_output".to_string(), Value::String(output));
+        self.metadata
+            .insert("expected_output".to_string(), Value::String(output));
         self
     }
 }
@@ -509,21 +510,25 @@ impl AgentSession {
     /// 添加参与者
     pub fn add_participant(&mut self, agent_id: String) -> Result<()> {
         if self.participants.len() >= self.config.max_participants {
-            return Err(Error::InvalidInput("Session has reached maximum participants".to_string()));
+            return Err(Error::InvalidInput(
+                "Session has reached maximum participants".to_string(),
+            ));
         }
-        
+
         if !self.config.allow_join {
-            return Err(Error::InvalidInput("Session does not allow new participants".to_string()));
+            return Err(Error::InvalidInput(
+                "Session does not allow new participants".to_string(),
+            ));
         }
-        
+
         if self.participants.contains(&agent_id) {
             return Err(Error::InvalidInput("Agent already in session".to_string()));
         }
-        
+
         self.participants.push(agent_id);
         self.stats.total_participants = self.participants.len();
         self.stats.active_participants = self.participants.len();
-        
+
         Ok(())
     }
 
@@ -531,13 +536,13 @@ impl AgentSession {
     pub fn remove_participant(&mut self, agent_id: &str) -> bool {
         if let Some(pos) = self.participants.iter().position(|id| id == agent_id) {
             self.participants.remove(pos);
-            
+
             // 如果创建者离开，会话结束
             if agent_id == self.creator {
                 self.state = SessionState::Ended;
                 self.ended_at = Some(chrono::Utc::now());
             }
-            
+
             self.stats.active_participants = self.participants.len();
             true
         } else {
@@ -557,8 +562,9 @@ impl AgentSession {
 
     /// 检查会话是否活跃
     pub fn is_active(&self) -> bool {
-        matches!(self.state, SessionState::Active) &&
-        (chrono::Utc::now() - self.stats.last_activity).num_seconds() < self.config.session_timeout as i64
+        matches!(self.state, SessionState::Active)
+            && (chrono::Utc::now() - self.stats.last_activity).num_seconds()
+                < self.config.session_timeout as i64
     }
 
     /// 结束会话
@@ -639,11 +645,7 @@ pub struct MatchingCondition {
 
 impl RoutingRule {
     /// 创建新路由规则
-    pub fn new(
-        name: String,
-        strategy: RoutingStrategy,
-        target_agents: Vec<String>,
-    ) -> Self {
+    pub fn new(name: String, strategy: RoutingStrategy, target_agents: Vec<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             name,
@@ -683,18 +685,20 @@ impl RoutingRule {
                 let content_value = serde_json::Value::String(message.content.clone());
                 self.compare_values(&condition.value, &content_value)
             }
-            "contains" => {
-                message.content.contains(&condition.value.to_string())
-            }
+            "contains" => message.content.contains(&condition.value.to_string()),
             "greater_than" => {
-                if let (Ok(val1), Some(val2)) = (message.content.parse::<f64>(), condition.value.as_f64()) {
+                if let (Ok(val1), Some(val2)) =
+                    (message.content.parse::<f64>(), condition.value.as_f64())
+                {
                     val1 > val2
                 } else {
                     false
                 }
             }
             "less_than" => {
-                if let (Ok(val1), Some(val2)) = (message.content.parse::<f64>(), condition.value.as_f64()) {
+                if let (Ok(val1), Some(val2)) =
+                    (message.content.parse::<f64>(), condition.value.as_f64())
+                {
                     val1 < val2
                 } else {
                     false
@@ -806,28 +810,30 @@ impl SubscriptionManager {
     /// 获取主题订阅者
     pub async fn get_subscribers(&self, topic: &str) -> Vec<String> {
         let subscriptions = self.subscriptions.read().await;
-        subscriptions
-            .get(topic)
-            .cloned()
-            .unwrap_or_default()
+        subscriptions.get(topic).cloned().unwrap_or_default()
     }
 
     /// 获取Agent的订阅列表
     pub async fn get_agent_subscriptions(&self, subscriber_id: &str) -> Vec<String> {
         let subscriptions = self.subscriptions.read().await;
         let mut topics = Vec::new();
-        
+
         for (topic, subs) in subscriptions.iter() {
             if subs.contains(&subscriber_id.to_string()) {
                 topics.push(topic.clone());
             }
         }
-        
+
         topics
     }
 
     /// 检查消息是否匹配订阅
-    pub async fn message_matches_subscription(&self, subscriber_id: &str, topic: &str, message: &AgentMessage) -> bool {
+    pub async fn message_matches_subscription(
+        &self,
+        subscriber_id: &str,
+        topic: &str,
+        message: &AgentMessage,
+    ) -> bool {
         // 检查是否订阅了该主题
         let is_subscribed = {
             let subscriptions = self.subscriptions.read().await;
@@ -879,7 +885,11 @@ impl SubscriptionManager {
                 }
             }
             FilterType::SessionId => {
-                if let Some(session_id) = message.session_id.as_ref().and_then(|s| serde_json::to_value(s).ok()) {
+                if let Some(session_id) = message
+                    .session_id
+                    .as_ref()
+                    .and_then(|s| serde_json::to_value(s).ok())
+                {
                     self.compare_values(&session_id, &filter.value)
                 } else {
                     false
@@ -903,22 +913,36 @@ impl SubscriptionManager {
     /// 更新消息统计
     pub async fn increment_message_count(&self, topic: &str) {
         let mut stats = self.stats.write().await;
-        let count = stats.daily_message_count.entry(topic.to_string()).or_insert(0);
+        let count = stats
+            .daily_message_count
+            .entry(topic.to_string())
+            .or_insert(0);
         *count += 1;
     }
 
     /// 订阅主题（单个过滤器）
-    pub async fn subscribe(&self, subscriber_id: String, topic: String, filter: Option<SubscriptionFilter>) -> Result<()> {
+    pub async fn subscribe(
+        &self,
+        subscriber_id: String,
+        topic: String,
+        filter: Option<SubscriptionFilter>,
+    ) -> Result<()> {
         let filters = filter.map(|f| vec![f]).unwrap_or_default();
-        self.subscribe_with_filters(subscriber_id, topic, filters).await
+        self.subscribe_with_filters(subscriber_id, topic, filters)
+            .await
     }
 
     /// 订阅主题（带过滤器列表）
-    pub async fn subscribe_with_filters(&self, subscriber_id: String, topic: String, filters: Vec<SubscriptionFilter>) -> Result<()> {
+    pub async fn subscribe_with_filters(
+        &self,
+        subscriber_id: String,
+        topic: String,
+        filters: Vec<SubscriptionFilter>,
+    ) -> Result<()> {
         {
             let mut subscriptions = self.subscriptions.write().await;
             let topic_subs = subscriptions.entry(topic.clone()).or_insert_with(Vec::new);
-            
+
             if !topic_subs.contains(&subscriber_id) {
                 topic_subs.push(subscriber_id.clone());
             }
@@ -942,16 +966,13 @@ impl SubscriptionManager {
     /// 获取主题订阅者
     pub async fn get_topic_subscribers(&self, topic: &str) -> Result<Vec<String>> {
         let subscriptions = self.subscriptions.read().await;
-        Ok(subscriptions
-            .get(topic)
-            .cloned()
-            .unwrap_or_default())
+        Ok(subscriptions.get(topic).cloned().unwrap_or_default())
     }
 
     /// 移除Agent的所有订阅
     pub async fn remove_agent_subscriptions(&self, agent_id: &str) -> Result<()> {
         let mut removed_count = 0;
-        
+
         // 从所有主题订阅中移除该Agent
         {
             let mut subscriptions = self.subscriptions.write().await;
@@ -973,7 +994,9 @@ impl SubscriptionManager {
         // 更新统计
         {
             let mut stats = self.stats.write().await;
-            stats.active_subscribers = stats.active_subscribers.saturating_sub(removed_count as usize);
+            stats.active_subscribers = stats
+                .active_subscribers
+                .saturating_sub(removed_count as usize);
         }
 
         Ok(())
@@ -1028,7 +1051,7 @@ impl Default for QueueConfig {
     fn default() -> Self {
         Self {
             max_queue_size: 10000,
-            cleanup_interval: 60, // 1分钟
+            cleanup_interval: 60,     // 1分钟
             default_message_ttl: 300, // 5分钟
             enable_priority_queue: true,
         }
@@ -1057,7 +1080,12 @@ impl MessageQueueManager {
 
         // 初始化优先级队列
         let mut priority_queues = manager.priority_queues.blocking_write();
-        for priority in [MessagePriority::Low, MessagePriority::Normal, MessagePriority::High, MessagePriority::Urgent] {
+        for priority in [
+            MessagePriority::Low,
+            MessagePriority::Normal,
+            MessagePriority::High,
+            MessagePriority::Urgent,
+        ] {
             priority_queues.insert(priority, VecDeque::new());
         }
         drop(priority_queues);
@@ -1141,7 +1169,7 @@ impl MessageQueueManager {
             0
         };
         let broadcast_size = self.broadcast_queue.read().await.len();
-        
+
         pending_size + priority_size + broadcast_size
     }
 
@@ -1204,7 +1232,7 @@ impl MessageQueueManager {
             0
         };
         let broadcast_size = self.broadcast_queue.read().await.len();
-        
+
         QueueStats {
             pending_messages: pending_size,
             priority_messages: priority_size,
@@ -1321,7 +1349,6 @@ impl Default for CommunicationConfig {
     }
 }
 
-
 /// 通信统计
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CommunicationStats {
@@ -1407,9 +1434,16 @@ pub enum CommunicationEvent {
     /// Agent注销
     AgentUnregistered { agent_id: String },
     /// 消息发送
-    MessageSent { message_id: String, sender: String, recipients: Vec<String> },
+    MessageSent {
+        message_id: String,
+        sender: String,
+        recipients: Vec<String>,
+    },
     /// 消息接收
-    MessageReceived { message_id: String, receiver: String },
+    MessageReceived {
+        message_id: String,
+        receiver: String,
+    },
     /// 会话创建
     SessionCreated { session_id: String },
     /// 会话结束
@@ -1419,7 +1453,6 @@ pub enum CommunicationEvent {
     /// 订阅取消
     SubscriptionCancelled { agent_id: String, topic: String },
 }
-
 
 /// 消息路由器
 #[derive(Debug)]
@@ -1440,7 +1473,6 @@ pub struct SessionManager {
     /// Agent到会话的映射
     agent_sessions: Arc<RwLock<HashMap<String, Vec<String>>>>,
 }
-
 
 impl MessageRouter {
     /// 创建新的消息路由器
@@ -1464,32 +1496,32 @@ impl MessageRouter {
 
         // 检查是否为会话消息
         if let Some(session_id) = &message.session_id {
-            decisions.push(RoutingDecision::Session { 
-                session_id: session_id.clone() 
+            decisions.push(RoutingDecision::Session {
+                session_id: session_id.clone(),
             });
             return decisions;
         }
 
         // 检查是否为主题消息
         if let Some(topic) = &message.topic {
-            decisions.push(RoutingDecision::Topic { 
-                topic: topic.clone() 
+            decisions.push(RoutingDecision::Topic {
+                topic: topic.clone(),
             });
             return decisions;
         }
 
         // 检查是否为广播消息
         if message.recipients.is_empty() {
-            decisions.push(RoutingDecision::Broadcast { 
-                recipients: vec![] // 将在投递时确定具体接收者
+            decisions.push(RoutingDecision::Broadcast {
+                recipients: vec![], // 将在投递时确定具体接收者
             });
             return decisions;
         }
 
         // 直接路由到指定接收者
         for recipient in &message.recipients {
-            decisions.push(RoutingDecision::Direct { 
-                recipient: recipient.clone() 
+            decisions.push(RoutingDecision::Direct {
+                recipient: recipient.clone(),
             });
         }
 
@@ -1497,7 +1529,11 @@ impl MessageRouter {
     }
 
     /// 基于内容的路由（高级功能）
-    pub async fn route_by_content(&self, message: &AgentMessage, available_agents: &[String]) -> Vec<String> {
+    pub async fn route_by_content(
+        &self,
+        message: &AgentMessage,
+        available_agents: &[String],
+    ) -> Vec<String> {
         // 首先尝试匹配规则
         let mut matched_targets = Vec::new();
         let mut max_priority = 0;
@@ -1561,7 +1597,7 @@ impl SessionManager {
     /// 获取Agent的所有会话
     pub async fn get_agent_sessions(&self, agent_id: &str) -> Vec<AgentSession> {
         let mut sessions = Vec::new();
-        
+
         if let Some(session_ids) = self.agent_sessions.read().await.get(agent_id) {
             let session_map = self.sessions.read().await;
             for session_id in session_ids {
@@ -1579,14 +1615,16 @@ impl SessionManager {
         let mut sessions = self.sessions.write().await;
         if let Some(session) = sessions.get_mut(session_id) {
             session.end_session();
-            
+
             // 更新所有参与者的会话映射
             for participant_id in &session.participants.clone() {
-                if let Some(agent_sessions) = self.agent_sessions.write().await.get_mut(participant_id) {
+                if let Some(agent_sessions) =
+                    self.agent_sessions.write().await.get_mut(participant_id)
+                {
                     agent_sessions.retain(|id| id != session_id);
                 }
             }
-            
+
             tracing::info!("Session {} ended", session_id);
             Ok(())
         } else {
@@ -1604,17 +1642,22 @@ impl SessionManager {
                 .map(|(session_id, _)| session_id.clone())
                 .collect::<Vec<String>>()
         };
-        
+
         let total_removed = sessions_to_remove.len();
         for session_id in sessions_to_remove {
             let _ = self.end_session(&session_id).await;
         }
-        
+
         println!("会话管理器: 清理了 {} 个过期会话", total_removed);
     }
 
     /// 创建会话（简化接口）
-    pub async fn create_session(&self, session_type: SessionType, participants: Vec<String>, metadata: SessionMetadata) -> Result<String> {
+    pub async fn create_session(
+        &self,
+        session_type: SessionType,
+        participants: Vec<String>,
+        metadata: SessionMetadata,
+    ) -> Result<String> {
         let creator = participants.first().cloned().unwrap_or_default();
         let session = AgentSession::new(
             creator.clone(),
@@ -1624,15 +1667,20 @@ impl SessionManager {
         );
 
         let session_id = session.id.clone();
-        
+
         // 验证创建者是否已存在
         let creator_has_session = {
             let agent_sessions = self.agent_sessions.read().await;
-            agent_sessions.get(&creator).map(|sessions| !sessions.is_empty()).unwrap_or(false)
+            agent_sessions
+                .get(&creator)
+                .map(|sessions| !sessions.is_empty())
+                .unwrap_or(false)
         };
 
         if creator_has_session && session_type != SessionType::GroupDiscussion {
-            return Err(Error::InvalidInput("Agent already has active sessions".to_string()));
+            return Err(Error::InvalidInput(
+                "Agent already has active sessions".to_string(),
+            ));
         }
 
         // 添加会话
@@ -1654,7 +1702,10 @@ impl SessionManager {
             }
         }
 
-        println!("会话管理器: 创建会话 {} (类型: {:?})", session_id, session_type);
+        println!(
+            "会话管理器: 创建会话 {} (类型: {:?})",
+            session_id, session_type
+        );
         Ok(session_id)
     }
 
@@ -1671,7 +1722,10 @@ impl SessionManager {
             if session.participants.contains(&agent_id.to_string()) {
                 Ok(())
             } else {
-                Err(Error::InvalidInput(format!("Agent {} 不是会话 {} 的参与者", agent_id, session_id)))
+                Err(Error::InvalidInput(format!(
+                    "Agent {} 不是会话 {} 的参与者",
+                    agent_id, session_id
+                )))
             }
         } else {
             Err(Error::NotFound(format!("Session {} not found", session_id)))
@@ -1681,7 +1735,7 @@ impl SessionManager {
     /// 移除Agent从所有会话
     pub async fn remove_agent_from_sessions(&self, agent_id: &str) -> Result<()> {
         let mut affected_sessions = Vec::new();
-        
+
         // 找到该Agent参与的所有会话
         {
             let agent_sessions = self.agent_sessions.read().await;
@@ -1689,14 +1743,14 @@ impl SessionManager {
                 affected_sessions = session_ids.clone();
             }
         }
-        
+
         // 从每个会话中移除该Agent
         for session_id in affected_sessions {
             {
                 let mut sessions = self.sessions.write().await;
                 if let Some(session) = sessions.get_mut(&session_id) {
                     session.remove_participant(agent_id);
-                    
+
                     // 如果创建者离开，会话结束
                     if agent_id == session.creator {
                         session.state = SessionState::Ended;
@@ -1704,20 +1758,21 @@ impl SessionManager {
                     }
                 }
             }
-            
+
             // 更新Agent会话映射
             {
                 let mut agent_sessions = self.agent_sessions.write().await;
                 if let Some(sessions) = agent_sessions.get_mut(agent_id) {
                     sessions.retain(|id| id != &session_id);
                 }
-                
+
                 // 从其他参与者的会话列表中也移除（如果会话已结束）
                 let sessions = self.sessions.read().await;
                 if let Some(session) = sessions.get(&session_id) {
                     if session.state == SessionState::Ended {
                         for participant_id in &session.participants {
-                            if let Some(agent_session_list) = agent_sessions.get_mut(participant_id) {
+                            if let Some(agent_session_list) = agent_sessions.get_mut(participant_id)
+                            {
                                 agent_session_list.retain(|id| id != &session_id);
                             }
                         }
@@ -1725,13 +1780,13 @@ impl SessionManager {
                 }
             }
         }
-        
+
         // 清理空的Agent会话映射
         {
             let mut agent_sessions = self.agent_sessions.write().await;
             agent_sessions.retain(|_, sessions| !sessions.is_empty());
         }
-        
+
         Ok(())
     }
 
@@ -1845,67 +1900,78 @@ impl AgentCommunicationManager {
             }
         });
 
-        println!("通信管理器: 注册Agent {} (状态: {:?})", agent_id, info.status);
+        println!(
+            "通信管理器: 注册Agent {} (状态: {:?})",
+            agent_id, info.status
+        );
         Ok(())
     }
 
     /// 发送消息 - 增强版
     pub async fn send_message(&self, mut message: AgentMessage) -> Result<()> {
         let start_time = std::time::Instant::now();
-        
+
         // 验证发送者
         self.validate_sender(&message.sender_id).await?;
-        
+
         // 应用消息路由
         let routing_decisions = self.message_router.route_message(&message).await;
-        
+
         // 检查会话有效性
         if let Some(session_id) = &message.session_id {
-            self.session_manager.validate_session_access(session_id, &message.sender_id).await?;
+            self.session_manager
+                .validate_session_access(session_id, &message.sender_id)
+                .await?;
         }
-        
+
         // 添加时间戳和序列号
         message.timestamp = chrono::Utc::now();
         message.id = self.generate_message_id(&message);
-        
+
         // 消息队列处理
         if message.priority == MessagePriority::Urgent {
             // 紧急消息直接投递
-            self.deliver_message_immediate(&message, &routing_decisions).await?;
+            self.deliver_message_immediate(&message, &routing_decisions)
+                .await?;
         } else {
             // 其他消息加入队列
             self.queue_manager.enqueue(message.clone()).await?;
             self.process_queued_messages(&routing_decisions).await?;
         }
-        
+
         // 记录消息历史
         self.record_message(&message).await;
-        
+
         // 更新统计信息
         {
             let mut stats = self.stats.write().await;
             stats.total_messages += 1;
             stats.total_delivery_time += start_time.elapsed().as_millis() as u64;
         }
-        
+
         Ok(())
     }
 
     /// 验证发送者
     async fn validate_sender(&self, sender_id: &str) -> Result<()> {
         let agents = self.agents.read().await;
-        let agent_info = agents.get(sender_id)
+        let agent_info = agents
+            .get(sender_id)
             .ok_or_else(|| Error::NotFound(format!("Agent {} 不存在", sender_id)))?;
-            
+
         if agent_info.status != AgentStatus::Active {
             return Err(Error::InvalidInput(format!("Agent {} 未激活", sender_id)));
         }
-        
+
         Ok(())
     }
 
     /// 立即投递消息
-    async fn deliver_message_immediate(&self, message: &AgentMessage, routing_decisions: &[RoutingDecision]) -> Result<()> {
+    async fn deliver_message_immediate(
+        &self,
+        message: &AgentMessage,
+        routing_decisions: &[RoutingDecision],
+    ) -> Result<()> {
         for decision in routing_decisions {
             match decision {
                 RoutingDecision::Direct { recipient } => {
@@ -1920,7 +1986,8 @@ impl AgentCommunicationManager {
                     self.deliver_to_topic_subscribers(topic, message).await?;
                 }
                 RoutingDecision::Session { session_id } => {
-                    self.deliver_to_session_participants(session_id, message).await?;
+                    self.deliver_to_session_participants(session_id, message)
+                        .await?;
                 }
             }
         }
@@ -1940,8 +2007,15 @@ impl AgentCommunicationManager {
     }
 
     /// 投递消息到主题订阅者
-    async fn deliver_to_topic_subscribers(&self, topic: &str, message: &AgentMessage) -> Result<()> {
-        let subscribers = self.subscription_manager.get_topic_subscribers(topic).await?;
+    async fn deliver_to_topic_subscribers(
+        &self,
+        topic: &str,
+        message: &AgentMessage,
+    ) -> Result<()> {
+        let subscribers = self
+            .subscription_manager
+            .get_topic_subscribers(topic)
+            .await?;
         for subscriber_id in subscribers {
             self.deliver_to_agent(&subscriber_id, message).await?;
         }
@@ -1949,9 +2023,14 @@ impl AgentCommunicationManager {
     }
 
     /// 投递消息到会话参与者
-    async fn deliver_to_session_participants(&self, session_id: &str, message: &AgentMessage) -> Result<()> {
+    async fn deliver_to_session_participants(
+        &self,
+        session_id: &str,
+        message: &AgentMessage,
+    ) -> Result<()> {
         let session_opt = self.session_manager.get_session(session_id).await?;
-        let session = session_opt.ok_or_else(|| Error::NotFound(format!("会话 {} 不存在", session_id)))?;
+        let session =
+            session_opt.ok_or_else(|| Error::NotFound(format!("会话 {} 不存在", session_id)))?;
 
         for participant_id in &session.participants {
             if participant_id != &message.sender_id {
@@ -1964,7 +2043,8 @@ impl AgentCommunicationManager {
     /// 处理队列中的消息
     async fn process_queued_messages(&self, routing_decisions: &[RoutingDecision]) -> Result<()> {
         while let Some(message) = self.queue_manager.dequeue_next().await? {
-            self.deliver_message_immediate(&message, routing_decisions).await?;
+            self.deliver_message_immediate(&message, routing_decisions)
+                .await?;
         }
         Ok(())
     }
@@ -1973,7 +2053,7 @@ impl AgentCommunicationManager {
     async fn record_message(&self, message: &AgentMessage) {
         let mut history = self.message_history.write().await;
         history.push(message.clone());
-        
+
         // 保持历史记录在合理范围内
         if history.len() > self.config.max_message_history {
             history.remove(0);
@@ -1984,12 +2064,12 @@ impl AgentCommunicationManager {
     fn generate_message_id(&self, message: &AgentMessage) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::Hasher;
-        
+
         let mut hasher = DefaultHasher::new();
         message.sender_id.hash(&mut hasher);
         message.content.hash(&mut hasher);
         chrono::Utc::now().timestamp_nanos().hash(&mut hasher);
-        
+
         format!("msg_{:x}", hasher.finish())
     }
 
@@ -1998,7 +2078,6 @@ impl AgentCommunicationManager {
         // 事件处理功能暂时禁用
     }
 
-    
     /// 注销Agent
     pub async fn unregister_agent(&self, agent_id: &str) -> Result<()> {
         {
@@ -2145,7 +2224,6 @@ impl AgentCommunicationManager {
         agents.keys().cloned().collect()
     }
 }
-
 
 /// 创建默认的通信管理器
 pub fn create_communication_manager() -> AgentCommunicationManager {

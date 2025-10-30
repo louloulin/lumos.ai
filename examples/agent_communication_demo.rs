@@ -3,9 +3,9 @@
 //! 展示Agent之间的消息传递、会话管理、主题订阅等高级通信功能
 
 use lumosai_core::agent::communication::{
-    AgentCommunicationManager, AgentMessage, AgentMessageType, MessagePriority,
-    AgentInfo, AgentStatus, AgentLoadInfo, SessionType, SessionMetadata,
-    CommunicationConfig, RoutingStrategy
+    AgentCommunicationManager, AgentInfo, AgentLoadInfo, AgentMessage, AgentMessageType,
+    AgentStatus, CommunicationConfig, MessagePriority, RoutingStrategy, SessionMetadata,
+    SessionType,
 };
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
@@ -50,19 +50,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "orchestrator",
             "orchestrator_agent",
             AgentStatus::Active,
-            vec!["协调".to_string(), "任务分发".to_string(), "监控".to_string()],
+            vec![
+                "协调".to_string(),
+                "任务分发".to_string(),
+                "监控".to_string(),
+            ],
         ),
         (
-            "developer", 
+            "developer",
             "developer_agent",
             AgentStatus::Active,
             vec!["编程".to_string(), "调试".to_string(), "测试".to_string()],
         ),
         (
             "analyzer",
-            "analyzer_agent", 
+            "analyzer_agent",
             AgentStatus::Active,
-            vec!["数据分析".to_string(), "报告生成".to_string(), "可视化".to_string()],
+            vec![
+                "数据分析".to_string(),
+                "报告生成".to_string(),
+                "可视化".to_string(),
+            ],
         ),
     ];
 
@@ -85,7 +93,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             last_active: chrono::Utc::now(),
         };
 
-        if let Err(e) = comm_manager.register_agent(agent_id.to_string(), agent_info).await {
+        if let Err(e) = comm_manager
+            .register_agent(agent_id.to_string(), agent_info)
+            .await
+        {
             eprintln!("注册Agent {} 失败: {:?}", agent_id, e);
         } else {
             println!("✅ 成功注册Agent: {}", agent_id);
@@ -104,10 +115,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 创建并发送不同类型的消息
     let message_types = vec![
-        (AgentMessageType::Request, "请求执行数据分析任务", MessagePriority::High),
-        (AgentMessageType::Notification, "系统维护通知", MessagePriority::Normal),
-        (AgentMessageType::Collaboration, "请求协作完成项目", MessagePriority::Urgent),
-        (AgentMessageType::StatusUpdate, "状态更新：任务进行中", MessagePriority::Low),
+        (
+            AgentMessageType::Request,
+            "请求执行数据分析任务",
+            MessagePriority::High,
+        ),
+        (
+            AgentMessageType::Notification,
+            "系统维护通知",
+            MessagePriority::Normal,
+        ),
+        (
+            AgentMessageType::Collaboration,
+            "请求协作完成项目",
+            MessagePriority::Urgent,
+        ),
+        (
+            AgentMessageType::StatusUpdate,
+            "状态更新：任务进行中",
+            MessagePriority::Low,
+        ),
     ];
 
     for (i, (msg_type, content, priority)) in message_types.iter().enumerate() {
@@ -140,11 +167,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         custom_attributes: std::collections::HashMap::new(),
     };
 
-    let session_id = comm_manager.create_session(
-        SessionType::Brainstorming,
-        vec!["orchestrator".to_string(), "developer".to_string(), "analyzer".to_string()],
-        session_metadata,
-    ).await?;
+    let session_id = comm_manager
+        .create_session(
+            SessionType::Brainstorming,
+            vec![
+                "orchestrator".to_string(),
+                "developer".to_string(),
+                "analyzer".to_string(),
+            ],
+            session_metadata,
+        )
+        .await?;
 
     println!("✅ 创建会话成功: {}", session_id);
 
@@ -168,8 +201,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let active_sessions = comm_manager.get_active_sessions().await;
     println!("\n📋 活跃会话列表:");
     for session in active_sessions {
-        println!("  - {} (类型: {:?}, 参与者: {})", 
-                session.title, session.session_type, session.participants.len());
+        println!(
+            "  - {} (类型: {:?}, 参与者: {})",
+            session.title,
+            session.session_type,
+            session.participants.len()
+        );
     }
 
     // 第四部分：主题订阅演示
@@ -185,11 +222,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (agent_id, topic, filter) in subscriptions {
-        if let Err(e) = comm_manager.subscribe(
-            agent_id.to_string(), 
-            topic.to_string(), 
-            filter
-        ).await {
+        if let Err(e) = comm_manager
+            .subscribe(agent_id.to_string(), topic.to_string(), filter)
+            .await
+        {
             eprintln!("❌ {} 订阅主题 {} 失败: {:?}", agent_id, topic, e);
         } else {
             println!("✅ {} 订阅主题 {} 成功", agent_id, topic);
@@ -229,23 +265,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("======================");
 
     // 任务委派演示
-    let task_id = comm_manager.delegate_task(
-        "orchestrator".to_string(),
-        "developer".to_string(),
-        "实现新的API接口".to_string(),
-        Some(chrono::Utc::now() + chrono::Duration::hours(2)),
-    ).await?;
+    let task_id = comm_manager
+        .delegate_task(
+            "orchestrator".to_string(),
+            "developer".to_string(),
+            "实现新的API接口".to_string(),
+            Some(chrono::Utc::now() + chrono::Duration::hours(2)),
+        )
+        .await?;
 
     println!("✅ 任务委派成功，任务ID: {}", task_id);
 
     // 资源共享演示
     let resource_data = b"shared resource data".to_vec();
-    if let Err(e) = comm_manager.share_resource(
-        "analyzer".to_string(),
-        "analysis_result".to_string(),
-        resource_data,
-        vec!["developer".to_string()],
-    ).await {
+    if let Err(e) = comm_manager
+        .share_resource(
+            "analyzer".to_string(),
+            "analysis_result".to_string(),
+            resource_data,
+            vec!["developer".to_string()],
+        )
+        .await
+    {
         eprintln!("❌ 资源共享失败: {:?}", e);
     } else {
         println!("✅ 资源共享成功");
@@ -261,8 +302,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let message_history = comm_manager.get_message_history(history_filters).await;
     println!("\n📜 消息历史 (最近5条来自orchestrator的消息):");
     for (i, msg) in message_history.iter().enumerate() {
-        println!("  {}. [{}] -> {:?}: {}", 
-                i + 1, msg.sender_id, msg.message_type, msg.content);
+        println!(
+            "  {}. [{}] -> {:?}: {}",
+            i + 1,
+            msg.sender_id,
+            msg.message_type,
+            msg.content
+        );
     }
 
     // 第六部分：性能和状态监控
@@ -285,11 +331,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  - 待处理消息: {}", queue_status.pending_messages);
     println!("  - 优先级消息: {}", queue_status.priority_messages);
     println!("  - 广播消息: {}", queue_status.broadcast_messages);
-    println!("  - 队列健康状态: {}", if queue_status.is_healthy { "健康" } else { "异常" });
+    println!(
+        "  - 队列健康状态: {}",
+        if queue_status.is_healthy {
+            "健康"
+        } else {
+            "异常"
+        }
+    );
 
     // 清理工作
     println!("\n🧹 清理工作...");
-    
+
     // 注销所有Agent
     for (agent_id, _, _, _) in agents_data {
         if let Err(e) = comm_manager.unregister_agent(agent_id).await {

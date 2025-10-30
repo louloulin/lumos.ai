@@ -486,11 +486,10 @@ impl EnhancedChunker {
                 }
             }
 
-            if return_each_line && !is_header
-                && !current_chunk.is_empty() {
-                    chunks.push(current_chunk.clone());
-                    current_chunk.clear();
-                }
+            if return_each_line && !is_header && !current_chunk.is_empty() {
+                chunks.push(current_chunk.clone());
+                current_chunk.clear();
+            }
 
             current_chunk.push_str(line);
             current_chunk.push('\n');

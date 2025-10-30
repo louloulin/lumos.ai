@@ -121,9 +121,7 @@ impl MCPServerRegistry {
             }
         }
 
-        println!(
-            "📁 Loaded {loaded_count} MCP server configurations from {dir_path:?}"
-        );
+        println!("📁 Loaded {loaded_count} MCP server configurations from {dir_path:?}");
         Ok(loaded_count)
     }
 

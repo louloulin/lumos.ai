@@ -361,4 +361,117 @@ pub trait Agent: Base + Send + Sync {
         self.set_status(AgentStatus::Ready)?;
         Ok(())
     }
+
+    // ========== SOP (Standard Operating Procedure) 方法 ==========
+
+    /// 声明 Agent 关注的消息类型（SOP Watch 阶段）
+    ///
+    /// 返回此 Agent 想要订阅和响应的消息类型列表。
+    /// 这是 SOP 机制的第一步：Agent 声明它的"观察范围"。
+    ///
+    /// # 返回值
+    ///
+    /// 消息类型标识符列表。空列表表示不参与 SOP 协作。
+    ///
+    /// # 示例
+    ///
+    /// ```ignore
+    /// fn sop_watch(&self) -> Vec<String> {
+    ///     vec![
+    ///         "research_request".to_string(),
+    ///         "analysis_needed".to_string(),
+    ///     ]
+    /// }
+    /// ```
+    fn sop_watch(&self) -> Vec<String> {
+        Vec::new() // 默认：不订阅任何消息
+    }
+
+    /// 思考如何响应消息（SOP Think 阶段）
+    ///
+    /// 接收匹配 watch 列表的消息，决定采取什么行动。
+    /// 这是 SOP 机制的第二步：Agent 分析消息并做出决策。
+    ///
+    /// # 参数
+    ///
+    /// * `messages` - 匹配 watch 列表的消息
+    ///
+    /// # 返回值
+    ///
+    /// 决定执行的行动
+    ///
+    /// # 示例
+    ///
+    /// ```ignore
+    /// async fn sop_think(&mut self, messages: Vec<SopMessage>) -> Result<AgentAction> {
+    ///     if messages.is_empty() {
+    ///         return Ok(AgentAction::NoOp);
+    ///     }
+    ///
+    ///     let msg = &messages[0];
+    ///     // 分析消息内容
+    ///     Ok(AgentAction::Reply {
+    ///         content: "Processing...".to_string()
+    ///     })
+    /// }
+    /// ```
+    async fn sop_think(
+        &mut self,
+        _messages: Vec<super::sop_types::SopMessage>,
+    ) -> Result<super::sop_types::AgentAction> {
+        Ok(super::sop_types::AgentAction::NoOp) // 默认：不执行任何操作
+    }
+
+    /// 执行决定的行动（SOP Act 阶段）
+    ///
+    /// 执行 think 阶段决定的行动，产生新的消息。
+    /// 这是 SOP 机制的第三步：Agent 执行行动并产生输出。
+    ///
+    /// # 参数
+    ///
+    /// * `action` - 要执行的行动
+    ///
+    /// # 返回值
+    ///
+    /// 执行结果消息
+    ///
+    /// # 示例
+    ///
+    /// ```ignore
+    /// async fn sop_act(&mut self, action: AgentAction) -> Result<SopMessage> {
+    ///     match action {
+    ///         AgentAction::Reply { content } => {
+    ///             Ok(SopMessage::new(
+    ///                 "response",
+    ///                 self.get_name(),
+    ///                 None,
+    ///                 json!({"content": content})
+    ///             ))
+    ///         }
+    ///         _ => Ok(SopMessage::broadcast("noop", self.get_name(), json!({})))
+    ///     }
+    /// }
+    /// ```
+    async fn sop_act(
+        &mut self,
+        _action: super::sop_types::AgentAction,
+    ) -> Result<super::sop_types::SopMessage> {
+        // 默认：产生一个空消息
+        Ok(super::sop_types::SopMessage::broadcast(
+            "noop",
+            self.get_name(),
+            serde_json::json!({}),
+        ))
+    }
+
+    /// 检查 Agent 是否完成了 SOP 任务
+    ///
+    /// 用于判断 Agent 是否已经完成了它在 SOP 流程中的工作。
+    ///
+    /// # 返回值
+    ///
+    /// `true` 表示已完成，`false` 表示还需要继续工作
+    fn sop_is_done(&self) -> bool {
+        false // 默认：永不完成
+    }
 }

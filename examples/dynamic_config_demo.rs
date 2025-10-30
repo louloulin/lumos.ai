@@ -12,8 +12,8 @@ use lumosai_core::agent::dynamic_config::{
     ComplexityLevel, DynamicArgument, EnhancedRuntimeContext,
 };
 use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
-use lumosai_core::llm::{Message, MockLlmProvider, Role};
 use lumosai_core::error::Result;
+use lumosai_core::llm::{Message, MockLlmProvider, Role};
 use std::sync::Arc;
 
 /// 场景 1: 基于用户角色的动态指令
@@ -100,12 +100,7 @@ async fn demo_context_aware_config() -> Result<()> {
 
     // 创建带消息历史的上下文
     let messages = vec![
-        Message::new(
-            Role::User,
-            "What is Rust?".to_string(),
-            None,
-            None,
-        ),
+        Message::new(Role::User, "What is Rust?".to_string(), None, None),
         Message::new(
             Role::Assistant,
             "Rust is a systems programming language...".to_string(),
@@ -114,8 +109,7 @@ async fn demo_context_aware_config() -> Result<()> {
         ),
     ];
 
-    let context = EnhancedRuntimeContext::new("session_003".to_string())
-        .with_messages(messages);
+    let context = EnhancedRuntimeContext::new("session_003".to_string()).with_messages(messages);
 
     // 动态配置：基于对话历史调整指令
     let dynamic_config = DynamicArgument::Dynamic(Box::new(|ctx| {
@@ -184,7 +178,7 @@ async fn demo_full_dynamic_agent() -> Result<()> {
 
     // 创建 Agent（使用 Mock LLM）
     let llm = Arc::new(MockLlmProvider::new(vec![
-        "I'm ready to assist with machine learning tasks!".to_string()
+        "I'm ready to assist with machine learning tasks!".to_string(),
     ]));
 
     let config = AgentConfig {
@@ -221,4 +215,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

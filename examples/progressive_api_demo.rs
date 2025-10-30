@@ -5,7 +5,7 @@
 //! - Level 2: 链式配置，更多控制
 //! - Level 3: 完整构建器模式，高级配置
 
-use lumosai_core::agent::simplified_api::{Agent, quick, web_agent, file_agent, data_agent};
+use lumosai_core::agent::simplified_api::{data_agent, file_agent, quick, web_agent, Agent};
 use lumosai_core::agent::trait_def::Agent as AgentTrait;
 use lumosai_core::error::Result;
 use lumosai_core::llm::MockLlmProvider;
@@ -62,7 +62,10 @@ async fn main() -> Result<()> {
         .expect("设置系统提示失败");
 
     println!("✅ Level 2 Agent 创建成功: {}", agent_level2.name());
-    println!("📝 指令包含'专业': {}", agent_level2.instructions().contains("专业"));
+    println!(
+        "📝 指令包含'专业': {}",
+        agent_level2.instructions().contains("专业")
+    );
     println!("🎯 温度设置: 0.7 (更创造性)");
     println!("🔧 最大工具调用: 10次");
 
@@ -139,7 +142,7 @@ async fn main() -> Result<()> {
     println!("  - Level 2: 链式配置API，支持温度、工具调用等设置");
     println!("  - Level 3: 完整构建器模式，完全控制所有配置");
     println!("  - 便捷函数: 特定场景的快速创建（web、文件、数据助手）");
-    
+
     println!("\n💡 使用建议：");
     println!("  - 初学者: 使用 Level 1 API 快速上手");
     println!("  - 中级用户: 使用 Level 2 API 进行定制");

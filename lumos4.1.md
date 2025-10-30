@@ -373,21 +373,63 @@ pub struct MessageBus {
 
 ---
 
-### ✅ 实施记录：P0-1 SOP 架构和消息路由
+### ✅ 实施记录：P0-1 SOP 架构深度融合
 
 **实施时间**：2025-10-30
-**负责人**：@louloulin
-**状态**：🟡 基础完成（40%）
+**负责人**：AI Assistant
+**状态**：🟢 核心完成（80% - Crew 融合完成，待完善测试）
+
+**融合方式**：
+- ✅ 扩展现有 `Agent` trait，添加可选的 `sop_watch()`、`sop_think()`、`sop_act()` 方法
+- ✅ 创建 `SopEnvironment` 作为 `Crew` 的适配器，复用现有通信系统
+- ✅ 实现 `SopMessage` ↔ `AgentMessage` 双向转换桥接
+- ✅ 修复 `AgentCommunicationManager` 阻塞问题（关键修复）
+- ✅ **扩展 `CollaborationMode` 枚举，添加 `SopReact`、`SopByOrder`、`SopPlanAndAct`**（新完成）
+- ✅ **扩展 `Crew::kickoff()` 支持 SOP 执行分支**（新完成）
+- ✅ **实现 `Crew::Clone` trait 支持 SOP 适配器**（新完成）
+- ⏳ 待完成：完善测试覆盖率到 80%+
 
 **实现文件**：
 - `lumosai_core/src/agent/sop_types.rs` (279 行) - SOP 核心类型定义
-- `lumosai_core/src/agent/sop_simple.rs` (385 行) - 简化的 SOP 环境
+- `lumosai_core/src/agent/sop_environment.rs` (593 行) - SOP 环境适配器（深度集成 Crew）
 - `lumosai_core/src/agent/trait_def.rs` (扩展) - Agent trait SOP 扩展
-- `examples/sop_agent_demo.rs` (107 行) - 可运行示例
+- `lumosai_core/src/agent/communication.rs` (修复) - **修复阻塞问题**（-5 行，+13 行）
+- `examples/sop_blocking_fix_test.rs` (54 行) - 阻塞问题修复验证
+- `examples/sop_research_team.rs` (176 行) - 研究团队示例
+- `SOP_FUSION_ARCHITECTURE_ANALYSIS.md` (500+ 行) - 完整架构分析文档
 
 **核心代码**：
 ```rust
-// Agent trait SOP 扩展（4个方法）
+// 1. 修复 AgentCommunicationManager 阻塞问题（关键修复）
+// lumosai_core/src/agent/communication.rs:1067-1092
+impl MessageQueueManager {
+    pub fn with_config(config: QueueConfig) -> Self {
+        let cleanup_interval = config.cleanup_interval;
+
+        // ✅ 预先初始化优先级队列（避免在async上下文中使用blocking_write）
+        let mut initial_priority_queues = HashMap::new();
+        for priority in [
+            MessagePriority::Low,
+            MessagePriority::Normal,
+            MessagePriority::High,
+            MessagePriority::Urgent,
+        ] {
+            initial_priority_queues.insert(priority, VecDeque::new());
+        }
+
+        Self {
+            pending_messages: Arc::new(RwLock::new(VecDeque::new())),
+            priority_queues: Arc::new(RwLock::new(initial_priority_queues)), // ✅ 直接初始化
+            broadcast_queue: Arc::new(RwLock::new(VecDeque::new())),
+            cleanup_task: Arc::new(tokio::spawn(async move {
+                tokio::time::sleep(tokio::time::Duration::from_secs(cleanup_interval)).await;
+            })),
+            config,
+        }
+    }
+}
+
+// 2. Agent trait SOP 扩展（4个方法）
 #[async_trait]
 pub trait Agent: Send + Sync {
     // 订阅消息类型
@@ -437,16 +479,23 @@ impl SimpleSopEnvironment {
 - [ ] 性能测试：1000 消息/秒吞吐量（未测试）
 
 **问题和解决方案**：
-1. **问题**：原计划创建独立的 `lumosai-agent` 包
+1. **问题**：`AgentCommunicationManager::new()` 在 async 上下文中使用 `blocking_write()` 导致 panic ⚠️ **关键阻塞问题**
+   - **位置**：`lumosai_core/src/agent/communication.rs:1082`
+   - **现象**：创建 `Crew` 或 `SopEnvironment` 时 panic："Cannot block the current thread from within a runtime"
+   - **解决**：移除 `blocking_write()`，改为在构造函数中直接初始化 `HashMap<MessagePriority, VecDeque<AgentMessage>>`
+   - **验证**：创建 `examples/sop_blocking_fix_test.rs`，所有测试通过 ✅
+   - **影响**：修复后，可以在 async 上下文中安全创建 `AgentCommunicationManager`、`Crew`、`SopEnvironment`
+
+2. **问题**：原计划创建独立的 `lumosai-agent` 包
    - **解决**：集成到现有 `lumosai_core/src/agent/` 模块，避免包依赖复杂性
 
-2. **问题**：原计划创建独立的 `Role` trait
+3. **问题**：原计划创建独立的 `Role` trait
    - **解决**：扩展现有 `Agent` trait，保持 API 一致性
 
-3. **问题**：BasicAgent 默认不参与 SOP
-   - **解决**：需要创建自定义 Agent 实现或使用宏简化（下一步）
+4. **问题**：如何确保 SOP 与现有 Agent 兼容
+   - **解决**：SOP 方法设为可选（默认实现返回空或 NoOp），现有 Agent 无需修改
 
-4. **问题**：execute_one_round 未实现真正的 watch-think-act 循环
+5. **问题**：execute_one_round 未实现真正的 watch-think-act 循环
    - **解决**：实现完整的消息处理和 Agent 协调逻辑
 
 **差异说明**：

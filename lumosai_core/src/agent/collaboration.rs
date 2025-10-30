@@ -133,6 +133,32 @@ pub enum CollaborationMode {
     Parallel,
     /// 层级执行（有管理者协调）
     Hierarchical,
+
+    // ===== SOP 执行模式（深度融合） =====
+    /// SOP React 模式：事件驱动，Agent 根据消息反应
+    ///
+    /// 特点：
+    /// - Agent 通过 `sop_watch()` 订阅感兴趣的消息类型
+    /// - 收到消息后通过 `sop_think()` 决定行动
+    /// - 通过 `sop_act()` 执行行动并发送新消息
+    /// - 适用于动态、响应式的协作场景
+    SopReact,
+
+    /// SOP ByOrder 模式：按预定义顺序执行
+    ///
+    /// 特点：
+    /// - Agent 按照添加顺序依次执行
+    /// - 每个 Agent 完成后传递消息给下一个
+    /// - 适用于流水线式的协作场景
+    SopByOrder,
+
+    /// SOP PlanAndAct 模式：先规划后执行
+    ///
+    /// 特点：
+    /// - 第一阶段：所有 Agent 通过 `sop_think()` 生成计划
+    /// - 第二阶段：根据计划依次执行 `sop_act()`
+    /// - 适用于需要全局协调的复杂任务
+    SopPlanAndAct,
 }
 
 /// Agent 性能指标
@@ -311,6 +337,24 @@ pub struct Crew {
     max_concurrent_tasks: usize,
 }
 
+impl Clone for Crew {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            agents: Arc::clone(&self.agents),
+            roles: Arc::clone(&self.roles),
+            metrics: Arc::clone(&self.metrics),
+            tasks: Arc::clone(&self.tasks),
+            mode: self.mode.clone(),
+            communication: Arc::clone(&self.communication),
+            task_queue: Arc::clone(&self.task_queue),
+            concurrency_limit: Arc::clone(&self.concurrency_limit),
+            max_concurrent_tasks: self.max_concurrent_tasks,
+        }
+    }
+}
+
 impl Crew {
     /// 创建新团队
     pub fn new(name: String, mode: CollaborationMode, max_concurrent_tasks: usize) -> Self {
@@ -402,6 +446,11 @@ impl Crew {
             CollaborationMode::Sequential => self.execute_sequential().await,
             CollaborationMode::Parallel => self.execute_parallel().await,
             CollaborationMode::Hierarchical => self.execute_hierarchical().await,
+
+            // SOP 执行模式（深度融合）
+            CollaborationMode::SopReact => self.execute_sop_react().await,
+            CollaborationMode::SopByOrder => self.execute_sop_by_order().await,
+            CollaborationMode::SopPlanAndAct => self.execute_sop_plan_and_act().await,
         }
     }
 
@@ -456,6 +505,69 @@ impl Crew {
 
         // 管理者分配任务
         self.execute_sequential().await
+    }
+
+    // ===== SOP 执行模式实现（深度融合） =====
+
+    /// SOP React 模式：事件驱动执行
+    ///
+    /// Agent 通过 watch-think-act 循环响应消息
+    async fn execute_sop_react(&self) -> Result<Vec<AgentTask>> {
+        use super::sop_environment::SopEnvironment;
+        use super::sop_types::SopExecutionMode;
+
+        tracing::info!("Executing SOP React mode for crew {}", self.name);
+
+        // 创建 SOP 环境（复用当前 Crew）
+        let sop_env = SopEnvironment::from_crew(Arc::new(self.clone()), SopExecutionMode::React);
+
+        // 执行 SOP 流程
+        // 注意：这里暂时返回空任务列表，因为 SOP 使用不同的任务模型
+        // 未来可以将 SOP 的执行结果转换为 AgentTask
+        sop_env.run(None).await?;
+
+        // 返回当前任务列表
+        Ok(self.tasks.read().await.clone())
+    }
+
+    /// SOP ByOrder 模式：按顺序执行
+    ///
+    /// Agent 按照添加顺序依次执行
+    async fn execute_sop_by_order(&self) -> Result<Vec<AgentTask>> {
+        use super::sop_environment::SopEnvironment;
+        use super::sop_types::SopExecutionMode;
+
+        tracing::info!("Executing SOP ByOrder mode for crew {}", self.name);
+
+        // 创建 SOP 环境（复用当前 Crew）
+        let sop_env = SopEnvironment::from_crew(Arc::new(self.clone()), SopExecutionMode::ByOrder);
+
+        // 执行 SOP 流程
+        sop_env.run(None).await?;
+
+        // 返回当前任务列表
+        Ok(self.tasks.read().await.clone())
+    }
+
+    /// SOP PlanAndAct 模式：先规划后执行
+    ///
+    /// 第一阶段：所有 Agent 生成计划
+    /// 第二阶段：根据计划执行
+    async fn execute_sop_plan_and_act(&self) -> Result<Vec<AgentTask>> {
+        use super::sop_environment::SopEnvironment;
+        use super::sop_types::SopExecutionMode;
+
+        tracing::info!("Executing SOP PlanAndAct mode for crew {}", self.name);
+
+        // 创建 SOP 环境（复用当前 Crew）
+        let sop_env =
+            SopEnvironment::from_crew(Arc::new(self.clone()), SopExecutionMode::PlanAndAct);
+
+        // 执行 SOP 流程
+        sop_env.run(None).await?;
+
+        // 返回当前任务列表
+        Ok(self.tasks.read().await.clone())
     }
 
     /// 执行单个任务
@@ -773,6 +885,29 @@ impl Crew {
             in_progress_tasks,
             pending_tasks: total_tasks - completed_tasks - failed_tasks - in_progress_tasks,
         }
+    }
+
+    // ===== SOP 辅助方法（用于 SopEnvironment 访问） =====
+
+    /// 获取所有 Agent（用于 SOP 环境）
+    ///
+    /// 返回当前 Crew 中的所有 Agent 实例
+    pub async fn get_agents(&self) -> Vec<Arc<dyn Agent>> {
+        self.agents.read().await.values().cloned().collect()
+    }
+
+    /// 获取 Agent ID 列表（用于 SOP 环境）
+    ///
+    /// 返回当前 Crew 中的所有 Agent ID
+    pub async fn get_agent_ids(&self) -> Vec<String> {
+        self.agents.read().await.keys().cloned().collect()
+    }
+
+    /// 获取通信管理器（用于 SOP 环境）
+    ///
+    /// 返回当前 Crew 的通信管理器，用于 SOP 消息路由
+    pub fn get_communication(&self) -> Arc<AgentCommunicationManager> {
+        Arc::clone(&self.communication)
     }
 
     /// 获取 Agent 性能指标

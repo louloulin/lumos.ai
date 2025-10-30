@@ -1067,30 +1067,28 @@ impl MessageQueueManager {
     /// 使用配置创建消息队列管理器
     pub fn with_config(config: QueueConfig) -> Self {
         let cleanup_interval = config.cleanup_interval;
-        let manager = Self {
-            pending_messages: Arc::new(RwLock::new(VecDeque::new())),
-            priority_queues: Arc::new(RwLock::new(HashMap::new())),
-            broadcast_queue: Arc::new(RwLock::new(VecDeque::new())),
-            cleanup_task: Arc::new(tokio::spawn(async move {
-                // 清理任务在drop时会被取消
-                tokio::time::sleep(tokio::time::Duration::from_secs(cleanup_interval)).await;
-            })),
-            config,
-        };
 
-        // 初始化优先级队列
-        let mut priority_queues = manager.priority_queues.blocking_write();
+        // 预先初始化优先级队列（避免在async上下文中使用blocking_write）
+        let mut initial_priority_queues = HashMap::new();
         for priority in [
             MessagePriority::Low,
             MessagePriority::Normal,
             MessagePriority::High,
             MessagePriority::Urgent,
         ] {
-            priority_queues.insert(priority, VecDeque::new());
+            initial_priority_queues.insert(priority, VecDeque::new());
         }
-        drop(priority_queues);
 
-        manager
+        Self {
+            pending_messages: Arc::new(RwLock::new(VecDeque::new())),
+            priority_queues: Arc::new(RwLock::new(initial_priority_queues)),
+            broadcast_queue: Arc::new(RwLock::new(VecDeque::new())),
+            cleanup_task: Arc::new(tokio::spawn(async move {
+                // 清理任务在drop时会被取消
+                tokio::time::sleep(tokio::time::Duration::from_secs(cleanup_interval)).await;
+            })),
+            config,
+        }
     }
 
     /// 添加消息到队列

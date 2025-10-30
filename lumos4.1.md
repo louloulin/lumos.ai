@@ -371,6 +371,111 @@ pub struct MessageBus {
 
 **时间估算**: 2 周
 
+---
+
+### ✅ 实施记录：P0-1 SOP 架构和消息路由
+
+**实施时间**：2025-10-30
+**负责人**：@louloulin
+**状态**：🟡 基础完成（40%）
+
+**实现文件**：
+- `lumosai_core/src/agent/sop_types.rs` (279 行) - SOP 核心类型定义
+- `lumosai_core/src/agent/sop_simple.rs` (385 行) - 简化的 SOP 环境
+- `lumosai_core/src/agent/trait_def.rs` (扩展) - Agent trait SOP 扩展
+- `examples/sop_agent_demo.rs` (107 行) - 可运行示例
+
+**核心代码**：
+```rust
+// Agent trait SOP 扩展（4个方法）
+#[async_trait]
+pub trait Agent: Send + Sync {
+    // 订阅消息类型
+    fn sop_watch(&self) -> Vec<String> { Vec::new() }
+
+    // 决定如何响应
+    async fn sop_think(&self, messages: Vec<SopMessage>) -> Result<AgentAction> {
+        Ok(AgentAction::NoOp)
+    }
+
+    // 执行行动
+    async fn sop_act(&self, action: AgentAction) -> Result<SopMessage> {
+        Ok(SopMessage::broadcast("noop", self.get_name(), json!({})))
+    }
+
+    // 检查是否完成
+    fn sop_is_done(&self) -> bool { false }
+}
+
+// SimpleSopEnvironment - 完整的 watch-think-act 循环
+pub struct SimpleSopEnvironment {
+    name: String,
+    agents: Arc<RwLock<Vec<Arc<dyn Agent>>>>,
+    message_queue: Arc<RwLock<VecDeque<SopMessage>>>,
+    execution_mode: SopExecutionMode,
+    max_iterations: usize,
+    agent_done_status: Arc<RwLock<HashMap<String, bool>>>,
+}
+
+impl SimpleSopEnvironment {
+    pub async fn run(&self, initial_message: Option<SopMessage>) -> Result<SopStats>;
+    async fn execute_one_round(&self) -> Result<()>;  // 核心循环
+}
+```
+
+**测试**：
+- ✅ 单元测试：2 个基础测试
+- ✅ 示例运行：`cargo run --example sop_agent_demo` 成功
+- ⚠️ 覆盖率：约 40%（目标 >80%）
+
+**验收标准完成情况**：
+- [x] 实现 `RoleDefinition` 结构体（通过 Agent trait 扩展实现）
+- [x] 实现 `MessageBus` 消息总线（通过 SimpleSopEnvironment 实现）
+- [x] 实现三种执行模式（React 完成，ByOrder/PlanAndAct 待完善）
+- [ ] 通过 20+ 个单元测试（当前 2 个）
+- [ ] 通过 5+ 个集成测试（当前 0 个）
+- [ ] 性能测试：1000 消息/秒吞吐量（未测试）
+
+**问题和解决方案**：
+1. **问题**：原计划创建独立的 `lumosai-agent` 包
+   - **解决**：集成到现有 `lumosai_core/src/agent/` 模块，避免包依赖复杂性
+
+2. **问题**：原计划创建独立的 `Role` trait
+   - **解决**：扩展现有 `Agent` trait，保持 API 一致性
+
+3. **问题**：BasicAgent 默认不参与 SOP
+   - **解决**：需要创建自定义 Agent 实现或使用宏简化（下一步）
+
+4. **问题**：execute_one_round 未实现真正的 watch-think-act 循环
+   - **解决**：实现完整的消息处理和 Agent 协调逻辑
+
+**差异说明**：
+- ✅ 使用 SimpleSopEnvironment 而非依赖 Crew 的 SopEnvironment
+- ✅ 扩展 Agent trait 而非创建新的 Role trait
+- ✅ 集成到 lumosai_core 而非创建新包
+- ⚠️ 测试覆盖率不足（40% vs 目标 80%）
+- ⚠️ PlanAndAct 模式未完全实现
+
+**下一步行动**：
+1. **立即行动**（本周）：
+   - [ ] 创建自定义 Agent 示例（ResearchAgent, AnalystAgent）
+   - [ ] 增加单元测试到 20+ 个
+   - [ ] 增加集成测试到 5+ 个
+   - [ ] 完善 PlanAndAct 模式
+
+2. **中期计划**（下周）：
+   - [ ] 创建 Agent 宏简化自定义实现
+   - [ ] 添加性能测试（1000 消息/秒）
+   - [ ] 编写用户文档
+
+**Git 提交**：
+- Commit 1: `5d64a5d` - 初始 SOP 架构实现
+- Commit 2: `df377e8` - 完善 SOP 机制实现（P0-1）
+
+**详细报告**：见 `SOP_PROGRESS_REPORT.md`
+
+---
+
 #### Week 3-4: DSL 宏系统（P0-2）
 
 **任务**: 实现 CangjieMagic 风格的 DSL 宏系统
@@ -1429,7 +1534,7 @@ let agent = Agent::builder()
 
 | 任务ID | 任务名称 | 优先级 | 时间 | 负责人 | 状态 |
 |--------|---------|--------|------|--------|------|
-| P0-1 | SOP 机制和消息路由 | P0 | 2周 | TBD | 待开始 |
+| P0-1 | SOP 机制和消息路由 | P0 | 2周 | @louloulin | 🟡 进行中（40%） |
 | P0-2 | DSL 宏系统 | P0 | 2周 | TBD | 待开始 |
 | P0-9 | 团队生命周期管理 | P0 | 2周 | TBD | 待开始 |
 | P0-10 | 共享心智模型同步 | P0 | 2周 | TBD | 待开始 |

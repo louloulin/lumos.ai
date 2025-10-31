@@ -55,6 +55,10 @@ mod simple_test;
 // #[cfg(test)]
 // mod executor_tests;
 
+// Week 1: 新增的单元测试模块
+#[cfg(test)]
+mod week1_agent_tests;
+
 pub use config::{AgentConfig, AgentGenerateOptions};
 pub use executor::BasicAgent;
 pub use message_utils::{assistant_message, system_message, tool_message, user_message};

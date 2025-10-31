@@ -222,30 +222,30 @@ impl LlmProvider for ZhipuProvider {
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": messages,
-            "stream": false,
-            "do_sample": true,
         });
 
         // Add optional parameters with defaults
         if let Some(temperature) = options.temperature {
-            // 使用 Temperature 类型的精确值
+            // 智谱AI只接受 0.0, 0.5, 1.0 三个温度值
+            // 将其他值映射到最接近的有效值
             let temp_value = temperature.value();
-            body["temperature"] = serde_json::json!(temp_value);
-        } else {
-            body["temperature"] = serde_json::json!(0.7);
+            let normalized_temp = if temp_value < 0.25 {
+                0.0
+            } else if temp_value < 0.75 {
+                0.5
+            } else {
+                1.0
+            };
+            body["temperature"] = serde_json::json!(normalized_temp);
         }
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
-        } else {
-            body["max_tokens"] = serde_json::json!(1000);
         }
 
-        // Add top_p parameter (required for Zhipu AI)
+        // Add top_p parameter if provided
         if let Some(top_p) = options.extra.get("top_p") {
             body["top_p"] = top_p.clone();
-        } else {
-            body["top_p"] = serde_json::json!(0.7);
         }
 
         // Send request
@@ -297,30 +297,30 @@ impl LlmProvider for ZhipuProvider {
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": api_messages,
-            "stream": false,
-            "do_sample": true,
         });
 
         // Add optional parameters with defaults
         if let Some(temperature) = options.temperature {
-            // 使用 Temperature 类型的精确值
+            // 智谱AI只接受 0.0, 0.5, 1.0 三个温度值
+            // 将其他值映射到最接近的有效值
             let temp_value = temperature.value();
-            body["temperature"] = serde_json::json!(temp_value);
-        } else {
-            body["temperature"] = serde_json::json!(0.7);
+            let normalized_temp = if temp_value < 0.25 {
+                0.0
+            } else if temp_value < 0.75 {
+                0.5
+            } else {
+                1.0
+            };
+            body["temperature"] = serde_json::json!(normalized_temp);
         }
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
-        } else {
-            body["max_tokens"] = serde_json::json!(1000);
         }
 
-        // Add top_p parameter (required for Zhipu AI)
+        // Add top_p parameter if provided
         if let Some(top_p) = options.extra.get("top_p") {
             body["top_p"] = top_p.clone();
-        } else {
-            body["top_p"] = serde_json::json!(0.7);
         }
 
         // Send request
@@ -376,29 +376,30 @@ impl LlmProvider for ZhipuProvider {
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": messages,
             "stream": true,
-            "do_sample": true,
         });
 
         // Add optional parameters with defaults
         if let Some(temperature) = options.temperature {
-            // 使用 Temperature 类型的精确值
+            // 智谱AI只接受 0.0, 0.5, 1.0 三个温度值
+            // 将其他值映射到最接近的有效值
             let temp_value = temperature.value();
-            body["temperature"] = serde_json::json!(temp_value);
-        } else {
-            body["temperature"] = serde_json::json!(0.7);
+            let normalized_temp = if temp_value < 0.25 {
+                0.0
+            } else if temp_value < 0.75 {
+                0.5
+            } else {
+                1.0
+            };
+            body["temperature"] = serde_json::json!(normalized_temp);
         }
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
-        } else {
-            body["max_tokens"] = serde_json::json!(1000);
         }
 
-        // Add top_p parameter (required for Zhipu AI)
+        // Add top_p parameter if provided
         if let Some(top_p) = options.extra.get("top_p") {
             body["top_p"] = top_p.clone();
-        } else {
-            body["top_p"] = serde_json::json!(0.7);
         }
 
         // Send request

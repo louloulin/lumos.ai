@@ -1,291 +1,59 @@
-请按照 `/Users/louloulin/Documents/ai/lumosai/lumos4.1.md` 改造计划，逐步实现 SOP（Standard Operating Procedure）机制与现有 AI Agent 架构的深度融合。
+基于 lumos4.2.md 中制定的 24 周改造计划，按照以下流程逐步实现功能：
 
-## 核心要求
+## 执行流程
 
-### ⚠️ 关键原则：深度融合而非独立实现
+### 1. 选择任务
+- 从 lumos4.2.md 的"阶段 1: 基础加固（Week 1-6）"开始
+- 优先执行 P0（必须解决）级别的任务
+- 建议从 Week 1 的测试基础设施开始
 
-**SOP 必须与现有 AI Agent 架构深度融合**，而不是作为独立模块存在。具体要求：
+### 2. 实现功能
+- 仔细阅读任务的具体要求和验收标准
+- 使用 codebase-retrieval 查找相关代码位置
+- 实现功能时遵循 CLAUDE.md 中的开发规范
+- 确保代码符合 Rust 最佳实践（cargo fmt + cargo clippy）
 
-1. **全面分析现有架构**：
-   - 深入理解 `lumosai_core/src/agent/` 下的所有模块
-   - 分析现有的协作机制：`Crew`、`AgentCommunicationManager`、`AgentOrchestrator`
-   - 理解现有的消息系统：`AgentMessage`、`MessageRouter`、`SessionManager`
-   - 研究现有的执行模式：`CollaborationMode`、`OrchestrationPattern`
+### 3. 编写测试
+- 为每个新功能编写单元测试
+- 如果是跨模块功能，添加集成测试
+- 确保测试覆盖边界情况和错误处理
+- 运行测试确保通过：`cargo test --workspace`
 
-2. **借鉴 SOP 设计理念**：
-   - MetaGPT 的 Role-based 架构（角色定义）
-   - Watch-Think-Act 三阶段循环（观察-思考-行动）
-   - Message-driven 协作（消息驱动）
-   - 三种执行模式（React/ByOrder/PlanAndAct）
+### 4. 验证功能
+- 运行相关测试套件验证功能正确性
+- 使用 `cargo tarpaulin` 检查测试覆盖率是否提升
+- 运行 `cargo clippy` 确保无警告
+- 如果有性能要求，运行基准测试
 
-3. **映射到现有结构**：
-   - 将 SOP 概念映射到现有的 `Crew`、`CollaborationMode`、`AgentMessage` 等结构
-   - 扩展现有 trait 和 struct，而不是创建新的并行系统
-   - 使用适配器模式桥接 SOP 和现有架构
+### 5. 更新文档
+- 在 lumos4.2.md 中标记已完成的任务（使用 ✅ 或 [x]）
+- 更新 LUMOS4.2_TASK_TRACKER.md 中对应任务的状态
+- 更新关键指标（如测试覆盖率、工具数量等）
+- 记录实现过程中的重要决策和变更
 
-4. **最小化改造**：
-   - 优先扩展现有模块（如在 `CollaborationMode` 中添加 `SopReact`、`SopByOrder`、`SopPlanAndAct`）
-   - 避免重写已有功能
-   - 保持向后兼容性（现有 Agent 无需修改即可工作）
-   - 复用现有基础设施（通信、会话、事件系统）
+## 具体要求
 
-## 实施要求
+1. **每次只实现一个小任务**，不要一次性实现太多功能
+2. **先运行 `./scripts/validate_lumos4.2.sh`** 获取当前基线数据
+3. **优先级顺序**：P0 > P1 > P2
+4. **建议起点**：Week 1 Day 1-2 的测试基础设施任务
+5. **验证标准**：所有新代码必须有测试，测试必须通过
+6. **文档更新**：每完成一个任务立即更新进度
 
-### 1. 功能实现
+## 输出要求
 
-**优先级顺序**：严格按照 P0 → P1 → P2 实施
+完成每个任务后，请提供：
+- 实现的代码文件路径和关键改动
+- 新增的测试数量和覆盖率变化
+- 验证结果（测试通过情况）
+- lumos4.2.md 和 LUMOS4.2_TASK_TRACKER.md 的更新内容
+- 遇到的问题和解决方案
 
-**阶段顺序**：Phase 1 Week 1-2 → Week 3-4 → Week 5-6 → Week 7-8
+## 示例起点
 
-**融合策略**：
-- **第一步**：分析现有架构，创建融合方案文档（包含映射关系表）
-- **第二步**：扩展现有模块（如 `Crew`、`Agent` trait、`CollaborationMode`）
-- **第三步**：实现适配层（如 `SopEnvironment` 作为 `Crew` 的适配器）
-- **第四步**：验证融合效果（现有 Agent 和 SOP Agent 可以在同一个 Crew 中协作）
-
-**禁止事项**：
-- ❌ 不要创建独立的 SOP 包（如 `lumosai_sop`）
-- ❌ 不要重写现有的消息系统
-- ❌ 不要创建与 `Crew` 平行的新协作系统
-- ❌ 不要破坏现有 API 的向后兼容性
-
-### 2. 代码质量
-
-- **Rust 规范**：遵循 Rust API 指南和 `CLAUDE.md` 中的开发规范
-- **代码风格**：每次提交前运行 `cargo fmt` 和 `cargo clippy --all-targets`
-- **文档注释**：所有 public API 必须有完整的文档注释，包含：
-  - 功能描述
-  - 参数说明
-  - 返回值说明
-  - 使用示例（`# Example` 代码块）
-  - 错误情况说明（如适用）
-- **错误处理**：
-  - 使用 `thiserror` 定义错误类型
-  - 避免 `unwrap()` 和 `expect()`（除非在测试代码中）
-  - 避免 `panic!()`
-  - 使用 `Result<T>` 返回类型
-
-### 3. 测试验证
-
-每个功能实现后必须：
-
-- **单元测试**：
-  - 覆盖率 > 80%
-  - 测试正常流程
-  - 测试边界条件
-  - 测试错误处理
-  - 文件位置：`lumosai_core/tests/sop_*.rs`
-
-- **集成测试**：
-  - 验证模块间交互
-  - 验证 SOP 与现有 Agent 的兼容性
-  - 验证消息转换的正确性
-  - 验证三种执行模式
-
-- **示例代码**：
-  - 在 `examples/` 目录创建至少 3 个可运行示例
-  - 示例必须能够成功编译和运行
-  - 示例应展示融合后的使用方式
-
-- **测试通过**：
-  - 运行 `./scripts/run_tests.sh` 确保所有测试通过
-  - 运行 `cargo test --all-features` 确保无回归
-
-### 4. 进度跟踪
-
-每完成一个任务后：
-
-- **更新文档**：在 `lumos4.1.md` 中标记已完成的任务（`[ ]` → `[x]`）
-
-- **添加实施说明**（中文），包括：
-  - 实现的文件路径（列出所有修改的文件）
-  - 核心代码片段（关键 trait/struct/函数签名）
-  - 测试文件路径和测试覆盖率百分比
-  - 遇到的问题和解决方案（技术细节）
-  - 与原计划的差异（如有，说明原因）
-  - **融合方式说明**（如何与现有架构集成）
-
-- **提交代码**：
-  - 使用规范的 commit message（参考现有提交格式）
-  - 每个 commit 应该是一个逻辑完整的变更
-  - Commit message 格式：`feat(sop): 简短描述`
-
-### 5. 实施流程
-
-对于每个任务，严格按照以下步骤：
-
-1. **分析阶段**：
-   - 阅读 `lumos4.1.md` 中的详细设计和代码示例
-   - 使用 `codebase-retrieval` 查找相关现有代码
-   - 使用 `view` 工具查看现有实现
-   - 创建融合方案文档（如 `SOP_FUSION_PLAN.md`）
-
-2. **设计阶段**：
-   - 确定需要修改的现有文件（而非创建新文件）
-   - 设计扩展点（如何扩展现有 enum、trait、struct）
-   - 设计适配层（如何桥接 SOP 和现有架构）
-   - 确认向后兼容性
-
-3. **实现阶段**：
-   - 实现功能（最小化改造）
-   - 遵循现有代码风格
-   - 添加完整的文档注释
-   - 运行 `cargo fmt` 和 `cargo clippy`
-
-4. **测试阶段**：
-   - 编写单元测试
-   - 编写集成测试
-   - 创建示例代码
-   - 运行 `./scripts/run_tests.sh`
-   - 验证测试覆盖率 > 80%
-
-5. **文档阶段**：
-   - 更新 `lumos4.1.md` 标记完成状态
-   - 添加实施记录
-   - 更新相关 API 文档
-
-6. **提交阶段**：
-   - 提交代码（规范的 commit message）
-   - 确认所有测试通过
-
-### 6. 当前任务优先级
-
-根据已完成的架构分析（`SOP_FUSION_ARCHITECTURE_ANALYSIS.md`），按以下顺序实施：
-
-**P0-1: 修复阻塞问题并完善 SOP 基础**（当前阶段）
-
-1. **修复 AgentCommunicationManager 阻塞问题**（最高优先级）
-   - 文件：`lumosai_core/src/agent/communication.rs`
-   - 问题：第 1082 行使用 `blocking_write()` 导致 async 上下文 panic
-   - 解决方案：移除 `blocking_write()`，使用 `tokio::spawn` 异步初始化
-
-2. **扩展 Crew 支持 SOP 执行模式**
-   - 文件：`lumosai_core/src/agent/collaboration.rs`
-   - 变更：在 `CollaborationMode` 中添加 `SopReact`、`SopByOrder`、`SopPlanAndAct`
-   - 变更：在 `Crew::kickoff()` 中添加 SOP 执行分支
-   - 变更：实现 `execute_sop_react()` 等方法
-
-3. **完善测试覆盖率到 80%+**
-   - 创建 `lumosai_core/tests/sop_unit_tests.rs`
-   - 创建 `lumosai_core/tests/sop_integration_tests.rs`
-   - 创建至少 3 个可运行示例
-
-4. **验证融合效果**
-   - 确保现有 Agent 可以在 SOP 模式下工作
-   - 确保 SOP Agent 可以在现有 Crew 中工作
-   - 确保消息转换正确无误
-
-**P0-2: DSL 宏系统**（下一阶段）
-
-- 实现 `#[agent]` 宏自动生成 SOP 方法
-- 实现 `#[tool]` 宏简化工具创建
-- 实现 `#[workflow]` 宏定义工作流
-
-## 输出格式
-
-实施完成后，在 `lumos4.1.md` 中添加实施记录，格式如下：
-
-```markdown
-### ✅ 实施记录：P0-1 SOP 架构深度融合
-
-**实施时间**：2025-10-30  
-**负责人**：AI Assistant  
-**状态**：✅ 完成
-
-**融合方式**：
-- 扩展 `CollaborationMode` 枚举，添加 `SopReact`、`SopByOrder`、`SopPlanAndAct`
-- 扩展 `Agent` trait，添加可选的 `sop_watch()`、`sop_think()`、`sop_act()` 方法
-- 创建 `SopEnvironment` 作为 `Crew` 的适配器，复用现有通信系统
-- 实现 `SopMessage` ↔ `AgentMessage` 双向转换
-
-**实现文件**：
-- `lumosai_core/src/agent/collaboration.rs` - 扩展 Crew 支持 SOP 模式（+120 行）
-- `lumosai_core/src/agent/trait_def.rs` - 扩展 Agent trait（+40 行）
-- `lumosai_core/src/agent/sop_environment.rs` - SOP 环境适配器（546 行）
-- `lumosai_core/src/agent/sop_types.rs` - SOP 类型定义（279 行）
-- `lumosai_core/src/agent/communication.rs` - 修复阻塞问题（-5 行，+8 行）
-
-**核心代码**：
-```rust
-// 扩展 CollaborationMode
-pub enum CollaborationMode {
-    Sequential,
-    Parallel,
-    Hierarchical,
-    SopReact,      // 新增：事件驱动
-    SopByOrder,    // 新增：顺序执行
-    SopPlanAndAct, // 新增：计划执行
-}
-
-// 扩展 Agent trait
-#[async_trait]
-pub trait Agent: Base + Send + Sync {
-    // ... 现有方法 ...
-    
-    // SOP 可选方法（默认实现）
-    async fn sop_watch(&self, messages: Vec<SopMessage>) -> Result<Vec<SopMessage>> {
-        Ok(Vec::new())
-    }
-    async fn sop_think(&self, messages: Vec<SopMessage>) -> Result<AgentAction> {
-        Ok(AgentAction::NoOp)
-    }
-    async fn sop_act(&self, action: AgentAction) -> Result<()> {
-        Ok(())
-    }
-}
-
-// SopEnvironment 作为 Crew 适配器
-pub struct SopEnvironment {
-    crew: Arc<Crew>,  // 复用现有 Crew
-    communication: Arc<AgentCommunicationManager>,  // 复用现有通信
-    execution_mode: SopExecutionMode,
-    // ...
-}
-```
-
-**测试**：
-- `lumosai_core/tests/sop_unit_tests.rs` - 单元测试覆盖率 85%（23 个测试）
-- `lumosai_core/tests/sop_integration_tests.rs` - 集成测试（5 个测试）
-- `examples/sop_types_demo.rs` - 类型系统演示
-- `examples/sop_research_team.rs` - 研究团队示例
-- `examples/sop_crew_fusion.rs` - Crew 融合示例
-
-**问题和解决方案**：
-- **问题 1**：`AgentCommunicationManager::new()` 在 async 上下文中使用 `blocking_write()` 导致 panic
-  - **解决**：移除 `blocking_write()`，使用 `tokio::spawn` 异步初始化优先级队列
-  
-- **问题 2**：`AgentMessageType` 没有 `Custom` 变体，无法直接映射 SOP 消息类型
-  - **解决**：实现 12 种 `AgentMessageType` 的映射函数，将 SOP 类型存储在 `metadata["sop_msg_type"]`
-
-- **问题 3**：如何确保现有 Agent 与 SOP Agent 兼容
-  - **解决**：SOP 方法设为可选（默认实现返回 NoOp），现有 Agent 无需修改
-
-**差异说明**：
-- **原计划**：创建独立的 `lumosai_sop` 包
-- **实际实现**：将 SOP 深度融合到 `lumosai_core/src/agent/`，扩展现有模块
-- **原因**：避免代码重复，复用现有基础设施，保持架构一致性
-
-**性能指标**：
-- 消息吞吐量：1200 msg/s（超过目标 1000 msg/s）
-- Agent 响应延迟：< 50ms（优于目标 100ms）
-- 内存占用：~80MB for 10 agents（符合目标 < 100MB）
-
-**向后兼容性**：
-- ✅ 现有 Agent 无需修改即可工作
-- ✅ 现有 Crew 代码继续有效
-- ✅ 新增的 SOP 功能完全可选
-```
-
-## 执行指令
-
-**立即开始第一个任务**：修复 `AgentCommunicationManager` 阻塞问题
-
-1. 查看 `lumosai_core/src/agent/communication.rs` 第 1082 行附近的代码
-2. 分析 `blocking_write()` 的使用场景
-3. 设计异步初始化方案
-4. 实现修复
-5. 验证修复后 `SopEnvironment::new()` 可以在 async 上下文中正常工作
-6. 运行测试确保无回归
-7. 提交代码
-
-**每次只专注于一个任务，确保质量后再进行下一个。**
+建议从以下任务开始：
+1. 运行 `./scripts/validate_lumos4.2.sh` 获取基线
+2. 安装 `cargo-tarpaulin`：`cargo install cargo-tarpaulin`
+3. 运行覆盖率测试：`cargo tarpaulin --workspace --out Html`
+4. 为 Agent 模块添加 10-20 个单元测试
+5. 验证测试通过并更新文档

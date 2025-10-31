@@ -46,6 +46,7 @@ struct ZhipuStreamChoice {
 struct ZhipuStreamDelta {
     role: Option<String>,
     content: Option<String>,
+    reasoning_content: Option<String>,  // For glm-4.6+ models
     #[serde(default)]
     tool_calls: Vec<ZhipuToolCall>,
 }
@@ -126,7 +127,7 @@ impl ZhipuProvider {
         Self {
             api_key,
             client: reqwest::Client::new(),
-            model: model.unwrap_or_else(|| "glm-4.6".to_string()),
+            model: model.unwrap_or_else(|| "glm-4-plus".to_string()),
             base_url: "https://open.bigmodel.cn/api/paas/v4".to_string(),
         }
     }
@@ -146,7 +147,7 @@ impl ZhipuProvider {
         Self {
             api_key,
             client: reqwest::Client::new(),
-            model: model.unwrap_or_else(|| "glm-4.6".to_string()),
+            model: model.unwrap_or_else(|| "glm-4-plus".to_string()),
             base_url,
         }
     }
@@ -275,11 +276,26 @@ impl LlmProvider for ZhipuProvider {
             .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {e}")))?;
 
         // Extract generated text
-        let content = response["choices"][0]["message"]["content"]
+        // glm-4.6+ models may return reasoning_content instead of content
+        let message = &response["choices"][0]["message"];
+        let content = message["content"]
             .as_str()
-            .ok_or_else(|| Error::Llm("Invalid response format from 智谱AI".to_string()))?;
+            .unwrap_or("");
 
-        Ok(content.to_string())
+        // If content is empty, try reasoning_content (for glm-4.6+)
+        let final_content = if content.is_empty() {
+            message["reasoning_content"]
+                .as_str()
+                .unwrap_or("")
+        } else {
+            content
+        };
+
+        if final_content.is_empty() {
+            return Err(Error::Llm("智谱AI returned empty response".to_string()));
+        }
+
+        Ok(final_content.to_string())
     }
 
     async fn generate_with_messages(
@@ -350,11 +366,26 @@ impl LlmProvider for ZhipuProvider {
             .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {e}")))?;
 
         // Extract generated text
-        let content = response["choices"][0]["message"]["content"]
+        // glm-4.6+ models may return reasoning_content instead of content
+        let message = &response["choices"][0]["message"];
+        let content = message["content"]
             .as_str()
-            .ok_or_else(|| Error::Llm("Invalid response format from 智谱AI".to_string()))?;
+            .unwrap_or("");
 
-        Ok(content.to_string())
+        // If content is empty, try reasoning_content (for glm-4.6+)
+        let final_content = if content.is_empty() {
+            message["reasoning_content"]
+                .as_str()
+                .unwrap_or("")
+        } else {
+            content
+        };
+
+        if final_content.is_empty() {
+            return Err(Error::Llm("智谱AI returned empty response".to_string()));
+        }
+
+        Ok(final_content.to_string())
     }
 
     async fn generate_stream<'a>(
@@ -627,7 +658,11 @@ impl ZhipuProvider {
                             match serde_json::from_str::<ZhipuStreamResponse>(data) {
                                 Ok(stream_response) => {
                                     if let Some(choice) = stream_response.choices.first() {
-                                        if let Some(content) = &choice.delta.content {
+                                        // Try content first, then reasoning_content (for glm-4.6+)
+                                        let content_to_use = choice.delta.content.as_ref()
+                                            .or(choice.delta.reasoning_content.as_ref());
+
+                                        if let Some(content) = content_to_use {
                                             if !content.is_empty() {
                                                 results.push(content.clone());
                                             }
@@ -663,15 +698,15 @@ mod tests {
 
     #[test]
     fn test_zhipu_provider_creation() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6".to_string()));
-        assert_eq!(provider.model, "glm-4.6");
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
+        assert_eq!(provider.model, "glm-4-plus");
         assert_eq!(provider.base_url, "https://open.bigmodel.cn/api/paas/v4");
     }
 
     #[test]
     fn test_zhipu_provider_with_custom_model() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6-plus".to_string()));
-        assert_eq!(provider.model, "glm-4.6-plus");
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus-plus".to_string()));
+        assert_eq!(provider.model, "glm-4-plus-plus");
     }
 
     #[test]
@@ -686,13 +721,13 @@ mod tests {
 
     #[test]
     fn test_supports_function_calling() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6".to_string()));
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
         assert!(provider.supports_function_calling());
     }
 
     #[test]
     fn test_provider_name() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6".to_string()));
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
         assert_eq!(provider.name(), "zhipu");
     }
 }

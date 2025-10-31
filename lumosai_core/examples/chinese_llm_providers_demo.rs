@@ -31,7 +31,7 @@ async fn test_zhipu_provider() -> std::result::Result<(), Box<dyn std::error::Er
     println!("-------------------");
 
     let zhipu_provider =
-        ZhipuProvider::new("your-zhipu-api-key".to_string(), Some("glm-4.6".to_string()));
+        ZhipuProvider::new("your-zhipu-api-key".to_string(), Some("glm-4-plus".to_string()));
 
     println!("✅ 智谱AI Provider 创建成功");
     println!("   - 提供商名称: {}", zhipu_provider.name());
@@ -141,7 +141,7 @@ async fn demo_unified_interface() -> std::result::Result<(), Box<dyn std::error:
     let providers: Vec<Box<dyn LlmProvider>> = vec![
         Box::new(ZhipuProvider::new(
             "test-key".to_string(),
-            Some("glm-4.6".to_string()),
+            Some("glm-4-plus".to_string()),
         )),
         Box::new(BaiduProvider::new(
             "test-key".to_string(),
@@ -175,8 +175,8 @@ async fn demo_unified_interface() -> std::result::Result<(), Box<dyn std::error:
 
     println!("\n📊 模型选择建议:");
     println!("   智谱AI GLM:");
-    println!("   - glm-4.6: 最新版本，性能优秀");
-    println!("   - glm-4.6-plus: 增强版本，更强推理能力");
+    println!("   - glm-4-plus: 最新版本，性能优秀");
+    println!("   - glm-4-plus-plus: 增强版本，更强推理能力");
     println!("   - glm-3-turbo: 快速版本，响应迅速");
 
     println!("   百度ERNIE:");
@@ -193,10 +193,10 @@ mod tests {
 
     #[test]
     fn test_zhipu_provider_creation() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6".to_string()));
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
 
         assert_eq!(provider.name(), "zhipu");
-        assert_eq!(provider.model(), "glm-4.6");
+        assert_eq!(provider.model(), "glm-4-plus");
         assert!(provider.supports_function_calling());
     }
 

@@ -39,7 +39,7 @@ fn test_together_provider_creation() {
 
 #[test]
 fn test_zhipu_provider_creation() {
-    let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6".to_string()));
+    let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
 
     assert_eq!(provider.name(), "zhipu");
     assert!(provider.supports_function_calling());
@@ -184,7 +184,7 @@ async fn test_together_integration() {
 #[ignore] // 需要实际的API密钥才能运行
 async fn test_zhipu_integration() {
     let api_key = std::env::var("ZHIPU_API_KEY").expect("需要设置ZHIPU_API_KEY环境变量");
-    let provider = ZhipuProvider::new(api_key, Some("glm-4.6".to_string()));
+    let provider = ZhipuProvider::new(api_key, Some("glm-4-plus".to_string()));
 
     let options = LlmOptions::default()
         .with_temperature(0.7)

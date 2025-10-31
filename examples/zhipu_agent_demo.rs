@@ -38,7 +38,7 @@ async fn demo_basic_zhipu_agent(api_key: &str) -> Result<(), Box<dyn std::error:
     // 创建智谱 AI 提供商
     let zhipu_provider = Arc::new(ZhipuProvider::new(
         api_key.to_string(),
-        Some("glm-4.6".to_string()),
+        Some("glm-4-plus".to_string()),
     ));
 
     // 创建 Agent
@@ -63,7 +63,7 @@ async fn demo_conversation_agent(api_key: &str) -> Result<(), Box<dyn std::error
     // 创建智谱 AI 提供商
     let zhipu_provider = Arc::new(ZhipuProvider::new(
         api_key.to_string(),
-        Some("glm-4.6".to_string()),
+        Some("glm-4-plus".to_string()),
     ));
 
     // 创建对话 Agent
@@ -101,7 +101,7 @@ async fn demo_professional_agent(api_key: &str) -> Result<(), Box<dyn std::error
     // 创建智谱 AI 提供商
     let zhipu_provider = Arc::new(ZhipuProvider::new(
         api_key.to_string(),
-        Some("glm-4.6".to_string()),
+        Some("glm-4-plus".to_string()),
     ));
 
     // 创建技术专家 Agent
@@ -159,7 +159,7 @@ mod tests {
     #[tokio::test]
     async fn test_zhipu_provider_creation() {
         let api_key = "test_key".to_string();
-        let provider = ZhipuProvider::new(api_key, Some("glm-4.6".to_string()));
+        let provider = ZhipuProvider::new(api_key, Some("glm-4-plus".to_string()));
 
         assert_eq!(provider.name(), "zhipu");
     }
@@ -167,7 +167,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_builder_with_zhipu() {
         let api_key = "test_key".to_string();
-        let zhipu_provider = Arc::new(ZhipuProvider::new(api_key, Some("glm-4.6".to_string())));
+        let zhipu_provider = Arc::new(ZhipuProvider::new(api_key, Some("glm-4-plus".to_string())));
 
         let agent = AgentBuilder::new()
             .name("test_agent")

@@ -11,7 +11,12 @@ pub fn get_zhipu_api_key() -> String {
         .unwrap_or_else(|_| "99a311fa7920a59e9399cf26ecc1e938.ac4w6buZHr2Ggc3k".to_string())
 }
 
-/// Create a Zhipu provider for testing with glm-4.6 model
+/// Create a Zhipu provider for testing with glm-4.6 model (latest, best quality)
+///
+/// Note: glm-4.6 uses reasoning_content for Chain-of-Thought responses.
+/// - For best results, use max_tokens >= 500 or don't set max_tokens
+/// - The model returns reasoning process in reasoning_content field
+/// - Our provider automatically handles both content and reasoning_content
 pub fn create_test_zhipu_provider() -> ZhipuProvider {
     ZhipuProvider::new(get_zhipu_api_key(), Some("glm-4.6".to_string()))
 }
@@ -51,6 +56,14 @@ mod tests {
     #[test]
     fn test_create_test_zhipu_provider_with_model() {
         let provider = create_test_zhipu_provider_with_model("glm-4.6-flash");
+        assert_eq!(provider.name(), "zhipu");
+    }
+
+    #[test]
+    fn test_glm46_model_name() {
+        // Verify we're using glm-4.6 by default
+        let provider = create_test_zhipu_provider();
+        // Note: Can't directly check model name from provider, but this ensures it compiles
         assert_eq!(provider.name(), "zhipu");
     }
 }

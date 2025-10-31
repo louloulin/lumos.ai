@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔑 使用 API Key: {}...", &api_key[..20]);
 
     // 创建智谱 AI 提供商
-    let zhipu_provider = ZhipuProvider::new(api_key, Some("glm-4.6".to_string()));
+    let zhipu_provider = ZhipuProvider::new(api_key, Some("glm-4-plus".to_string()));
 
     println!("\n=== 演示1: 使用精确的 Temperature 类型 ===");
 
@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 创建 Agent (重新创建 provider 因为没有 Clone)
         let temp_provider = ZhipuProvider::new(
             env::var("ZHIPU_API_KEY").expect("ZHIPU_API_KEY required"),
-            Some("glm-4.6".to_string()),
+            Some("glm-4-plus".to_string()),
         );
         let agent = AgentBuilder::new()
             .name(&format!("zhipu_temp_{}", name.replace(" ", "_")))

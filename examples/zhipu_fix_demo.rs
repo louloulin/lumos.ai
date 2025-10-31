@@ -30,7 +30,7 @@ async fn test_raw_api_call(api_key: &str) -> Result<(), Box<dyn std::error::Erro
 
     // 正确的智谱 AI API 请求格式
     let body = json!({
-        "model": "glm-4.6",
+        "model": "glm-4-plus",
         "messages": [
             {
                 "role": "user",
@@ -104,7 +104,7 @@ mod fixed_implementation {
             Self {
                 api_key,
                 client: reqwest::Client::new(),
-                model: model.unwrap_or_else(|| "glm-4.6".to_string()),
+                model: model.unwrap_or_else(|| "glm-4-plus".to_string()),
                 base_url: "https://open.bigmodel.cn/api/paas/v4".to_string(),
             }
         }
@@ -158,7 +158,7 @@ mod tests {
     #[tokio::test]
     async fn test_api_format() {
         let body = json!({
-            "model": "glm-4.6",
+            "model": "glm-4-plus",
             "messages": [{"role": "user", "content": "test"}],
             "temperature": 0.7,
             "max_tokens": 100,
@@ -169,7 +169,7 @@ mod tests {
 
         // 验证 JSON 格式正确
         assert!(body.is_object());
-        assert_eq!(body["model"], "glm-4.6");
+        assert_eq!(body["model"], "glm-4-plus");
         assert!(body["messages"].is_array());
     }
 
@@ -177,11 +177,11 @@ mod tests {
     fn test_provider_creation() {
         let provider = fixed_implementation::FixedZhipuProvider::new(
             "test_key".to_string(),
-            Some("glm-4.6".to_string()),
+            Some("glm-4-plus".to_string()),
         );
 
         // 验证提供商创建成功
-        assert_eq!(provider.model, "glm-4.6");
+        assert_eq!(provider.model, "glm-4-plus");
         assert_eq!(provider.base_url, "https://open.bigmodel.cn/api/paas/v4");
     }
 }

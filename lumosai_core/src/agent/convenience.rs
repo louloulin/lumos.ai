@@ -244,11 +244,11 @@ mod tests {
     
     #[test]
     fn test_model_builder() {
-        let mock_provider = create_test_zhipu_provider_arc();
+        let zhipu_provider = create_test_zhipu_provider_arc();
 
         // Test that the provider has a name
-        assert!(!mock_provider.name().is_empty());
-        assert_eq!(mock_provider.name(), "mock");
+        assert!(!zhipu_provider.name().is_empty());
+        assert_eq!(zhipu_provider.name(), "zhipu");
     }
 
     #[test]

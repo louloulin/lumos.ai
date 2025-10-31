@@ -1,6 +1,6 @@
 //! 智谱 AI 基础测试
 //!
-//! 测试 LumosAI 与智谱 AI (GLM-4-flash) 的集成
+//! 测试 LumosAI 与智谱 AI (glm-4.6-flash) 的集成
 
 use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role, ZhipuProvider};
 use std::env;
@@ -17,8 +17,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("🔑 使用 API Key: {}...", &api_key[..20]);
 
-    // 创建智谱 AI 提供商 - 使用 glm-4 而不是 glm-4-flash
-    let provider = ZhipuProvider::new(api_key, Some("glm-4".to_string()));
+    // 创建智谱 AI 提供商 - 使用 glm-4.6 而不是 glm-4.6-flash
+    let provider = ZhipuProvider::new(api_key, Some("glm-4.6".to_string()));
 
     println!("🔧 使用模型: {}", provider.model());
     println!("🌐 API 端点: {}", provider.base_url());

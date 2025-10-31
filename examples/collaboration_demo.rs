@@ -4,7 +4,6 @@
 
 use lumosai_core::agent::collaboration::{AgentRole, AgentTask, CollaborationMode, Crew};
 use lumosai_core::agent::simplified_api::Agent;
-use lumosai_core::llm::MockLlmProvider;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -17,12 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("==================");
 
     // 创建 Mock LLM 提供商
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "任务完成：我已经分析了数据并生成了报告。".to_string(),
-        "代码编写完成：我已经实现了所需的功能。".to_string(),
-        "文档编写完成：我已经创建了完整的技术文档。".to_string(),
-        "测试执行完成：所有测试都通过了。".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // 创建一个 Crew 团队
     let crew = Crew::new(

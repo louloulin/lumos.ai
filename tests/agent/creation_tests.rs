@@ -3,7 +3,6 @@ use std::time::Duration;
 use tokio::time::timeout;
 use lumosai_core::prelude::*;
 use lumosai_core::agent::{BasicAgent, AgentConfig, AgentBuilder};
-use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::memory::MemoryManager;
 use crate::common::{TestUtils, TestAssertions};
 
@@ -15,7 +14,7 @@ mod agent_creation_tests {
     #[tokio::test]
     async fn test_agent_builder_validation() {
         // 测试AgentBuilder的参数验证
-        let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         // 测试有效配置
         let config = AgentConfig {
@@ -42,7 +41,7 @@ mod agent_creation_tests {
     #[tokio::test]
     async fn test_agent_with_invalid_model() {
         // 测试无效模型配置的错误处理
-        let llm = Arc::new(MockLlmProvider::new(vec![])); // 空响应
+        let llm = create_test_zhipu_provider_arc(); // 空响应
 
         let config = AgentConfig {
             name: "test-agent".to_string(),
@@ -61,7 +60,7 @@ mod agent_creation_tests {
     #[tokio::test]
     async fn test_agent_memory_configuration() {
         // 测试不同内存配置的Agent创建
-        let llm = Arc::new(MockLlmProvider::new(vec!["Memory test response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         // 测试带内存管理器的Agent
         let memory_manager = MemoryManager::new();
@@ -83,7 +82,7 @@ mod agent_creation_tests {
     #[tokio::test]
     async fn test_agent_tool_integration() {
         // 测试工具集成的正确性
-        let llm = Arc::new(MockLlmProvider::new(vec!["Tool integration test".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let config = AgentConfig {
             name: "tool-agent".to_string(),
@@ -124,7 +123,7 @@ mod agent_creation_tests {
     #[tokio::test]
     async fn test_agent_configuration_validation() {
         // 测试配置参数验证
-        let llm = Arc::new(MockLlmProvider::new(vec!["Config test".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         // 测试最大长度限制
         let long_name = "a".repeat(1000);
@@ -151,7 +150,7 @@ mod agent_creation_tests {
     #[tokio::test]
     async fn test_agent_default_configuration() {
         // 测试默认配置
-        let llm = Arc::new(MockLlmProvider::new(vec!["Default config test".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
@@ -167,7 +166,7 @@ mod agent_creation_tests {
     #[tokio::test]
     async fn test_agent_timeout_configuration() {
         // 测试超时配置
-        let llm = Arc::new(MockLlmProvider::new(vec!["Timeout test".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let config = AgentConfig {
             name: "timeout-agent".to_string(),

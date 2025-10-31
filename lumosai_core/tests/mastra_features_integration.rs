@@ -4,7 +4,6 @@
 
 use lumosai_core::agent::trait_def::Agent as AgentTrait;
 use lumosai_core::agent::{mastra_compat, Agent, AgentBuilder};
-use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::tool::builtin::{
     create_all_builtin_tools, create_dev_builtin_tools, create_safe_builtin_tools,
     BuiltinToolsConfig,
@@ -16,7 +15,7 @@ use std::sync::Arc;
 #[tokio::test]
 async fn test_agent_builder_pattern() {
     // Test the enhanced AgentBuilder pattern
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello from agent!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("test_agent")
@@ -35,9 +34,7 @@ async fn test_agent_builder_pattern() {
 #[tokio::test]
 async fn test_mastra_compatible_api() {
     // Test Mastra-compatible Agent creation API
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Hello from Mastra-style agent!".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = mastra_compat::Agent::create()
         .name("mastra_agent")
@@ -56,9 +53,7 @@ async fn test_mastra_compatible_api() {
 #[tokio::test]
 async fn test_agent_with_builtin_tools() {
     // Test agent creation with built-in tools
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "I'll use the tools to help you!".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = mastra_compat::Agent::with_tools()
         .name("tool_agent")
@@ -134,7 +129,7 @@ async fn test_safe_vs_dev_tools() {
 
 #[tokio::test]
 async fn test_mastra_utility_functions() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Quick response!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     // Test quick agent creation
     let quick_agent =
@@ -215,11 +210,7 @@ async fn test_tool_execution() {
 #[tokio::test]
 async fn test_comprehensive_agent_workflow() {
     // Test a comprehensive workflow that combines multiple features
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "I'll help you with calculations and data processing!".to_string(),
-        "Let me use the calculator tool to compute 10 + 20".to_string(),
-        "The result is 30. Now let me process some JSON data.".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // Create an agent with multiple tool categories
     let agent = mastra_compat::Agent::with_tools()
@@ -263,9 +254,7 @@ async fn test_comprehensive_agent_workflow() {
 #[tokio::test]
 async fn test_performance_and_scalability() {
     // Test that we can create multiple agents efficiently
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Performance test response".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let start_time = std::time::Instant::now();
 

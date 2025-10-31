@@ -6,7 +6,8 @@ mod tests {
     use lumosai_core::agent::types::AgentGenerateOptions;
     use lumosai_core::agent::{AgentConfig, BasicAgent};
     use lumosai_core::base::Base;
-    use lumosai_core::llm::{LlmOptions, Message, MockLlmProvider, Role};
+    use lumosai_core::llm::{LlmOptions, Message, Role};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
     use lumosai_core::logger::Component;
     use lumosai_core::memory::thread::{
         CreateThreadParams, GetMessagesParams, MemoryThread, MemoryThreadStorage,
@@ -218,9 +219,7 @@ mod tests {
     #[tokio::test]
     async fn test_generate_with_memory_basic() -> Result<()> {
         // Create a mock LLM provider with specific responses
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Hello Alice! Nice to meet you.".to_string()
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         // Create basic agent config
         let config = AgentConfig {
@@ -282,10 +281,7 @@ mod tests {
     #[tokio::test]
     async fn test_generate_with_memory_conversation_history() -> Result<()> {
         // Create a mock LLM provider with multiple responses
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Hello Alice! Nice to meet you.".to_string(),
-            "Your name is Alice, as you mentioned earlier.".to_string(),
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         let config = AgentConfig {
             name: "test_agent".to_string(),
@@ -353,9 +349,7 @@ mod tests {
     #[tokio::test]
     async fn test_generate_with_memory_without_thread_id() -> Result<()> {
         // Test that the method works even without a thread_id
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Hello! How can I help you?".to_string()
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         let config = AgentConfig {
             name: "test_agent".to_string(),
@@ -392,9 +386,7 @@ mod tests {
     #[tokio::test]
     async fn test_generate_with_memory_without_memory_storage() -> Result<()> {
         // Test with an agent that doesn't have memory storage
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Hello! I don't have memory.".to_string()
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         let config = AgentConfig {
             name: "test_agent".to_string(),
@@ -434,7 +426,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_base_implementation() -> Result<()> {
         // Create a mock LLM provider
-        let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         // Create basic agent config
         let config = AgentConfig {

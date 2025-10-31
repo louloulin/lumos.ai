@@ -8,15 +8,12 @@ mod tests {
     use super::super::*;
     use crate::agent::trait_def::Agent as AgentTrait;
     use crate::agent::types::AgentGenerateOptions;
-    use crate::llm::MockLlmProvider;
-    use std::sync::Arc;
+        use std::sync::Arc;
 
     #[tokio::test]
     async fn test_agent_quick_api() {
         // Test the quick API for simple agent creation
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Hello from quick agent!".to_string()
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = quick("assistant", "You are a helpful assistant")
             .model(llm)
@@ -33,9 +30,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_builder_api() {
         // Test the builder API for more complex configuration
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Hello from builder agent!".to_string()
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = AgentBuilder::new()
             .name("research_agent")
@@ -53,9 +48,7 @@ mod tests {
     #[tokio::test]
     async fn test_web_agent_convenience() {
         // Test the web agent convenience function
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "I can help with web tasks!".to_string()
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = web_agent("web_helper", "You are a web-enabled assistant")
             .model(llm)
@@ -79,9 +72,7 @@ mod tests {
     #[tokio::test]
     async fn test_file_agent_convenience() {
         // Test the file agent convenience function
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "I can help with file operations!".to_string(),
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = file_agent("file_helper", "You are a file management assistant")
             .model(llm)
@@ -108,9 +99,7 @@ mod tests {
     #[tokio::test]
     async fn test_data_agent_convenience() {
         // Test the data agent convenience function
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "I can help with data processing!".to_string(),
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = data_agent("data_helper", "You are a data processing assistant")
             .model(llm)
@@ -136,7 +125,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_builder_with_tool_collections() {
         // Test adding tool collections to a builder
-        let llm = Arc::new(MockLlmProvider::new(vec!["I have many tools!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = AgentBuilder::new()
             .name("multi_tool_agent")
@@ -163,9 +152,7 @@ mod tests {
     #[tokio::test]
     async fn test_smart_defaults() {
         // Test that smart defaults are applied correctly
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Smart defaults work!".to_string()
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = quick("smart_agent", "You are a smart assistant")
             .model(llm)
@@ -192,9 +179,7 @@ mod tests {
     #[tokio::test]
     async fn test_api_backward_compatibility() {
         // Test that the old API still works
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Backward compatibility!".to_string()
-        ]));
+        let llm = create_test_zhipu_provider_arc();
 
         // Old way using AgentBuilder directly
         let old_agent = AgentBuilder::new()
@@ -224,7 +209,7 @@ mod tests {
         assert!(result.is_err());
 
         // Test with valid configuration (this should succeed)
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let result = quick("agent", "You are an assistant").model(llm).build();
         assert!(result.is_ok());
     }

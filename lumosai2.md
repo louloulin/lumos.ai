@@ -275,7 +275,7 @@ lumosai_cli: ✅ 基本功能正常
 ```rust
 // 当前实现问题
 let body = serde_json::json!({
-    "model": "glm-4",
+    "model": "glm-4.6",
     "messages": messages,
     "temperature": 0.7,
     "max_tokens": 100
@@ -286,7 +286,7 @@ let body = serde_json::json!({
 ```rust
 // 正确的智谱 AI API 格式
 let body = serde_json::json!({
-    "model": "glm-4",
+    "model": "glm-4.6",
     "messages": messages,
     "temperature": 0.7,
     "max_tokens": 100,

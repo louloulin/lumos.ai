@@ -190,6 +190,7 @@ pub use crate::vector::{
 pub use crate::agent::{AgentGenerateResult, AgentStep};
 /// 消息和配置类型
 pub use crate::llm::{Message, Role};
+    use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 
 // ============================================================================
 // Agent 便利创建函数 - 统一的 Agent 创建接口
@@ -304,12 +305,11 @@ pub fn memory_vector_storage(
 mod tests {
     use super::*;
     use crate::agent::trait_def::Agent as AgentTrait;
-    use crate::llm::MockLlmProvider;
-    use std::sync::Arc;
+        use std::sync::Arc;
 
     #[tokio::test]
     async fn test_prelude_quick_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = quick_agent("assistant", "You are helpful")
             .model(llm)
@@ -323,7 +323,7 @@ mod tests {
     // 专业化 Agent 快速函数测试
     #[tokio::test]
     async fn test_prelude_web_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = web_agent("web_helper", "You can browse the web")
             .model(llm)
@@ -338,7 +338,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_prelude_file_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = file_agent("file_helper", "You can manage files")
             .model(llm)
@@ -353,7 +353,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_prelude_data_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = data_agent("data_helper", "You can process data")
             .model(llm)

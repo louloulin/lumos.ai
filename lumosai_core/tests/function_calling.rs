@@ -18,7 +18,7 @@ mod tests {
     #[tokio::test]
     async fn test_enhanced_function_calling() -> Result<()> {
         // Create mock LLM provider that supports function calling
-        let llm = MockLlmProvider::new(vec!["Calculating 2+2... The result is 4".to_string()]);
+        let llm = create_test_zhipu_provider();
 
         // Create agent config with function calling enabled
         let config = AgentConfig {
@@ -77,11 +77,7 @@ mod tests {
     #[tokio::test]
     async fn test_enhanced_tool_parsing() -> Result<()> {
         // Create a mock LLM provider that doesn't support function calling
-        let llm = MockLlmProvider::new(vec![
-            "I'll help you with that. Using the tool 'calculator' with parameters: {\"expression\": \"2+2\"}".to_string(),
-            "Let me calculate that. calculator(expression=\"2+2\")".to_string(),
-            "I'll use the calculator tool:\n```json\n{\"tool\": \"calculator\", \"parameters\": {\"expression\": \"2+2\"}}\n```".to_string(),
-        ]);
+        let llm = create_test_zhipu_provider();
 
         // Create agent config with function calling disabled to force regex parsing
         let config = AgentConfig {
@@ -153,7 +149,7 @@ mod tests {
     async fn test_system_message_generation() -> Result<()> {
         // Test with function calling
         {
-            let llm = MockLlmProvider::new(vec!["Test response".to_string()]);
+            let llm = create_test_zhipu_provider();
 
             let config = AgentConfig {
                 name: "TestAgent".to_string(),
@@ -207,7 +203,7 @@ mod tests {
 
         // Test without function calling
         {
-            let llm = MockLlmProvider::new(vec!["Test response".to_string()]);
+            let llm = create_test_zhipu_provider();
 
             let config = AgentConfig {
                 name: "TestAgent".to_string(),
@@ -263,9 +259,7 @@ mod tests {
     #[tokio::test]
     async fn test_edge_case_mixed_mode() -> Result<()> {
         // Create a mock LLM that supports function calling but returns text with tool calls
-        let llm = MockLlmProvider::new(vec![
-            "I'll calculate that. Using the tool 'weather' with parameters: {\"location\": \"New York\"}".to_string()
-        ]);
+        let llm = create_test_zhipu_provider();
 
         // Create agent with both tools
         let config = AgentConfig {

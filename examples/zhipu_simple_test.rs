@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("API Key: {}...{}\n", &api_key[..10], &api_key[api_key.len()-10..]);
 
     // 创建 Zhipu provider
-    let zhipu = ZhipuProvider::new(api_key, Some("glm-4".to_string()));
+    let zhipu = ZhipuProvider::new(api_key, Some("glm-4.6".to_string()));
 
     // 测试 1: 使用 generate 方法（简单字符串输入）
     println!("📝 Test 1: generate() method");

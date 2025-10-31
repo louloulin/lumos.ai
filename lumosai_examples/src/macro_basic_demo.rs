@@ -178,9 +178,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     // 4. 创建基础 Agent 演示宏的价值
     println!("\n🤖 创建 Agent 演示宏的价值:");
-    let mock_provider = MockLlmProvider::new(vec![
-        "我是一个演示宏功能的 AI 助手。通过使用 LumosAI 的宏系统，开发者可以：\n1. 快速定义工具函数\n2. 自动生成参数验证\n3. 简化 Agent 配置\n4. 提高代码可读性和维护性".to_string()
-    ]);
+    let mock_provider = create_test_zhipu_provider();
 
     let agent = quick_agent(
         "macro_demo_agent",

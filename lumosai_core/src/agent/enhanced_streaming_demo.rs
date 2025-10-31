@@ -11,7 +11,8 @@ use lumosai_core::agent::message_utils::user_message;
 use lumosai_core::agent::{
     AgentConfig, AgentEvent, AgentGenerateOptions, BasicAgent, IntoStreaming, StreamingConfig,
 };
-use lumosai_core::llm::{LlmOptions, MockLlmProvider};
+use lumosai_core::llm::{LlmOptions};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::memory::WorkingMemoryConfig;
 use lumosai_core::tools::{ParameterDefinition, ParameterType, Tool, ToolConfig, ToolsConfig};
 
@@ -284,7 +285,7 @@ mod tests {
             ..Default::default()
         };
 
-        let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let agent = BasicAgent::new(agent_config, llm);
 
         let streaming_agent = agent.into_streaming_with_config(streaming_config);

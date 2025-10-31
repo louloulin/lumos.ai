@@ -4,7 +4,6 @@
 //! against the traditional builder pattern to validate our improvements.
 
 use lumosai_core::agent::{quick, web_agent, AgentBuilder};
-use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio;
@@ -245,7 +244,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_api_performance_consistency() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["test".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         // Test that both APIs produce equivalent results
         let quick_agent = quick("test_agent", "You are a test agent")
@@ -270,7 +269,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_smart_defaults_application() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["test".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = quick("smart_agent", "You are a smart agent")
             .model(llm)
@@ -288,7 +287,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tool_collection_performance() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["test".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let start = Instant::now();
 

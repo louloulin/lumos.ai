@@ -8,7 +8,7 @@ use lumosai_core::llm::types::Temperature;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = "99a311fa7920a59e9399cf26ecc1e938.ac4w6buZHr2Ggc3k";
-    let zhipu = ZhipuProvider::new(api_key.to_string(), Some("glm-4".to_string()));
+    let zhipu = ZhipuProvider::new(api_key.to_string(), Some("glm-4.6".to_string()));
 
     println!("🌡️  智谱 AI 温度参数测试");
     println!("{}", "=".repeat(60));

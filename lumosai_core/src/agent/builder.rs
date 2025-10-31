@@ -91,10 +91,9 @@ impl Tool for ToolWrapper {
 ///
 /// ```rust
 /// use lumosai_core::agent::AgentBuilder;
-/// use lumosai_core::llm::MockLlmProvider;
-/// use std::sync::Arc;
+/// /// use std::sync::Arc;
 ///
-/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+/// let llm = create_test_zhipu_provider_arc();
 ///
 /// let agent = AgentBuilder::new()
 ///     .name("assistant")
@@ -653,12 +652,11 @@ impl AgentBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::MockLlmProvider;
-    use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
+        use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
 
     #[tokio::test]
     async fn test_agent_builder_basic() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = AgentBuilder::new()
             .name("test_agent")
@@ -673,7 +671,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_builder_with_tools() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         // Create a test tool
         let schema = ToolSchema::new(vec![ParameterSchema {
@@ -717,7 +715,7 @@ mod tests {
         assert!(result.is_err());
 
         // Test missing instructions
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let result = AgentBuilder::new().name("test").model(llm).build();
         assert!(result.is_err());
     }

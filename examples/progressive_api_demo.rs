@@ -8,7 +8,6 @@
 use lumosai_core::agent::simplified_api::{data_agent, file_agent, quick, web_agent, Agent};
 use lumosai_core::agent::trait_def::Agent as AgentTrait;
 use lumosai_core::error::Result;
-use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -46,10 +45,7 @@ async fn main() -> Result<()> {
     println!("提供更多控制，但保持简洁：");
 
     // 创建一个Mock LLM用于Level 2演示
-    let llm_level2 = Arc::new(MockLlmProvider::new(vec![
-        "你好！我是你的专业助手，可以根据你的需求定制配置。".to_string(),
-        "我现在使用0.7的温度参数，最多可以进行10次工具调用。".to_string(),
-    ]));
+    let llm_level2 = create_test_zhipu_provider_arc();
 
     let agent_level2 = Agent::new("专业助手", "你是一个友好的AI助手")
         .await
@@ -73,10 +69,7 @@ async fn main() -> Result<()> {
     println!("\n⚙️  Level 3 API - 完整构建器模式");
     println!("完全控制，适合高级用户：");
 
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "你好！我是 LumosAI 助手，很高兴为您服务！".to_string(),
-        "我可以帮助您处理各种任务，包括回答问题、分析数据、编写代码等。".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = Agent::builder()
         .name("advanced_assistant")
@@ -96,9 +89,7 @@ async fn main() -> Result<()> {
     // 演示快速创建方法
     println!("\n🚀 快速创建方法演示");
     let quick_agent = Agent::quick("quick_helper", "你是一个快速助手")
-        .model(Arc::new(MockLlmProvider::new(vec![
-            "我是快速助手，随时为您提供帮助！".to_string(),
-        ])))
+        .model(create_test_zhipu_provider_arc())
         .build()?;
 
     println!("✅ 快速 Agent 创建成功: {}", quick_agent.get_name());
@@ -109,11 +100,7 @@ async fn main() -> Result<()> {
     println!("\n🛠️  便捷函数演示");
     println!("针对特定场景的快速配置：");
 
-    let llm_convenience = Arc::new(MockLlmProvider::new(vec![
-        "我是Web助手，可以帮您处理网页相关任务。".to_string(),
-        "我是文件助手，可以帮您管理文件和目录。".to_string(),
-        "我是数据助手，可以帮您处理和分析数据。".to_string(),
-    ]));
+    let llm_convenience = create_test_zhipu_provider_arc();
 
     // Web助手
     let web_helper = web_agent("web助手")

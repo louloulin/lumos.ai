@@ -7,7 +7,7 @@ use lumosai_core::agent::collaboration::{
     IntelligentTaskDecomposer, SchedulingStrategy, TaskDecomposer,
 };
 use lumosai_core::agent::simplified_api::Agent;
-use lumosai_core::llm::MockLlmProvider;
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -17,16 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("===========================================");
 
     // 创建Mock LLM提供商
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "数据收集和分析完成".to_string(),
-        "市场调研报告生成完毕".to_string(),
-        "技术架构设计完成".to_string(),
-        "系统开发工作已完成".to_string(),
-        "测试计划已制定".to_string(),
-        "项目文档编写完毕".to_string(),
-        "部署流程已验证".to_string(),
-        "最终验证测试通过".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // 创建智能任务分解器
     let decomposer = IntelligentTaskDecomposer::new(llm.clone());

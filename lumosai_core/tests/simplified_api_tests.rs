@@ -5,7 +5,8 @@
 
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::AgentBuilder;
-use lumosai_core::llm::{Message, MockLlmProvider, Role};
+use lumosai_core::llm::{Message, Role};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::tool::{create_tool, ToolBuilder};
 use lumosai_core::{Agent, Error, Tool};
 use serde_json::json;
@@ -14,7 +15,7 @@ use std::time::Instant;
 
 #[tokio::test]
 async fn test_agent_builder_basic_functionality() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello from agent!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("test_agent")
@@ -33,10 +34,7 @@ async fn test_agent_builder_basic_functionality() {
 
 #[tokio::test]
 async fn test_agent_builder_with_tools() {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "I'll use the echo tool to help you.".to_string(),
-        "Tool result: Echo: Hello World!".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // Create a tool using the builder
     let echo_tool = ToolBuilder::new()
@@ -147,7 +145,7 @@ async fn test_create_tool_convenience_function() {
 #[tokio::test]
 async fn test_agent_builder_validation() {
     // Test missing name
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
     let result = AgentBuilder::new()
         .instructions("Test instructions")
         .model(llm.clone())
@@ -192,9 +190,7 @@ async fn test_tool_builder_validation() {
 
 #[tokio::test]
 async fn test_agent_generation_with_simplified_api() {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "I'll help you calculate that using the calculator tool.".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // Create calculator tool
     let calc_tool = create_tool(
@@ -259,7 +255,7 @@ async fn test_agent_generation_with_simplified_api() {
 #[tokio::test]
 async fn test_performance_comparison() {
     // Test that the new API doesn't significantly impact performance
-    let llm = Arc::new(MockLlmProvider::new(vec!["Quick response".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     // Measure agent creation time
     let start = Instant::now();
@@ -281,7 +277,7 @@ async fn test_performance_comparison() {
 
 #[tokio::test]
 async fn test_metadata_and_context() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("metadata_test")
@@ -338,9 +334,7 @@ async fn test_tool_with_default_parameters() {
 
 #[tokio::test]
 async fn test_multiple_tools_with_agent() {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "I can help with both math and greetings!".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let calc_tool = create_tool(
         "calc",

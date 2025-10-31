@@ -4,13 +4,12 @@
 
 use super::*;
 use crate::agent::trait_def::Agent as AgentTrait;
-use crate::llm::MockLlmProvider;
 use std::sync::Arc;
 use tokio;
 
 #[tokio::test]
 async fn test_agent_factory_quick() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentFactory::quick("test_agent", "You are a test assistant")
         .model(llm)
@@ -30,7 +29,7 @@ async fn test_agent_factory_quick() {
 
 #[tokio::test]
 async fn test_agent_factory_builder() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Builder response".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentFactory::builder()
         .name("builder_agent")
@@ -53,9 +52,7 @@ async fn test_agent_factory_builder() {
 
 #[tokio::test]
 async fn test_convenience_functions() {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Convenience response".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // Test quick function
     let quick_agent = quick("quick_test", "Quick test")

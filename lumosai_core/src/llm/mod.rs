@@ -15,6 +15,7 @@ pub mod providers;
 mod qwen;
 #[cfg(test)]
 mod tests;
+pub mod test_helpers;
 pub mod together;
 pub mod types;
 pub mod zhipu;

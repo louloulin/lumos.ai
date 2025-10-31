@@ -5,7 +5,7 @@
 ## 支持的提供商
 
 ### 1. 智谱AI (GLM)
-- **模型**: GLM-4, GLM-4-Plus, GLM-3-Turbo等
+- **模型**: glm-4.6, glm-4.6-Plus, GLM-3-Turbo等
 - **功能**: 文本生成、对话、函数调用、Embedding
 - **官网**: https://open.bigmodel.cn/
 
@@ -54,7 +54,7 @@ use lumosai_core::llm::{ZhipuProvider, BaiduProvider};
 // 智谱AI
 let zhipu = ZhipuProvider::new(
     "your_api_key".to_string(),
-    Some("glm-4".to_string())
+    Some("glm-4.6".to_string())
 );
 
 // 百度ERNIE
@@ -197,7 +197,7 @@ println!();
 let zhipu = ZhipuProvider::with_base_url(
     "your_api_key".to_string(),
     "https://custom.api.url".to_string(),
-    Some("glm-4-plus".to_string())
+    Some("glm-4.6-plus".to_string())
 );
 ```
 
@@ -216,8 +216,8 @@ let baidu = BaiduProvider::with_base_url(
 ### 模型选择
 
 #### 智谱AI支持的模型
-- `glm-4`: 最新的GLM-4模型
-- `glm-4-plus`: GLM-4增强版
+- `glm-4.6`: 最新的glm-4.6模型
+- `glm-4.6-plus`: glm-4.6增强版
 - `glm-3-turbo`: GLM-3快速版本
 
 #### 百度ERNIE支持的模型

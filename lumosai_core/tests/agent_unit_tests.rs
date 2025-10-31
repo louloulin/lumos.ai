@@ -10,13 +10,12 @@
 
 use lumosai_core::agent::trait_def::AgentStatus; // 使用 trait_def 中的 AgentStatus
 use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
-use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 
 /// 测试 1: Agent 基本创建
 #[test]
 fn test_agent_creation_with_name() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["test response".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig {
         name: "test_agent".to_string(),
         instructions: "You are a helpful assistant".to_string(),
@@ -32,7 +31,7 @@ fn test_agent_creation_with_name() {
 /// 测试 2: Agent 默认配置
 #[test]
 fn test_agent_default_configuration() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let agent = BasicAgent::new(config, llm);
 
@@ -44,7 +43,7 @@ fn test_agent_default_configuration() {
 /// 测试 3: Agent 指令修改
 #[test]
 fn test_agent_instructions_update() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig {
         name: "updatable_agent".to_string(),
         instructions: "Initial instructions".to_string(),
@@ -66,7 +65,7 @@ fn test_agent_instructions_update() {
 /// 测试 4: Agent 状态管理
 #[test]
 fn test_agent_status_transitions() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let mut agent = BasicAgent::new(config, llm);
 
@@ -89,7 +88,7 @@ fn test_agent_status_transitions() {
 /// 测试 5: Agent 错误状态
 #[test]
 fn test_agent_error_status() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let mut agent = BasicAgent::new(config, llm);
 
@@ -108,7 +107,7 @@ fn test_agent_error_status() {
 /// 测试 6: Agent Tool 管理
 #[test]
 fn test_agent_tool_management() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let agent = BasicAgent::new(config, llm);
 
@@ -119,7 +118,7 @@ fn test_agent_tool_management() {
 /// 测试 7: Agent Memory 集成
 #[test]
 fn test_agent_memory_integration() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig {
         name: "memory_agent".to_string(),
         instructions: "Test".to_string(),
@@ -136,7 +135,7 @@ fn test_agent_memory_integration() {
 /// 测试 8: Agent LLM Provider
 #[test]
 fn test_agent_llm_provider() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["response".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let agent = BasicAgent::new(config, llm.clone());
 
@@ -150,7 +149,7 @@ fn test_agent_llm_provider() {
 /// 测试 9: Agent Function Calling 配置
 #[test]
 fn test_agent_function_calling_config() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
 
     // 测试显式启用
     let config_enabled = AgentConfig {
@@ -175,7 +174,7 @@ fn test_agent_function_calling_config() {
 /// 测试 10: Agent 配置验证
 #[test]
 fn test_agent_config_validation() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig {
         name: "valid_agent".to_string(),
         instructions: "Valid instructions".to_string(),
@@ -191,8 +190,8 @@ fn test_agent_config_validation() {
 /// 测试 11: 多个 Agent 实例独立性
 #[test]
 fn test_multiple_agents_independence() {
-    let llm1 = Arc::new(MockLlmProvider::new(vec![]));
-    let llm2 = Arc::new(MockLlmProvider::new(vec![]));
+    let llm1 = create_test_zhipu_provider_arc();
+    let llm2 = create_test_zhipu_provider_arc();
 
     let config1 = AgentConfig {
         name: "agent1".to_string(),
@@ -222,7 +221,7 @@ fn test_multiple_agents_independence() {
 /// 测试 12: Agent 名称不同
 #[test]
 fn test_agents_with_different_names() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
 
     let names = vec!["alice", "bob", "charlie"];
 
@@ -241,7 +240,7 @@ fn test_agents_with_different_names() {
 /// 测试 13: Agent 空指令处理
 #[test]
 fn test_agent_empty_instructions() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig {
         name: "test".to_string(),
         instructions: "".to_string(),
@@ -257,7 +256,7 @@ fn test_agent_empty_instructions() {
 /// 测试 14: Agent 长指令处理
 #[test]
 fn test_agent_long_instructions() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let long_instructions = "A".repeat(10000);
 
     let config = AgentConfig {
@@ -275,7 +274,7 @@ fn test_agent_long_instructions() {
 /// 测试 15: Agent 特殊字符处理
 #[test]
 fn test_agent_special_characters() {
-    let llm = Arc::new(MockLlmProvider::new(vec![]));
+    let llm = create_test_zhipu_provider_arc();
     let special_name = "agent-with_special.chars@123";
     let special_instructions = "Instructions with 中文, emoji 🚀, and symbols: !@#$%^&*()";
 

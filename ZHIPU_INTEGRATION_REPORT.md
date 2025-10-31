@@ -8,7 +8,7 @@
 
 - **API Key**: `99a311fa7920a59e9399cf26ecc1e938.ac4w6buZHr2Ggc3k`
 - **Base URL**: `https://open.bigmodel.cn/api/paas/v4`
-- **默认模型**: `glm-4`
+- **默认模型**: `glm-4.6`
 - **认证方式**: Bearer Token
 
 ## 🐛 发现的问题
@@ -141,7 +141,7 @@ use lumosai_core::llm::{LlmProvider, LlmOptions, ZhipuProvider};
 use lumosai_core::llm::types::Temperature;
 
 // 创建 provider
-let zhipu = ZhipuProvider::new(api_key, Some("glm-4".to_string()));
+let zhipu = ZhipuProvider::new(api_key, Some("glm-4.6".to_string()));
 
 // 配置选项
 let options = LlmOptions {
@@ -161,7 +161,7 @@ use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
 use lumosai_core::llm::ZhipuProvider;
 use std::sync::Arc;
 
-let zhipu = Arc::new(ZhipuProvider::new(api_key, Some("glm-4".to_string())));
+let zhipu = Arc::new(ZhipuProvider::new(api_key, Some("glm-4.6".to_string())));
 
 let config = AgentConfig {
     name: "zhipu_assistant".to_string(),
@@ -180,7 +180,7 @@ let response = agent.generate_simple("你好！").await?;
 1. **温度限制**: 只接受 0.0, 0.5, 1.0
 2. **参数简化**: 不需要 `do_sample`, `stream` 等额外参数
 3. **中文优化**: 对中文输入输出有很好的支持
-4. **模型选择**: 支持 glm-4, glm-4-flash, glm-3-turbo
+4. **模型选择**: 支持 glm-4.6, glm-4.6-flash, glm-3-turbo
 
 ### 与其他 Provider 的差异
 
@@ -205,14 +205,14 @@ let response = agent.generate_simple("你好！").await?;
 - [ ] 流式生成 (`generate_stream`)
 - [ ] 函数调用 (`generate_with_functions`)
 - [ ] 嵌入生成 (`get_embedding`)
-- [ ] 不同模型 (glm-4-flash, glm-3-turbo)
+- [ ] 不同模型 (glm-4.6-flash, glm-3-turbo)
 - [ ] 长上下文处理
 - [ ] 多模态输入
 
 ## 📚 参考资料
 
 - [智谱 AI 官方文档](https://open.bigmodel.cn/dev/api)
-- [GLM-4 模型介绍](https://open.bigmodel.cn/dev/howuse/model)
+- [glm-4.6 模型介绍](https://open.bigmodel.cn/dev/howuse/model)
 - [API 参数说明](https://open.bigmodel.cn/dev/api#chatglm_std)
 
 ## ✅ 验收标准

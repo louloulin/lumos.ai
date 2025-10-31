@@ -33,6 +33,7 @@
 use crate::agent::Agent;
 use crate::error::Result;
 use crate::llm::{Message, Role};
+    use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use std::sync::Arc;
 
 /// Agent 管道链
@@ -290,12 +291,11 @@ pub fn delegate(
 mod tests {
     use super::*;
     use crate::agent::BasicAgent;
-    use crate::llm::MockLlmProvider;
-
+    
     #[tokio::test]
     async fn test_agent_pipeline() {
-        let llm1 = Arc::new(MockLlmProvider::new(vec!["Step 1 result".to_string()]));
-        let llm2 = Arc::new(MockLlmProvider::new(vec!["Step 2 result".to_string()]));
+        let llm1 = create_test_zhipu_provider_arc();
+        let llm2 = create_test_zhipu_provider_arc();
 
         let agent1 = Arc::new(BasicAgent::new(
             crate::agent::AgentConfig {

@@ -22,10 +22,9 @@ impl Agent {
     ///
     /// ```rust
     /// use lumosai_core::agent::mastra_compat::Agent;
-    /// use lumosai_core::llm::MockLlmProvider;
-    /// use std::sync::Arc;
+    ///     /// use std::sync::Arc;
     ///
-    /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    /// let llm = create_test_zhipu_provider_arc();
     ///
     /// let agent = Agent::create()
     ///     .name("assistant")
@@ -321,11 +320,10 @@ pub mod utils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::MockLlmProvider;
-
+    
     #[tokio::test]
     async fn test_mastra_style_agent_creation() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = Agent::create()
             .name("test_agent")
@@ -340,7 +338,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_with_tools() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = Agent::with_tools()
             .name("tool_agent")
@@ -357,7 +355,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_quick_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = utils::quick_agent("quick_test", "Quick test agent", llm)
             .expect("Failed to create quick agent");

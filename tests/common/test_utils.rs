@@ -1,5 +1,4 @@
 use lumosai_core::agent::{AgentConfig, BasicAgent};
-use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::prelude::*;
 use lumosai_core::vector::MemoryVectorStorage;
 use lumosai_network::AgentNetwork;
@@ -12,7 +11,7 @@ pub struct TestUtils;
 impl TestUtils {
     /// 创建测试用Agent
     pub async fn create_test_agent(name: &str) -> Result<BasicAgent> {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: name.to_string(),
             instructions: "Test agent".to_string(),
@@ -63,7 +62,7 @@ impl TestUtils {
         // 这里需要实际的QwenProvider实现
         // let llm = QwenProvider::new(api_key, model.to_string());
         // 暂时使用Mock，等待真实实现
-        let llm = Arc::new(MockLlmProvider::new(vec!["Real API response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let config = AgentConfig {
             name: "real_test_agent".to_string(),

@@ -31,9 +31,7 @@ async fn main() -> Result<()> {
 
 async fn test_quick_agent_creation() -> Result<()> {
     // 使用 MockLlmProvider 进行测试
-    let llm = Arc::new(lumosai_core::llm::MockLlmProvider::new(vec![
-        "Hello!".to_string()
-    ]));
+    let llm = Arc::new(lumosai_core::llm::create_test_zhipu_provider());
 
     let agent = quick_agent("test_agent", "You are a test assistant")
         .model(llm)
@@ -92,9 +90,7 @@ fn test_vector_storage() -> Result<()> {
 }
 
 async fn test_specialized_agents() -> Result<()> {
-    let llm = Arc::new(lumosai_core::llm::MockLlmProvider::new(vec![
-        "Hello!".to_string()
-    ]));
+    let llm = Arc::new(lumosai_core::llm::create_test_zhipu_provider());
 
     // TODO: 这些专用 agent 快速创建函数尚未实现
     // 使用通用的 agent_quick 函数代替

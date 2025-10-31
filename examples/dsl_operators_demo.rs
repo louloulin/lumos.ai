@@ -6,7 +6,8 @@
 //! - `delegate_to()` - 委托操作符（类似 `<=`）
 
 use lumosai_core::agent::{create_basic_agent, delegate, Agent, AgentParallel, AgentPipeline};
-use lumosai_core::llm::{LlmProvider, MockLlmProvider};
+use lumosai_core::llm::{LlmProvider};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -15,14 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("注意：此示例使用 Mock LLM 提供者进行演示\n");
 
     // 创建 Mock LLM 提供者（用于演示，不需要 API 密钥）
-    let llm_provider: Arc<dyn LlmProvider> = Arc::new(MockLlmProvider::new(vec![
-        "Research result: AI trends in 2024 include...".to_string(),
-        "Analysis: Key insights from the research...".to_string(),
-        "Summary: Concise technical summary...".to_string(),
-        "Quantum computing is an emerging technology...".to_string(),
-        "Blockchain technology offers decentralized solutions...".to_string(),
-        "Machine learning advancements continue to accelerate...".to_string(),
-    ]));
+    let llm_provider: Arc<dyn LlmProvider> = create_test_zhipu_provider_arc();
 
     // 创建三个 Agent（使用 Arc<dyn Agent> 类型）
     let researcher: Arc<dyn Agent> = Arc::new(create_basic_agent(

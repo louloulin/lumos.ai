@@ -8,7 +8,6 @@ use lumosai_core::agent::sop_types::{SopExecutionMode, SopMessage};
 use lumosai_core::agent::trait_def::Agent;
 use lumosai_core::agent::AgentBuilder;
 use lumosai_core::error::Result;
-use lumosai_core::llm::MockLlmProvider;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -16,9 +15,7 @@ use std::sync::Arc;
 ///
 /// 研究员关注 "research_request" 消息，执行研究并发送结果
 async fn create_researcher() -> Result<Arc<dyn Agent>> {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Research on AI Agent Collaboration completed.".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("researcher")
@@ -36,9 +33,7 @@ async fn create_researcher() -> Result<Arc<dyn Agent>> {
 ///
 /// 分析员关注 "research_results" 消息，分析数据并生成洞察
 async fn create_analyst() -> Result<Arc<dyn Agent>> {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Analysis of research findings completed.".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("analyst")
@@ -56,9 +51,7 @@ async fn create_analyst() -> Result<Arc<dyn Agent>> {
 ///
 /// 撰写员关注 "analysis_complete" 消息，生成最终报告
 async fn create_writer() -> Result<Arc<dyn Agent>> {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Final report generated successfully.".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("writer")

@@ -10,7 +10,8 @@ use lumosai_core::agent::{
     AgentConfig, AgentEvent, BasicAgent, IntoWebSocketStreaming, StreamingConfig, WebSocketConfig,
     WebSocketMessage,
 };
-use lumosai_core::llm::{LlmOptions, MockLlmProvider};
+use lumosai_core::llm::{LlmOptions};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::memory::WorkingMemoryConfig;
 
 #[tokio::test]
@@ -142,7 +143,7 @@ async fn test_websocket_streaming_agent_creation() {
         ..Default::default()
     };
 
-    let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
     let agent = BasicAgent::new(agent_config, llm);
 
     let ws_agent = agent.into_websocket_streaming(streaming_config, websocket_config);
@@ -182,9 +183,7 @@ async fn test_websocket_streaming_execution() {
         ..Default::default()
     };
 
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Hello world this is a test response".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
     let agent = BasicAgent::new(agent_config, llm);
 
     let ws_agent = agent.into_websocket_streaming(streaming_config, websocket_config);
@@ -382,7 +381,7 @@ async fn test_heartbeat_monitoring() {
         ..Default::default()
     };
 
-    let llm = Arc::new(MockLlmProvider::new(vec!["Test".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
     let agent = BasicAgent::new(agent_config, llm);
 
     let ws_agent = agent.into_websocket_streaming(streaming_config, config);

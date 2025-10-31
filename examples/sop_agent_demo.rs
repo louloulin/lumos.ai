@@ -6,7 +6,6 @@ use lumosai_core::agent::{
     AgentBuilder, BasicAgent, SimpleSopEnvironment, SopExecutionMode, SopMessage,
 };
 use lumosai_core::error::Result;
-use lumosai_core::llm::MockLlmProvider;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -14,9 +13,7 @@ use std::sync::Arc;
 ///
 /// 使用 BasicAgent 并通过闭包实现 SOP 逻辑
 async fn create_researcher() -> Result<Arc<BasicAgent>> {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "I have completed the research on AI agents.".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("researcher")
@@ -29,9 +26,7 @@ async fn create_researcher() -> Result<Arc<BasicAgent>> {
 
 /// 创建分析员 Agent
 async fn create_analyst() -> Result<Arc<BasicAgent>> {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Analysis complete: The research shows promising results.".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("analyst")

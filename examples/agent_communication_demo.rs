@@ -7,7 +7,6 @@ use lumosai_core::agent::communication::{
     AgentStatus, CommunicationConfig, MessagePriority, RoutingStrategy, SessionMetadata,
     SessionType,
 };
-use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -18,12 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("==================");
 
     // 创建Mock LLM提供商
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "消息已处理".to_string(),
-        "任务已接受".to_string(),
-        "协作请求已确认".to_string(),
-        "会话消息已处理".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // 创建通信配置
     let config = CommunicationConfig {

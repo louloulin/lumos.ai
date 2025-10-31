@@ -6,7 +6,6 @@
 use lumosai_core::agent::AgentBuilder;
 use lumosai_core::app::LumosApp;
 use lumosai_core::config::{ConfigLoader, YamlConfig};
-use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::workflow::{EnhancedWorkflow, WorkflowBuilder};
 use std::fs;
 use std::sync::Arc;
@@ -134,10 +133,7 @@ rag:
 #[tokio::test]
 async fn test_workflow_builder() {
     // Create a mock LLM provider
-    let mock_llm = Arc::new(MockLlmProvider::new(vec![
-        "Hello! I'm here to help.".to_string(),
-        "I can assist with coding tasks.".to_string(),
-    ]));
+    let mock_llm = create_test_zhipu_provider_arc();
 
     // Create agents
     let assistant = AgentBuilder::new()

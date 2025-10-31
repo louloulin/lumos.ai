@@ -26,8 +26,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // 创建 Zhipu provider
-    let zhipu = Arc::new(ZhipuProvider::new(api_key.clone(), Some("glm-4".to_string())));
-    println!("✅ Created Zhipu provider with model: glm-4");
+    let zhipu = Arc::new(ZhipuProvider::new(api_key.clone(), Some("glm-4.6".to_string())));
+    println!("✅ Created Zhipu provider with model: glm-4.6");
 
     // 测试 1: 简单的文本生成
     println!("\n📝 Test 1: Simple Text Generation");
@@ -231,7 +231,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ All tests completed!");
     println!("\n💡 Tips:");
     println!("  - 确保 ZHIPU_API_KEY 环境变量已设置");
-    println!("  - 可以使用不同的模型: glm-4, glm-4-flash, glm-3-turbo");
+    println!("  - 可以使用不同的模型: glm-4.6, glm-4.6-flash, glm-3-turbo");
     println!("  - 调整 temperature 参数控制创造性 (0.0-1.0)");
     println!("  - 使用 max_tokens 限制响应长度");
 

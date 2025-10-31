@@ -17,7 +17,8 @@ mod tests {
     use crate::agent::executor::BasicAgent;
     use crate::agent::trait_def::{Agent, AgentStatus};
     use crate::agent::types::AgentGenerateOptions;
-    use crate::llm::{LlmOptions, Message, MockLlmProvider, Role};
+    use crate::llm::{LlmOptions, Message, Role};
+    use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
     use serde_json::{json, Value};
     use std::sync::Arc;
@@ -28,7 +29,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_default_config() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -39,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_custom_name() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "custom_agent".to_string(),
             instructions: "Test instructions".to_string(),
@@ -52,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_custom_instructions() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let instructions = "You are a specialized test assistant with custom instructions.";
         let config = AgentConfig {
             name: "test_agent".to_string(),
@@ -66,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_empty_name() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "".to_string(),
             instructions: "Test".to_string(),
@@ -80,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_long_name() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let long_name = "a".repeat(1000);
         let config = AgentConfig {
             name: long_name.clone(),
@@ -94,7 +95,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_special_characters_in_name() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let special_name = "agent-123_test!@#$%";
         let config = AgentConfig {
             name: special_name.to_string(),
@@ -108,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_unicode_name() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let unicode_name = "智能助手_🤖";
         let config = AgentConfig {
             name: unicode_name.to_string(),
@@ -122,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_empty_instructions() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "test_agent".to_string(),
             instructions: "".to_string(),
@@ -136,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_long_instructions() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let long_instructions = "You are a helpful assistant. ".repeat(100);
         let config = AgentConfig {
             name: "test_agent".to_string(),
@@ -150,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_agent_creation_with_multiline_instructions() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let multiline_instructions = "Line 1\nLine 2\nLine 3\n\nLine 5";
         let config = AgentConfig {
             name: "test_agent".to_string(),
@@ -168,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_agent_initial_status_is_ready() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -177,7 +178,7 @@ mod tests {
 
     #[test]
     fn test_agent_status_after_creation() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -187,7 +188,7 @@ mod tests {
 
     #[test]
     fn test_agent_name_getter() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "getter_test".to_string(),
             instructions: "Test".to_string(),
@@ -200,7 +201,7 @@ mod tests {
 
     #[test]
     fn test_agent_instructions_getter() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let instructions = "Custom instructions for testing";
         let config = AgentConfig {
             name: "test".to_string(),
@@ -214,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_agent_tools_getter_empty() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -223,7 +224,7 @@ mod tests {
 
     #[test]
     fn test_agent_memory_getter_none() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -272,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_agent_validate_config_success() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "valid_agent".to_string(),
             instructions: "Valid instructions".to_string(),
@@ -285,8 +286,8 @@ mod tests {
 
     #[test]
     fn test_multiple_agents_with_same_config() {
-        let llm1 = Arc::new(MockLlmProvider::new(vec![]));
-        let llm2 = Arc::new(MockLlmProvider::new(vec![]));
+        let llm1 = create_test_zhipu_provider_arc();
+        let llm2 = create_test_zhipu_provider_arc();
 
         let config = AgentConfig {
             name: "shared_config".to_string(),
@@ -303,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_agent_config_with_function_calling_enabled() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "fc_agent".to_string(),
             instructions: "Test".to_string(),
@@ -321,7 +322,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generate_with_empty_input() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response to empty".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -335,7 +336,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generate_with_very_long_input() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -350,7 +351,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generate_with_special_characters() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -364,7 +365,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generate_with_unicode_input() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["回复".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -378,7 +379,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generate_with_newlines() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -392,7 +393,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generate_with_tabs() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -406,7 +407,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generate_with_json_input() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -420,7 +421,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generate_with_code_input() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -438,7 +439,7 @@ fn main() {
 
     #[tokio::test]
     async fn test_agent_generate_with_html_input() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -452,7 +453,7 @@ fn main() {
 
     #[tokio::test]
     async fn test_agent_generate_with_markdown_input() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 

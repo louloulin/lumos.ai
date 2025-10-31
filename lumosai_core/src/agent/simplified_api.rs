@@ -10,6 +10,7 @@ use crate::agent::trait_def::Agent as AgentTrait;
 use crate::agent::types::AgentGenerateOptions;
 use crate::error::Result;
 use crate::llm::{LlmProvider, Message, Role};
+    use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use crate::memory::MemoryConfig;
 use crate::tool::Tool;
 use crate::unified_api::{self, llm::*};
@@ -327,10 +328,9 @@ impl Agent {
     ///
     /// ```rust
     /// use lumosai_core::agent::Agent;
-    /// use lumosai_core::llm::MockLlmProvider;
-    /// use std::sync::Arc;
+    ///     /// use std::sync::Arc;
     ///
-    /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    /// let llm = create_test_zhipu_provider_arc();
     ///
     /// let agent = Agent::builder()
     ///     .name("research_agent")
@@ -462,10 +462,9 @@ pub fn quick(name: &str, instructions: &str) -> AgentBuilder {
 ///
 /// ```rust
 /// use lumosai_core::agent::web_agent;
-/// use lumosai_core::llm::MockLlmProvider;
-/// use std::sync::Arc;
+/// /// use std::sync::Arc;
 ///
-/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+/// let llm = create_test_zhipu_provider_arc();
 ///
 /// let agent = web_agent("web_helper")
 ///     .model(llm)
@@ -486,10 +485,9 @@ pub fn web_agent(name: &str) -> AgentBuilder {
 ///
 /// ```rust
 /// use lumosai_core::agent::file_agent;
-/// use lumosai_core::llm::MockLlmProvider;
-/// use std::sync::Arc;
+/// /// use std::sync::Arc;
 ///
-/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+/// let llm = create_test_zhipu_provider_arc();
 ///
 /// let agent = file_agent("file_helper")
 ///     .model(llm)
@@ -510,10 +508,9 @@ pub fn file_agent(name: &str) -> AgentBuilder {
 ///
 /// ```rust
 /// use lumosai_core::agent::data_agent;
-/// use lumosai_core::llm::MockLlmProvider;
-/// use std::sync::Arc;
+/// /// use std::sync::Arc;
 ///
-/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+/// let llm = create_test_zhipu_provider_arc();
 ///
 /// let agent = data_agent("data_helper")
 ///     .model(llm)
@@ -533,12 +530,11 @@ pub fn data_agent(name: &str) -> AgentBuilder {
 mod tests {
     use super::*;
     use crate::agent::trait_def::Agent as AgentTrait;
-    use crate::llm::MockLlmProvider;
-    use std::sync::Arc;
+        use std::sync::Arc;
 
     #[tokio::test]
     async fn test_agent_quick_api() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = Agent::quick("assistant", "You are helpful")
             .model(llm)
@@ -551,7 +547,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_builder_api() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = Agent::builder()
             .name("research_agent")
@@ -567,7 +563,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_quick_convenience_function() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = quick("assistant", "You are helpful")
             .model(llm)
@@ -580,7 +576,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_web_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = web_agent("web_helper")
             .model(llm)
@@ -595,7 +591,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_file_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = file_agent("file_helper")
             .model(llm)
@@ -610,7 +606,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_data_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = data_agent("data_helper")
             .model(llm)
@@ -625,7 +621,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_level_2_api_chaining() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = Agent::new("assistant", "You are helpful")
             .await
@@ -654,7 +650,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_enhanced_model_resolution() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
 
         // Test various model name resolutions
         let agent = Agent::quick("assistant", "You are helpful")

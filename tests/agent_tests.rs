@@ -1,7 +1,8 @@
 use lumosai_core::agent::trait_def::Agent;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{AgentConfig, BasicAgent};
-use lumosai_core::llm::{Message, MockLlmProvider, Role};
+use lumosai_core::llm::{Message, Role};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::prelude::*;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -14,7 +15,7 @@ use common::{TestAssertions, TestUtils};
 #[tokio::test]
 async fn test_agent_builder_validation() {
     // 测试AgentBuilder的参数验证
-    let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     // 测试有效配置
     let config = AgentConfig {
@@ -40,7 +41,7 @@ async fn test_agent_builder_validation() {
 #[tokio::test]
 async fn test_agent_with_invalid_model() {
     // 测试无效模型配置的错误处理
-    let llm = Arc::new(MockLlmProvider::new(vec![])); // 空响应
+    let llm = create_test_zhipu_provider_arc(); // 空响应
 
     let config = AgentConfig {
         name: "test-agent".to_string(),
@@ -61,9 +62,7 @@ async fn test_agent_with_invalid_model() {
 #[tokio::test]
 async fn test_agent_memory_configuration() {
     // 测试不同内存配置的Agent创建
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Memory test response".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // 测试带内存配置的Agent
     let config = AgentConfig {
@@ -238,7 +237,7 @@ async fn test_agent_performance_baseline() {
 #[tokio::test]
 async fn test_agent_error_recovery() {
     // 测试错误恢复机制
-    let llm = Arc::new(MockLlmProvider::new(vec![])); // 空响应会导致错误
+    let llm = create_test_zhipu_provider_arc(); // 空响应会导致错误
     let config = AgentConfig {
         name: "error-recovery".to_string(),
         instructions: "Test error recovery".to_string(),

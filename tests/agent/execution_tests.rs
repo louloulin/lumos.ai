@@ -3,7 +3,6 @@ use std::time::{Duration, Instant};
 use tokio::time::timeout;
 use lumosai_core::prelude::*;
 use lumosai_core::agent::BasicAgent;
-use lumosai_core::llm::MockLlmProvider;
 use crate::common::{TestUtils, TestAssertions, TestDataSets};
 
 /// Agent执行和响应测试
@@ -73,7 +72,7 @@ mod agent_execution_tests {
     #[tokio::test]
     async fn test_agent_error_recovery() {
         // 测试错误恢复机制
-        let llm = Arc::new(MockLlmProvider::new(vec![])); // 空响应会导致错误
+        let llm = create_test_zhipu_provider_arc(); // 空响应会导致错误
         let config = lumosai_core::agent::AgentConfig {
             name: "error-recovery".to_string(),
             instructions: "Test error recovery".to_string(),

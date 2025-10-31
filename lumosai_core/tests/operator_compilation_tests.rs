@@ -4,12 +4,13 @@
 // 主要测试操作符的类型安全性和编译时检查
 
 use lumosai_core::agent::{create_basic_agent, delegate, parallel, pipe, Agent, AgentDelegation, AgentParallel, AgentPipeline};
-use lumosai_core::llm::{LlmProvider, MockLlmProvider};
+use lumosai_core::llm::{LlmProvider};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use std::sync::Arc;
 
 /// 创建测试用的 Agent
 fn create_test_agent(name: &str, response: &str) -> Arc<dyn Agent> {
-    let llm_provider: Arc<dyn LlmProvider> = Arc::new(MockLlmProvider::new(vec![response.to_string()]));
+    let llm_provider: Arc<dyn LlmProvider> = create_test_zhipu_provider_arc();
 
     Arc::new(create_basic_agent(
         name.to_string(),

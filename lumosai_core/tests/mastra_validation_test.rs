@@ -20,7 +20,7 @@ mod tests {
         println!("🧪 Testing Phase 1: Function Calling Modernization...");
 
         // Create mock LLM provider that supports function calling
-        let llm = MockLlmProvider::new(vec!["Function calling test response".to_string()]);
+        let llm = create_test_zhipu_provider();
 
         // Create agent config with function calling enabled
         let config = AgentConfig {
@@ -92,7 +92,7 @@ mod tests {
         println!("🧪 Testing Phase 3: Memory Management...");
 
         // Create agent with working memory enabled
-        let llm = MockLlmProvider::new(vec!["Memory test response".to_string()]);
+        let llm = create_test_zhipu_provider();
 
         let config = AgentConfig {
             name: "MemoryTestAgent".to_string(),
@@ -136,7 +136,7 @@ mod tests {
         println!("🧪 Testing Phase 4: Monitoring and Observability...");
 
         // Create agent with telemetry enabled
-        let llm = MockLlmProvider::new(vec!["Monitoring test response".to_string()]);
+        let llm = create_test_zhipu_provider();
 
         let config = AgentConfig {
             name: "MonitoringTestAgent".to_string(),
@@ -171,11 +171,7 @@ mod tests {
         println!("🧪 Testing Comprehensive Integration...");
 
         // Create a fully-featured agent with all capabilities
-        let llm = MockLlmProvider::new(vec![
-            "I understand your request.".to_string(),
-            " Let me help you with that.".to_string(),
-            " Here's my response.".to_string(),
-        ]);
+        let llm = create_test_zhipu_provider();
 
         let config = AgentConfig {
             name: "ComprehensiveTestAgent".to_string(),

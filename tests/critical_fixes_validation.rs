@@ -1,7 +1,8 @@
 use lumosai_core::agent::config::AgentConfig;
 use lumosai_core::agent::executor::BasicAgent;
 use lumosai_core::agent::trait_def::Agent;
-use lumosai_core::llm::{mock::MockLlmProvider, Message, Role};
+use lumosai_core::llm::{mock::Message, Role};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::tool::builtin::CalculatorTool;
 use serde_json::json;
 use std::sync::Arc;
@@ -11,7 +12,7 @@ use tokio::time::timeout;
 /// 测试错误处理修复 - 验证不再有panic风险
 #[tokio::test]
 async fn test_error_handling_fixes() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["测试响应".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "test_agent".to_string(),
@@ -38,7 +39,7 @@ async fn test_error_handling_fixes() {
 /// 测试流式处理改进 - 验证智能分块
 #[tokio::test]
 async fn test_streaming_improvements() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["流式响应测试".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "streaming_test_agent".to_string(),
@@ -88,7 +89,7 @@ async fn test_streaming_improvements() {
 /// 测试内存管理改进 - 验证优雅降级
 #[tokio::test]
 async fn test_memory_management_improvements() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["内存测试响应".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "memory_test_agent".to_string(),
@@ -124,7 +125,7 @@ async fn test_memory_management_improvements() {
 /// 测试工具调用解析改进 - 验证健壮性
 #[tokio::test]
 async fn test_tool_parsing_improvements() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["工具测试响应".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "tool_test_agent".to_string(),
@@ -187,7 +188,7 @@ async fn test_tool_parsing_improvements() {
 /// 测试并发安全改进 - 验证无死锁
 #[tokio::test]
 async fn test_concurrency_safety() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["并发测试响应".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "concurrent_test_agent".to_string(),
@@ -240,7 +241,7 @@ async fn test_concurrency_safety() {
 /// 测试超时处理 - 验证不会无限等待
 #[tokio::test]
 async fn test_timeout_handling() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["超时测试响应".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "timeout_test_agent".to_string(),
@@ -271,7 +272,7 @@ async fn test_timeout_handling() {
 /// 测试错误恢复 - 验证从错误状态恢复
 #[tokio::test]
 async fn test_error_recovery() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["恢复测试响应".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "recovery_test_agent".to_string(),

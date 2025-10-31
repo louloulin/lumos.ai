@@ -16,7 +16,8 @@ mod tests {
     use crate::agent::types::{AgentGenerateOptions, AgentStatus};
     use crate::base::Base;
     use crate::compat::Component;
-    use crate::llm::{LlmOptions, MockLlmProvider};
+    use crate::llm::{LlmOptions};
+    use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
     use crate::tool::Tool;
     use serde_json::{json, Value};
     use std::sync::Arc;
@@ -24,7 +25,7 @@ mod tests {
     /// 测试 Agent 基本创建
     #[test]
     fn test_basic_agent_creation() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["test".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "test_agent".to_string(),
             instructions: "You are a test assistant".to_string(),
@@ -41,7 +42,7 @@ mod tests {
     /// 测试 Agent 名称和指令设置
     #[test]
     fn test_agent_name_and_instructions() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "assistant".to_string(),
             instructions: "Initial instructions".to_string(),
@@ -62,7 +63,7 @@ mod tests {
     /// 测试 Base trait 实现
     #[test]
     fn test_agent_base_trait() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "base_test".to_string(),
             instructions: "Test".to_string(),
@@ -83,7 +84,7 @@ mod tests {
     /// 测试 Agent 状态管理
     #[test]
     fn test_agent_status() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let mut agent = BasicAgent::new(config, llm);
 
@@ -104,7 +105,7 @@ mod tests {
     /// 测试 Agent 错误状态
     #[test]
     fn test_agent_error_status() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let mut agent = BasicAgent::new(config, llm);
 
@@ -119,7 +120,7 @@ mod tests {
     /// 测试 Tool 注册
     #[test]
     fn test_tool_registration() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -131,7 +132,7 @@ mod tests {
     /// 测试 Memory 集成
     #[test]
     fn test_memory_integration() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "memory_test".to_string(),
             instructions: "Test".to_string(),
@@ -148,7 +149,7 @@ mod tests {
     /// 测试 LLM provider 获取
     #[test]
     fn test_llm_provider() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm.clone());
 
@@ -159,7 +160,7 @@ mod tests {
     /// 测试 Agent 配置验证
     #[test]
     fn test_agent_config_validation() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "valid_agent".to_string(),
             instructions: "Valid instructions".to_string(),
@@ -173,7 +174,7 @@ mod tests {
     /// 测试 Agent 默认配置
     #[test]
     fn test_agent_default_config() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
         let agent = BasicAgent::new(config, llm);
 
@@ -185,7 +186,7 @@ mod tests {
     /// 测试 Agent function calling 配置
     #[test]
     fn test_function_calling_config() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         
         // 测试启用 function calling
         let config_enabled = AgentConfig {
@@ -212,7 +213,7 @@ mod tests {
     /// 测试 Agent 克隆（如果实现了 Clone）
     #[test]
     fn test_agent_properties() {
-        let llm = Arc::new(MockLlmProvider::new(vec![]));
+        let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig {
             name: "prop_test".to_string(),
             instructions: "Test instructions".to_string(),
@@ -234,8 +235,8 @@ mod tests {
     /// 测试 Agent 多个实例独立性
     #[test]
     fn test_multiple_agents_independence() {
-        let llm1 = Arc::new(MockLlmProvider::new(vec![]));
-        let llm2 = Arc::new(MockLlmProvider::new(vec![]));
+        let llm1 = create_test_zhipu_provider_arc();
+        let llm2 = create_test_zhipu_provider_arc();
 
         let config1 = AgentConfig {
             name: "agent1".to_string(),

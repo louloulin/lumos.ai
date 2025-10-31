@@ -1167,7 +1167,7 @@ impl A2aProtocol {
 - Anthropic (Claude 3.5 Sonnet, Claude 3 Opus)
 - Google (Gemini Pro, Gemini Ultra)
 - Qwen (通义千问)
-- Zhipu (智谱 GLM-4)
+- Zhipu (智谱 glm-4.6)
 - DeepSeek
 - Baidu (文心一言)
 - Cohere

@@ -5,7 +5,8 @@
 use lumosai_core::agent::trait_def::Agent as AgentTrait;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{quick, AgentBuilder};
-use lumosai_core::llm::{Message, MockLlmProvider, Role};
+use lumosai_core::llm::{Message, Role};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::tool::CalculatorTool;
 use lumosai_core::Result;
 use std::sync::Arc;
@@ -15,9 +16,7 @@ async fn test_quick_api() -> Result<()> {
     println!("🚀 测试 1: quick() 函数 API");
     println!("==========================");
 
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "你好！我是你的AI助手。".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // ✅ 验证 quick 函数
     let agent = quick("assistant", "你是一个友好的AI助手")
@@ -49,9 +48,7 @@ async fn test_agent_builder() -> Result<()> {
     println!("\n🏗️ 测试 2: AgentBuilder 构建器");
     println!("===============================");
 
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "我是一个高级助手，可以进行计算。".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     // ✅ 验证完整的构建器模式
     let agent = AgentBuilder::new()
@@ -93,7 +90,7 @@ async fn test_configuration_validation() -> Result<()> {
 
     // 测试缺少指令
     println!("测试缺少指令的错误:");
-    let llm = Arc::new(MockLlmProvider::new(vec!["测试".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
     let result = AgentBuilder::new().name("test").model(llm).build();
 
     match result {
@@ -109,7 +106,7 @@ async fn test_smart_defaults() -> Result<()> {
     println!("\n🧠 测试 4: 智能默认配置");
     println!("========================");
 
-    let llm = Arc::new(MockLlmProvider::new(vec!["默认配置测试".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     // ✅ 验证智能默认配置
     let agent = quick("default_test", "测试默认配置").model(llm).build()?;
@@ -127,7 +124,7 @@ async fn test_tool_system() -> Result<()> {
     println!("\n🔧 测试 5: 工具系统");
     println!("===================");
 
-    let llm = Arc::new(MockLlmProvider::new(vec!["工具系统测试完成".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     // ✅ 验证工具注册和使用
     let agent = AgentBuilder::new()
@@ -161,10 +158,7 @@ async fn test_error_recovery() -> Result<()> {
     println!("\n🛡️ 测试 6: 错误恢复");
     println!("====================");
 
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "正常响应".to_string(),
-        "错误后恢复".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = quick("error_test", "错误处理测试").model(llm).build()?;
 

@@ -512,8 +512,7 @@ impl<T: Agent> IntoStreaming<T> for T {
 mod tests {
     use super::*;
     use crate::agent::{AgentConfig, BasicAgent};
-    use crate::llm::MockLlmProvider;
-    use crate::memory::WorkingMemoryConfig;
+        use crate::memory::WorkingMemoryConfig;
 
     #[tokio::test]
     async fn test_streaming_agent_creation() {
@@ -533,7 +532,7 @@ mod tests {
             ..Default::default()
         };
 
-        let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let agent = BasicAgent::new(agent_config, llm);
 
         let streaming_agent = agent.into_streaming();
@@ -565,7 +564,7 @@ mod tests {
             ..Default::default()
         };
 
-        let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
+        let llm = create_test_zhipu_provider_arc();
         let agent = BasicAgent::new(agent_config, llm);
 
         let streaming_agent = agent.into_streaming_with_config(config);

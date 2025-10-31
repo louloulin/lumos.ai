@@ -126,7 +126,7 @@ impl ZhipuProvider {
         Self {
             api_key,
             client: reqwest::Client::new(),
-            model: model.unwrap_or_else(|| "glm-4".to_string()),
+            model: model.unwrap_or_else(|| "glm-4.6".to_string()),
             base_url: "https://open.bigmodel.cn/api/paas/v4".to_string(),
         }
     }
@@ -146,7 +146,7 @@ impl ZhipuProvider {
         Self {
             api_key,
             client: reqwest::Client::new(),
-            model: model.unwrap_or_else(|| "glm-4".to_string()),
+            model: model.unwrap_or_else(|| "glm-4.6".to_string()),
             base_url,
         }
     }
@@ -663,15 +663,15 @@ mod tests {
 
     #[test]
     fn test_zhipu_provider_creation() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4".to_string()));
-        assert_eq!(provider.model, "glm-4");
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6".to_string()));
+        assert_eq!(provider.model, "glm-4.6");
         assert_eq!(provider.base_url, "https://open.bigmodel.cn/api/paas/v4");
     }
 
     #[test]
     fn test_zhipu_provider_with_custom_model() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
-        assert_eq!(provider.model, "glm-4-plus");
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6-plus".to_string()));
+        assert_eq!(provider.model, "glm-4.6-plus");
     }
 
     #[test]
@@ -686,13 +686,13 @@ mod tests {
 
     #[test]
     fn test_supports_function_calling() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4".to_string()));
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6".to_string()));
         assert!(provider.supports_function_calling());
     }
 
     #[test]
     fn test_provider_name() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4".to_string()));
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4.6".to_string()));
         assert_eq!(provider.name(), "zhipu");
     }
 }

@@ -3,7 +3,8 @@ use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{create_basic_agent, Agent};
 use lumosai_core::base::{Base, BaseComponent, ComponentConfig};
 use lumosai_core::compat::Component;
-use lumosai_core::llm::{Message, MockLlmProvider, Role};
+use lumosai_core::llm::{Message, Role};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::logger::Logger;
 use lumosai_core::telemetry::TelemetrySink;
 use lumosai_core::tool::{
@@ -152,9 +153,7 @@ async fn main() -> Result<()> {
     println!("简单的Agent和Tools示例");
 
     // 创建LLM提供者（使用MockLlmProvider进行测试）
-    let llm_provider = Arc::new(MockLlmProvider::new(vec![
-        "我将使用计算器工具来计算 15.2 + 15.3。结果是 30.5。".to_string(),
-    ]));
+    let llm_provider = create_test_zhipu_provider_arc();
 
     // 创建代理
     let mut agent = create_basic_agent(

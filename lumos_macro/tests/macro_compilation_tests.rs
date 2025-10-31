@@ -5,7 +5,6 @@
 
 use lumos_macro::agent;
 use lumosai_core::agent::Agent;
-use lumosai_core::llm::MockLlmProvider;
 
 /// 测试 1: agent! 宏 - 基础用法
 #[test]
@@ -13,7 +12,7 @@ fn test_agent_macro_basic_compiles() {
     let agent = agent! {
         name: "test_agent",
         instructions: "You are a test agent",
-        provider: MockLlmProvider::new(vec!["Hello".to_string()])
+        provider: create_test_zhipu_provider()
     };
 
     // 验证类型正确
@@ -26,7 +25,7 @@ fn test_agent_macro_with_memory_compiles() {
     let agent = agent! {
         name: "memory_agent",
         instructions: "You are an agent with memory",
-        provider: MockLlmProvider::new(vec!["I remember".to_string()]),
+        provider: create_test_zhipu_provider(),
         memory: true
     };
 
@@ -39,7 +38,7 @@ fn test_agent_macro_with_max_tool_calls_compiles() {
     let agent = agent! {
         name: "limited_agent",
         instructions: "You are an agent with limited tool calls",
-        provider: MockLlmProvider::new(vec!["Limited".to_string()]),
+        provider: create_test_zhipu_provider(),
         max_tool_calls: 5
     };
 
@@ -52,7 +51,7 @@ fn test_agent_macro_with_tool_timeout_compiles() {
     let agent = agent! {
         name: "timeout_agent",
         instructions: "You are an agent with tool timeout",
-        provider: MockLlmProvider::new(vec!["Timeout".to_string()]),
+        provider: create_test_zhipu_provider(),
         tool_timeout: 30
     };
 
@@ -65,7 +64,7 @@ fn test_agent_macro_all_parameters_compiles() {
     let agent = agent! {
         name: "full_agent",
         instructions: "You are a fully configured agent",
-        provider: MockLlmProvider::new(vec!["Full".to_string()]),
+        provider: create_test_zhipu_provider(),
         memory: true,
         max_tool_calls: 10,
         tool_timeout: 60
@@ -82,7 +81,7 @@ fn test_agent_macro_expansion_structure() {
         agent! {
             name: "test",
             instructions: "Test agent",
-            provider: MockLlmProvider::new(vec!["Test".to_string()])
+            provider: create_test_zhipu_provider()
         }
     };
 
@@ -95,13 +94,13 @@ fn test_multiple_agents_compile() {
     let agent1 = agent! {
         name: "agent1",
         instructions: "First agent",
-        provider: MockLlmProvider::new(vec!["Agent 1".to_string()])
+        provider: create_test_zhipu_provider()
     };
 
     let agent2 = agent! {
         name: "agent2",
         instructions: "Second agent",
-        provider: MockLlmProvider::new(vec!["Agent 2".to_string()])
+        provider: create_test_zhipu_provider()
     };
 
     let _: &dyn Agent = &agent1;
@@ -114,7 +113,7 @@ fn test_agent_with_special_chars_in_name() {
     let agent = agent! {
         name: "agent_with_special-chars.123",
         instructions: "Agent with special characters in name",
-        provider: MockLlmProvider::new(vec!["Special".to_string()])
+        provider: create_test_zhipu_provider()
     };
 
     let _: &dyn Agent = &agent;
@@ -141,7 +140,7 @@ fn test_agent_parameter_order() {
     let agent1 = agent! {
         name: "order1",
         instructions: "Test order",
-        provider: MockLlmProvider::new(vec!["Order 1".to_string()]),
+        provider: create_test_zhipu_provider(),
         memory: true,
         max_tool_calls: 5
     };
@@ -152,7 +151,7 @@ fn test_agent_parameter_order() {
         max_tool_calls: 5,
         instructions: "Test order",
         memory: true,
-        provider: MockLlmProvider::new(vec!["Order 2".to_string()])
+        provider: create_test_zhipu_provider()
     };
 
     let _: &dyn Agent = &agent1;
@@ -165,7 +164,7 @@ fn test_agent_memory_false() {
     let agent = agent! {
         name: "no_memory_agent",
         instructions: "Agent without memory",
-        provider: MockLlmProvider::new(vec!["No memory".to_string()]),
+        provider: create_test_zhipu_provider(),
         memory: false
     };
 
@@ -178,7 +177,7 @@ fn test_agent_numeric_parameters() {
     let agent = agent! {
         name: "numeric_agent",
         instructions: "Agent with numeric parameters",
-        provider: MockLlmProvider::new(vec!["Numeric".to_string()]),
+        provider: create_test_zhipu_provider(),
         max_tool_calls: 100,
         tool_timeout: 3600
     };
@@ -192,7 +191,7 @@ fn test_agent_string_literals() {
     let agent = agent! {
         name: "literal_agent",
         instructions: "This is a string literal with special characters: \n\t\"quotes\"",
-        provider: MockLlmProvider::new(vec!["Literal".to_string()])
+        provider: create_test_zhipu_provider()
     };
 
     let _: &dyn Agent = &agent;
@@ -204,7 +203,7 @@ fn test_agent_empty_responses() {
     let agent = agent! {
         name: "empty_agent",
         instructions: "Agent with empty responses",
-        provider: MockLlmProvider::new(vec![])
+        provider: create_test_zhipu_provider()
     };
 
     let _: &dyn Agent = &agent;
@@ -216,7 +215,7 @@ fn test_agent_long_instructions() {
     let agent = agent! {
         name: "long_instructions_agent",
         instructions: "This is a very long instruction that spans multiple lines and contains a lot of text to test that the macro can handle long strings without any issues. It includes various punctuation marks, numbers like 123, and special characters like @#$%.",
-        provider: MockLlmProvider::new(vec!["Long".to_string()])
+        provider: create_test_zhipu_provider()
     };
 
     let _: &dyn Agent = &agent;
@@ -229,7 +228,7 @@ fn test_agent_in_different_scopes() {
         let agent = agent! {
             name: "scope1",
             instructions: "Scope 1",
-            provider: MockLlmProvider::new(vec!["Scope 1".to_string()])
+            provider: create_test_zhipu_provider()
         };
         let _: &dyn Agent = &agent;
     }
@@ -238,7 +237,7 @@ fn test_agent_in_different_scopes() {
         let agent = agent! {
             name: "scope2",
             instructions: "Scope 2",
-            provider: MockLlmProvider::new(vec!["Scope 2".to_string()])
+            provider: create_test_zhipu_provider()
         };
         let _: &dyn Agent = &agent;
     }
@@ -250,7 +249,7 @@ fn test_agent_can_be_moved() {
     let agent = agent! {
         name: "movable_agent",
         instructions: "This agent can be moved",
-        provider: MockLlmProvider::new(vec!["Movable".to_string()])
+        provider: create_test_zhipu_provider()
     };
 
     let moved_agent = agent;
@@ -263,7 +262,7 @@ fn test_agent_type_check() {
     let agent = agent! {
         name: "type_check_agent",
         instructions: "Type checking",
-        provider: MockLlmProvider::new(vec!["Type".to_string()])
+        provider: create_test_zhipu_provider()
     };
 
     // 验证类型
@@ -279,7 +278,7 @@ fn create_test_agent() -> impl Agent {
     agent! {
         name: "function_agent",
         instructions: "Created in function",
-        provider: MockLlmProvider::new(vec!["Function".to_string()])
+        provider: create_test_zhipu_provider()
     }
 }
 
@@ -297,7 +296,7 @@ fn test_agent_syntax_validity() {
     let _ = agent! {
         name: "syntax_test",
         instructions: "Testing syntax",
-        provider: MockLlmProvider::new(vec!["Syntax".to_string()])
+        provider: create_test_zhipu_provider()
     };
 }
 

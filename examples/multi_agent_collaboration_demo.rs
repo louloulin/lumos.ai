@@ -5,7 +5,6 @@
 use lumosai_core::agent::{
     AgentBuilder, AgentTask, CollaborationMode, Crew, CrewAgentRole, TaskStatus,
 };
-use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -73,9 +72,7 @@ async fn demo_create_crew() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // 创建 Agent 1: 研究员
-    let researcher_llm = Arc::new(MockLlmProvider::new(vec![
-        "I'll research this topic thoroughly.".to_string(),
-    ]));
+    let researcher_llm = create_test_zhipu_provider_arc();
     let researcher = AgentBuilder::new()
         .name("researcher")
         .instructions("You are a research expert")
@@ -102,9 +99,7 @@ async fn demo_create_crew() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // 创建 Agent 2: 作家
-    let writer_llm = Arc::new(MockLlmProvider::new(vec![
-        "I'll write engaging content based on the research.".to_string(),
-    ]));
+    let writer_llm = create_test_zhipu_provider_arc();
     let writer = AgentBuilder::new()
         .name("writer")
         .instructions("You are a content writer")
@@ -127,9 +122,7 @@ async fn demo_create_crew() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // 创建 Agent 3: 编辑
-    let editor_llm = Arc::new(MockLlmProvider::new(vec![
-        "I'll review and polish the content.".to_string(),
-    ]));
+    let editor_llm = create_test_zhipu_provider_arc();
     let editor = AgentBuilder::new()
         .name("editor")
         .instructions("You are an editor")
@@ -166,7 +159,7 @@ async fn demo_sequential_execution() -> Result<(), Box<dyn std::error::Error>> {
     let crew = Crew::new("Content Team".to_string(), CollaborationMode::Sequential, 1);
 
     // 添加 Agent
-    let llm = Arc::new(MockLlmProvider::new(vec!["Done".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
     let agent = AgentBuilder::new()
         .name("agent1")
         .instructions("You are a helpful agent")
@@ -248,7 +241,7 @@ async fn demo_parallel_execution() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // 添加 Agent
-    let llm = Arc::new(MockLlmProvider::new(vec!["Done".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
     let agent = AgentBuilder::new()
         .name("agent1")
         .instructions("You are a helpful agent")
@@ -316,7 +309,7 @@ async fn demo_hierarchical_execution() -> Result<(), Box<dyn std::error::Error>>
     );
 
     // 添加管理者 Agent
-    let manager_llm = Arc::new(MockLlmProvider::new(vec!["Task assigned".to_string()]));
+    let manager_llm = create_test_zhipu_provider_arc();
     let manager = AgentBuilder::new()
         .name("manager")
         .instructions("You are a team manager")
@@ -336,7 +329,7 @@ async fn demo_hierarchical_execution() -> Result<(), Box<dyn std::error::Error>>
     .await?;
 
     // 添加工作者 Agent
-    let worker_llm = Arc::new(MockLlmProvider::new(vec!["Task completed".to_string()]));
+    let worker_llm = create_test_zhipu_provider_arc();
     let worker = AgentBuilder::new()
         .name("worker")
         .instructions("You are a worker")

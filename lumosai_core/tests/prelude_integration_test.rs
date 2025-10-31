@@ -4,16 +4,13 @@
 //! and provides the developer experience improvements outlined in plan6.md.
 
 use lumosai_core::agent::trait_def::Agent as AgentTrait;
-use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::prelude::*;
 use std::sync::Arc;
 
 #[tokio::test]
 async fn test_quick_agent_creation() {
     // Test the most basic API from plan6.md
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Hello from quick agent!".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = quick_agent("assistant", "You are a helpful assistant")
         .model(llm)
@@ -34,9 +31,7 @@ async fn test_quick_agent_creation() {
 #[tokio::test]
 async fn test_agent_quick_static_method() {
     // Test Agent::quick() static method
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Response from static method".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = Agent::quick("test_agent", "Test instructions")
         .model(llm)
@@ -50,9 +45,7 @@ async fn test_agent_quick_static_method() {
 #[tokio::test]
 async fn test_agent_builder_pattern() {
     // Test the full builder pattern
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Builder pattern response".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = Agent::builder()
         .name("builder_agent")
@@ -69,7 +62,7 @@ async fn test_agent_builder_pattern() {
 #[tokio::test]
 async fn test_web_agent_quick() {
     // Test web agent convenience function
-    let llm = Arc::new(MockLlmProvider::new(vec!["Web agent response".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = web_agent_quick("web_helper", "You can browse the web")
         .model(llm)
@@ -161,9 +154,7 @@ async fn test_tool_convenience_functions() {
 #[tokio::test]
 async fn test_agent_with_custom_tools() {
     // Test adding custom tools to an agent
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Custom tools response".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = Agent::quick("custom_agent", "Agent with custom tools")
         .model(llm)
@@ -186,7 +177,7 @@ async fn test_agent_with_custom_tools() {
 #[tokio::test]
 async fn test_rig_style_api_comparison() {
     // Test that our API is as simple as Rig's
-    let llm = Arc::new(MockLlmProvider::new(vec!["Rig-style response".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     // This should be as simple as Rig's API:
     // let agent = Agent::quick("assistant", "You are helpful").model("gpt-4").build()?;
@@ -209,7 +200,7 @@ async fn test_rig_style_api_comparison() {
 #[tokio::test]
 async fn test_error_handling() {
     // Test that errors are handled gracefully
-    let llm = Arc::new(MockLlmProvider::new(vec![])); // Empty responses to trigger error
+    let llm = create_test_zhipu_provider_arc(); // Empty responses to trigger error
 
     let agent = Agent::quick("error_test", "Test error handling")
         .model(llm)

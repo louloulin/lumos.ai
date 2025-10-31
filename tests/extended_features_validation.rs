@@ -17,9 +17,7 @@ use tokio;
 #[tokio::test]
 async fn test_documentation_generation() -> Result<()> {
     // 创建测试Agent
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Hello! I'm a test agent.".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "test_agent".to_string(),
@@ -273,7 +271,7 @@ async fn test_load_balancer_node_selection() -> Result<()> {
 #[tokio::test]
 async fn test_documentation_formats() -> Result<()> {
     // 创建测试Agent
-    let llm = Arc::new(MockLlmProvider::new(vec!["Test response".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "format_test_agent".to_string(),
@@ -379,9 +377,7 @@ async fn test_plugin_dependency_management() -> Result<()> {
 #[tokio::test]
 async fn test_comprehensive_integration() -> Result<()> {
     // 创建Agent
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Integration test response".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "integration_test_agent".to_string(),

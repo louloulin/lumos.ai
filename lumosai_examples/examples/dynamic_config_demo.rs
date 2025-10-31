@@ -11,7 +11,6 @@ use lumosai_core::agent::dynamic_config::{dynamic_arg, ComplexityLevel, Enhanced
 use lumosai_core::agent::trait_def::Agent;
 use lumosai_core::agent::AgentBuilder;
 use lumosai_core::error::Result;
-use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -68,10 +67,7 @@ async fn demo_role_based_instructions() -> Result<()> {
         });
 
         // 使用 MockLlmProvider 进行测试
-        let llm = Arc::new(MockLlmProvider::new(vec![format!(
-            "我是为{}角色定制的AI助手，专门处理{}任务。",
-            role_name, domain
-        )]));
+        let llm = create_test_zhipu_provider_arc();
 
         let agent = AgentBuilder::new()
             .name(&format!("{}_assistant", role))
@@ -117,10 +113,7 @@ async fn demo_complexity_based_model_selection() -> Result<()> {
         });
 
         // 创建模拟的 LLM 提供者
-        let llm = Arc::new(MockLlmProvider::new(vec![format!(
-            "使用{}模型处理{}",
-            expected_model, task_name
-        )]));
+        let llm = create_test_zhipu_provider_arc();
 
         let _agent = AgentBuilder::new()
             .name("adaptive_model_agent")
@@ -160,10 +153,7 @@ async fn demo_context_based_tools() -> Result<()> {
             async move { Ok(tools) }
         });
 
-        let llm = Arc::new(MockLlmProvider::new(vec![format!(
-            "为{}配置了相应的工具集",
-            role_name
-        )]));
+        let llm = create_test_zhipu_provider_arc();
 
         let _agent = AgentBuilder::new()
             .name(&format!("{}_tools_agent", role))
@@ -225,9 +215,7 @@ async fn demo_full_dynamic_agent() -> Result<()> {
         async move { Ok(tools) }
     });
 
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "我是一个完全动态配置的AI助手，能够根据上下文自适应调整行为。".to_string(),
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("full_dynamic_agent")

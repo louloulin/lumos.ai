@@ -10,7 +10,8 @@ use futures::StreamExt;
 use lumosai_core::agent::streaming::{AgentEvent, IntoStreaming, StreamingAgent, StreamingConfig};
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::AgentBuilder;
-use lumosai_core::llm::{Message, MockLlmProvider, Role};
+use lumosai_core::llm::{Message, Role};
+    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use std::io::{self, Write};
 use std::sync::Arc;
 use tokio;
@@ -42,7 +43,7 @@ async fn demo_basic_streaming() -> std::result::Result<(), Box<dyn std::error::E
     // 创建模拟流式响应
     let streaming_content = "人工智能的发展历史可以追溯到20世纪50年代。1950年，艾伦·图灵提出了著名的图灵测试。1956年，达特茅斯会议标志着人工智能学科的正式诞生。随后经历了多次发展浪潮，包括专家系统时代、机器学习兴起，直到近年来深度学习的突破性进展。";
 
-    let mock_provider = Arc::new(MockLlmProvider::new(vec![streaming_content.to_string()]));
+    let mock_provider = create_test_zhipu_provider_arc();
 
     // 创建支持流式的 Agent
     let agent = AgentBuilder::new()
@@ -122,7 +123,7 @@ async fn demo_advanced_streaming() -> std::result::Result<(), Box<dyn std::error
     // 创建长文本响应
     let long_response = "Rust编程语言是一门系统编程语言，由Mozilla开发。它的设计目标是提供内存安全、并发安全和高性能。Rust的核心特性包括所有权系统、借用检查器、零成本抽象等。所有权系统通过编译时检查来防止内存泄漏和数据竞争。借用检查器确保引用的有效性。零成本抽象意味着高级特性不会带来运行时开销。Rust还提供了强大的类型系统、模式匹配、trait系统等现代编程语言特性。";
 
-    let mock_provider = Arc::new(MockLlmProvider::new(vec![long_response.to_string()]));
+    let mock_provider = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("advanced_streaming_agent")
@@ -184,11 +185,7 @@ async fn demo_advanced_streaming() -> std::result::Result<(), Box<dyn std::error
 async fn demo_event_driven_streaming() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n=== 演示3: 事件驱动流处理 ===");
 
-    let mock_provider = Arc::new(MockLlmProvider::new(vec![
-        "我正在分析您的请求...".to_string(),
-        "根据分析结果，我建议...".to_string(),
-        "最终结论是...".to_string(),
-    ]));
+    let mock_provider = create_test_zhipu_provider_arc();
 
     let agent = AgentBuilder::new()
         .name("event_driven_agent")

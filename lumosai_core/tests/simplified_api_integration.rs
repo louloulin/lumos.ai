@@ -5,12 +5,11 @@
 
 use lumosai_core::agent::trait_def::Agent as AgentTrait;
 use lumosai_core::agent::{data_agent, file_agent, web_agent, Agent};
-use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 
 #[tokio::test]
 async fn test_quick_agent_creation() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = Agent::quick("test_agent", "You are a test assistant")
         .model(llm)
@@ -23,7 +22,7 @@ async fn test_quick_agent_creation() {
 
 #[tokio::test]
 async fn test_builder_pattern_agent() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = Agent::builder()
         .name("builder_agent")
@@ -39,7 +38,7 @@ async fn test_builder_pattern_agent() {
 
 #[tokio::test]
 async fn test_web_agent_with_tools() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = web_agent("web_test", "You are a web assistant")
         .model(llm)
@@ -71,7 +70,7 @@ async fn test_web_agent_with_tools() {
 
 #[tokio::test]
 async fn test_file_agent_with_tools() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = file_agent("file_test", "You are a file assistant")
         .model(llm)
@@ -106,7 +105,7 @@ async fn test_file_agent_with_tools() {
 
 #[tokio::test]
 async fn test_data_agent_with_tools() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = data_agent("data_test", "You are a data assistant")
         .model(llm)
@@ -137,7 +136,7 @@ async fn test_data_agent_with_tools() {
 
 #[tokio::test]
 async fn test_smart_defaults_applied() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = Agent::quick("smart_test", "You are a smart assistant")
         .model(llm)
@@ -153,9 +152,7 @@ async fn test_smart_defaults_applied() {
 
 #[tokio::test]
 async fn test_agent_interaction() {
-    let llm = Arc::new(MockLlmProvider::new(vec![
-        "Hello! I'm your AI assistant.".to_string()
-    ]));
+    let llm = create_test_zhipu_provider_arc();
 
     let agent = Agent::quick("interaction_test", "You are a helpful assistant")
         .model(llm)
@@ -185,7 +182,7 @@ async fn test_backward_compatibility() {
     // Test that old-style agent creation still works
     use lumosai_core::agent::{create_basic_agent, AgentBuilder};
 
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     // Old-style creation should still work
     let old_agent = create_basic_agent(
@@ -211,7 +208,7 @@ async fn test_backward_compatibility() {
 
 #[tokio::test]
 async fn test_api_simplicity_comparison() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     // New simplified API - should be very concise
     let simple_agent = Agent::quick("simple", "You are simple")
@@ -237,7 +234,7 @@ async fn test_api_simplicity_comparison() {
 
 #[tokio::test]
 async fn test_performance_no_regression() {
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+    let llm = create_test_zhipu_provider_arc();
 
     // Test that simplified API doesn't add performance overhead
     let start = std::time::Instant::now();

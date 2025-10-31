@@ -240,6 +240,7 @@ impl LlmProviderExt for Arc<dyn LlmProvider> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     
     #[test]
     fn test_model_builder() {

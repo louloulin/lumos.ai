@@ -454,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_deepseek_provider_creation() {
-        let provider = DeepSeekProvider::new("test-key".to_string());
+        let provider = DeepSeekProvider::new("test-key".to_string(), None);
         assert_eq!(provider.model, "deepseek-chat");
         assert_eq!(provider.base_url, "https://api.deepseek.com");
     }
@@ -480,13 +480,13 @@ mod tests {
 
     #[test]
     fn test_supports_function_calling() {
-        let provider = DeepSeekProvider::new("test-key".to_string());
+        let provider = DeepSeekProvider::new("test-key".to_string(), None);
         assert!(provider.supports_function_calling());
     }
 
     #[tokio::test]
     async fn test_get_embedding_returns_error() {
-        let provider = DeepSeekProvider::new("test-key".to_string());
+        let provider = DeepSeekProvider::new("test-key".to_string(), None);
         let result = provider.get_embedding("test text").await;
         assert!(result.is_err());
         assert!(result

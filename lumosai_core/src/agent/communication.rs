@@ -2237,13 +2237,13 @@ mod tests {
     fn test_agent_message_creation() {
         let message = AgentMessage::new(
             "agent1".to_string(),
-            "agent2".to_string(),
+            vec!["agent2".to_string()],
             AgentMessageType::Request,
-            json!({"test": "data"}),
+            serde_json::to_string(&json!({"test": "data"})).unwrap(),
         );
 
         assert_eq!(message.sender_id, "agent1");
-        assert_eq!(message.receiver_id, "agent2");
+        assert_eq!(message.recipients, vec!["agent2".to_string()]);
         assert!(!message.requires_response);
         assert!(!message.is_expired());
     }
@@ -2252,15 +2252,15 @@ mod tests {
     fn test_message_response_creation() {
         let original = AgentMessage::new(
             "agent1".to_string(),
-            "agent2".to_string(),
+            vec!["agent2".to_string()],
             AgentMessageType::Request,
-            json!({"test": "data"}),
+            serde_json::to_string(&json!({"test": "data"})).unwrap(),
         );
 
-        let response = original.create_response(json!({"response": "data"}));
+        let response = original.create_response(serde_json::to_string(&json!({"response": "data"})).unwrap());
 
-        assert_eq!(response.sender_id, "agent2");
-        assert_eq!(response.receiver_id, "agent1");
+        assert_eq!(response.sender_id, original.recipients[0]);
+        assert_eq!(response.recipients, vec![original.sender_id.clone()]);
         assert_eq!(response.correlation_id, Some(original.id));
     }
 

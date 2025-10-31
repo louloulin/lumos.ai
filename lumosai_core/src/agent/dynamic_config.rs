@@ -340,12 +340,16 @@ mod tests {
 
         let resolver = DynamicConfigResolver;
 
-        let dynamic_instructions = dynamic_arg(|ctx: &EnhancedRuntimeContext| async move {
-            Ok(format!(
-                "You are a {} assistant for {}",
-                ctx.user_role.as_deref().unwrap_or("general"),
-                ctx.domain.as_deref().unwrap_or("general tasks")
-            ))
+        let dynamic_instructions = dynamic_arg(|ctx: &EnhancedRuntimeContext| {
+            let user_role = ctx.user_role.clone();
+            let domain = ctx.domain.clone();
+            async move {
+                Ok(format!(
+                    "You are a {} assistant for {}",
+                    user_role.as_deref().unwrap_or("general"),
+                    domain.as_deref().unwrap_or("general tasks")
+                ))
+            }
         });
 
         let result = resolver
@@ -363,12 +367,15 @@ mod tests {
         let simple_context = EnhancedRuntimeContext::new("test".to_string())
             .with_complexity(ComplexityLevel::Simple);
 
-        let model_selector = dynamic_arg(|ctx: &EnhancedRuntimeContext| async move {
-            Ok(match ctx.complexity {
-                ComplexityLevel::Simple => "gpt-3.5-turbo".to_string(),
-                ComplexityLevel::Complex => "gpt-4".to_string(),
-                ComplexityLevel::Expert => "claude-3-opus".to_string(),
-            })
+        let model_selector = dynamic_arg(|ctx: &EnhancedRuntimeContext| {
+            let complexity = ctx.complexity.clone();
+            async move {
+                Ok(match complexity {
+                    ComplexityLevel::Simple => "gpt-3.5-turbo".to_string(),
+                    ComplexityLevel::Complex => "gpt-4".to_string(),
+                    ComplexityLevel::Expert => "claude-3-opus".to_string(),
+                })
+            }
         });
 
         let result = resolver

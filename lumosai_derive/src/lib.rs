@@ -215,7 +215,7 @@ fn is_option_type(ty: &Type) -> bool {
     false
 }
 
-fn get_type_info(ty: &Type, is_optional: bool) -> (&'static str, &'static str) {
+fn get_type_info(ty: &Type, _is_optional: bool) -> (&'static str, &'static str) {
     if let Type::Path(type_path) = ty {
         if let Some(segment) = type_path.path.segments.last() {
             let type_name = segment.ident.to_string();

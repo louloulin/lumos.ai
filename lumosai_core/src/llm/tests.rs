@@ -4,6 +4,7 @@ mod tests {
         AnthropicProvider, CohereProvider, DeepSeekProvider, GeminiProvider, LlmOptions,
         LlmProvider, Message, OllamaProvider, OpenAiProvider, Role, TogetherProvider,
     };
+    use crate::llm::types::Temperature;
 
     // 这些测试使用内联的测试数据，不依赖于外部HTTP模拟库
 
@@ -11,7 +12,7 @@ mod tests {
     #[test]
     fn test_llm_options_default() {
         let options = LlmOptions::default();
-        assert_eq!(options.temperature, Some(0.7));
+        assert_eq!(options.temperature, Some(Temperature::BALANCED));
         assert_eq!(options.max_tokens, Some(1000));
         assert_eq!(options.stream, false);
         assert!(options.stop.is_none());
@@ -22,7 +23,7 @@ mod tests {
     // 测试消息结构
     #[test]
     fn test_message_creation() {
-        let message = Message::new(Role::User, "Hello".to_string(), None);
+        let message = Message::new(Role::User, "Hello".to_string(), None, None);
 
         assert_eq!(message.role, Role::User);
         assert_eq!(message.content, "Hello");
@@ -51,7 +52,7 @@ mod tests {
     #[tokio::test]
     async fn test_deepseek_embedding_error() {
         // DeepSeek没有嵌入API，所以这应该返回一个错误
-        let provider = DeepSeekProvider::new("fake-api-key".to_string());
+        let provider = DeepSeekProvider::new("fake-api-key".to_string(), None);
 
         // 调用嵌入方法
         let result = provider.get_embedding("Hello").await;

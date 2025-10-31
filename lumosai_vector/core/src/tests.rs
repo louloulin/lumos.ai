@@ -35,7 +35,7 @@ mod tests {
         ]);
         assert!(matches!(and_filter, FilterCondition::And(_)));
 
-        let not_filter = FilterCondition::not(FilterCondition::eq("active", false));
+        let not_filter = FilterCondition::negate(FilterCondition::eq("active", false));
         assert!(matches!(not_filter, FilterCondition::Not(_)));
     }
 
@@ -176,7 +176,7 @@ mod tests {
         assert!(evaluator.evaluate(&or_filter, &metadata).unwrap());
 
         // Test NOT filter
-        let not_filter = FilterCondition::not(FilterCondition::eq("active", false));
+        let not_filter = FilterCondition::negate(FilterCondition::eq("active", false));
         assert!(evaluator.evaluate(&not_filter, &metadata).unwrap());
     }
 

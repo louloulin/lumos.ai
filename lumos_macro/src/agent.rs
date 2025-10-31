@@ -205,13 +205,10 @@ pub fn agent(input: TokenStream) -> TokenStream {
 
     // 生成内存配置代码
     let memory_config = if let Some(memory_enabled) = &agent_def.memory {
-        if memory_enabled.value {
-            quote! {
-                // TODO: 添加内存配置
-                // agent.enable_memory();
-            }
-        } else {
-            quote! {}
+        let _ = memory_enabled.value; // 标记为已使用
+        quote! {
+            // TODO: 添加内存配置
+            // agent.enable_memory();
         }
     } else {
         quote! {}

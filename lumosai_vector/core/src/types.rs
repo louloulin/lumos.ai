@@ -158,7 +158,7 @@ impl FilterCondition {
     }
 
     /// Create a NOT filter
-    pub fn not(condition: FilterCondition) -> Self {
+    pub fn negate(condition: FilterCondition) -> Self {
         FilterCondition::Not(Box::new(condition))
     }
 

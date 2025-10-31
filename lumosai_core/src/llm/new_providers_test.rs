@@ -59,12 +59,14 @@ fn test_baidu_provider_creation() {
 
 #[test]
 fn test_llm_options_basic() {
+    use crate::llm::types::Temperature;
+
     let options = LlmOptions::default()
         .with_temperature(0.7)
         .with_max_tokens(100);
 
     // Test that options can be created
-    assert_eq!(options.temperature, Some(0.7));
+    assert_eq!(options.temperature, Some(Temperature::new(0.7)));
     assert_eq!(options.max_tokens, Some(100));
 }
 

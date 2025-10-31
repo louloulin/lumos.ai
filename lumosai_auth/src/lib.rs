@@ -53,15 +53,19 @@ impl AuthService {
     }
 
     pub async fn authenticate(&self, email: &str, password: &str) -> Result<AuthToken> {
-        // 简化实现
+        // 简化实现 - 在实际应用中应该验证密码哈希
         if email.is_empty() || password.is_empty() {
             return Err(AuthError::AuthenticationFailed(
                 "Invalid credentials".to_string(),
             ));
         }
 
+        // 使用 secret_key 生成 token（简化版本）
+        let _token_data = format!("{}:{}:{}", email, self.secret_key, uuid::Uuid::new_v4());
+        let token = format!("token_{}", uuid::Uuid::new_v4());
+
         Ok(AuthToken {
-            token: format!("token_{}", uuid::Uuid::new_v4()),
+            token,
             token_type: "Bearer".to_string(),
             expires_in: 3600,
         })
@@ -71,6 +75,10 @@ impl AuthService {
         if token.is_empty() {
             return Err(AuthError::InvalidToken("Empty token".to_string()));
         }
+
+        // 在实际应用中应该使用 secret_key 验证 token 签名
+        // 这里只是简化实现
+        let _ = &self.secret_key;
 
         Ok(User {
             id: uuid::Uuid::new_v4().to_string(),

@@ -8,16 +8,14 @@ mod tests {
     use crate::agent::evaluation::{EvaluationMetric, LengthMetric, RelevanceMetric};
     use crate::agent::types::{DynamicArgument, RuntimeContext, ToolsInput};
     use crate::llm::{Message, Role};
-    // use crate::compat::{create_logger, Component, LogLevel};
-    use crate::compat::{create_logger, Component, LogLevel};
+    use crate::logger::{Logger, NoopLogger};
     use crate::memory::processor::{
         DeduplicationProcessor, MemoryProcessor, MemoryProcessorOptions, MessageLimitProcessor,
     };
     use crate::tool::Tool;
 
-    fn create_test_logger() -> Arc<dyn crate::compat::Logger> {
-        // create_logger already returns Arc<dyn Logger>, so we don't need to wrap it again
-        create_logger("test", Component::Agent, LogLevel::Debug)
+    fn create_test_logger() -> Arc<dyn Logger> {
+        Arc::new(NoopLogger)
     }
 
     fn create_test_messages() -> Vec<Message> {

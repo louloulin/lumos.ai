@@ -393,7 +393,7 @@ mod tests {
     #[tokio::test]
     async fn test_semantic_memory_store() {
         // 创建配置
-        let config = create_test_config("test_store");
+        let config = create_test_config("test_store", None);
 
         // 创建Mock LLM，提供1536维的嵌入向量
         let mock_llm = Arc::new(MockLlmProvider::new_with_sequential_embeddings(
@@ -487,7 +487,7 @@ mod tests {
     #[tokio::test]
     async fn test_semantic_memory_stats() {
         // 创建配置
-        let config = create_test_config("test_stats");
+        let config = create_test_config("test_stats", None);
 
         // 创建Mock LLM
         let mock_llm = Arc::new(MockLlmProvider::new_with_sequential_embeddings(

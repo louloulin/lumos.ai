@@ -4,7 +4,9 @@ mod tests {
 
     use crate::agent::types::{StepType, TokenUsage, ToolCall};
     use crate::agent::{assistant_message, AgentGenerateResult, AgentStep};
-    use crate::compat::{Component, Logger, TelemetrySink};
+    use crate::compat::Component;
+    use crate::logger::Logger;
+    use crate::telemetry::TelemetrySink;
     use crate::error::{Error, Result};
     use crate::llm::Message;
     use crate::Agent;
@@ -13,8 +15,6 @@ mod tests {
     use std::sync::Arc;
 
     use crate::base::Base;
-    // use crate::compat::{Component, Logger};
-    // use crate::compat::TelemetrySink;
     use uuid::Uuid;
 
     // 实现一个简单的Mock代理

@@ -478,7 +478,10 @@ mod tests {
     use std::sync::Arc;
 
     fn create_test_context() -> (Arc<RuntimeContext>, ToolExecutionOptions) {
-        let context = Arc::new(RuntimeContext::new());
+        let context = Arc::new(RuntimeContext::new(
+            "test-session".to_string(),
+            "test-run".to_string(),
+        ));
         let options = ToolExecutionOptions::default();
         (context, options)
     }
@@ -486,8 +489,8 @@ mod tests {
     #[tokio::test]
     async fn test_image_info_basic() {
         let tool = image_info_tool();
-        let (context, options) = create_test_context();
-        let exec_context = ToolExecutionContext::new(context);
+        let (_context, options) = create_test_context();
+        let exec_context = ToolExecutionContext::new();
 
         let params = json!({
             "image_path": "/path/to/image.png"
@@ -503,8 +506,8 @@ mod tests {
     #[tokio::test]
     async fn test_image_convert_valid() {
         let tool = image_convert_tool();
-        let (context, options) = create_test_context();
-        let exec_context = ToolExecutionContext::new(context);
+        let (_context, options) = create_test_context();
+        let exec_context = ToolExecutionContext::new();
 
         let params = json!({
             "input_path": "/path/to/input.png",
@@ -522,8 +525,8 @@ mod tests {
     #[tokio::test]
     async fn test_image_convert_invalid_format() {
         let tool = image_convert_tool();
-        let (context, options) = create_test_context();
-        let exec_context = ToolExecutionContext::new(context);
+        let (_context, options) = create_test_context();
+        let exec_context = ToolExecutionContext::new();
 
         let params = json!({
             "input_path": "/path/to/input.png",
@@ -542,8 +545,8 @@ mod tests {
     #[tokio::test]
     async fn test_image_compress_with_target_size() {
         let tool = image_compress_tool();
-        let (context, options) = create_test_context();
-        let exec_context = ToolExecutionContext::new(context);
+        let (_context, options) = create_test_context();
+        let exec_context = ToolExecutionContext::new();
 
         let params = json!({
             "input_path": "/path/to/large.jpg",

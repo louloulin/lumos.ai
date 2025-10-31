@@ -511,6 +511,7 @@ impl<T: Agent> IntoStreaming<T> for T {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     use crate::agent::{AgentConfig, BasicAgent};
         use crate::memory::WorkingMemoryConfig;
 

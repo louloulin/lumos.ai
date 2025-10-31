@@ -652,7 +652,8 @@ impl AgentBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-        use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
+    use crate::llm::test_helpers::create_test_zhipu_provider_arc;
+    use crate::tool::{FunctionTool, ParameterSchema, ToolSchema};
 
     #[tokio::test]
     async fn test_agent_builder_basic() {

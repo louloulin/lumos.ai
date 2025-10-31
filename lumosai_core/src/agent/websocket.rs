@@ -507,6 +507,7 @@ impl<T: Agent> IntoWebSocketStreaming<T> for T {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     use crate::agent::{AgentConfig, BasicAgent};
         use crate::memory::WorkingMemoryConfig;
     use std::sync::Arc;

@@ -261,6 +261,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::llm::test_helpers::create_test_zhipu_provider_arc;
 
     #[tokio::test]
     async fn test_enhanced_streaming_agent() {

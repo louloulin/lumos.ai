@@ -4,6 +4,7 @@
 
 use super::*;
 use crate::agent::trait_def::Agent as AgentTrait;
+use crate::llm::test_helpers::create_test_zhipu_provider_arc;
 use std::sync::Arc;
 use tokio;
 

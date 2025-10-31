@@ -23,4 +23,7 @@ nom = "7.1"
 serde_json = "1.0"
 
 [dev-dependencies]
-trybuild = "1.0" 
+trybuild = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+lumosai_core = { path = "../lumosai_core" }
+serde_json = "1.0"

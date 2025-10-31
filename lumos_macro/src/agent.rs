@@ -186,8 +186,8 @@ pub fn agent(input: TokenStream) -> TokenStream {
         quote! {
             // 使用模型名称创建提供者（需要环境变量配置）
             let llm_provider: std::sync::Arc<dyn lumosai_core::llm::LlmProvider> = {
-                use lumosai_core::llm::openai::OpenAIProvider;
-                std::sync::Arc::new(OpenAIProvider::from_env().expect("Failed to create OpenAI provider"))
+                use lumosai_core::llm::openai::OpenAiProvider;
+                std::sync::Arc::new(OpenAiProvider::from_env().expect("Failed to create OpenAI provider"))
             };
         }
     } else {

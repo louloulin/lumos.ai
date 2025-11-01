@@ -111,6 +111,9 @@ pub mod session;
 pub mod thread;
 pub mod working;
 
+#[cfg(test)]
+mod real_api_tests;
+
 // #[cfg(test)]
 // mod processor_tests;
 

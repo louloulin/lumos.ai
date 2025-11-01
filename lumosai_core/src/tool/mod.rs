@@ -17,6 +17,9 @@ pub mod toolset;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod real_api_tests;
+
 pub use builder::{create_tool, ToolBuilder};
 pub use builtin::{
     create_all_builtin_tools, create_dev_builtin_tools, create_safe_builtin_tools,

@@ -292,7 +292,8 @@ mod tests {
     use super::*;
     use crate::agent::BasicAgent;
     use crate::llm::test_helpers::create_test_zhipu_provider_arc;
-    
+    use std::time::Duration;
+
     #[tokio::test]
     async fn test_agent_pipeline() {
         let llm1 = create_test_zhipu_provider_arc();
@@ -316,9 +317,15 @@ mod tests {
             llm2,
         ));
 
-        let pipeline = AgentPipeline::new(agent1).pipe(agent2);
-        let result = pipeline.execute("input").await.unwrap();
+        // Add delay to avoid rate limiting
+        tokio::time::sleep(Duration::from_millis(1000)).await;
 
-        assert_eq!(result, "Step 2 result");
+        let pipeline = AgentPipeline::new(agent1).pipe(agent2);
+        let result = pipeline.execute("input").await;
+
+        // Real LLM returns variable responses, just check it's successful
+        assert!(result.is_ok(), "Pipeline execution failed: {:?}", result.err());
+        let output = result.unwrap();
+        assert!(!output.is_empty(), "Pipeline output should not be empty");
     }
 }

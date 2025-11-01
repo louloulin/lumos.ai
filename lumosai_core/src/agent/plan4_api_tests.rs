@@ -6,6 +6,7 @@ use super::*;
 use crate::agent::trait_def::Agent as AgentTrait;
 use crate::llm::test_helpers::create_test_zhipu_provider_arc;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio;
 
 #[tokio::test]
@@ -25,7 +26,10 @@ async fn test_agent_factory_quick() {
         .generate_simple("Hello")
         .await
         .expect("Failed to generate response");
-    assert_eq!(response, "Hello!");
+
+    // Real LLM returns variable responses, just check it's not empty
+    assert!(!response.is_empty(), "Response should not be empty");
+    assert!(response.len() > 5, "Response should be meaningful");
 }
 
 #[tokio::test]
@@ -48,7 +52,10 @@ async fn test_agent_factory_builder() {
         .generate_simple("Test")
         .await
         .expect("Failed to generate response");
-    assert_eq!(response, "Builder response");
+
+    // Real LLM returns variable responses, just check it's not empty
+    assert!(!response.is_empty(), "Response should not be empty");
+    assert!(response.len() > 5, "Response should be meaningful");
 }
 
 #[tokio::test]
@@ -63,9 +70,13 @@ async fn test_convenience_functions() {
 
     assert_eq!(quick_agent.get_name(), "quick_test");
 
+    tokio::time::sleep(Duration::from_millis(1000)).await;
     let response = quick_agent
         .generate_simple("Test")
         .await
         .expect("Failed to generate response");
-    assert_eq!(response, "Convenience response");
+
+    // Real LLM returns variable responses, just check it's not empty
+    assert!(!response.is_empty(), "Response should not be empty");
+    assert!(response.len() > 5, "Response should be meaningful");
 }

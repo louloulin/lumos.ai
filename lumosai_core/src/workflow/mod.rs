@@ -10,6 +10,7 @@ pub mod enhanced;
 pub mod execution_engine;
 mod step;
 mod tests;
+mod real_api_tests;
 mod types;
 mod workflow;
 

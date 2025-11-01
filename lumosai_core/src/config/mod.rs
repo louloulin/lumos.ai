@@ -5,6 +5,9 @@
 
 pub mod yaml_config;
 
+#[cfg(test)]
+mod real_api_tests;
+
 use crate::{Error, Result};
 use std::path::Path;
 

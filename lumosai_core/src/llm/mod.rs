@@ -22,6 +22,8 @@ pub mod zhipu;
 
 #[cfg(test)]
 mod new_providers_test;
+#[cfg(test)]
+mod real_api_tests;
 // Temporarily disabled due to missing imports
 // mod third_party_integration_test;
 

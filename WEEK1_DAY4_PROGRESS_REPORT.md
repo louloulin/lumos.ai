@@ -14,10 +14,10 @@
 ### 测试数量统计
 | 指标 | 初始值 | 当前值 | 变化 | 目标 |
 |------|--------|--------|------|------|
-| 总测试数 | 287 | 309 | **+22** | ~350 |
-| 通过测试 | 287 | 308 | **+21** | ~350 |
-| 失败测试 | 0 | 1 | +1 | 0 |
-| 通过率 | 100% | 99.7% | -0.3% | 100% |
+| 总测试数 | 287 | 321 | **+34** | ~350 |
+| 通过测试 | 287 | 321 | **+34** | ~350 |
+| 失败测试 | 0 | 0 | 0 | 0 |
+| 通过率 | 100% | 100% | 0% | 100% |
 
 ### 模块测试覆盖情况
 | 模块 | 测试模块数 | 新增测试 | 状态 |
@@ -25,7 +25,7 @@
 | **workflow** | 2 → 3 | **+6 tests** | ✅ 已完成 |
 | **tool** | 18 → 19 | **+7 tests** | ✅ 已完成 |
 | **memory** | 7 → 8 | **+9 tests** | ✅ 已完成 |
-| **config** | 2 | 0 | ⏸️ 待处理 |
+| **config** | 2 → 3 | **+12 tests** | ✅ 已完成 |
 | **error** | 1 | 0 | ⏸️ 待处理 |
 | **llm** | ~15 | 0 | ⏸️ 待处理 |
 
@@ -136,6 +136,50 @@ test memory::real_api_tests::tests::test_working_memory_metadata ... ok
 test result: ok. 9 passed; 0 failed; 0 ignored; finished in 0.01s
 ```
 
+### 4. Config 模块测试 (12 个新测试)
+
+**文件**: `lumosai_core/src/config/real_api_tests.rs`
+
+**新增测试**:
+1. ✅ `test_yaml_config_empty_project_name` - 空项目名验证
+2. ✅ `test_yaml_config_empty_agent_name` - 空 Agent 名验证
+3. ✅ `test_yaml_config_empty_agent_model` - 空 Agent 模型验证
+4. ✅ `test_yaml_config_empty_agent_instructions` - 空 Agent 指令验证
+5. ✅ `test_yaml_config_workflow_validation` - 工作流验证（包含 3 个子测试）
+6. ✅ `test_yaml_config_from_invalid_yaml` - 无效 YAML 解析
+7. ✅ `test_yaml_config_file_not_found` - 文件不存在处理
+8. ✅ `test_config_loader_unknown_extension` - 未知扩展名处理
+9. ✅ `test_config_loader_invalid_content` - 无效内容处理
+10. ✅ `test_yaml_config_serialization_roundtrip` - 序列化往返测试
+11. ✅ `test_yaml_config_get_agent` - Agent 获取测试
+12. ✅ `test_yaml_config_get_workflow` - Workflow 获取测试
+
+**技术特点**:
+- ✅ 测试配置验证逻辑
+- ✅ 测试边界情况和错误处理
+- ✅ 测试 YAML/TOML 配置加载
+- ✅ 测试配置序列化和反序列化
+- ✅ 不需要 API 调用（纯逻辑测试，执行速度快）
+
+**测试结果**:
+```
+running 12 tests
+test config::real_api_tests::tests::test_yaml_config_empty_agent_name ... ok
+test config::real_api_tests::tests::test_yaml_config_get_agent ... ok
+test config::real_api_tests::tests::test_yaml_config_file_not_found ... ok
+test config::real_api_tests::tests::test_yaml_config_empty_project_name ... ok
+test config::real_api_tests::tests::test_yaml_config_empty_agent_model ... ok
+test config::real_api_tests::tests::test_yaml_config_get_workflow ... ok
+test config::real_api_tests::tests::test_yaml_config_empty_agent_instructions ... ok
+test config::real_api_tests::tests::test_yaml_config_workflow_validation ... ok
+test config::real_api_tests::tests::test_yaml_config_from_invalid_yaml ... ok
+test config::real_api_tests::tests::test_yaml_config_serialization_roundtrip ... ok
+test config::real_api_tests::tests::test_config_loader_unknown_extension ... ok
+test config::real_api_tests::tests::test_config_loader_invalid_content ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; finished in 0.01s
+```
+
 ---
 
 ## 🎯 下一步计划
@@ -147,6 +191,9 @@ test result: ok. 9 passed; 0 failed; 0 ignored; finished in 0.01s
 
 #### 2. ~~Memory 模块测试~~ ✅ 已完成
 **状态**: ✅ 已添加 9 个 WorkingMemory 测试
+
+#### 3. ~~Config 模块测试~~ ✅ 已完成
+**状态**: ✅ 已添加 12 个配置验证测试
 
 #### 3. Config 模块测试 (目标: +8 tests)
 **当前状态**: 2 个测试模块
@@ -346,7 +393,34 @@ Related to: #lumos4.2 Week 1 Day 4-5
 - Memory 模块覆盖率: 提升 15-20%
 - 预计耗时: 3 hours
 
+**Commit 6**: `773ec57` - 更新进度报告（Memory 模块）
+
+**Commit 7**: `210f3ed` - 添加 12 个 config 验证测试
+```
+feat: Add 12 config validation tests
+
+🎯 Week 1 Day 4-5: 提高测试覆盖率到 50%
+
+✅ 新增测试 (Config):
+- test_yaml_config_empty_project_name
+- test_yaml_config_empty_agent_name
+- test_yaml_config_empty_agent_model
+- test_yaml_config_empty_agent_instructions
+- test_yaml_config_workflow_validation
+- test_yaml_config_from_invalid_yaml
+- test_yaml_config_file_not_found
+- test_config_loader_unknown_extension
+- test_config_loader_invalid_content
+- test_yaml_config_serialization_roundtrip
+- test_yaml_config_get_agent
+- test_yaml_config_get_workflow
+
+📊 测试统计:
+- 测试数量: 309 → 321 (+12)
+- 通过测试: 321 (100%)
+```
+
 ---
 
-**状态**: ⏸️ 进行中 - 已完成 Workflow (6) + Tool (7) = 13 个测试，准备开始 Memory 模块
+**状态**: ✅ **已完成 4 个核心模块测试** - Workflow (6) + Tool (7) + Memory (9) + Config (12) = 34 个测试
 

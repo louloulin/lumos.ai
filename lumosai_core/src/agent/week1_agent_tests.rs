@@ -449,11 +449,11 @@ mod tests {
         let messages = vec![Message::new(Role::User, tab_input.to_string(), None, None)];
         let options = AgentGenerateOptions::default();
 
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+        tokio::time::sleep(Duration::from_millis(2000)).await;
         let result = retry_with_backoff(
             || async { agent.generate(&messages, &options).await },
-            5,
-            2000,
+            7,
+            3000,
         ).await;
 
         assert!(result.is_ok(), "Failed with error: {:?}", result.err());

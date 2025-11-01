@@ -294,6 +294,37 @@ mod tests {
     use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     use std::time::Duration;
 
+    /// Helper function to retry API calls with exponential backoff
+    async fn retry_with_backoff<F, Fut, T>(
+        mut f: F,
+        max_retries: u32,
+        initial_delay_ms: u64,
+    ) -> crate::Result<T>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = crate::Result<T>>,
+    {
+        let mut delay = initial_delay_ms;
+        for attempt in 0..max_retries {
+            match f().await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    let error_msg = format!("{:?}", e);
+                    if error_msg.contains("429") || error_msg.contains("Too Many Requests") || error_msg.contains("1302") {
+                        if attempt < max_retries - 1 {
+                            eprintln!("⚠️  Rate limit hit (attempt {}/{}), retrying after {}ms...", attempt + 1, max_retries, delay);
+                            tokio::time::sleep(Duration::from_millis(delay)).await;
+                            delay *= 2; // Exponential backoff
+                            continue;
+                        }
+                    }
+                    return Err(e);
+                }
+            }
+        }
+        unreachable!()
+    }
+
     #[tokio::test]
     async fn test_agent_pipeline() {
         let llm1 = create_test_zhipu_provider_arc();
@@ -321,7 +352,12 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(1000)).await;
 
         let pipeline = AgentPipeline::new(agent1).pipe(agent2);
-        let result = pipeline.execute("input").await;
+
+        let result = retry_with_backoff(
+            || async { pipeline.execute("input").await },
+            5,
+            2000,
+        ).await;
 
         // Real LLM returns variable responses, just check it's successful
         assert!(result.is_ok(), "Pipeline execution failed: {:?}", result.err());

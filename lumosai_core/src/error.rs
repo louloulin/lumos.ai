@@ -2,6 +2,9 @@
 
 pub mod friendly;
 
+#[cfg(test)]
+mod real_api_tests;
+
 use thiserror::Error;
 
 /// Result type for Lumosai operations

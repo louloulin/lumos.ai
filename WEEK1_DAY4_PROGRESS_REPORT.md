@@ -14,10 +14,10 @@
 ### 测试数量统计
 | 指标 | 初始值 | 当前值 | 变化 | 目标 |
 |------|--------|--------|------|------|
-| 总测试数 | 287 | 321 | **+34** | ~350 |
-| 通过测试 | 287 | 321 | **+34** | ~350 |
+| 总测试数 | 287 | 354 | **+67 (+23.3%)** | ~350 |
+| 通过测试 | 287 | 354 | **+67** | ~350 |
 | 失败测试 | 0 | 0 | 0 | 0 |
-| 通过率 | 100% | 100% | 0% | 100% |
+| 通过率 | 100% | 100% | ✅ 保持 | 100% |
 
 ### 模块测试覆盖情况
 | 模块 | 测试模块数 | 新增测试 | 状态 |
@@ -26,7 +26,7 @@
 | **tool** | 18 → 19 | **+7 tests** | ✅ 已完成 |
 | **memory** | 7 → 8 | **+9 tests** | ✅ 已完成 |
 | **config** | 2 → 3 | **+12 tests** | ✅ 已完成 |
-| **error** | 1 | 0 | ⏸️ 待处理 |
+| **error** | 1 → 2 | **+33 tests** | ✅ 已完成 |
 | **llm** | ~15 | 0 | ⏸️ 待处理 |
 
 ---
@@ -180,6 +180,93 @@ test config::real_api_tests::tests::test_config_loader_invalid_content ... ok
 test result: ok. 12 passed; 0 failed; 0 ignored; finished in 0.01s
 ```
 
+### 5. Error 模块测试 (33 个新测试)
+
+**文件**: `lumosai_core/src/error/real_api_tests.rs`
+
+**新增测试**:
+1. ✅ `test_error_llm_creation` - LLM 错误创建
+2. ✅ `test_error_agent_creation` - Agent 错误创建
+3. ✅ `test_error_tool_creation` - Tool 错误创建
+4. ✅ `test_error_memory_creation` - Memory 错误创建
+5. ✅ `test_error_workflow_creation` - Workflow 错误创建
+6. ✅ `test_error_configuration_creation` - Configuration 错误创建
+7. ✅ `test_error_from_string` - 从 String 转换
+8. ✅ `test_error_from_str` - 从 &str 转换
+9. ✅ `test_error_not_found` - NotFound 错误
+10. ✅ `test_error_invalid_input` - InvalidInput 错误
+11. ✅ `test_error_timeout` - Timeout 错误
+12. ✅ `test_error_authentication` - Authentication 错误
+13. ✅ `test_error_network` - Network 错误
+14. ✅ `test_error_validation` - Validation 错误（结构化）
+15. ✅ `test_error_api_error` - ApiError 错误（结构化）
+16. ✅ `test_result_type_ok` - Result 类型 Ok 分支
+17. ✅ `test_result_type_err` - Result 类型 Err 分支
+18. ✅ `test_friendly_error_creation` - FriendlyError 创建
+19. ✅ `test_friendly_error_with_context` - 添加上下文
+20. ✅ `test_friendly_error_with_suggestion` - 添加建议
+21. ✅ `test_friendly_error_generate_suggestions` - 生成建议
+22. ✅ `test_friendly_error_format_for_display` - 格式化显示
+23. ✅ `test_error_category_configuration` - 配置错误分类
+24. ✅ `test_error_category_authentication` - 认证错误分类
+25. ✅ `test_error_category_network` - 网络错误分类
+26. ✅ `test_error_category_validation` - 验证错误分类
+27. ✅ `test_error_severity_high` - 高严重性错误
+28. ✅ `test_error_severity_medium` - 中严重性错误
+29. ✅ `test_error_severity_low` - 低严重性错误
+30. ✅ `test_helper_config_error` - 配置错误辅助函数
+31. ✅ `test_helper_tool_error` - 工具错误辅助函数
+32. ✅ `test_helper_agent_error` - Agent 错误辅助函数
+33. ✅ `test_helper_network_error` - 网络错误辅助函数
+
+**技术特点**:
+- ✅ 测试所有主要错误类型的创建
+- ✅ 测试错误转换（From trait）
+- ✅ 测试 FriendlyError 功能
+- ✅ 测试错误分类和严重性判断
+- ✅ 测试辅助函数（helpers）
+- ✅ 不需要 API 调用（纯逻辑测试，执行速度快）
+
+**测试结果**:
+```
+running 33 tests
+test error::real_api_tests::tests::test_error_llm_creation ... ok
+test error::real_api_tests::tests::test_error_agent_creation ... ok
+test error::real_api_tests::tests::test_error_tool_creation ... ok
+test error::real_api_tests::tests::test_error_memory_creation ... ok
+test error::real_api_tests::tests::test_error_workflow_creation ... ok
+test error::real_api_tests::tests::test_error_configuration_creation ... ok
+test error::real_api_tests::tests::test_error_from_string ... ok
+test error::real_api_tests::tests::test_error_from_str ... ok
+test error::real_api_tests::tests::test_error_not_found ... ok
+test error::real_api_tests::tests::test_error_invalid_input ... ok
+test error::real_api_tests::tests::test_error_timeout ... ok
+test error::real_api_tests::tests::test_error_authentication ... ok
+test error::real_api_tests::tests::test_error_network ... ok
+test error::real_api_tests::tests::test_error_validation ... ok
+test error::real_api_tests::tests::test_error_api_error ... ok
+test error::real_api_tests::tests::test_result_type_ok ... ok
+test error::real_api_tests::tests::test_result_type_err ... ok
+test error::real_api_tests::tests::test_friendly_error_creation ... ok
+test error::real_api_tests::tests::test_friendly_error_with_context ... ok
+test error::real_api_tests::tests::test_friendly_error_with_suggestion ... ok
+test error::real_api_tests::tests::test_friendly_error_generate_suggestions ... ok
+test error::real_api_tests::tests::test_friendly_error_format_for_display ... ok
+test error::real_api_tests::tests::test_error_category_configuration ... ok
+test error::real_api_tests::tests::test_error_category_authentication ... ok
+test error::real_api_tests::tests::test_error_category_network ... ok
+test error::real_api_tests::tests::test_error_category_validation ... ok
+test error::real_api_tests::tests::test_error_severity_high ... ok
+test error::real_api_tests::tests::test_error_severity_medium ... ok
+test error::real_api_tests::tests::test_error_severity_low ... ok
+test error::real_api_tests::tests::test_helper_config_error ... ok
+test error::real_api_tests::tests::test_helper_tool_error ... ok
+test error::real_api_tests::tests::test_helper_agent_error ... ok
+test error::real_api_tests::tests::test_helper_network_error ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; finished in 0.01s
+```
+
 ---
 
 ## 🎯 下一步计划
@@ -195,8 +282,8 @@ test result: ok. 12 passed; 0 failed; 0 ignored; finished in 0.01s
 #### 3. ~~Config 模块测试~~ ✅ 已完成
 **状态**: ✅ 已添加 12 个配置验证测试
 
-#### 3. Config 模块测试 (目标: +8 tests)
-**当前状态**: 2 个测试模块
+#### 4. ~~Error 模块测试~~ ✅ 已完成
+**状态**: ✅ 已添加 33 个错误处理测试
 
 **需要添加的测试**:
 - YAML 配置加载
@@ -420,7 +507,32 @@ feat: Add 12 config validation tests
 - 通过测试: 321 (100%)
 ```
 
+**Commit 8**: `c1f5e3e` - 更新进度报告（Config 模块）
+
+**Commit 9**: `d676505` - 添加 33 个 error 模块测试
+```
+feat: Add 33 error module tests
+
+🎯 Week 1 Day 4-5: 提高测试覆盖率到 50%
+
+✅ 新增测试 (Error Module - 33 tests):
+- 错误类型创建测试（LLM, Agent, Tool, Memory, Workflow, Configuration）
+- 错误转换测试（From String, From &str）
+- 特殊错误测试（NotFound, InvalidInput, Timeout, Authentication, Network）
+- 结构化错误测试（Validation, ApiError）
+- Result 类型测试（Ok, Err）
+- FriendlyError 功能测试（创建、上下文、建议、格式化）
+- 错误分类测试（Configuration, Authentication, Network, Validation）
+- 错误严重性测试（High, Medium, Low）
+- 辅助函数测试（config_error, tool_error, agent_error, network_error）
+
+📊 测试统计:
+- 测试数量: 321 → 354 (+33)
+- Error 模块: 5 → 38 (+33)
+- 通过测试: 354 (100%)
+```
+
 ---
 
-**状态**: ✅ **已完成 4 个核心模块测试** - Workflow (6) + Tool (7) + Memory (9) + Config (12) = 34 个测试
+**状态**: ✅ **已完成 5 个核心模块测试** - Workflow (6) + Tool (7) + Memory (9) + Config (12) + Error (33) = 67 个测试
 

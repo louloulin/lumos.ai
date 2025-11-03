@@ -36,6 +36,14 @@ pub enum Error {
     #[error("Memory error: {0}")]
     Memory(String),
 
+    /// Cache errors
+    #[error("Cache error: {0}")]
+    Cache(String),
+
+    /// Cache full error
+    #[error("Cache is full and LRU eviction is disabled")]
+    CacheFull,
+
     /// Unsupported operation errors
     #[error("Unsupported operation: {0}")]
     UnsupportedOperation(String),

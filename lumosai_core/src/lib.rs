@@ -12,8 +12,9 @@
 //! - error: 错误处理
 //! - prelude: 便捷导入
 
-// 8 个核心模块
+// 核心模块
 pub mod agent;
+pub mod cache; // 新增：缓存系统
 pub mod config;
 pub mod error;
 pub mod llm;

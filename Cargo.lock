@@ -7741,6 +7741,7 @@ dependencies = [
  "lumosai_vector",
  "mockall 0.11.4",
  "notify",
+ "num_cpus",
  "rand 0.8.5",
  "regex",
  "reqwest 0.12.23",

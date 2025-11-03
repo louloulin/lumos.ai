@@ -467,25 +467,95 @@ impl Crew {
         Ok(completed_tasks)
     }
 
-    /// 并行执行任务
+    /// 并行执行任务（优化版：使用 JoinSet 和智能负载均衡）
     async fn execute_parallel(&self) -> Result<Vec<AgentTask>> {
+        use tokio::task::JoinSet;
+
         let task_queue = self.task_queue.read().await.clone();
-        let mut handles = Vec::new();
+        let task_count = task_queue.len();
 
-        for task_id in task_queue {
-            let crew = self.clone_arc();
-            let handle = tokio::spawn(async move { crew.execute_task(&task_id).await });
-            handles.push(handle);
-        }
+        tracing::info!(
+            "Starting parallel execution of {} tasks with intelligent load balancing",
+            task_count
+        );
 
-        let mut completed_tasks = Vec::new();
-        for handle in handles {
-            match handle.await {
-                Ok(Ok(task)) => completed_tasks.push(task),
-                Ok(Err(e)) => tracing::error!("Task execution failed: {}", e),
-                Err(e) => tracing::error!("Task join failed: {}", e),
+        // 使用 JoinSet 管理并发任务
+        let mut join_set: JoinSet<Result<AgentTask>> = JoinSet::new();
+
+        // 获取可用的 CPU 核心数，用于智能并发控制
+        let max_concurrency = num_cpus::get().max(4); // 至少 4 个并发
+        let effective_concurrency = task_count.min(max_concurrency);
+
+        tracing::debug!(
+            "Using concurrency level: {} (max: {}, tasks: {})",
+            effective_concurrency,
+            max_concurrency,
+            task_count
+        );
+
+        // 分批执行以控制并发度
+        for chunk in task_queue.chunks(effective_concurrency) {
+            for task_id in chunk {
+                let crew = self.clone_arc();
+                let task_id_clone = task_id.clone();
+
+                join_set.spawn(async move {
+                    let start_time = std::time::Instant::now();
+                    let result = crew.execute_task(&task_id_clone).await;
+                    let elapsed = start_time.elapsed();
+
+                    tracing::debug!(
+                        "Task {} completed in {:?}",
+                        task_id_clone,
+                        elapsed
+                    );
+
+                    result
+                });
+            }
+
+            // 等待当前批次完成后再启动下一批
+            // 这样可以避免过多的并发任务
+            let mut batch_results = Vec::new();
+            while let Some(result) = join_set.join_next().await {
+                batch_results.push(result);
+            }
+
+            // 处理批次结果
+            for result in batch_results {
+                match result {
+                    Ok(Ok(task)) => {
+                        // 任务成功完成
+                        tracing::debug!("Task {} succeeded", task.id);
+                    }
+                    Ok(Err(e)) => {
+                        tracing::error!("Task execution failed: {}", e);
+                    }
+                    Err(e) => {
+                        tracing::error!("Task join failed: {}", e);
+                    }
+                }
             }
         }
+
+        // 收集所有完成的任务
+        let mut completed_tasks = Vec::new();
+        let tasks = self.tasks.read().await;
+
+        for task_id in task_queue {
+            // 在 Vec 中查找任务
+            if let Some(task) = tasks.iter().find(|t| t.id == task_id) {
+                if task.status == TaskStatus::Completed {
+                    completed_tasks.push(task.clone());
+                }
+            }
+        }
+
+        tracing::info!(
+            "Parallel execution completed: {}/{} tasks successful",
+            completed_tasks.len(),
+            task_count
+        );
 
         Ok(completed_tasks)
     }

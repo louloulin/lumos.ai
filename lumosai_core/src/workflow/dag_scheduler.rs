@@ -193,6 +193,7 @@ impl Default for Dag {
 }
 
 /// DAG 调度器
+#[derive(Clone)]
 pub struct DagScheduler {
     /// 最大并发度
     max_concurrency: usize,

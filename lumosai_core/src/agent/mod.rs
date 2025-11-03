@@ -8,6 +8,7 @@ pub mod communication;
 pub mod config;
 pub mod config_validator;
 pub mod convenience;
+pub mod dag_orchestration;
 pub mod dynamic_config;
 pub mod enhanced_integration_test;
 pub mod evaluation;
@@ -124,6 +125,11 @@ pub use session::{
 pub use orchestration::{
     AgentExecutionState, AgentOrchestrator, AgentRole, BasicOrchestrator, CollaborationSession,
     CollaborationTask, OrchestrationPattern, RetryConfig, VotingStrategy,
+};
+
+// Re-export DAG orchestration
+pub use dag_orchestration::{
+    AgentChain, AgentDagOrchestrator, AgentDagOrchestratorBuilder,
 };
 
 // Re-export events

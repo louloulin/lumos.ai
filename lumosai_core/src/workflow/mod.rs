@@ -6,6 +6,7 @@
 #![allow(unexpected_cfgs, unused_assignments)]
 
 pub mod basic;
+pub mod dag_scheduler;
 pub mod enhanced;
 pub mod execution_engine;
 mod step;
@@ -64,6 +65,7 @@ pub enum WorkflowStatus {
 }
 
 // 重新导出公共项
+pub use dag_scheduler::{Dag, DagNode, DagScheduler};
 pub use enhanced::{EnhancedWorkflow, StepExecutor, StepFlowEntry, StepType, WorkflowStep};
 pub use execution_engine::{DefaultExecutionEngine, ExecutionEngine, ExecutionMetrics};
 pub use step::{BasicStep, StepBuilder, StepConfig};

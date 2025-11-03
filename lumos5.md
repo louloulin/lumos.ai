@@ -359,7 +359,7 @@ async fn execute_parallel(&self) -> Result<Vec<AgentTask>> {
    - ✅ 支持动态并发度调整
    - ✅ 添加执行指标跟踪（成功/失败/平均时间）
    - ✅ 实现批次处理以控制并发度
-   - ⏳ DAG 并行调度器（待实现）
+   - ✅ DAG 并行调度器（已完成 2025-11-03）
    - ⏳ 工作窃取算法（待实现）
 
 3. **向量检索并行化** ⏳
@@ -370,15 +370,30 @@ async fn execute_parallel(&self) -> Result<Vec<AgentTask>> {
 **实现文件**:
 - `lumosai_core/src/agent/collaboration.rs` - Agent 并发执行优化
 - `lumosai_core/src/workflow/execution_engine.rs` - Workflow 并行执行优化
+- `lumosai_core/src/workflow/dag_scheduler.rs` - DAG 并行调度器（新增，300 行）
 - `lumosai_core/tests/concurrency_performance_tests.rs` - 并发性能测试（7 个测试）
+- `lumosai_core/tests/dag_scheduler_tests.rs` - DAG 调度器测试（11 个测试）
 - `lumosai_core/Cargo.toml` - 添加 num_cpus 依赖
+
+**DAG 调度器功能**:
+- ✅ DAG 构建和节点管理
+- ✅ 环检测（Cycle Detection）
+- ✅ 拓扑排序（Kahn 算法）
+- ✅ 基于依赖的智能并行调度
+- ✅ 并发度控制（Semaphore）
+- ✅ 层级化执行（按拓扑层级并行）
+- ✅ 依赖输入合并
 
 **性能提升**:
 - ✅ Agent 并发创建：10 个 Agent < 2ms
 - ✅ Agent 并发操作：5 个 Agent 并发 < 25ms
 - ✅ Workflow 并行执行：8 个任务 < 10ms
 - ✅ 并发度控制：Semaphore 限流正常工作
-- ✅ 所有并发测试通过（7/7）
+- ✅ DAG 简单执行：2 节点 < 25ms
+- ✅ DAG 并行执行：4 节点（2 并行）< 80ms
+- ✅ DAG 复杂执行：6 节点（3 层级）< 60ms
+- ✅ DAG 并发限制：11 节点（并发度 2）> 250ms（符合预期）
+- ✅ 所有测试通过（7 并发测试 + 11 DAG 测试 = 18 tests）
 
 #### 2.2 缓存机制优化 ✅ **已完成 (2025-11-03)**
 **目标**: 缓存命中率 >80%

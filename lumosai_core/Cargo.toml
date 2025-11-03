@@ -136,3 +136,7 @@ path = "examples/security_demo.rs"
 [[bench]]
 name = "tool_performance"
 harness = false
+
+[[bench]]
+name = "comprehensive_performance"
+harness = false

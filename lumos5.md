@@ -129,11 +129,22 @@
     10. 性能和边界情况 (5 tests)
   - **测试结果**: 49 passed, 0 failed
   
-- [ ] `lumosai_core/memory`: 增加 25+ 单元测试
-  - 工作内存测试
-  - 语义内存测试
-  - 会话管理测试
-  - 内存处理器测试
+- [x] `lumosai_core/memory`: 增加 25+ 单元测试 ✅ (2025-11-02)
+  - 工作内存测试 ✅
+  - 语义内存测试 ✅
+  - 会话管理测试 ✅
+  - 内存处理器测试 ✅
+  - **实际完成**: 40 个测试，覆盖 7 大类别
+  - **测试文件**: `lumosai_core/tests/memory_comprehensive_tests.rs`
+  - **测试类别**:
+    1. WorkingMemory 测试 (8 tests)
+    2. SemanticMemory 配置测试 (6 tests)
+    3. SessionManager 测试 (7 tests)
+    4. MemoryProcessor 测试 (6 tests)
+    5. BasicMemory 测试 (5 tests)
+    6. UnifiedMemory 配置测试 (4 tests)
+    7. 并发和性能测试 (4 tests)
+  - **测试结果**: 40 passed, 0 failed
 
 **实施方案**:
 ```rust

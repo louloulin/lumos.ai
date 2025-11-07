@@ -20,6 +20,7 @@ pub mod error;
 pub mod llm;
 pub mod logger;
 pub mod memory;
+pub mod pool; // 新增：资源池系统
 pub mod prelude;
 pub mod telemetry;
 pub mod tool;

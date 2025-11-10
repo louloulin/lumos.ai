@@ -163,9 +163,9 @@ use crate::{Error, Result};
 ///
 /// # See Also
 ///
-/// - [`Tool`](crate::tool::Tool) - Tool trait
-/// - [`FunctionTool`](crate::tool::FunctionTool) - Function-based tool implementation
-/// - [`ToolSchema`](crate::tool::ToolSchema) - Tool parameter schema
+/// - [`Tool`] - Tool trait
+/// - [`FunctionTool`] - Function-based tool implementation
+/// - [`ToolSchema`] - Tool parameter schema
 pub struct ToolBuilder {
     /// Tool name (required)
     name: Option<String>,

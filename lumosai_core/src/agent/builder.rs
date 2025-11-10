@@ -186,9 +186,9 @@ impl Tool for ToolWrapper {
 ///
 /// # See Also
 ///
-/// - [`Agent`](crate::agent::Agent) - The agent trait
-/// - [`BasicAgent`](crate::agent::BasicAgent) - The default agent implementation
-/// - [`Tool`](crate::tool::Tool) - Tool trait for extending agent capabilities
+/// - [`Agent`] - The agent trait
+/// - [`BasicAgent`] - The default agent implementation
+/// - [`Tool`] - Tool trait for extending agent capabilities
 pub struct AgentBuilder {
     name: Option<String>,
     instructions: Option<String>,

@@ -32,7 +32,6 @@
 
 use crate::agent::Agent;
 use crate::error::Result;
-use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use crate::llm::{Message, Role};
 use std::sync::Arc;
 

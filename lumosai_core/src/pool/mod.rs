@@ -42,7 +42,6 @@ pub use connection_pool::{ConnectionPool, ConnectionPoolConfig, PooledConnection
 pub use object_pool::{ObjectPool, ObjectPoolConfig};
 pub use resource_monitor::{ResourceMonitor, ResourceStats};
 
-use crate::Result;
 use std::time::Duration;
 
 /// 池配置

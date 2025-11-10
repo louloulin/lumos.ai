@@ -476,7 +476,7 @@ impl BasicWorkingMemory {
             if let Err(e) = collector.record_memory_operation(metrics).await {
                 // 记录日志但不影响主要操作
                 let logger = self.logger();
-                logger.error(&format!("Failed to record memory metrics: {e}"));
+                let _ = logger.error(&format!("Failed to record memory metrics: {e}"));
             }
         }
     }

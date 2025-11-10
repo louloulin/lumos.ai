@@ -3,7 +3,6 @@
 //! This module provides simplified APIs for creating LLM providers,
 //! inspired by Mastra's model creation patterns.
 
-use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use crate::llm::{AnthropicProvider, DeepSeekProvider, LlmProvider, OpenAiProvider, QwenProvider};
 use crate::Result;
 use std::sync::Arc;

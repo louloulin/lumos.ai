@@ -5,7 +5,7 @@
 use super::{PoolConfig, PoolStats};
 use crate::Result;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio::sync::{Mutex, Semaphore};
 use tokio::time::timeout;
 

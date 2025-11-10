@@ -14,7 +14,6 @@
 use super::{Cache, CacheConfig, CacheStats, LruCache};
 use crate::error::Result;
 use serde_json::Value;
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;

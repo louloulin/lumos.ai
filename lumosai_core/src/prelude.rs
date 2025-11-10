@@ -188,7 +188,6 @@ pub use crate::vector::{
 };
 
 pub use crate::agent::{AgentGenerateResult, AgentStep};
-use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 /// 消息和配置类型
 pub use crate::llm::{Message, Role};
 

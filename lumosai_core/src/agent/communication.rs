@@ -2,9 +2,7 @@
 //!
 //! 提供Agent之间的消息传递、协作和协调功能
 
-use base64;
 use chrono;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, VecDeque};
@@ -13,7 +11,6 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
 
-use crate::agent::Agent;
 use crate::error::{Error, Result};
 
 /// Agent通信消息类型
@@ -324,7 +321,7 @@ impl AgentMessage {
 
     /// 创建响应消息
     pub fn create_response(&self, content: String) -> Self {
-        let mut response = Self {
+        let response = Self {
             id: Uuid::new_v4().to_string(),
             sender_id: self.recipients.first().cloned().unwrap_or_default(),
             recipients: vec![self.sender_id.clone()],

@@ -10,14 +10,11 @@
 //! - 缓存预热和失效
 //! - 详细的缓存统计和监控
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::hash::Hash;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
 
 pub mod lru;
 pub mod multi_level;

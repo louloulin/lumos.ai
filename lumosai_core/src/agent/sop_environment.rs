@@ -34,7 +34,7 @@ use tokio::sync::RwLock;
 
 use super::collaboration::{CollaborationMode, Crew};
 use super::communication::{AgentCommunicationManager, AgentMessage, AgentMessageType};
-use super::sop_types::{AgentAction, SopExecutionMode, SopMessage, SopStats};
+use super::sop_types::{SopExecutionMode, SopMessage, SopStats};
 use super::Agent;
 use crate::error::{Error, Result};
 

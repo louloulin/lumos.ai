@@ -1190,7 +1190,7 @@ impl Agent for BasicAgent {
                                         metrics.record_error();
                                     }
 
-                                    self.logger().error(&format!(
+                                    let _ = self.logger().error(&format!(
                                         "Function call '{}' failed after {:?}: {}",
                                         call.name, execution_time, e
                                     ));
@@ -1476,7 +1476,7 @@ impl Agent for BasicAgent {
                                     metrics.record_error();
                                 }
 
-                                self.logger().error(&format!(
+                                let _ = self.logger().error(&format!(
                                     "Function call '{}' failed after {:?}: {}",
                                     call.name, execution_time, e
                                 ));
@@ -1703,7 +1703,7 @@ impl Agent for BasicAgent {
         };
         steps.push(final_step);
 
-        self.logger().info(&format!(
+        let _ = self.logger().info(&format!(
             "Agent '{}' completed execution in {}ms with {} steps, {} tool calls, {} errors",
             self.name, total_execution_time, current_step, total_tool_calls, total_errors
         ));

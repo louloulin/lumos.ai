@@ -539,7 +539,14 @@ impl MultiLevelCache {
 **目标**: 100% API 文档覆盖（示例代码部分）
 
 **任务清单**:
-- [ ] 所有 public API 添加文档注释
+- [ ] 所有 public API 添加文档注释 ⏳ **进行中 (10% - 2025-11-10)**
+  - [x] `AgentBuilder` - 所有方法已添加完整文档注释 ✅
+  - [ ] `Agent` trait - 待添加
+  - [ ] `Tool` trait - 待添加
+  - [ ] `ToolBuilder` - 待添加
+  - [ ] `Memory` trait - 待添加
+  - [ ] `LlmProvider` trait - 待添加
+  - [ ] `Workflow` 相关 API - 待添加
 - [x] 示例代码覆盖率 >80% ✅ **已完成 (100% - 2025-11-10)**
   - ✅ 创建快速开始指南（QUICK_START_MVP.md）
   - ✅ 创建 5 个核心 MVP 示例（5/5 完成）

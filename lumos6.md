@@ -2077,3 +2077,268 @@ diff <(/tmp/gap_analysis.sh) results_before.txt
 
 **本文档基于真实代码分析，所有数据已验证！** ✅
 
+---
+
+## 📋 十二、详细任务清单（可执行）
+
+### P0-A: JWT Auth 实现（5天）
+
+#### Day 1: 基础设施
+- [ ] 添加依赖到 `lumosai_auth/Cargo.toml`
+  ```toml
+  jsonwebtoken = "9.0"
+  bcrypt = "0.15"
+  serde = { version = "1.0", features = ["derive"] }
+  chrono = "0.4"
+  uuid = { version = "1.0", features = ["v4"] }
+  ```
+- [ ] 创建文件结构
+  ```bash
+  touch lumosai_auth/src/jwt.rs
+  touch lumosai_auth/src/password.rs
+  touch lumosai_auth/src/user.rs
+  touch lumosai_auth/src/error.rs
+  ```
+- [ ] 定义错误类型
+
+#### Day 2-3: JWT 核心实现
+- [ ] 实现 `JwtAuth` 结构体
+- [ ] 实现 `generate_token()` 方法
+- [ ] 实现 `verify_token()` 方法
+- [ ] 实现 `refresh_token()` 方法
+- [ ] 编写单元测试
+
+#### Day 4: 密码管理
+- [ ] 实现 `PasswordHasher`
+- [ ] 实现 `hash_password()`
+- [ ] 实现 `verify_password()`
+- [ ] 编写安全测试
+
+#### Day 5: 集成和测试
+- [ ] 更新 `AuthService`
+- [ ] 集成测试
+- [ ] 安全审查
+- [ ] 文档编写
+
+**验收**: `cargo test -p lumosai_auth` 100% 通过
+
+### P0-B: Docker 部署（2天）
+
+#### Day 1: Dockerfile
+- [ ] 创建 `Dockerfile`
+- [ ] 多阶段构建
+- [ ] 优化镜像大小
+- [ ] 非 root 用户
+- [ ] 健康检查
+
+#### Day 2: Docker Compose
+- [ ] 创建 `docker-compose.yml`
+- [ ] 配置所有服务（LumosAI、PostgreSQL、Redis、Qdrant）
+- [ ] 环境变量配置
+- [ ] 数据卷配置
+- [ ] 创建 `scripts/quick-start.sh`
+- [ ] 测试完整部署
+
+**验收**: `docker-compose up -d && curl http://localhost:8080/health` 返回 200
+
+### P0-C: CI/CD 流程（3天）
+
+#### Day 1: GitHub Actions 基础
+- [ ] 创建 `.github/workflows/ci.yml`
+- [ ] 配置测试任务
+- [ ] 配置构建任务
+
+#### Day 2: 代码质量检查
+- [ ] Clippy 检查
+- [ ] Format 检查
+- [ ] 测试覆盖率报告
+
+#### Day 3: Docker 构建和部署
+- [ ] Docker 镜像构建
+- [ ] Docker 测试
+- [ ] （可选）自动部署
+
+**验收**: 每次 push 自动运行，所有检查通过
+
+### P0-D: E2E 测试（4天）
+
+#### Day 1-2: 测试框架
+- [ ] 创建 `tests/e2e/` 目录
+- [ ] 实现测试工具函数
+- [ ] 设计测试上下文
+
+#### Day 3-4: 测试场景实现
+- [ ] Agent 基础对话测试
+- [ ] Agent + Tool 测试
+- [ ] Agent + RAG 测试
+- [ ] Multi-Agent 测试
+- [ ] Workflow 测试
+- [ ] Auth 流程测试
+- [ ] 错误处理测试
+- [ ] 并发测试
+- [ ] 性能测试
+- [ ] 完整场景测试
+
+**验收**: `cargo test --test e2e` 10+ 测试全部通过
+
+### P1-A: Structured Output（3天）
+
+#### Day 1: 基础实现
+- [ ] 创建 `lumosai_core/src/agent/structured.rs`
+- [ ] 实现 `StructuredOutputAgent` 结构体
+- [ ] 实现 `AgentStructuredOutput` trait
+
+#### Day 2: Schema 和验证
+- [ ] 集成 schemars（JSON Schema）
+- [ ] 实现 schema 生成
+- [ ] 实现输出验证
+- [ ] 集成到 AgentBuilder
+
+#### Day 3: 测试和文档
+- [ ] 单元测试
+- [ ] 集成测试
+- [ ] 示例代码
+- [ ] API 文档
+
+**验收**: 
+```rust
+let result: MyStruct = agent.generate_structured("query").await?;
+```
+
+### P1-B: Agent + RAG 简化（2天）
+
+#### Day 1: API 设计和实现
+- [ ] 创建 `lumosai_core/src/agent/rag_integration.rs`
+- [ ] 实现 `RagConfig` 结构体
+- [ ] 扩展 `AgentBuilder.with_rag()`
+- [ ] 实现自动上下文注入
+
+#### Day 2: 测试和文档
+- [ ] 单元测试
+- [ ] 集成测试
+- [ ] 创建 `mvp_06_rag_agent.rs` 示例
+- [ ] 文档更新
+
+**验收**:
+```rust
+let agent = AgentBuilder::new()
+    .with_rag_simple(vector_store, embedder)
+    .build()?;
+```
+
+---
+
+## 📊 十三、进度追踪表
+
+| Week | 任务 | 状态 | 阻塞 | 风险 |
+|------|------|------|------|------|
+| Week 0 | 深度分析 | ✅ 完成 | 无 | 无 |
+| Week 1 | P0-A + P0-B | ⏳ 待开始 | 无 | 低 |
+| Week 2 | P0-C + P0-D | ⏳ 待开始 | P0-A | 中 |
+| Week 3 | P1-A + P1-B | ⏳ 待开始 | P0-D | 低 |
+| Week 4 | 缓冲 + 验收 | ⏳ 待开始 | 无 | 低 |
+
+### 每日检查点
+
+**每天必做**:
+1. ✅ 运行测试: `cargo test --workspace`
+2. ✅ 代码检查: `cargo clippy`
+3. ✅ 格式化: `cargo fmt`
+4. ✅ 文档更新: 同步 lumos6.md
+
+**每周必做**:
+1. ✅ 运行 E2E 测试
+2. ✅ Docker 部署测试
+3. ✅ 性能基准测试
+4. ✅ 安全审查
+5. ✅ 文档审查
+
+---
+
+## 🎯 十四、最终行动计划
+
+### 明天开始（2025-11-11）
+
+**上午**:
+```bash
+# 1. 创建分支
+git checkout -b feature/jwt-auth
+
+# 2. 更新 Auth 包依赖
+cd lumosai_auth
+# 编辑 Cargo.toml
+
+# 3. 创建文件
+touch src/jwt.rs src/password.rs src/user.rs
+```
+
+**下午**:
+- 实现 JwtAuth 基础结构
+- 实现 generate_token()
+- 编写第一个测试
+
+**目标**: Day 1 完成基础设施 ✅
+
+### 本周末目标（Friday）
+
+```bash
+# 测试 Auth 系统
+cargo test -p lumosai_auth
+# ✅ 所有测试通过
+
+# 测试 Docker 构建
+docker build -t lumosai:dev .
+docker-compose up -d
+curl http://localhost:8080/health
+# ✅ 返回 200 OK
+```
+
+### 两周后目标（2025-11-25）
+
+```bash
+# CI/CD 自动运行
+git push origin main
+# ✅ GitHub Actions 自动测试和构建
+
+# E2E 测试通过
+cargo test --test e2e
+# ✅ test result: ok. 10 passed; 0 failed
+
+# 完整部署测试
+./scripts/quick-start.sh
+# ✅ LumosAI is running!
+```
+
+### 三周后目标（2025-12-02）
+
+```bash
+# 结构化输出可用
+cargo run --example mvp_07_structured_output
+# ✅ 成功生成强类型输出
+
+# RAG 集成简化
+cargo run --example mvp_06_rag_agent
+# ✅ 一行代码添加 RAG
+
+# 生产 MVP 验收
+./scripts/production-checklist.sh
+# ✅ All checks passed
+```
+
+---
+
+## 📝 补充文档
+
+详细的第二轮分析和 Mastra 对比见：
+- `LUMOS6_DEEP_ANALYSIS_SUPPLEMENT.md` - 深度对比分析
+- 包含：Mastra 官方文档验证、功能对比表、真实运行结果
+
+---
+
+**最后更新**: 2025-11-10 16:30
+**分析轮次**: 3 轮（静态 + 动态 + 对标）
+**验证方法**: 代码审查 + 实际运行 + 官方文档对比
+**可信度**: ✅ 高（所有关键发现已验证）
+
+**下次更新**: 2025-11-17（Week 1 完成后，更新实施进度）
+

@@ -80,36 +80,247 @@ pub trait AgentVoiceSender: Send + Sync {
     ) -> Result<BoxStream<'_, Result<Vec<u8>>>>;
 }
 
-/// Trait defining the core functionality of an agent
+/// Core trait defining the functionality of an AI agent
+///
+/// The `Agent` trait provides the fundamental interface for all agents in LumosAI.
+/// It defines methods for configuration, tool management, memory access, and
+/// interaction with LLM providers.
+///
+/// # Overview
+///
+/// An agent is an autonomous entity that can:
+/// - Generate responses using an LLM
+/// - Use tools to perform actions
+/// - Maintain conversation history in memory
+/// - Execute workflows
+/// - Stream responses in real-time
+///
+/// # Implementations
+///
+/// The primary implementation is [`BasicAgent`](crate::agent::BasicAgent), which
+/// provides a full-featured agent with tool calling, memory management, and
+/// streaming support.
+///
+/// # Examples
+///
+/// ```rust
+/// use lumosai_core::agent::{Agent, AgentBuilder};
+/// use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
+///
+/// # tokio_test::block_on(async {
+/// let llm = create_test_zhipu_provider_arc();
+/// let agent = AgentBuilder::new()
+///     .name("assistant")
+///     .instructions("You are a helpful AI assistant")
+///     .model(llm)
+///     .build()
+///     .expect("Failed to build agent");
+///
+/// // Get agent information
+/// let name = agent.name().unwrap_or("unknown");
+/// println!("Agent name: {}", name);
+/// # });
+/// ```
+///
+/// # Thread Safety
+///
+/// All agents must be `Send + Sync`, allowing them to be safely shared across
+/// threads and used in async contexts.
+///
+/// # See Also
+///
+/// - [`AgentBuilder`](crate::agent::AgentBuilder) - Builder for creating agents
+/// - [`Tool`](crate::tool::Tool) - Tool trait for extending agent capabilities
+/// - [`Memory`](crate::memory::Memory) - Memory trait for conversation history
 #[async_trait]
 pub trait Agent: Base + Send + Sync {
-    /// Get the name of the agent
+    /// Returns the agent's name
+    ///
+    /// The name is used for identification in logs, metrics, and debugging.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &dyn Agent) {
+    /// let name = agent.get_name();
+    /// println!("Agent name: {}", name);
+    /// # }
+    /// ```
     fn get_name(&self) -> &str;
 
-    /// Get the instructions for the agent
+    /// Returns the agent's instructions (system prompt)
+    ///
+    /// Instructions define the agent's behavior, personality, and capabilities.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &dyn Agent) {
+    /// let instructions = agent.get_instructions();
+    /// println!("Agent instructions: {}", instructions);
+    /// # }
+    /// ```
     fn get_instructions(&self) -> &str;
 
-    /// Set new instructions for the agent
+    /// Updates the agent's instructions
+    ///
+    /// This allows you to dynamically change the agent's behavior at runtime.
+    ///
+    /// # Arguments
+    ///
+    /// * `instructions` - New system prompt for the agent
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &mut dyn Agent) {
+    /// agent.set_instructions("You are now a creative writing assistant".to_string());
+    /// # }
+    /// ```
     fn set_instructions(&mut self, instructions: String);
 
-    /// Get the LLM provider for the agent
+    /// Returns the LLM provider used by the agent
+    ///
+    /// The LLM provider handles communication with the underlying language model.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &dyn Agent) {
+    /// let llm = agent.get_llm();
+    /// // Use the LLM provider...
+    /// # }
+    /// ```
     fn get_llm(&self) -> Arc<dyn LlmProvider>;
 
-    /// Get the memory for the agent
+    /// Returns the agent's memory, if configured
+    ///
+    /// Memory stores conversation history and can be used for context retrieval.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(memory)` if the agent has memory configured
+    /// - `None` if the agent has no memory
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &dyn Agent) {
+    /// if let Some(memory) = agent.get_memory() {
+    ///     println!("Agent has memory configured");
+    /// } else {
+    ///     println!("Agent has no memory");
+    /// }
+    /// # }
+    /// ```
     fn get_memory(&self) -> Option<Arc<dyn Memory>>;
 
-    /// Check if the agent has its own memory
+    /// Checks if the agent has its own memory instance
+    ///
+    /// Returns `true` if the agent owns its memory, `false` if it shares
+    /// memory with other agents or has no memory.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &dyn Agent) {
+    /// if agent.has_own_memory() {
+    ///     println!("Agent has its own memory");
+    /// }
+    /// # }
+    /// ```
     fn has_own_memory(&self) -> bool;
 
-    /// Get the working memory for the agent, if configured
+    /// Returns the agent's working memory, if configured
+    ///
+    /// Working memory is a short-term memory buffer with limited capacity,
+    /// useful for maintaining recent conversation context.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(working_memory)` if configured
+    /// - `None` if not configured (default implementation)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &dyn Agent) {
+    /// if let Some(working_memory) = agent.get_working_memory() {
+    ///     println!("Agent has working memory");
+    /// }
+    /// # }
+    /// ```
     fn get_working_memory(&self) -> Option<Arc<dyn WorkingMemory>> {
         None
     }
 
-    /// Get all tools available to the agent
+    /// Returns all tools available to the agent
+    ///
+    /// Tools extend the agent's capabilities by allowing it to perform
+    /// actions like web searches, file operations, calculations, etc.
+    ///
+    /// # Returns
+    ///
+    /// A HashMap mapping tool names to tool implementations.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &dyn Agent) {
+    /// let tools = agent.get_tools();
+    /// println!("Agent has {} tools", tools.len());
+    /// for (name, tool) in tools {
+    ///     println!("- {}: {}", name, tool.description());
+    /// }
+    /// # }
+    /// ```
     fn get_tools(&self) -> HashMap<String, Box<dyn Tool>>;
 
-    /// Get tools with runtime context for dynamic resolution
+    /// Returns tools with runtime context for dynamic resolution
+    ///
+    /// This method allows tools to be resolved dynamically based on the
+    /// runtime context, enabling context-aware tool selection.
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - Runtime context for tool resolution
+    ///
+    /// # Returns
+    ///
+    /// A HashMap of available tools for the given context.
+    ///
+    /// # Default Implementation
+    ///
+    /// The default implementation returns static tools via `get_tools()`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::{Agent, types::RuntimeContext};
+    ///
+    /// # async fn example(agent: &dyn Agent) -> lumosai_core::Result<()> {
+    /// let context = RuntimeContext::default();
+    /// let tools = agent.get_tools_with_context(&context).await?;
+    /// println!("Available tools: {}", tools.len());
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn get_tools_with_context(
         &self,
         context: &RuntimeContext,
@@ -118,16 +329,111 @@ pub trait Agent: Base + Send + Sync {
         Ok(self.get_tools())
     }
 
-    /// Add a tool to the agent
+    /// Adds a tool to the agent
+    ///
+    /// Tools can be added dynamically at runtime to extend the agent's
+    /// capabilities.
+    ///
+    /// # Arguments
+    ///
+    /// * `tool` - Box-wrapped tool implementation
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - A tool with the same name already exists
+    /// - The tool is invalid
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    /// use lumosai_core::tool::Tool;
+    ///
+    /// # fn example(agent: &mut dyn Agent) -> lumosai_core::Result<()> {
+    /// // Assuming you have a custom tool
+    /// // let my_tool = Box::new(MyCustomTool::new());
+    /// // agent.add_tool(my_tool)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     fn add_tool(&mut self, tool: Box<dyn Tool>) -> Result<()>;
 
-    /// Remove a tool from the agent
+    /// Removes a tool from the agent
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - Name of the tool to remove
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the tool does not exist.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &mut dyn Agent) -> lumosai_core::Result<()> {
+    /// agent.remove_tool("calculator")?;
+    /// # Ok(())
+    /// # }
+    /// ```
     fn remove_tool(&mut self, tool_name: &str) -> Result<()>;
 
-    /// Get a specific tool by name
+    /// Returns a specific tool by name
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - Name of the tool to retrieve
+    ///
+    /// # Returns
+    ///
+    /// - `Some(tool)` if the tool exists
+    /// - `None` if the tool does not exist
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # fn example(agent: &dyn Agent) {
+    /// if let Some(tool) = agent.get_tool("calculator") {
+    ///     println!("Found tool: {}", tool.description());
+    /// }
+    /// # }
+    /// ```
     fn get_tool(&self, tool_name: &str) -> Option<Box<dyn Tool>>;
 
-    /// Get available workflows for the agent
+    /// Returns available workflows for the agent
+    ///
+    /// Workflows are reusable sequences of operations that can be executed
+    /// by the agent.
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - Runtime context for workflow resolution
+    ///
+    /// # Returns
+    ///
+    /// A HashMap mapping workflow names to workflow implementations.
+    ///
+    /// # Default Implementation
+    ///
+    /// Returns an empty HashMap (no workflows).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::{Agent, types::RuntimeContext};
+    ///
+    /// # async fn example(agent: &dyn Agent) -> lumosai_core::Result<()> {
+    /// let context = RuntimeContext::default();
+    /// let workflows = agent.get_workflows(&context).await?;
+    /// println!("Available workflows: {}", workflows.len());
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn get_workflows(
         &self,
         context: &RuntimeContext,
@@ -136,7 +442,37 @@ pub trait Agent: Base + Send + Sync {
         Ok(HashMap::new())
     }
 
-    /// Execute a workflow by name
+    /// Executes a workflow by name
+    ///
+    /// # Arguments
+    ///
+    /// * `workflow_name` - Name of the workflow to execute
+    /// * `input` - Input data for the workflow
+    /// * `context` - Runtime context
+    ///
+    /// # Returns
+    ///
+    /// The workflow's output as a JSON value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The workflow does not exist
+    /// - The workflow execution fails
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::{Agent, types::RuntimeContext};
+    /// use serde_json::json;
+    ///
+    /// # async fn example(agent: &dyn Agent) -> lumosai_core::Result<()> {
+    /// let context = RuntimeContext::default();
+    /// let input = json!({"task": "analyze data"});
+    /// let result = agent.execute_workflow("data_analysis", input, &context).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn execute_workflow(
         &self,
         workflow_name: &str,
@@ -153,33 +489,174 @@ pub trait Agent: Base + Send + Sync {
         }
     }
 
-    /// Parse the LLM response to extract tool calls
+    /// Parses the LLM response to extract tool calls
+    ///
+    /// This method analyzes the LLM's response to identify any tool calls
+    /// that need to be executed.
+    ///
+    /// # Arguments
+    ///
+    /// * `response` - The LLM's response text
+    ///
+    /// # Returns
+    ///
+    /// A vector of tool calls extracted from the response.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the response cannot be parsed.
     fn parse_tool_calls(&self, response: &str) -> Result<Vec<ToolCall>>;
 
-    /// Execute a tool call and return the result
+    /// Executes a tool call and returns the result
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_call` - The tool call to execute
+    ///
+    /// # Returns
+    ///
+    /// The tool's output as a JSON value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The tool does not exist
+    /// - The tool execution fails
+    /// - The tool times out
     async fn execute_tool_call(&self, tool_call: &ToolCall) -> Result<Value>;
 
-    /// Format messages for the LLM provider
+    /// Formats messages for the LLM provider
+    ///
+    /// This method prepares messages for submission to the LLM, applying
+    /// any necessary transformations or formatting.
+    ///
+    /// # Arguments
+    ///
+    /// * `messages` - Input messages
+    /// * `options` - Generation options
+    ///
+    /// # Returns
+    ///
+    /// Formatted messages ready for the LLM.
     fn format_messages(&self, messages: &[Message], options: &AgentGenerateOptions)
         -> Vec<Message>;
 
-    /// Generate a title for a conversation
+    /// Generates a title for a conversation
+    ///
+    /// Creates a concise title summarizing the conversation based on the
+    /// user's message.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_message` - The user's message
+    ///
+    /// # Returns
+    ///
+    /// A generated title string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if title generation fails.
     async fn generate_title(&self, user_message: &Message) -> Result<String>;
 
-    /// Get instructions with runtime context for dynamic resolution
+    /// Returns instructions with runtime context for dynamic resolution
+    ///
+    /// Allows instructions to be dynamically generated or modified based on
+    /// the runtime context.
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - Runtime context
+    ///
+    /// # Returns
+    ///
+    /// The agent's instructions (potentially modified based on context).
+    ///
+    /// # Default Implementation
+    ///
+    /// Returns static instructions via `get_instructions()`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::{Agent, types::RuntimeContext};
+    ///
+    /// # async fn example(agent: &dyn Agent) -> lumosai_core::Result<()> {
+    /// let context = RuntimeContext::default();
+    /// let instructions = agent.get_instructions_with_context(&context).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn get_instructions_with_context(&self, context: &RuntimeContext) -> Result<String> {
         // Default implementation returns static instructions
         Ok(self.get_instructions().to_string())
     }
 
-    /// Generate a response given a set of messages
+    /// Generates a response given a set of messages
+    ///
+    /// This is the core method for agent interaction. It processes the input
+    /// messages and generates a response, potentially calling tools if needed.
+    ///
+    /// # Arguments
+    ///
+    /// * `messages` - Conversation history
+    /// * `options` - Generation options (temperature, max_tokens, etc.)
+    ///
+    /// # Returns
+    ///
+    /// An `AgentGenerateResult` containing the response and metadata.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The LLM request fails
+    /// - Tool execution fails
+    /// - The response cannot be parsed
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::{Agent, types::AgentGenerateOptions};
+    /// use lumosai_core::llm::{Message, Role};
+    ///
+    /// # async fn example(agent: &dyn Agent) -> lumosai_core::Result<()> {
+    /// let messages = vec![Message {
+    ///     role: Role::User,
+    ///     content: "Hello!".to_string(),
+    ///     metadata: None,
+    ///     name: None,
+    /// }];
+    ///
+    /// let options = AgentGenerateOptions::default();
+    /// let result = agent.generate(&messages, &options).await?;
+    /// println!("Response: {}", result.response);
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn generate(
         &self,
         messages: &[Message],
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult>;
 
-    /// Generate with runtime context for dynamic resolution
+    /// Generates a response with runtime context for dynamic resolution
+    ///
+    /// Extended version of `generate()` that accepts runtime context for
+    /// dynamic tool and instruction resolution.
+    ///
+    /// # Arguments
+    ///
+    /// * `messages` - Conversation history
+    /// * `options` - Generation options
+    /// * `context` - Runtime context
+    ///
+    /// # Returns
+    ///
+    /// An `AgentGenerateResult` containing the response and metadata.
+    ///
+    /// # Default Implementation
+    ///
+    /// Calls `generate()` and ignores the context.
     async fn generate_with_context(
         &self,
         messages: &[Message],
@@ -190,7 +667,34 @@ pub trait Agent: Base + Send + Sync {
         self.generate(messages, options).await
     }
 
-    /// Generate a simple response from a text input (convenience method for plan4.md API)
+    /// Generates a simple response from text input
+    ///
+    /// Convenience method for quick interactions without manually constructing
+    /// messages and options.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - User's text input
+    ///
+    /// # Returns
+    ///
+    /// The agent's response as a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if generation fails.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::Agent;
+    ///
+    /// # async fn example(agent: &dyn Agent) -> lumosai_core::Result<()> {
+    /// let response = agent.generate_simple("What is Rust?").await?;
+    /// println!("Response: {}", response);
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn generate_simple(&self, input: &str) -> Result<String> {
         use crate::llm::{Message, Role};
 
@@ -207,7 +711,45 @@ pub trait Agent: Base + Send + Sync {
         Ok(result.response)
     }
 
-    /// Generate with multi-step reasoning
+    /// Generates a response with multi-step reasoning
+    ///
+    /// Allows the agent to break down complex tasks into multiple steps,
+    /// potentially calling tools multiple times.
+    ///
+    /// # Arguments
+    ///
+    /// * `messages` - Conversation history
+    /// * `options` - Generation options
+    /// * `max_steps` - Maximum number of reasoning steps (None = unlimited)
+    ///
+    /// # Returns
+    ///
+    /// An `AgentGenerateResult` containing the final response and all steps.
+    ///
+    /// # Default Implementation
+    ///
+    /// Uses single-step generation via `generate()`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::{Agent, types::AgentGenerateOptions};
+    /// use lumosai_core::llm::{Message, Role};
+    ///
+    /// # async fn example(agent: &dyn Agent) -> lumosai_core::Result<()> {
+    /// let messages = vec![Message {
+    ///     role: Role::User,
+    ///     content: "Solve this complex problem...".to_string(),
+    ///     metadata: None,
+    ///     name: None,
+    /// }];
+    ///
+    /// let options = AgentGenerateOptions::default();
+    /// let result = agent.generate_with_steps(&messages, &options, Some(5)).await?;
+    /// println!("Response: {}", result.response);
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn generate_with_steps(
         &self,
         messages: &[Message],

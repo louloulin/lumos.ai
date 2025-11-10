@@ -539,7 +539,7 @@ impl MultiLevelCache {
 **目标**: 100% API 文档覆盖（示例代码部分）
 
 **任务清单**:
-- [ ] 所有 public API 添加文档注释 ⏳ **进行中 (65% - 2025-11-10)**
+- [x] 所有 public API 添加文档注释 ✅ **已完成 (100% - 2025-11-10)**
   - [x] `AgentBuilder` - 所有方法已添加完整文档注释 ✅
   - [x] `Agent` trait - 核心方法已添加完整文档注释 ✅
   - [x] `Tool` trait - 所有方法已添加完整文档注释 ✅
@@ -547,7 +547,7 @@ impl MultiLevelCache {
   - [x] `Memory` trait - 所有方法已添加完整文档注释 ✅
   - [x] `WorkingMemory` trait - 所有方法已添加完整文档注释 ✅
   - [x] `LlmProvider` trait - 所有方法已添加完整文档注释 ✅
-  - [ ] `Workflow` 相关 API - 待添加
+  - [x] `Workflow` trait - 所有方法已添加完整文档注释 ✅
 - [x] 示例代码覆盖率 >80% ✅ **已完成 (100% - 2025-11-10)**
   - ✅ 创建快速开始指南（QUICK_START_MVP.md）
   - ✅ 创建 5 个核心 MVP 示例（5/5 完成）
@@ -572,8 +572,8 @@ impl MultiLevelCache {
       - 创建工作流模式（规划 → 执行 → 审核）
       - 演示顺序执行和数据流动
       - 验证通过，运行正常
-- [ ] 生成 rustdoc 文档
-- [ ] 部署到 docs.rs
+- [ ] 生成 rustdoc 文档 ⏳ **进行中 (2025-11-10)**
+- [ ] 部署到 docs.rs ⏳ **待开始**
 
 **重要技术发现** 🔍 **(2025-11-10)**:
 - ✅ **Rust 函数参数属性限制**: 根据 [Rust Reference](https://doc.rust-lang.org/reference/items/functions.html#attributes-on-function-parameters)，函数参数**仅允许**内置属性（`cfg`, `cfg_attr`, `allow`, `warn`, `deny`, `forbid`），**不允许**自定义过程宏属性（如 `#[parameter]`）

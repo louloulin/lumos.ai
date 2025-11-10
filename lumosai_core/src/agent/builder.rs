@@ -18,7 +18,7 @@ use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
 use crate::{Error, Result};
 use async_trait::async_trait;
 
-/// Wrapper to convert Arc<dyn Tool> to Box<dyn Tool>
+/// Wrapper to convert `Arc<dyn Tool>` to `Box<dyn Tool>`
 #[derive(Clone)]
 struct ToolWrapper(Arc<dyn Tool>);
 

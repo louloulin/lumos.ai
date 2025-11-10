@@ -529,6 +529,7 @@ pub enum WorkflowStatus {
 }
 
 // 重新导出公共项
+pub use basic::BasicWorkflow;
 pub use dag_scheduler::{Dag, DagNode, DagScheduler};
 pub use dag_workflow::{DagWorkflow, DagWorkflowBuilder, DagWorkflowRun};
 pub use enhanced::{EnhancedWorkflow, StepExecutor, StepFlowEntry, StepType, WorkflowStep};

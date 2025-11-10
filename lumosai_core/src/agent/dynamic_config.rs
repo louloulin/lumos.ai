@@ -3,7 +3,7 @@
 //! 实现运行时上下文感知的配置系统，支持静态值和动态闭包配置
 //!
 //! # 设计目标
-//! - 对标 Mastra 的 DynamicArgument<T> 类型
+//! - 对标 Mastra 的 `DynamicArgument<T>` 类型
 //! - 支持运行时上下文感知的配置解析
 //! - 提供类型安全的动态配置 API
 //! - 保持向后兼容性
@@ -55,7 +55,7 @@ pub enum ComplexityLevel {
     Expert,
 }
 
-/// 动态参数类型 - 对标 Mastra 的 DynamicArgument<T>
+/// 动态参数类型 - 对标 Mastra 的 `DynamicArgument<T>`
 ///
 /// 支持静态值或运行时闭包配置
 pub enum DynamicArgument<T> {

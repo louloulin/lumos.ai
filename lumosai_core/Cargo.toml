@@ -141,3 +141,9 @@ harness = false
 [[bench]]
 name = "comprehensive_performance"
 harness = false
+
+# Configuration for docs.rs
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+targets = ["x86_64-unknown-linux-gnu"]

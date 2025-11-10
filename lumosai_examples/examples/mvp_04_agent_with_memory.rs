@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n💬 对话 1: 提供个人信息");
     let message1 = "My name is Alice and I'm a software engineer working on AI projects.";
     println!("👤 用户: {}", message1);
-    
+
     let response1 = agent.generate_simple(message1).await?;
     println!("🤖 Agent: {}\n", response1);
 
@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("💬 对话 2: 分享兴趣爱好");
     let message2 = "I love programming in Rust and building AI applications.";
     println!("👤 用户: {}", message2);
-    
+
     let response2 = agent.generate_simple(message2).await?;
     println!("🤖 Agent: {}\n", response2);
 
@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("💬 对话 3: 询问技术建议");
     let message3 = "What are some good practices for Rust programming?";
     println!("👤 用户: {}", message3);
-    
+
     let response3 = agent.generate_simple(message3).await?;
     println!("🤖 Agent: {}", response3);
 
@@ -73,4 +73,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

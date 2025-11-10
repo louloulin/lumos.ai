@@ -11,7 +11,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use lumosai_core::agent::{AgentConfig, BasicAgent};
 use lumosai_core::llm::{Message, MockLlmProvider, Role};
-use lumosai_core::memory::{WorkingMemory, WorkingMemoryConfig, create_working_memory};
+use lumosai_core::memory::{create_working_memory, WorkingMemory, WorkingMemoryConfig};
 use lumosai_core::workflow::{BasicStep, Step, StepContext};
 use serde_json::json;
 use std::collections::HashMap;
@@ -41,12 +41,7 @@ fn create_test_agent() -> BasicAgent {
 /// Create test messages
 fn create_test_messages(count: usize) -> Vec<Message> {
     (0..count)
-        .map(|i| Message::new(
-            Role::User,
-            format!("Test message {}", i),
-            None,
-            None,
-        ))
+        .map(|i| Message::new(Role::User, format!("Test message {}", i), None, None))
         .collect()
 }
 
@@ -68,11 +63,9 @@ fn create_test_memory() -> Box<dyn WorkingMemory> {
 
 /// Create test workflow step
 fn create_test_step(id: &str) -> BasicStep {
-    BasicStep::create_simple(
-        id.to_string(),
-        format!("Benchmark step {}", id),
-        |input| Ok(json!({"result": "success", "input": input})),
-    )
+    BasicStep::create_simple(id.to_string(), format!("Benchmark step {}", id), |input| {
+        Ok(json!({"result": "success", "input": input}))
+    })
 }
 
 // ============================================================================
@@ -164,7 +157,7 @@ fn bench_agent_with_history(c: &mut Criterion) {
 /// Benchmark: Vector similarity search (simulated)
 fn bench_vector_similarity_search(c: &mut Criterion) {
     let mut group = c.benchmark_group("vector_similarity_search");
-    
+
     // Simulate vector similarity computation
     for vector_count in [100, 500, 1000, 5000].iter() {
         group.bench_with_input(
@@ -175,41 +168,43 @@ fn bench_vector_similarity_search(c: &mut Criterion) {
                 let vectors: Vec<Vec<f32>> = (0..count)
                     .map(|_| (0..384).map(|i| i as f32 * 0.01).collect())
                     .collect();
-                
+
                 b.iter(|| {
                     // Simulate cosine similarity computation
                     let mut similarities: Vec<f32> = vectors
                         .iter()
                         .map(|v| {
-                            let dot: f32 = query_vector.iter().zip(v.iter()).map(|(a, b)| a * b).sum();
-                            let norm_q: f32 = query_vector.iter().map(|x| x * x).sum::<f32>().sqrt();
+                            let dot: f32 =
+                                query_vector.iter().zip(v.iter()).map(|(a, b)| a * b).sum();
+                            let norm_q: f32 =
+                                query_vector.iter().map(|x| x * x).sum::<f32>().sqrt();
                             let norm_v: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
                             dot / (norm_q * norm_v)
                         })
                         .collect();
-                    
+
                     // Sort by similarity
                     similarities.sort_by(|a, b| b.partial_cmp(a).unwrap());
-                    
+
                     black_box(similarities)
                 });
             },
         );
     }
-    
+
     group.finish();
 }
 
 /// Benchmark: Top-K retrieval
 fn bench_vector_topk_retrieval(c: &mut Criterion) {
     let mut group = c.benchmark_group("vector_topk_retrieval");
-    
+
     let vector_count = 1000;
     let query_vector: Vec<f32> = (0..384).map(|i| i as f32 * 0.01).collect();
     let vectors: Vec<Vec<f32>> = (0..vector_count)
         .map(|_| (0..384).map(|i| i as f32 * 0.01).collect())
         .collect();
-    
+
     for k in [5, 10, 20, 50].iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(format!("top{}", k)),
@@ -220,22 +215,24 @@ fn bench_vector_topk_retrieval(c: &mut Criterion) {
                         .iter()
                         .enumerate()
                         .map(|(idx, v)| {
-                            let dot: f32 = query_vector.iter().zip(v.iter()).map(|(a, b)| a * b).sum();
-                            let norm_q: f32 = query_vector.iter().map(|x| x * x).sum::<f32>().sqrt();
+                            let dot: f32 =
+                                query_vector.iter().zip(v.iter()).map(|(a, b)| a * b).sum();
+                            let norm_q: f32 =
+                                query_vector.iter().map(|x| x * x).sum::<f32>().sqrt();
                             let norm_v: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
                             (idx, dot / (norm_q * norm_v))
                         })
                         .collect();
-                    
+
                     similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
                     similarities.truncate(k);
-                    
+
                     black_box(similarities)
                 });
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -246,9 +243,9 @@ fn bench_vector_topk_retrieval(c: &mut Criterion) {
 /// Benchmark: Sequential workflow execution
 fn bench_workflow_sequential_execution(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    
+
     let mut group = c.benchmark_group("workflow_sequential_execution");
-    
+
     for step_count in [3, 5, 10, 20].iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(format!("{}steps", step_count)),
@@ -258,7 +255,7 @@ fn bench_workflow_sequential_execution(c: &mut Criterion) {
                     let steps: Vec<BasicStep> = (0..count)
                         .map(|i| create_test_step(&format!("step{}", i)))
                         .collect();
-                    
+
                     let mut ctx = StepContext {
                         run_id: "bench_run".to_string(),
                         input_data: json!({"value": 42}),
@@ -266,18 +263,18 @@ fn bench_workflow_sequential_execution(c: &mut Criterion) {
                         steps: HashMap::new(),
                         attempts: HashMap::new(),
                     };
-                    
+
                     for step in steps {
                         let result = step.execute(black_box(ctx.clone())).await.unwrap();
                         ctx.input_data = result;
                     }
-                    
+
                     black_box(ctx)
                 });
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -306,9 +303,7 @@ fn bench_workflow_parallel_execution(c: &mut Criterion) {
                     for i in 0..count {
                         let step = create_test_step(&format!("parallel{}", i));
                         let ctx_clone = ctx.clone();
-                        futures.push(async move {
-                            step.execute(black_box(ctx_clone)).await
-                        });
+                        futures.push(async move { step.execute(black_box(ctx_clone)).await });
                     }
 
                     let results = futures::future::join_all(futures).await;
@@ -381,10 +376,10 @@ fn bench_memory_write_operations(c: &mut Criterion) {
                     let memory = create_test_memory();
                     let value = json!({"data": "x".repeat(size)});
 
-                    memory.set_value(
-                        black_box("test_key"),
-                        black_box(value),
-                    ).await.unwrap();
+                    memory
+                        .set_value(black_box("test_key"), black_box(value))
+                        .await
+                        .unwrap();
                 });
             },
         );
@@ -403,10 +398,10 @@ fn bench_memory_read_operations(c: &mut Criterion) {
     let memory = create_test_memory();
     rt.block_on(async {
         for i in 0..100 {
-            memory.set_value(
-                &format!("key{}", i),
-                json!({"value": i}),
-            ).await.unwrap();
+            memory
+                .set_value(&format!("key{}", i), json!({"value": i}))
+                .await
+                .unwrap();
         }
     });
 
@@ -417,9 +412,10 @@ fn bench_memory_read_operations(c: &mut Criterion) {
             |b, &count| {
                 b.to_async(&rt).iter(|| async {
                     for i in 0..count {
-                        let _ = memory.get_value(
-                            black_box(&format!("key{}", i)),
-                        ).await.unwrap();
+                        let _ = memory
+                            .get_value(black_box(&format!("key{}", i)))
+                            .await
+                            .unwrap();
                     }
                 });
             },
@@ -444,10 +440,13 @@ fn bench_memory_update_operations(c: &mut Criterion) {
                     let memory = create_test_memory();
 
                     for i in 0..count {
-                        memory.set_value(
-                            black_box(&format!("key{}", i % 10)),
-                            black_box(json!({"value": i})),
-                        ).await.unwrap();
+                        memory
+                            .set_value(
+                                black_box(&format!("key{}", i % 10)),
+                                black_box(json!({"value": i})),
+                            )
+                            .await
+                            .unwrap();
                     }
                 });
             },
@@ -475,10 +474,9 @@ fn bench_memory_concurrent_operations(c: &mut Criterion) {
                         .map(|i| {
                             let mem = Arc::clone(&memory);
                             async move {
-                                mem.set_value(
-                                    &format!("key{}", i),
-                                    json!({"value": i}),
-                                ).await.unwrap();
+                                mem.set_value(&format!("key{}", i), json!({"value": i}))
+                                    .await
+                                    .unwrap();
                             }
                         })
                         .collect();
@@ -530,4 +528,3 @@ criterion_main!(
     workflow_benches,
     memory_benches,
 );
-

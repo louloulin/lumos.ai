@@ -1,7 +1,7 @@
 //! LLM 综合单元测试
 //!
 //! P0-1.2 任务：增加 LLM 模块的单元测试覆盖率到 >95%
-//! 
+//!
 //! 测试范围：
 //! - LLM Provider 基础功能（创建、配置、名称）
 //! - 文本生成（prompt、messages、选项）
@@ -12,15 +12,14 @@
 //! - 各个提供商的特定功能
 //! - 性能测试（并发、批量）
 
-use lumosai_core::llm::{
-    LlmProvider, LlmOptions, Message, Role,
-    MockLlmProvider, OpenAiProvider, AnthropicProvider,
-    ClaudeProvider, DeepSeekProvider, QwenProvider,
-};
-use lumosai_core::llm::types::{Temperature, user_message, system_message, assistant_message};
-use lumosai_core::llm::function_calling::{FunctionDefinition, ToolChoice};
-use serde_json::json;
 use futures::StreamExt;
+use lumosai_core::llm::function_calling::{FunctionDefinition, ToolChoice};
+use lumosai_core::llm::types::{assistant_message, system_message, user_message, Temperature};
+use lumosai_core::llm::{
+    AnthropicProvider, ClaudeProvider, DeepSeekProvider, LlmOptions, LlmProvider, Message,
+    MockLlmProvider, OpenAiProvider, QwenProvider, Role,
+};
+use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -95,7 +94,7 @@ fn test_llm_options_builder() {
         .with_temperature(0.8)
         .with_max_tokens(500)
         .with_stream(true);
-    
+
     assert_eq!(options.temperature, Some(Temperature::new(0.8)));
     assert_eq!(options.max_tokens, Some(500));
     assert_eq!(options.stream, true);
@@ -103,18 +102,16 @@ fn test_llm_options_builder() {
 
 #[test]
 fn test_llm_options_with_stop_sequences() {
-    let options = LlmOptions::default()
-        .with_stop(vec!["STOP".to_string(), "END".to_string()]);
-    
+    let options = LlmOptions::default().with_stop(vec!["STOP".to_string(), "END".to_string()]);
+
     assert!(options.stop.is_some());
     assert_eq!(options.stop.unwrap().len(), 2);
 }
 
 #[test]
 fn test_llm_options_with_model() {
-    let options = LlmOptions::default()
-        .with_model("gpt-4".to_string());
-    
+    let options = LlmOptions::default().with_model("gpt-4".to_string());
+
     assert_eq!(options.model, Some("gpt-4".to_string()));
 }
 
@@ -145,7 +142,7 @@ fn test_message_helper_functions() {
     let user_msg = user_message("User text");
     let system_msg = system_message("System text");
     let assistant_msg = assistant_message("Assistant text");
-    
+
     assert_eq!(user_msg.role, Role::User);
     assert_eq!(system_msg.role, Role::System);
     assert_eq!(assistant_msg.role, Role::Assistant);
@@ -156,7 +153,7 @@ fn test_provider_names() {
     let openai = OpenAiProvider::new("test-key".to_string(), "gpt-3.5-turbo".to_string());
     let anthropic = AnthropicProvider::new("test-key".to_string(), "claude-2".to_string());
     let deepseek = DeepSeekProvider::new("test-key".to_string(), None);
-    
+
     assert_eq!(openai.name(), "openai");
     assert_eq!(anthropic.name(), "anthropic");
     assert_eq!(deepseek.name(), "deepseek");
@@ -170,7 +167,7 @@ fn test_provider_names() {
 async fn test_mock_generate_basic() {
     let provider = create_mock_provider(vec!["Hello, world!".to_string()]);
     let options = create_test_options();
-    
+
     let result = provider.generate("Test prompt", &options).await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "Hello, world!");
@@ -184,11 +181,11 @@ async fn test_mock_generate_multiple_responses() {
         "Response 3".to_string(),
     ]);
     let options = create_test_options();
-    
+
     let r1 = provider.generate("Prompt 1", &options).await.unwrap();
     let r2 = provider.generate("Prompt 2", &options).await.unwrap();
     let r3 = provider.generate("Prompt 3", &options).await.unwrap();
-    
+
     assert_eq!(r1, "Response 1");
     assert_eq!(r2, "Response 2");
     assert_eq!(r3, "Response 3");
@@ -199,7 +196,7 @@ async fn test_mock_generate_with_messages() {
     let provider = create_mock_provider(vec!["Message response".to_string()]);
     let messages = create_test_messages();
     let options = create_test_options();
-    
+
     let result = provider.generate_with_messages(&messages, &options).await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "Message response");
@@ -209,7 +206,7 @@ async fn test_mock_generate_with_messages() {
 async fn test_generate_with_empty_prompt() {
     let provider = create_mock_provider(vec!["Empty prompt response".to_string()]);
     let options = create_test_options();
-    
+
     let result = provider.generate("", &options).await;
     assert!(result.is_ok());
 }
@@ -219,7 +216,7 @@ async fn test_generate_with_long_prompt() {
     let provider = create_mock_provider(vec!["Long prompt response".to_string()]);
     let options = create_test_options();
     let long_prompt = "a".repeat(10000);
-    
+
     let result = provider.generate(&long_prompt, &options).await;
     assert!(result.is_ok());
 }
@@ -228,7 +225,7 @@ async fn test_generate_with_long_prompt() {
 async fn test_generate_with_unicode() {
     let provider = create_mock_provider(vec!["Unicode response: 你好世界".to_string()]);
     let options = create_test_options();
-    
+
     let result = provider.generate("你好，世界！🌍", &options).await;
     assert!(result.is_ok());
     assert!(result.unwrap().contains("你好世界"));
@@ -238,7 +235,7 @@ async fn test_generate_with_unicode() {
 async fn test_generate_with_special_characters() {
     let provider = create_mock_provider(vec!["Special chars: @#$%".to_string()]);
     let options = create_test_options();
-    
+
     let result = provider.generate("Test @#$%^&*()", &options).await;
     assert!(result.is_ok());
 }
@@ -247,7 +244,7 @@ async fn test_generate_with_special_characters() {
 async fn test_generate_default_response() {
     let provider = create_mock_provider(vec![]);
     let options = create_test_options();
-    
+
     let result = provider.generate("Test", &options).await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "Default mock response");
@@ -261,19 +258,19 @@ async fn test_generate_default_response() {
 async fn test_generate_stream_basic() {
     let provider = create_mock_provider(vec!["Stream response".to_string()]);
     let options = create_test_options();
-    
+
     let result = provider.generate_stream("Test prompt", &options).await;
     assert!(result.is_ok());
-    
+
     let mut stream = result.unwrap();
     let mut chunks = Vec::new();
-    
+
     while let Some(chunk_result) = stream.next().await {
         if let Ok(chunk) = chunk_result {
             chunks.push(chunk);
         }
     }
-    
+
     assert!(!chunks.is_empty());
 }
 
@@ -281,19 +278,19 @@ async fn test_generate_stream_basic() {
 async fn test_generate_stream_collect_all() {
     let provider = create_mock_provider(vec!["Full stream text".to_string()]);
     let options = create_test_options();
-    
+
     let result = provider.generate_stream("Test", &options).await;
     assert!(result.is_ok());
-    
+
     let mut stream = result.unwrap();
     let mut full_text = String::new();
-    
+
     while let Some(chunk_result) = stream.next().await {
         if let Ok(chunk) = chunk_result {
             full_text.push_str(&chunk);
         }
     }
-    
+
     assert!(!full_text.is_empty());
 }
 
@@ -342,9 +339,7 @@ async fn test_stream_multiple_chunks() {
 
 #[tokio::test]
 async fn test_mock_embedding_basic() {
-    let provider = MockLlmProvider::new_with_embeddings(vec![
-        vec![0.1, 0.2, 0.3],
-    ]);
+    let provider = MockLlmProvider::new_with_embeddings(vec![vec![0.1, 0.2, 0.3]]);
 
     let result = provider.get_embedding("Test text").await;
     assert!(result.is_ok());
@@ -405,7 +400,10 @@ async fn test_anthropic_embedding_not_supported() {
 
     let result = provider.get_embedding("Test").await;
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("does not provide an embedding API"));
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("does not provide an embedding API"));
 }
 
 // ============================================================================
@@ -453,12 +451,9 @@ async fn test_function_calling_default_implementation() {
     let functions = vec![create_test_function()];
     let options = create_test_options();
 
-    let result = provider.generate_with_functions(
-        &messages,
-        &functions,
-        &ToolChoice::Auto,
-        &options
-    ).await;
+    let result = provider
+        .generate_with_functions(&messages, &functions, &ToolChoice::Auto, &options)
+        .await;
 
     assert!(result.is_ok());
     let response = result.unwrap();
@@ -476,7 +471,10 @@ async fn test_deepseek_embedding_not_supported() {
 
     let result = provider.get_embedding("Test").await;
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("DeepSeek does not provide embedding API"));
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("DeepSeek does not provide embedding API"));
 }
 
 #[test]
@@ -550,7 +548,8 @@ fn test_claude_provider_creation() {
 
 #[test]
 fn test_qwen_provider_creation() {
-    let provider = QwenProvider::new_with_defaults("test-key".to_string(), "qwen-turbo".to_string());
+    let provider =
+        QwenProvider::new_with_defaults("test-key".to_string(), "qwen-turbo".to_string());
     assert_eq!(provider.name(), "qwen");
 }
 
@@ -575,13 +574,13 @@ async fn test_concurrent_generate_calls() {
     ]));
     let options = Arc::new(create_test_options());
 
-    let handles: Vec<_> = (0..5).map(|i| {
-        let p = Arc::clone(&provider);
-        let o = Arc::clone(&options);
-        tokio::spawn(async move {
-            p.generate(&format!("Prompt {}", i), &o).await
+    let handles: Vec<_> = (0..5)
+        .map(|i| {
+            let p = Arc::clone(&provider);
+            let o = Arc::clone(&options);
+            tokio::spawn(async move { p.generate(&format!("Prompt {}", i), &o).await })
         })
-    }).collect();
+        .collect();
 
     let mut success_count = 0;
     for handle in handles {
@@ -612,9 +611,15 @@ async fn test_batch_embedding_generation() {
 #[tokio::test]
 async fn test_rapid_sequential_calls() {
     let provider = create_mock_provider(vec![
-        "R1".to_string(), "R2".to_string(), "R3".to_string(),
-        "R4".to_string(), "R5".to_string(), "R6".to_string(),
-        "R7".to_string(), "R8".to_string(), "R9".to_string(),
+        "R1".to_string(),
+        "R2".to_string(),
+        "R3".to_string(),
+        "R4".to_string(),
+        "R5".to_string(),
+        "R6".to_string(),
+        "R7".to_string(),
+        "R8".to_string(),
+        "R9".to_string(),
         "R10".to_string(),
     ]);
     let options = create_test_options();
@@ -650,9 +655,9 @@ async fn test_large_batch_processing() {
 #[tokio::test]
 async fn test_provider_memory_efficiency() {
     // Create many providers to test memory efficiency
-    let providers: Vec<_> = (0..100).map(|i| {
-        create_mock_provider(vec![format!("Response {}", i)])
-    }).collect();
+    let providers: Vec<_> = (0..100)
+        .map(|i| create_mock_provider(vec![format!("Response {}", i)]))
+        .collect();
 
     assert_eq!(providers.len(), 100);
 
@@ -672,12 +677,7 @@ fn test_message_with_metadata() {
     metadata.insert("key".to_string(), json!("value"));
     metadata.insert("number".to_string(), json!(42));
 
-    let msg = Message::new(
-        Role::User,
-        "Test".to_string(),
-        Some(metadata.clone()),
-        None
-    );
+    let msg = Message::new(Role::User, "Test".to_string(), Some(metadata.clone()), None);
 
     assert!(msg.metadata.is_some());
     let msg_metadata = msg.metadata.unwrap();
@@ -691,7 +691,7 @@ fn test_message_with_name() {
         Role::Assistant,
         "Response".to_string(),
         None,
-        Some("assistant_1".to_string())
+        Some("assistant_1".to_string()),
     );
 
     assert!(msg.name.is_some());

@@ -81,7 +81,10 @@ impl AgentDagOrchestrator {
         dependencies: Vec<String>,
     ) -> Result<()> {
         // 存储 Agent
-        self.agents.write().await.insert(agent_id.clone(), Arc::clone(&agent));
+        self.agents
+            .write()
+            .await
+            .insert(agent_id.clone(), Arc::clone(&agent));
 
         // 创建 Agent 执行器
         let executor = Arc::new(AgentExecutor {
@@ -139,7 +142,11 @@ impl AgentDagOrchestrator {
     }
 
     /// 执行 Agent DAG
-    pub async fn execute(&self, input: Value, context: &RuntimeContext) -> Result<HashMap<String, Value>> {
+    pub async fn execute(
+        &self,
+        input: Value,
+        context: &RuntimeContext,
+    ) -> Result<HashMap<String, Value>> {
         // 验证 DAG
         self.validate().await?;
 
@@ -151,7 +158,11 @@ impl AgentDagOrchestrator {
     }
 
     /// 执行并返回最终结果（最后一个节点的输出）
-    pub async fn execute_and_get_final(&self, input: Value, context: &RuntimeContext) -> Result<Value> {
+    pub async fn execute_and_get_final(
+        &self,
+        input: Value,
+        context: &RuntimeContext,
+    ) -> Result<Value> {
         let results = self.execute(input, context).await?;
 
         // 获取拓扑排序
@@ -247,7 +258,9 @@ impl AgentChain {
             vec![]
         };
 
-        self.orchestrator.add_agent(agent_id.clone(), agent, dependencies).await?;
+        self.orchestrator
+            .add_agent(agent_id.clone(), agent, dependencies)
+            .await?;
         self.agent_ids.push(agent_id);
 
         Ok(())
@@ -255,7 +268,9 @@ impl AgentChain {
 
     /// 执行 Agent 链
     pub async fn execute(&self, input: Value, context: &RuntimeContext) -> Result<Value> {
-        self.orchestrator.execute_and_get_final(input, context).await
+        self.orchestrator
+            .execute_and_get_final(input, context)
+            .await
     }
 
     /// 获取链长度
@@ -281,4 +296,3 @@ mod tests {
 
     // 测试将在单独的测试文件中实现
 }
-

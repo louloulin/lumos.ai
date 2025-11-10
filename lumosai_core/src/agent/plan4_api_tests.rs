@@ -74,9 +74,17 @@ where
             Ok(result) => return Ok(result),
             Err(e) => {
                 let error_msg = format!("{:?}", e);
-                if error_msg.contains("429") || error_msg.contains("Too Many Requests") || error_msg.contains("1302") {
+                if error_msg.contains("429")
+                    || error_msg.contains("Too Many Requests")
+                    || error_msg.contains("1302")
+                {
                     if attempt < max_retries - 1 {
-                        eprintln!("⚠️  Rate limit hit (attempt {}/{}), retrying after {}ms...", attempt + 1, max_retries, delay);
+                        eprintln!(
+                            "⚠️  Rate limit hit (attempt {}/{}), retrying after {}ms...",
+                            attempt + 1,
+                            max_retries,
+                            delay
+                        );
                         tokio::time::sleep(Duration::from_millis(delay)).await;
                         delay *= 2; // Exponential backoff
                         continue;
@@ -107,7 +115,8 @@ async fn test_convenience_functions() {
         || async { quick_agent.generate_simple("Test").await },
         5,
         2000,
-    ).await;
+    )
+    .await;
 
     assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     let response = result.unwrap();

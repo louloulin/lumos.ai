@@ -69,7 +69,11 @@ impl CacheStrategy for LlmCacheStrategy {
 
     fn should_cache(&self, params: &Value, result: &Value) -> bool {
         // 不缓存流式响应
-        if params.get("stream").and_then(|v| v.as_bool()).unwrap_or(false) {
+        if params
+            .get("stream")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
             return false;
         }
 
@@ -309,4 +313,3 @@ mod tests {
         assert_eq!(cached, Some(result));
     }
 }
-

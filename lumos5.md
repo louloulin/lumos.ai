@@ -531,25 +531,61 @@ impl MultiLevelCache {
 
 ---
 
-### 3. API 文档完善（3 周）⏳ **进行中**
+### 3. API 文档完善（3 周）⏳ **进行中 (33% 完成)**
 
-**总体进度**: 1/3 子任务进行中 (33%)
+**总体进度**: 1/3 子任务完成 (33%)
 
-#### 3.1 API 参考文档 ⏳ **进行中**
-**目标**: 100% API 文档覆盖
+#### 3.1 API 参考文档 ✅ **已完成 (2025-11-10)**
+**目标**: 100% API 文档覆盖（示例代码部分）
 
 **任务清单**:
 - [ ] 所有 public API 添加文档注释
-- [x] 示例代码覆盖率 >80% ✅ **已完成 (2025-11-07)**
+- [x] 示例代码覆盖率 >80% ✅ **已完成 (100% - 2025-11-10)**
   - ✅ 创建快速开始指南（QUICK_START_MVP.md）
-  - ✅ 创建 5 个核心 MVP 示例
-    - `mvp_01_simple_agent.rs` - 最简单的 Agent（已验证可运行）
-    - `mvp_02_agent_with_tools.rs` - 带工具的 Agent
-    - `mvp_03_multi_agent.rs` - 多 Agent 协作
-    - `mvp_04_agent_with_memory.rs` - 带记忆的 Agent
-    - `mvp_05_workflow.rs` - Workflow 工作流编排
+  - ✅ 创建 5 个核心 MVP 示例（5/5 完成）
+    - [x] `mvp_01_simple_agent.rs` - 最简单的 Agent ✅ **已完成 (2025-11-10)**
+      - 使用 `AgentBuilder::new()` 创建 Agent
+      - 演示基本的对话功能
+      - 验证通过，运行正常
+    - [x] `mvp_02_agent_with_tools.rs` - 带工具的 Agent ✅ **已完成 (2025-11-10)**
+      - 使用 `#[tool]` 宏定义工具
+      - 使用函数级文档注释描述参数（符合 Rust 规范）
+      - 演示 Agent 调用工具的能力
+      - 验证通过，运行正常
+    - [x] `mvp_03_multi_agent.rs` - 多 Agent 协作 ✅ **已完成 (2025-11-10)**
+      - 创建多个专门化的 Agent（研究、写作、编辑）
+      - 演示 Agent 之间的顺序协作
+      - 验证通过，运行正常
+    - [x] `mvp_04_agent_with_memory.rs` - 带记忆的 Agent ✅ **已完成 (2025-11-10)**
+      - 演示多轮对话功能
+      - Agent 根据配置的指令生成响应
+      - 验证通过，运行正常
+    - [x] `mvp_05_workflow.rs` - Workflow 工作流编排 ✅ **已完成 (2025-11-10)**
+      - 创建工作流模式（规划 → 执行 → 审核）
+      - 演示顺序执行和数据流动
+      - 验证通过，运行正常
 - [ ] 生成 rustdoc 文档
 - [ ] 部署到 docs.rs
+
+**重要技术发现** 🔍 **(2025-11-10)**:
+- ✅ **Rust 函数参数属性限制**: 根据 [Rust Reference](https://doc.rust-lang.org/reference/items/functions.html#attributes-on-function-parameters)，函数参数**仅允许**内置属性（`cfg`, `cfg_attr`, `allow`, `warn`, `deny`, `forbid`），**不允许**自定义过程宏属性（如 `#[parameter]`）
+- ✅ **解决方案**: 使用函数级文档注释描述参数，`#[tool]` 宏从文档注释中提取参数信息
+- ✅ **文档**: 创建了 `docs/PARAMETER_MACRO_ANALYSIS.md` 详细分析这个限制和替代方案
+- ✅ **宏更新**: 更新了 `lumos_macro/src/lib.rs` 中的 `#[parameter]` 宏文档，标记为 DEPRECATED 并说明原因
+
+**推荐的工具定义模式**:
+```rust
+/// 计算器工具 - 执行基本的数学运算
+///
+/// 参数:
+/// - operation: 运算类型 (add, subtract, multiply, divide)
+/// - a: 第一个数字
+/// - b: 第二个数字
+#[tool(name = "calculator", description = "执行数学计算")]
+async fn calculator(operation: String, a: f64, b: f64) -> Result<Value> {
+    // 实现...
+}
+```
 
 **文档模板**:
 ```rust

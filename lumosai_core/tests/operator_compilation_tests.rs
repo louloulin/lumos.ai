@@ -3,9 +3,12 @@
 // 这个测试文件验证所有操作符能够正确编译
 // 主要测试操作符的类型安全性和编译时检查
 
-use lumosai_core::agent::{create_basic_agent, delegate, parallel, pipe, Agent, AgentDelegation, AgentParallel, AgentPipeline};
-use lumosai_core::llm::{LlmProvider};
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::agent::{
+    create_basic_agent, delegate, parallel, pipe, Agent, AgentDelegation, AgentParallel,
+    AgentPipeline,
+};
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::llm::LlmProvider;
 use std::sync::Arc;
 
 /// 创建测试用的 Agent
@@ -80,9 +83,7 @@ fn test_chained_pipeline_compiles() {
     let agent2 = create_test_agent("agent2", "Step 2");
     let agent3 = create_test_agent("agent3", "Step 3");
 
-    let _pipeline = AgentPipeline::new(agent1)
-        .pipe(agent2)
-        .pipe(agent3);
+    let _pipeline = AgentPipeline::new(agent1).pipe(agent2).pipe(agent3);
 }
 
 /// 测试 8: 链式 parallel 编译
@@ -92,9 +93,7 @@ fn test_chained_parallel_compiles() {
     let agent2 = create_test_agent("agent2", "Result 2");
     let agent3 = create_test_agent("agent3", "Result 3");
 
-    let _parallel = AgentParallel::new(agent1)
-        .parallel(agent2)
-        .parallel(agent3);
+    let _parallel = AgentParallel::new(agent1).parallel(agent2).parallel(agent3);
 }
 
 /// 测试 9: 多个 pipeline 编译
@@ -241,9 +240,7 @@ fn test_operator_builder_pattern() {
     let agent3 = create_test_agent("agent3", "Step 3");
 
     // 使用构造器模式
-    let _pipeline = AgentPipeline::new(agent1)
-        .pipe(agent2)
-        .pipe(agent3);
+    let _pipeline = AgentPipeline::new(agent1).pipe(agent2).pipe(agent3);
 }
 
 /// 测试 21: 验证 parallel 的构造器模式
@@ -254,9 +251,7 @@ fn test_parallel_builder_pattern() {
     let agent3 = create_test_agent("agent3", "Result 3");
 
     // 使用构造器模式
-    let _parallel = AgentParallel::new(agent1)
-        .parallel(agent2)
-        .parallel(agent3);
+    let _parallel = AgentParallel::new(agent1).parallel(agent2).parallel(agent3);
 }
 
 /// 测试 22: 验证操作符可以在结构体中使用
@@ -297,10 +292,7 @@ fn test_operators_in_vec() {
     let agent3 = create_test_agent("agent3", "Step 3");
     let agent4 = create_test_agent("agent4", "Step 4");
 
-    let _pipelines = vec![
-        pipe(agent1, agent2),
-        pipe(agent3, agent4),
-    ];
+    let _pipelines = vec![pipe(agent1, agent2), pipe(agent3, agent4)];
 }
 
 /// 测试 25: 验证操作符可以在 Option 中使用
@@ -311,4 +303,3 @@ fn test_operators_in_option() {
 
     let _maybe_pipeline: Option<AgentPipeline> = Some(pipe(agent1, agent2));
 }
-

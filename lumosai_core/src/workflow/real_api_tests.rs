@@ -76,14 +76,14 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(1000)).await;
 
-        let result = retry_with_backoff(
-            || async { workflow.execute(input.clone()).await },
-            5,
-            2000,
-        )
-        .await;
+        let result =
+            retry_with_backoff(|| async { workflow.execute(input.clone()).await }, 5, 2000).await;
 
-        assert!(result.is_ok(), "Workflow execution failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Workflow execution failed: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         assert!(!output.is_null(), "Workflow output should not be null");
     }
@@ -112,7 +112,7 @@ mod tests {
         ));
 
         let mut workflow = BasicWorkflow::new("multi_step_workflow");
-        
+
         workflow.add_step(WorkflowStep {
             name: "analyze".to_string(),
             agent: agent1,
@@ -135,14 +135,14 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(1500)).await;
 
-        let result = retry_with_backoff(
-            || async { workflow.execute(input.clone()).await },
-            5,
-            2000,
-        )
-        .await;
+        let result =
+            retry_with_backoff(|| async { workflow.execute(input.clone()).await }, 5, 2000).await;
 
-        assert!(result.is_ok(), "Multi-step workflow failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Multi-step workflow failed: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         assert!(!output.is_null(), "Workflow output should not be null");
     }
@@ -159,11 +159,14 @@ mod tests {
             llm,
         ));
 
-        let workflow = BasicWorkflow::new("test_workflow")
-            .with_description("A test workflow for validation");
+        let workflow =
+            BasicWorkflow::new("test_workflow").with_description("A test workflow for validation");
 
         assert_eq!(workflow.name(), "test_workflow");
-        assert_eq!(workflow.description(), Some("A test workflow for validation"));
+        assert_eq!(
+            workflow.description(),
+            Some("A test workflow for validation")
+        );
     }
 
     #[tokio::test]
@@ -179,7 +182,7 @@ mod tests {
         ));
 
         let mut workflow = BasicWorkflow::new("steps_test");
-        
+
         workflow.add_step(WorkflowStep {
             name: "step1".to_string(),
             agent: agent.clone(),
@@ -230,12 +233,8 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(1000)).await;
 
-        let result = retry_with_backoff(
-            || async { workflow.execute(input.clone()).await },
-            5,
-            2000,
-        )
-        .await;
+        let result =
+            retry_with_backoff(|| async { workflow.execute(input.clone()).await }, 5, 2000).await;
 
         assert!(result.is_ok(), "Workflow with Always condition failed");
     }
@@ -266,14 +265,9 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(1000)).await;
 
-        let result = retry_with_backoff(
-            || async { workflow.execute(input.clone()).await },
-            5,
-            2000,
-        )
-        .await;
+        let result =
+            retry_with_backoff(|| async { workflow.execute(input.clone()).await }, 5, 2000).await;
 
         assert!(result.is_ok(), "Workflow with empty input failed");
     }
 }
-

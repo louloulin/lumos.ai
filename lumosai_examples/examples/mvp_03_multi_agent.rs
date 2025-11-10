@@ -24,7 +24,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .instructions("You are a researcher. Gather information and provide facts about the topic.")
         .model(llm1)
         .build()?;
-    println!("✅ 研究 Agent '{}' 创建成功", researcher.name().unwrap_or("unknown"));
+    println!(
+        "✅ 研究 Agent '{}' 创建成功",
+        researcher.name().unwrap_or("unknown")
+    );
 
     // 步骤 2: 创建写作 Agent
     println!("\n📝 步骤 2: 创建写作 Agent");
@@ -34,7 +37,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .instructions("You are a writer. Create engaging content based on research findings.")
         .model(llm2)
         .build()?;
-    println!("✅ 写作 Agent '{}' 创建成功", writer.name().unwrap_or("unknown"));
+    println!(
+        "✅ 写作 Agent '{}' 创建成功",
+        writer.name().unwrap_or("unknown")
+    );
 
     // 步骤 3: 创建编辑 Agent
     println!("\n📝 步骤 3: 创建编辑 Agent");
@@ -44,7 +50,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .instructions("You are an editor. Polish and improve the content for clarity and impact.")
         .model(llm3)
         .build()?;
-    println!("✅ 编辑 Agent '{}' 创建成功", editor.name().unwrap_or("unknown"));
+    println!(
+        "✅ 编辑 Agent '{}' 创建成功",
+        editor.name().unwrap_or("unknown")
+    );
 
     // 步骤 4: 顺序执行 Agent 工作流
     println!("\n📝 步骤 4: 执行多 Agent 协作工作流");
@@ -56,10 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 第 1 阶段：研究
     println!("\n🔍 阶段 1: 研究阶段");
     let research_result = researcher
-        .generate_simple(&format!(
-            "Research and provide key facts about: {}",
-            topic
-        ))
+        .generate_simple(&format!("Research and provide key facts about: {}", topic))
         .await?;
     println!("研究结果:\n{}\n", research_result);
 
@@ -91,4 +97,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

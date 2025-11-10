@@ -2,8 +2,8 @@
 //!
 //! 测试不同的温度值，找出智谱 AI 接受的范围
 
-use lumosai_core::llm::{LlmProvider, LlmOptions, ZhipuProvider};
 use lumosai_core::llm::types::Temperature;
+use lumosai_core::llm::{LlmOptions, LlmProvider, ZhipuProvider};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -39,7 +39,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         match zhipu.generate("你好", &options).await {
             Ok(response) => {
-                println!("✅ SUCCESS: {}", response.chars().take(50).collect::<String>());
+                println!(
+                    "✅ SUCCESS: {}",
+                    response.chars().take(50).collect::<String>()
+                );
             }
             Err(e) => {
                 println!("❌ FAILED: {:?}", e);
@@ -78,7 +81,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match zhipu.generate("你好", &options_no_max).await {
         Ok(response) => {
-            println!("✅ SUCCESS: {}", response.chars().take(50).collect::<String>());
+            println!(
+                "✅ SUCCESS: {}",
+                response.chars().take(50).collect::<String>()
+            );
         }
         Err(e) => {
             println!("❌ FAILED: {:?}", e);
@@ -105,4 +111,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

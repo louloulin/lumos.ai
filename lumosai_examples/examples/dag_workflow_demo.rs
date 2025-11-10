@@ -47,7 +47,10 @@ impl StepExecutor for DataCleanerExecutor {
         println!("🧹 清洗数据（规则: {:?}）...", self.rules);
         tokio::time::sleep(Duration::from_millis(150)).await;
 
-        let source = input.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
+        let source = input
+            .get("source")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
         let count = input.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
 
         Ok(json!({
@@ -416,4 +419,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

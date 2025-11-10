@@ -13,13 +13,12 @@
 //! 7. 并发和性能测试 (4 tests)
 
 use lumosai_core::llm::{Message, Role};
+use lumosai_core::logger::{ConsoleLogger, LogLevel, Logger};
 use lumosai_core::memory::{
     create_working_memory, BasicMemory, Memory, MemoryConfig, MemoryProcessor,
     MemoryProcessorOptions, MessageLimitProcessor, RoleFilterProcessor, SessionConfig,
-    SessionContext, SessionState,
-    WorkingMemoryConfig, WorkingMemoryContent,
+    SessionContext, SessionState, WorkingMemoryConfig, WorkingMemoryContent,
 };
-use lumosai_core::logger::{ConsoleLogger, Logger, LogLevel};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -76,7 +75,7 @@ async fn test_working_memory_creation() {
 async fn test_working_memory_get_default() {
     let config = create_test_working_memory_config();
     let memory = create_working_memory(&config).unwrap();
-    
+
     let content = memory.get().await;
     assert!(content.is_ok());
     let content = content.unwrap();
@@ -87,13 +86,13 @@ async fn test_working_memory_get_default() {
 async fn test_working_memory_update() {
     let config = create_test_working_memory_config();
     let memory = create_working_memory(&config).unwrap();
-    
+
     let mut content = WorkingMemoryContent::default();
     content.content = json!({"key": "value"});
-    
+
     let result = memory.update(content.clone()).await;
     assert!(result.is_ok());
-    
+
     let retrieved = memory.get().await.unwrap();
     assert_eq!(retrieved.content, json!({"key": "value"}));
 }
@@ -102,16 +101,16 @@ async fn test_working_memory_update() {
 async fn test_working_memory_clear() {
     let config = create_test_working_memory_config();
     let memory = create_working_memory(&config).unwrap();
-    
+
     // Add some content
     let mut content = WorkingMemoryContent::default();
     content.content = json!({"key": "value"});
     memory.update(content).await.unwrap();
-    
+
     // Clear
     let result = memory.clear().await;
     assert!(result.is_ok());
-    
+
     // Verify cleared
     let retrieved = memory.get().await.unwrap();
     assert_eq!(retrieved.content, json!({}));
@@ -121,19 +120,19 @@ async fn test_working_memory_clear() {
 async fn test_working_memory_get_value() {
     let config = create_test_working_memory_config();
     let memory = create_working_memory(&config).unwrap();
-    
+
     // Set initial content
     let mut content = WorkingMemoryContent::default();
     content.content = json!({"name": "Alice", "age": 30});
     memory.update(content).await.unwrap();
-    
+
     // Get specific value
     let name = memory.get_value("name").await.unwrap();
     assert_eq!(name, Some(json!("Alice")));
-    
+
     let age = memory.get_value("age").await.unwrap();
     assert_eq!(age, Some(json!(30)));
-    
+
     let missing = memory.get_value("missing").await.unwrap();
     assert_eq!(missing, None);
 }
@@ -142,11 +141,11 @@ async fn test_working_memory_get_value() {
 async fn test_working_memory_set_value() {
     let config = create_test_working_memory_config();
     let memory = create_working_memory(&config).unwrap();
-    
+
     // Set values
     memory.set_value("key1", json!("value1")).await.unwrap();
     memory.set_value("key2", json!(42)).await.unwrap();
-    
+
     // Verify
     let content = memory.get().await.unwrap();
     assert_eq!(content.content["key1"], json!("value1"));
@@ -157,19 +156,19 @@ async fn test_working_memory_set_value() {
 async fn test_working_memory_delete_value() {
     let config = create_test_working_memory_config();
     let memory = create_working_memory(&config).unwrap();
-    
+
     // Set initial values
     memory.set_value("key1", json!("value1")).await.unwrap();
     memory.set_value("key2", json!("value2")).await.unwrap();
-    
+
     // Delete one key
     let result = memory.delete_value("key1").await;
     assert!(result.is_ok());
-    
+
     // Verify deletion
     let value1 = memory.get_value("key1").await.unwrap();
     assert_eq!(value1, None);
-    
+
     let value2 = memory.get_value("key2").await.unwrap();
     assert_eq!(value2, Some(json!("value2")));
 }
@@ -178,14 +177,14 @@ async fn test_working_memory_delete_value() {
 async fn test_working_memory_multiple_operations() {
     let config = create_test_working_memory_config();
     let memory = create_working_memory(&config).unwrap();
-    
+
     // Perform multiple operations
     memory.set_value("a", json!(1)).await.unwrap();
     memory.set_value("b", json!(2)).await.unwrap();
     memory.set_value("c", json!(3)).await.unwrap();
     memory.delete_value("b").await.unwrap();
     memory.set_value("d", json!(4)).await.unwrap();
-    
+
     // Verify final state
     let content = memory.get().await.unwrap();
     assert_eq!(content.content["a"], json!(1));
@@ -204,7 +203,7 @@ async fn test_working_memory_multiple_operations() {
 #[test]
 fn test_semantic_recall_config_creation() {
     use lumosai_core::memory::SemanticRecallConfig;
-    
+
     let config = SemanticRecallConfig {
         top_k: 5,
         message_range: None,
@@ -215,7 +214,7 @@ fn test_semantic_recall_config_creation() {
         relevance_threshold: Some(0.7),
         template: Some("Test template".to_string()),
     };
-    
+
     assert_eq!(config.top_k, 5);
     assert_eq!(config.generate_summaries, true);
     assert_eq!(config.use_embeddings, true);
@@ -224,7 +223,7 @@ fn test_semantic_recall_config_creation() {
 #[test]
 fn test_semantic_recall_config_serialization() {
     use lumosai_core::memory::SemanticRecallConfig;
-    
+
     let config = SemanticRecallConfig {
         top_k: 5,
         message_range: None,
@@ -235,10 +234,10 @@ fn test_semantic_recall_config_serialization() {
         relevance_threshold: Some(0.7),
         template: Some("Test template".to_string()),
     };
-    
+
     let serialized = serde_json::to_string(&config).unwrap();
     let deserialized: SemanticRecallConfig = serde_json::from_str(&serialized).unwrap();
-    
+
     assert_eq!(deserialized.top_k, 5);
     assert_eq!(deserialized.max_capacity, Some(1000));
 }
@@ -246,12 +245,12 @@ fn test_semantic_recall_config_serialization() {
 #[test]
 fn test_message_range_config() {
     use lumosai_core::memory::MessageRange;
-    
+
     let range = MessageRange {
         before: 5,
         after: 3,
     };
-    
+
     assert_eq!(range.before, 5);
     assert_eq!(range.after, 3);
 }
@@ -259,7 +258,7 @@ fn test_message_range_config() {
 #[test]
 fn test_semantic_recall_config_defaults() {
     use lumosai_core::memory::SemanticRecallConfig;
-    
+
     let config = SemanticRecallConfig {
         top_k: 10,
         message_range: None,
@@ -270,7 +269,7 @@ fn test_semantic_recall_config_defaults() {
         relevance_threshold: None,
         template: None,
     };
-    
+
     assert_eq!(config.use_embeddings, true);
     assert_eq!(config.generate_summaries, false);
 }
@@ -278,12 +277,12 @@ fn test_semantic_recall_config_defaults() {
 #[test]
 fn test_semantic_recall_config_with_message_range() {
     use lumosai_core::memory::{MessageRange, SemanticRecallConfig};
-    
+
     let range = MessageRange {
         before: 10,
         after: 5,
     };
-    
+
     let config = SemanticRecallConfig {
         top_k: 5,
         message_range: Some(range.clone()),
@@ -294,7 +293,7 @@ fn test_semantic_recall_config_with_message_range() {
         relevance_threshold: Some(0.7),
         template: None,
     };
-    
+
     assert!(config.message_range.is_some());
     let msg_range = config.message_range.unwrap();
     assert_eq!(msg_range.before, 10);
@@ -671,9 +670,7 @@ async fn test_working_memory_concurrent_reads() {
     let mut handles = vec![];
     for _ in 0..10 {
         let mem = Arc::clone(&memory);
-        let handle = tokio::spawn(async move {
-            mem.get_value("counter").await.unwrap()
-        });
+        let handle = tokio::spawn(async move { mem.get_value("counter").await.unwrap() });
         handles.push(handle);
     }
 
@@ -693,9 +690,8 @@ async fn test_working_memory_concurrent_writes() {
     let mut handles = vec![];
     for i in 0..10 {
         let mem = Arc::clone(&memory);
-        let handle = tokio::spawn(async move {
-            mem.set_value(&format!("key{}", i), json!(i)).await
-        });
+        let handle =
+            tokio::spawn(async move { mem.set_value(&format!("key{}", i), json!(i)).await });
         handles.push(handle);
     }
 
@@ -752,7 +748,10 @@ async fn test_working_memory_performance() {
 
     // Perform 1000 operations
     for i in 0..1000 {
-        memory.set_value(&format!("key{}", i % 100), json!(i)).await.unwrap();
+        memory
+            .set_value(&format!("key{}", i % 100), json!(i))
+            .await
+            .unwrap();
     }
 
     let duration = start.elapsed();
@@ -764,4 +763,3 @@ async fn test_working_memory_performance() {
     let content = memory.get().await.unwrap();
     assert!(content.content.as_object().unwrap().len() <= 100);
 }
-

@@ -10,9 +10,9 @@ pub mod dag_scheduler;
 pub mod dag_workflow;
 pub mod enhanced;
 pub mod execution_engine;
+mod real_api_tests;
 mod step;
 mod tests;
-mod real_api_tests;
 mod types;
 mod workflow;
 

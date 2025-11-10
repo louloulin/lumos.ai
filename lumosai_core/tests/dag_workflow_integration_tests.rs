@@ -275,7 +275,10 @@ async fn test_dag_workflow_parallel_execution() {
 
     assert!(result.is_ok());
     println!("✅ Parallel DAG execution completed in {:?}", duration);
-    println!("📊 Results count: {}", result.unwrap().as_object().unwrap().len());
+    println!(
+        "📊 Results count: {}",
+        result.unwrap().as_object().unwrap().len()
+    );
 
     // 验证并行执行比顺序执行快
     // node2 和 node3 应该并行执行（各 50ms），而不是顺序执行（100ms）
@@ -370,6 +373,8 @@ async fn test_dag_workflow_complex_dag() {
 
     assert!(result.is_ok());
     println!("✅ Complex DAG execution completed in {:?}", duration);
-    println!("📊 Results count: {}", result.unwrap().as_object().unwrap().len());
+    println!(
+        "📊 Results count: {}",
+        result.unwrap().as_object().unwrap().len()
+    );
 }
-

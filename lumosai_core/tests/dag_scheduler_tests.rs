@@ -293,7 +293,11 @@ async fn test_dag_topological_sort_parallel() {
     dag.add_node(DagNode {
         id: "node5".to_string(),
         name: "Node 5".to_string(),
-        dependencies: vec!["node2".to_string(), "node3".to_string(), "node4".to_string()],
+        dependencies: vec![
+            "node2".to_string(),
+            "node3".to_string(),
+            "node4".to_string(),
+        ],
         step: create_test_step("node5", "Node 5", 0),
     })
     .unwrap();
@@ -454,7 +458,11 @@ async fn test_dag_scheduler_complex_dag() {
     dag.add_node(DagNode {
         id: "node5".to_string(),
         name: "Node 5".to_string(),
-        dependencies: vec!["node2".to_string(), "node3".to_string(), "node4".to_string()],
+        dependencies: vec![
+            "node2".to_string(),
+            "node3".to_string(),
+            "node4".to_string(),
+        ],
         step: create_test_step("node5", "Node 5", 10),
     })
     .unwrap();
@@ -519,7 +527,10 @@ async fn test_dag_scheduler_concurrency_limit() {
     let results = scheduler.execute(&dag, input, &context).await.unwrap();
     let elapsed = start.elapsed();
 
-    println!("✅ Concurrency-limited DAG execution completed in {:?}", elapsed);
+    println!(
+        "✅ Concurrency-limited DAG execution completed in {:?}",
+        elapsed
+    );
     println!("📊 Results count: {}", results.len());
 
     // 验证结果
@@ -532,4 +543,3 @@ async fn test_dag_scheduler_concurrency_limit() {
         "Should respect concurrency limit"
     );
 }
-

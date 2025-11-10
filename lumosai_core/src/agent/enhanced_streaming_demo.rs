@@ -11,8 +11,8 @@ use lumosai_core::agent::message_utils::user_message;
 use lumosai_core::agent::{
     AgentConfig, AgentEvent, AgentGenerateOptions, BasicAgent, IntoStreaming, StreamingConfig,
 };
-use lumosai_core::llm::{LlmOptions};
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::llm::LlmOptions;
 use lumosai_core::memory::WorkingMemoryConfig;
 use lumosai_core::tools::{ParameterDefinition, ParameterType, Tool, ToolConfig, ToolsConfig};
 

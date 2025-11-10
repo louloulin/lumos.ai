@@ -10,12 +10,14 @@
 //! 4. 企业级功能集成测试 (15 scenarios)
 
 use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
+use lumosai_core::base::Base;
 use lumosai_core::llm::{LlmOptions, Message, MockLlmProvider, Role};
-use lumosai_core::memory::{BasicMemory, Memory, MemoryConfig, WorkingMemoryConfig, create_working_memory};
+use lumosai_core::memory::{
+    create_working_memory, BasicMemory, Memory, MemoryConfig, WorkingMemoryConfig,
+};
 use lumosai_core::tool::Tool;
 use lumosai_core::workflow::{BasicStep, Step, StepContext};
 use lumosai_core::{Error, Result};
-use lumosai_core::base::Base;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -86,12 +88,15 @@ async fn mock_tool_execute(operation: &str, a: f64, b: f64) -> Result<f64> {
 
 #[tokio::test]
 async fn test_agent_rag_basic_retrieval() {
-    let agent = create_test_agent("rag_agent", "You are a helpful assistant with RAG capabilities");
-    
+    let agent = create_test_agent(
+        "rag_agent",
+        "You are a helpful assistant with RAG capabilities",
+    );
+
     // Simulate RAG retrieval
     let query = "What is Rust?";
     let documents = mock_rag_retrieve(query).await.unwrap();
-    
+
     assert_eq!(documents.len(), 3);
     assert!(documents[0].contains("Document 1"));
 }
@@ -99,15 +104,15 @@ async fn test_agent_rag_basic_retrieval() {
 #[tokio::test]
 async fn test_agent_rag_context_injection() {
     let agent = create_test_agent("rag_agent", "Answer based on provided context");
-    
+
     // Retrieve documents
     let query = "machine learning";
     let documents = mock_rag_retrieve(query).await.unwrap();
-    
+
     // Inject context into agent prompt
     let context = documents.join("\n");
     let enhanced_prompt = format!("Context:\n{}\n\nQuestion: {}", context, query);
-    
+
     assert!(enhanced_prompt.contains("Document 1"));
     assert!(enhanced_prompt.contains("machine learning"));
 }
@@ -115,10 +120,10 @@ async fn test_agent_rag_context_injection() {
 #[tokio::test]
 async fn test_agent_rag_empty_results() {
     let agent = create_test_agent("rag_agent", "Handle empty RAG results gracefully");
-    
+
     // Simulate empty retrieval
     let documents: Vec<String> = vec![];
-    
+
     assert_eq!(documents.len(), 0);
     // Agent should handle empty context gracefully
 }
@@ -126,57 +131,57 @@ async fn test_agent_rag_empty_results() {
 #[tokio::test]
 async fn test_agent_rag_relevance_filtering() {
     let agent = create_test_agent("rag_agent", "Filter relevant documents");
-    
+
     let documents = mock_rag_retrieve("test query").await.unwrap();
-    
+
     // Simulate relevance filtering (score > 0.7)
     let filtered: Vec<String> = documents
         .into_iter()
         .filter(|doc| doc.contains("Document"))
         .collect();
-    
+
     assert_eq!(filtered.len(), 3);
 }
 
 #[tokio::test]
 async fn test_agent_rag_multi_query() {
     let agent = create_test_agent("rag_agent", "Handle multiple queries");
-    
+
     let queries = vec!["query1", "query2", "query3"];
     let mut all_documents = Vec::new();
-    
+
     for query in queries {
         let docs = mock_rag_retrieve(query).await.unwrap();
         all_documents.extend(docs);
     }
-    
+
     assert_eq!(all_documents.len(), 9); // 3 queries * 3 docs each
 }
 
 #[tokio::test]
 async fn test_agent_rag_with_memory() {
     let agent = create_test_agent("rag_agent", "Use RAG with memory");
-    
+
     // Create memory
     let memory = BasicMemory::new(None, None);
-    
+
     // Store conversation
     let msg = create_message(Role::User, "Tell me about Rust");
     memory.store(&msg).await.unwrap();
-    
+
     // Retrieve documents
     let documents = mock_rag_retrieve("Rust").await.unwrap();
-    
+
     assert_eq!(documents.len(), 3);
 }
 
 #[tokio::test]
 async fn test_agent_rag_error_handling() {
     let agent = create_test_agent("rag_agent", "Handle RAG errors");
-    
+
     // Simulate error scenario
     let result: Result<Vec<String>> = Err(Error::Other("RAG service unavailable".to_string()));
-    
+
     assert!(result.is_err());
     // Agent should handle RAG errors gracefully
 }
@@ -184,11 +189,11 @@ async fn test_agent_rag_error_handling() {
 #[tokio::test]
 async fn test_agent_rag_large_context() {
     let agent = create_test_agent("rag_agent", "Handle large context");
-    
+
     // Simulate large document retrieval
     let large_doc = "x".repeat(10000);
     let documents = vec![large_doc.clone()];
-    
+
     assert_eq!(documents[0].len(), 10000);
     // Agent should handle large contexts
 }
@@ -196,29 +201,32 @@ async fn test_agent_rag_large_context() {
 #[tokio::test]
 async fn test_agent_rag_streaming_results() {
     let agent = create_test_agent("rag_agent", "Stream RAG results");
-    
+
     // Simulate streaming retrieval
     let mut stream_results = Vec::new();
     for i in 0..5 {
         stream_results.push(format!("Chunk {}", i));
     }
-    
+
     assert_eq!(stream_results.len(), 5);
 }
 
 #[tokio::test]
 async fn test_agent_rag_caching() {
     let agent = create_test_agent("rag_agent", "Cache RAG results");
-    
+
     // Simulate caching
     let cache: Arc<Mutex<HashMap<String, Vec<String>>>> = Arc::new(Mutex::new(HashMap::new()));
-    
+
     let query = "test query";
     let documents = mock_rag_retrieve(query).await.unwrap();
-    
+
     // Cache results
-    cache.lock().await.insert(query.to_string(), documents.clone());
-    
+    cache
+        .lock()
+        .await
+        .insert(query.to_string(), documents.clone());
+
     // Retrieve from cache
     let cached = cache.lock().await.get(query).cloned();
     assert!(cached.is_some());
@@ -246,10 +254,10 @@ async fn test_multi_agent_basic_collaboration() {
 async fn test_multi_agent_message_passing() {
     let agent1 = create_test_agent("sender", "Send messages");
     let agent2 = create_test_agent("receiver", "Receive messages");
-    
+
     // Simulate message passing
     let message = create_message(Role::User, "Hello from agent1");
-    
+
     // Message should be created
     assert_eq!(message.content, "Hello from agent1");
 }
@@ -259,10 +267,10 @@ async fn test_multi_agent_task_delegation() {
     let coordinator = create_test_agent("coordinator", "Coordinate tasks");
     let worker1 = create_test_agent("worker1", "Execute task 1");
     let worker2 = create_test_agent("worker2", "Execute task 2");
-    
+
     // Simulate task delegation
     let tasks = vec!["task1", "task2"];
-    
+
     assert_eq!(tasks.len(), 2);
 }
 
@@ -270,7 +278,7 @@ async fn test_multi_agent_task_delegation() {
 async fn test_multi_agent_shared_memory() {
     let agent1 = create_test_agent("agent1", "Use shared memory");
     let agent2 = create_test_agent("agent2", "Use shared memory");
-    
+
     // Create shared memory
     let config = WorkingMemoryConfig {
         enabled: true,
@@ -279,10 +287,13 @@ async fn test_multi_agent_shared_memory() {
         max_capacity: Some(10000),
     };
     let shared_memory = create_working_memory(&config).unwrap();
-    
+
     // Agent 1 writes
-    shared_memory.set_value("shared_data", json!({"key": "value"})).await.unwrap();
-    
+    shared_memory
+        .set_value("shared_data", json!({"key": "value"}))
+        .await
+        .unwrap();
+
     // Agent 2 reads
     let value = shared_memory.get_value("shared_data").await.unwrap();
     assert_eq!(value, Some(json!({"key": "value"})));
@@ -332,9 +343,7 @@ async fn test_multi_agent_hierarchical_structure() {
     let _worker2 = create_test_agent("worker2", "Report to supervisor");
 
     // Simulate hierarchical structure
-    let hierarchy = vec![
-        ("supervisor", vec!["worker1", "worker2"]),
-    ];
+    let hierarchy = vec![("supervisor", vec!["worker1", "worker2"])];
 
     assert_eq!(hierarchy.len(), 1);
     assert_eq!(hierarchy[0].1.len(), 2);
@@ -347,11 +356,9 @@ async fn test_multi_agent_hierarchical_structure() {
 #[tokio::test]
 async fn test_workflow_basic_orchestration() {
     // Create simple workflow
-    let step1 = BasicStep::create_simple(
-        "step1".to_string(),
-        "First step".to_string(),
-        |_input| Ok(json!({"step": 1})),
-    );
+    let step1 = BasicStep::create_simple("step1".to_string(), "First step".to_string(), |_input| {
+        Ok(json!({"step": 1}))
+    });
 
     assert_eq!(step1.id(), "step1");
 }
@@ -359,17 +366,13 @@ async fn test_workflow_basic_orchestration() {
 #[tokio::test]
 async fn test_workflow_sequential_execution() {
     // Create sequential steps
-    let step1 = BasicStep::create_simple(
-        "step1".to_string(),
-        "Step 1".to_string(),
-        |_input| Ok(json!({"result": 1})),
-    );
+    let step1 = BasicStep::create_simple("step1".to_string(), "Step 1".to_string(), |_input| {
+        Ok(json!({"result": 1}))
+    });
 
-    let step2 = BasicStep::create_simple(
-        "step2".to_string(),
-        "Step 2".to_string(),
-        |_input| Ok(json!({"result": 2})),
-    );
+    let step2 = BasicStep::create_simple("step2".to_string(), "Step 2".to_string(), |_input| {
+        Ok(json!({"result": 2}))
+    });
 
     // Execute sequentially
     let ctx1 = StepContext {
@@ -411,10 +414,7 @@ async fn test_workflow_parallel_execution() {
     };
 
     // Execute in parallel
-    let (result1, result2) = tokio::join!(
-        step1.execute(ctx.clone()),
-        step2.execute(ctx)
-    );
+    let (result1, result2) = tokio::join!(step1.execute(ctx.clone()), step2.execute(ctx));
 
     assert!(result1.is_ok());
     assert!(result2.is_ok());
@@ -447,17 +447,14 @@ async fn test_workflow_conditional_branching() {
 #[tokio::test]
 async fn test_workflow_error_handling() {
     // Create step that may fail
-    let failing_step = BasicStep::create_simple(
-        "failing".to_string(),
-        "May fail".to_string(),
-        |input| {
+    let failing_step =
+        BasicStep::create_simple("failing".to_string(), "May fail".to_string(), |input| {
             if input["should_fail"].as_bool().unwrap_or(false) {
                 Err(Error::Workflow("Step failed".to_string()))
             } else {
                 Ok(json!({"success": true}))
             }
-        },
-    );
+        });
 
     let ctx_fail = StepContext {
         run_id: "test_run".to_string(),
@@ -586,7 +583,10 @@ async fn test_workflow_memory_integration() {
     );
 
     // Store data in memory
-    memory.set_value("workflow_state", json!({"step": "memory_step"})).await.unwrap();
+    memory
+        .set_value("workflow_state", json!({"step": "memory_step"}))
+        .await
+        .unwrap();
 
     let ctx = StepContext {
         run_id: "test_run".to_string(),
@@ -604,21 +604,17 @@ async fn test_workflow_memory_integration() {
 async fn test_workflow_complex_orchestration() {
     // Create complex workflow with multiple steps
     let steps = vec![
-        BasicStep::create_simple(
-            "init".to_string(),
-            "Initialize".to_string(),
-            |_input| Ok(json!({"initialized": true})),
-        ),
+        BasicStep::create_simple("init".to_string(), "Initialize".to_string(), |_input| {
+            Ok(json!({"initialized": true}))
+        }),
         BasicStep::create_simple(
             "process".to_string(),
             "Process data".to_string(),
             |_input| Ok(json!({"processed": true})),
         ),
-        BasicStep::create_simple(
-            "finalize".to_string(),
-            "Finalize".to_string(),
-            |_input| Ok(json!({"finalized": true})),
-        ),
+        BasicStep::create_simple("finalize".to_string(), "Finalize".to_string(), |_input| {
+            Ok(json!({"finalized": true}))
+        }),
     ];
 
     assert_eq!(steps.len(), 3);
@@ -808,4 +804,3 @@ async fn test_enterprise_compliance() {
     let compliant = data_retention_days >= required_retention_days;
     assert!(compliant);
 }
-

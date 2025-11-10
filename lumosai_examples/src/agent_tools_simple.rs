@@ -3,8 +3,8 @@ use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{create_basic_agent, Agent};
 use lumosai_core::base::{Base, BaseComponent, ComponentConfig};
 use lumosai_core::compat::Component;
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::llm::{Message, Role};
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::logger::Logger;
 use lumosai_core::telemetry::TelemetrySink;
 use lumosai_core::tool::{

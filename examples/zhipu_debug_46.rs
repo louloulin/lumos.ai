@@ -78,7 +78,10 @@ async fn test_model(
                 println!("📋 Full response:");
                 println!("{}", serde_json::to_string_pretty(&json)?);
             } else {
-                println!("📝 Content: {}", content.chars().take(100).collect::<String>());
+                println!(
+                    "📝 Content: {}",
+                    content.chars().take(100).collect::<String>()
+                );
             }
         } else {
             println!("❌ No content field");
@@ -126,7 +129,10 @@ async fn test_model_no_max_tokens(
                 println!("📋 Full response:");
                 println!("{}", serde_json::to_string_pretty(&json)?);
             } else {
-                println!("📝 Content: {}", content.chars().take(100).collect::<String>());
+                println!(
+                    "📝 Content: {}",
+                    content.chars().take(100).collect::<String>()
+                );
             }
         } else {
             println!("❌ No content field");
@@ -138,4 +144,3 @@ async fn test_model_no_max_tokens(
 
     Ok(())
 }
-

@@ -13,9 +13,9 @@ pub mod openai;
 pub mod provider;
 pub mod providers;
 mod qwen;
+pub mod test_helpers;
 #[cfg(test)]
 mod tests;
-pub mod test_helpers;
 pub mod together;
 pub mod types;
 pub mod zhipu;

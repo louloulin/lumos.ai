@@ -5,8 +5,8 @@
 #[cfg(test)]
 mod tests {
     use crate::llm::test_helpers::*;
-    use crate::llm::{LlmOptions, LlmProvider, Message, Role, ZhipuProvider};
     use crate::llm::types::Temperature;
+    use crate::llm::{LlmOptions, LlmProvider, Message, Role, ZhipuProvider};
     use std::sync::Arc;
     use tokio::time::{sleep, Duration};
 
@@ -163,7 +163,12 @@ mod tests {
 
         let provider = create_test_zhipu_provider_arc();
         let messages = vec![
-            Message::new(Role::System, "You are a helpful assistant.".to_string(), None, None),
+            Message::new(
+                Role::System,
+                "You are a helpful assistant.".to_string(),
+                None,
+                None,
+            ),
             Message::new(Role::User, "Say 'hello'".to_string(), None, None),
         ];
 
@@ -363,7 +368,12 @@ mod tests {
 
         let provider = create_test_zhipu_provider_arc();
         let messages = vec![
-            Message::new(Role::System, "You are a helpful assistant.".to_string(), None, None),
+            Message::new(
+                Role::System,
+                "You are a helpful assistant.".to_string(),
+                None,
+                None,
+            ),
             Message::new(Role::User, "What is 2+2?".to_string(), None, None),
             Message::new(Role::Assistant, "4".to_string(), None, None),
             Message::new(Role::User, "What is 3+3?".to_string(), None, None),
@@ -391,8 +401,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_zhipu_provider_creation() {
-        let api_key = std::env::var("ZHIPU_API_KEY")
-            .unwrap_or_else(|_| "test_key".to_string());
+        let api_key = std::env::var("ZHIPU_API_KEY").unwrap_or_else(|_| "test_key".to_string());
 
         let provider = ZhipuProvider::new(api_key.clone(), Some("glm-4.6".to_string()));
         assert_eq!(provider.name(), "zhipu");
@@ -403,8 +412,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_llm_options_with_model() {
-        let options = LlmOptions::default()
-            .with_model("glm-4.6".to_string());
+        let options = LlmOptions::default().with_model("glm-4.6".to_string());
 
         assert_eq!(options.model, Some("glm-4.6".to_string()));
     }

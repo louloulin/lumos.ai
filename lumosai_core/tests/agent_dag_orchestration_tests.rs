@@ -5,11 +5,11 @@
 //! 注意：由于 Agent trait 非常复杂，这里使用简化的测试方法
 //! 主要测试 DAG 编排器的结构和基本功能
 
-use lumosai_core::agent::{AgentChain, AgentDagOrchestrator};
+use async_trait::async_trait;
 use lumosai_core::agent::types::RuntimeContext;
+use lumosai_core::agent::{AgentChain, AgentDagOrchestrator};
 use lumosai_core::workflow::{StepExecutor, WorkflowStep};
 use lumosai_core::Result;
-use async_trait::async_trait;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use std::time::Duration;
@@ -83,4 +83,3 @@ async fn test_agent_chain_creation() {
 // 注意：完整的 Agent DAG 集成测试需要实际的 Agent 实现
 // 这些测试将在示例代码中进行演示
 // 这里只测试基本的结构创建
-

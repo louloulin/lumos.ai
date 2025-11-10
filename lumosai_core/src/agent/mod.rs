@@ -128,9 +128,7 @@ pub use orchestration::{
 };
 
 // Re-export DAG orchestration
-pub use dag_orchestration::{
-    AgentChain, AgentDagOrchestrator, AgentDagOrchestratorBuilder,
-};
+pub use dag_orchestration::{AgentChain, AgentDagOrchestrator, AgentDagOrchestratorBuilder};
 
 // Re-export events
 pub use events::{EventBus, EventFilter, EventHandler, LogEventHandler, MetricsEventHandler};

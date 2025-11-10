@@ -30,8 +30,10 @@ async fn test_zhipu_provider() -> std::result::Result<(), Box<dyn std::error::Er
     println!("\n📡 智谱AI (GLM) 示例:");
     println!("-------------------");
 
-    let zhipu_provider =
-        ZhipuProvider::new("your-zhipu-api-key".to_string(), Some("glm-4-plus".to_string()));
+    let zhipu_provider = ZhipuProvider::new(
+        "your-zhipu-api-key".to_string(),
+        Some("glm-4-plus".to_string()),
+    );
 
     println!("✅ 智谱AI Provider 创建成功");
     println!("   - 提供商名称: {}", zhipu_provider.name());

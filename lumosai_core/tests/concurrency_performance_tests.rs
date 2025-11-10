@@ -33,18 +33,14 @@ fn create_test_agent(name: &str) -> BasicAgent {
 }
 
 fn create_test_step(id: &str) -> BasicStep {
-    BasicStep::create_simple(
-        id.to_string(),
-        format!("Step {}", id),
-        |input| {
-            // 模拟一些计算工作（使用 CPU 密集型操作而不是 sleep）
-            let mut sum = 0u64;
-            for i in 0..100000 {
-                sum = sum.wrapping_add(i);
-            }
-            Ok(json!({"result": "success", "input": input, "sum": sum}))
-        },
-    )
+    BasicStep::create_simple(id.to_string(), format!("Step {}", id), |input| {
+        // 模拟一些计算工作（使用 CPU 密集型操作而不是 sleep）
+        let mut sum = 0u64;
+        for i in 0..100000 {
+            sum = sum.wrapping_add(i);
+        }
+        Ok(json!({"result": "success", "input": input, "sum": sum}))
+    })
 }
 
 // ============================================================================
@@ -54,7 +50,7 @@ fn create_test_step(id: &str) -> BasicStep {
 #[tokio::test]
 async fn test_workflow_parallel_performance_2_tasks() {
     let start = Instant::now();
-    
+
     let ctx = StepContext {
         run_id: "test".to_string(),
         input_data: json!({"value": 1}),
@@ -62,30 +58,30 @@ async fn test_workflow_parallel_performance_2_tasks() {
         steps: HashMap::new(),
         attempts: HashMap::new(),
     };
-    
+
     // 并行执行 2 个任务
     let step1 = create_test_step("step1");
     let step2 = create_test_step("step2");
-    
-    let (r1, r2) = tokio::join!(
-        step1.execute(ctx.clone()),
-        step2.execute(ctx.clone())
-    );
-    
+
+    let (r1, r2) = tokio::join!(step1.execute(ctx.clone()), step2.execute(ctx.clone()));
+
     assert!(r1.is_ok());
     assert!(r2.is_ok());
-    
+
     let elapsed = start.elapsed();
     println!("✅ 2 tasks parallel execution: {:?}", elapsed);
-    
+
     // 并行执行应该接近单个任务的时间（~10ms），而不是 2 倍（~20ms）
-    assert!(elapsed.as_millis() < 50, "Parallel execution should be fast");
+    assert!(
+        elapsed.as_millis() < 50,
+        "Parallel execution should be fast"
+    );
 }
 
 #[tokio::test]
 async fn test_workflow_parallel_performance_4_tasks() {
     let start = Instant::now();
-    
+
     let ctx = StepContext {
         run_id: "test".to_string(),
         input_data: json!({"value": 1}),
@@ -93,7 +89,7 @@ async fn test_workflow_parallel_performance_4_tasks() {
         steps: HashMap::new(),
         attempts: HashMap::new(),
     };
-    
+
     // 并行执行 4 个任务
     let steps: Vec<_> = (0..4)
         .map(|i| create_test_step(&format!("step{}", i)))
@@ -105,21 +101,24 @@ async fn test_workflow_parallel_performance_4_tasks() {
         .collect::<Vec<_>>();
 
     let results = futures::future::join_all(futures).await;
-    
+
     assert_eq!(results.len(), 4);
     assert!(results.iter().all(|r| r.is_ok()));
-    
+
     let elapsed = start.elapsed();
     println!("✅ 4 tasks parallel execution: {:?}", elapsed);
-    
+
     // 并行执行应该接近单个任务的时间，而不是 4 倍
-    assert!(elapsed.as_millis() < 100, "Parallel execution should be fast");
+    assert!(
+        elapsed.as_millis() < 100,
+        "Parallel execution should be fast"
+    );
 }
 
 #[tokio::test]
 async fn test_workflow_parallel_performance_8_tasks() {
     let start = Instant::now();
-    
+
     let ctx = StepContext {
         run_id: "test".to_string(),
         input_data: json!({"value": 1}),
@@ -127,7 +126,7 @@ async fn test_workflow_parallel_performance_8_tasks() {
         steps: HashMap::new(),
         attempts: HashMap::new(),
     };
-    
+
     // 并行执行 8 个任务
     let steps: Vec<_> = (0..8)
         .map(|i| create_test_step(&format!("step{}", i)))
@@ -139,15 +138,18 @@ async fn test_workflow_parallel_performance_8_tasks() {
         .collect::<Vec<_>>();
 
     let results = futures::future::join_all(futures).await;
-    
+
     assert_eq!(results.len(), 8);
     assert!(results.iter().all(|r| r.is_ok()));
-    
+
     let elapsed = start.elapsed();
     println!("✅ 8 tasks parallel execution: {:?}", elapsed);
-    
+
     // 并行执行应该明显快于顺序执行
-    assert!(elapsed.as_millis() < 200, "Parallel execution should be fast");
+    assert!(
+        elapsed.as_millis() < 200,
+        "Parallel execution should be fast"
+    );
 }
 
 #[tokio::test]
@@ -159,9 +161,9 @@ async fn test_workflow_parallel_vs_sequential() {
         steps: HashMap::new(),
         attempts: HashMap::new(),
     };
-    
+
     let task_count = 10;
-    
+
     // 顺序执行
     let sequential_start = Instant::now();
     for i in 0..task_count {
@@ -169,7 +171,7 @@ async fn test_workflow_parallel_vs_sequential() {
         let _ = step.execute(ctx.clone()).await;
     }
     let sequential_time = sequential_start.elapsed();
-    
+
     // 并行执行
     let parallel_start = Instant::now();
     let steps: Vec<_> = (0..task_count)
@@ -182,7 +184,7 @@ async fn test_workflow_parallel_vs_sequential() {
         .collect::<Vec<_>>();
     let _ = futures::future::join_all(futures).await;
     let parallel_time = parallel_start.elapsed();
-    
+
     println!("📊 Performance comparison:");
     println!("   Sequential: {:?}", sequential_time);
     println!("   Parallel:   {:?}", parallel_time);
@@ -213,26 +215,25 @@ async fn test_workflow_parallel_vs_sequential() {
 #[tokio::test]
 async fn test_agent_concurrent_creation() {
     let start = Instant::now();
-    
+
     // 并发创建 10 个 Agent
     let futures = (0..10)
-        .map(|i| {
-            tokio::spawn(async move {
-                create_test_agent(&format!("agent{}", i))
-            })
-        })
+        .map(|i| tokio::spawn(async move { create_test_agent(&format!("agent{}", i)) }))
         .collect::<Vec<_>>();
-    
+
     let results = futures::future::join_all(futures).await;
-    
+
     assert_eq!(results.len(), 10);
     assert!(results.iter().all(|r| r.is_ok()));
-    
+
     let elapsed = start.elapsed();
     println!("✅ 10 agents concurrent creation: {:?}", elapsed);
-    
+
     // 并发创建应该很快
-    assert!(elapsed.as_millis() < 100, "Concurrent creation should be fast");
+    assert!(
+        elapsed.as_millis() < 100,
+        "Concurrent creation should be fast"
+    );
 }
 
 #[tokio::test]
@@ -240,9 +241,9 @@ async fn test_agent_concurrent_operations() {
     let agents: Vec<_> = (0..5)
         .map(|i| Arc::new(create_test_agent(&format!("agent{}", i))))
         .collect();
-    
+
     let start = Instant::now();
-    
+
     // 并发执行多个 Agent 操作
     let futures = agents
         .iter()
@@ -257,15 +258,18 @@ async fn test_agent_concurrent_operations() {
         .collect::<Vec<_>>();
 
     let results = futures::future::join_all(futures).await;
-    
+
     assert_eq!(results.len(), 5);
     assert!(results.iter().all(|r| r.is_ok()));
-    
+
     let elapsed = start.elapsed();
     println!("✅ 5 agents concurrent operations: {:?}", elapsed);
-    
+
     // 并发操作应该接近单个操作的时间
-    assert!(elapsed.as_millis() < 100, "Concurrent operations should be fast");
+    assert!(
+        elapsed.as_millis() < 100,
+        "Concurrent operations should be fast"
+    );
 }
 
 // ============================================================================
@@ -275,13 +279,13 @@ async fn test_agent_concurrent_operations() {
 #[tokio::test]
 async fn test_concurrency_control_with_semaphore() {
     use tokio::sync::Semaphore;
-    
+
     let max_concurrent = 3;
     let semaphore = Arc::new(Semaphore::new(max_concurrent));
     let task_count = 10;
-    
+
     let start = Instant::now();
-    
+
     let futures = (0..task_count)
         .map(|i| {
             let sem = Arc::clone(&semaphore);
@@ -293,18 +297,23 @@ async fn test_concurrency_control_with_semaphore() {
             })
         })
         .collect::<Vec<_>>();
-    
+
     let results = futures::future::join_all(futures).await;
-    
+
     assert_eq!(results.len(), task_count);
     assert!(results.iter().all(|r| r.is_ok()));
-    
+
     let elapsed = start.elapsed();
-    println!("✅ {} tasks with concurrency limit {}: {:?}", task_count, max_concurrent, elapsed);
-    
+    println!(
+        "✅ {} tasks with concurrency limit {}: {:?}",
+        task_count, max_concurrent, elapsed
+    );
+
     // 验证并发控制生效
     // 10 个任务，每个 10ms，最多 3 个并发，应该需要约 40ms (10/3 * 10ms)
-    assert!(elapsed.as_millis() >= 30, "Should respect concurrency limit");
+    assert!(
+        elapsed.as_millis() >= 30,
+        "Should respect concurrency limit"
+    );
     assert!(elapsed.as_millis() < 100, "Should still be reasonably fast");
 }
-

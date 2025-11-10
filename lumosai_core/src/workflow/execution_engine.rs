@@ -237,27 +237,32 @@ impl ExecutionEngine for DefaultExecutionEngine {
                                 "result": input_clone
                             }))
                         }
-                        StepFlowEntry::Parallel { steps: _, concurrency: _ } => {
-                            Ok(json!({
-                                "status": "completed",
-                                "type": "parallel",
-                                "result": input_clone
-                            }))
-                        }
-                        StepFlowEntry::Conditional { condition: _, if_true: _, if_false: _ } => {
-                            Ok(json!({
-                                "status": "completed",
-                                "type": "conditional",
-                                "result": input_clone
-                            }))
-                        }
-                        StepFlowEntry::Loop { condition: _, body: _, loop_type: _ } => {
-                            Ok(json!({
-                                "status": "completed",
-                                "type": "loop",
-                                "result": input_clone
-                            }))
-                        }
+                        StepFlowEntry::Parallel {
+                            steps: _,
+                            concurrency: _,
+                        } => Ok(json!({
+                            "status": "completed",
+                            "type": "parallel",
+                            "result": input_clone
+                        })),
+                        StepFlowEntry::Conditional {
+                            condition: _,
+                            if_true: _,
+                            if_false: _,
+                        } => Ok(json!({
+                            "status": "completed",
+                            "type": "conditional",
+                            "result": input_clone
+                        })),
+                        StepFlowEntry::Loop {
+                            condition: _,
+                            body: _,
+                            loop_type: _,
+                        } => Ok(json!({
+                            "status": "completed",
+                            "type": "loop",
+                            "result": input_clone
+                        })),
                     };
 
                     // 更新指标
@@ -274,8 +279,9 @@ impl ExecutionEngine for DefaultExecutionEngine {
 
                     // 更新平均执行时间
                     if metrics_guard.total_steps > 0 {
-                        metrics_guard.avg_execution_time_ms =
-                            metrics_guard.total_execution_time_ms as f64 / metrics_guard.total_steps as f64;
+                        metrics_guard.avg_execution_time_ms = metrics_guard.total_execution_time_ms
+                            as f64
+                            / metrics_guard.total_steps as f64;
                     }
 
                     result
@@ -308,7 +314,10 @@ impl ExecutionEngine for DefaultExecutionEngine {
             tracing::info!(
                 "Parallel execution completed: {} steps, {} successful",
                 results.len(),
-                results.iter().filter(|r| r["status"] == "completed").count()
+                results
+                    .iter()
+                    .filter(|r| r["status"] == "completed")
+                    .count()
             );
         }
 

@@ -14,18 +14,17 @@
 //!
 //! Total: 58 tests (exceeds target of 30+)
 
-use lumosai_core::workflow::{
-    BasicStep, RetryConfig, Step, StepBuilder, StepContext,
-    StepType, WorkflowStep, StepExecutor,
-};
+use async_trait::async_trait;
 use lumosai_core::agent::types::RuntimeContext;
+use lumosai_core::workflow::{
+    BasicStep, RetryConfig, Step, StepBuilder, StepContext, StepExecutor, StepType, WorkflowStep,
+};
 use lumosai_core::{Error, Result};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use async_trait::async_trait;
 
 // ============================================================================
 // Test Helper Functions
@@ -33,36 +32,26 @@ use async_trait::async_trait;
 
 /// Create a simple test step that returns the input
 fn create_simple_step(id: &str, description: &str) -> BasicStep {
-    BasicStep::create_simple(
-        id.to_string(),
-        description.to_string(),
-        |input| Ok(input),
-    )
+    BasicStep::create_simple(id.to_string(), description.to_string(), |input| Ok(input))
 }
 
 /// Create a step that adds a field to the input
 fn create_transform_step(id: &str, description: &str, field: &str, value: Value) -> BasicStep {
     let field = field.to_string();
-    BasicStep::create_simple(
-        id.to_string(),
-        description.to_string(),
-        move |mut input| {
-            if let Some(obj) = input.as_object_mut() {
-                obj.insert(field.clone(), value.clone());
-            }
-            Ok(input)
-        },
-    )
+    BasicStep::create_simple(id.to_string(), description.to_string(), move |mut input| {
+        if let Some(obj) = input.as_object_mut() {
+            obj.insert(field.clone(), value.clone());
+        }
+        Ok(input)
+    })
 }
 
 /// Create a step that fails
 fn create_failing_step(id: &str, description: &str, error_msg: &str) -> BasicStep {
     let error_msg = error_msg.to_string();
-    BasicStep::create_simple(
-        id.to_string(),
-        description.to_string(),
-        move |_input| Err(Error::Workflow(error_msg.clone())),
-    )
+    BasicStep::create_simple(id.to_string(), description.to_string(), move |_input| {
+        Err(Error::Workflow(error_msg.clone()))
+    })
 }
 
 /// Create a step that succeeds after N attempts
@@ -166,7 +155,7 @@ fn test_step_builder_basic() {
     let step = StepBuilder::new("builder_step".to_string())
         .description("Built step".to_string())
         .build(|ctx| async move { Ok(ctx.input_data) });
-    
+
     assert_eq!(step.id(), "builder_step");
     assert_eq!(step.description(), "Built step");
 }
@@ -192,7 +181,7 @@ fn test_step_builder_with_retry() {
 fn test_step_context_creation() {
     let input = json!({"key": "value"});
     let ctx = create_test_context(input.clone());
-    
+
     assert_eq!(ctx.run_id, "test_run_123");
     assert_eq!(ctx.input_data, input);
     assert_eq!(ctx.trigger_data, json!({"trigger": "test"}));
@@ -205,15 +194,15 @@ fn test_step_context_creation() {
 #[test]
 fn test_step_context_attempt_tracking() {
     let mut ctx = create_test_context(json!({}));
-    
+
     // First attempt
     let count1 = ctx.increment_attempt("step1");
     assert_eq!(count1, 1);
-    
+
     // Second attempt
     let count2 = ctx.increment_attempt("step1");
     assert_eq!(count2, 2);
-    
+
     // Third attempt
     let count3 = ctx.increment_attempt("step1");
     assert_eq!(count3, 3);
@@ -238,7 +227,7 @@ fn test_retry_config_creation() {
 async fn test_simple_step_execution() {
     let step = create_simple_step("step1", "Simple step");
     let ctx = create_test_context(json!({"input": "data"}));
-    
+
     let result = step.execute(ctx).await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), json!({"input": "data"}));
@@ -548,12 +537,7 @@ async fn test_error_context_preservation() {
     let step = BasicStep::new(
         "context_error".to_string(),
         "Error with context".to_string(),
-        |ctx| async move {
-            Err(Error::Workflow(format!(
-                "Failed at run_id: {}",
-                ctx.run_id
-            )))
-        },
+        |ctx| async move { Err(Error::Workflow(format!("Failed at run_id: {}", ctx.run_id))) },
         None,
     );
 
@@ -622,8 +606,8 @@ fn test_step_context_cloning() {
 
 #[test]
 fn test_step_builder_minimal() {
-    let step = StepBuilder::new("minimal".to_string())
-        .build(|ctx| async move { Ok(ctx.input_data) });
+    let step =
+        StepBuilder::new("minimal".to_string()).build(|ctx| async move { Ok(ctx.input_data) });
 
     assert_eq!(step.id(), "minimal");
     assert_eq!(step.description(), "");
@@ -811,7 +795,11 @@ async fn test_conditional_workflow_simulation() {
         "check".to_string(),
         "Check condition".to_string(),
         |ctx| async move {
-            let should_process = ctx.input_data.get("process").and_then(|v| v.as_bool()).unwrap_or(false);
+            let should_process = ctx
+                .input_data
+                .get("process")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             Ok(json!({"should_process": should_process}))
         },
         None,
@@ -1068,4 +1056,3 @@ fn test_suite_summary() {
     println!("----------------------------------");
     println!("Total: 57 tests (exceeds target of 30+)");
 }
-

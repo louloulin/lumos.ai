@@ -146,7 +146,7 @@ mod tests {
             total: 10,
             ..Default::default()
         };
-        
+
         stats.calculate_utilization();
         assert_eq!(stats.utilization, 0.8);
     }
@@ -161,7 +161,7 @@ mod tests {
             utilization: 0.9,
             ..Default::default()
         };
-        
+
         assert!(stats.should_scale_up(0.85));
         assert!(!stats.should_scale_up(0.95));
     }
@@ -176,7 +176,7 @@ mod tests {
             utilization: 0.2,
             ..Default::default()
         };
-        
+
         assert!(stats.should_scale_down(0.3));
         assert!(!stats.should_scale_down(0.1));
     }
@@ -189,9 +189,8 @@ mod tests {
             total: 0,
             ..Default::default()
         };
-        
+
         stats.calculate_utilization();
         assert_eq!(stats.utilization, 0.0);
     }
 }
-

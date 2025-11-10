@@ -170,7 +170,10 @@ async fn test_multi_level_cache_mixed_performance() {
     }
 
     let elapsed = start.elapsed();
-    println!("✅ Multi-level cache mixed access (100 times): {:?}", elapsed);
+    println!(
+        "✅ Multi-level cache mixed access (100 times): {:?}",
+        elapsed
+    );
 
     let stats = cache.stats().await;
     println!("📊 Multi-level cache stats:");
@@ -211,7 +214,10 @@ async fn test_llm_cache_strategy_performance() {
     }
 
     let elapsed = start.elapsed();
-    println!("✅ LLM cache strategy (100 calls, 50 unique): {:?}", elapsed);
+    println!(
+        "✅ LLM cache strategy (100 calls, 50 unique): {:?}",
+        elapsed
+    );
 
     // 验证缓存效果
     let params = json!({
@@ -247,7 +253,10 @@ async fn test_tool_cache_strategy_performance() {
     }
 
     let elapsed = start.elapsed();
-    println!("✅ Tool cache strategy (100 calls, 50 unique): {:?}", elapsed);
+    println!(
+        "✅ Tool cache strategy (100 calls, 50 unique): {:?}",
+        elapsed
+    );
 }
 
 // ============================================================================
@@ -291,7 +300,10 @@ async fn test_concurrent_cache_access() {
     }
 
     let elapsed = start.elapsed();
-    println!("✅ Concurrent cache access (10 tasks × 100 reads): {:?}", elapsed);
+    println!(
+        "✅ Concurrent cache access (10 tasks × 100 reads): {:?}",
+        elapsed
+    );
 
     let stats = cache.stats().await;
     println!("📊 Concurrent access stats:");
@@ -321,4 +333,3 @@ fn test_cache_key_generation_performance() {
 
     assert!(elapsed.as_millis() < 100, "Key generation should be fast");
 }
-

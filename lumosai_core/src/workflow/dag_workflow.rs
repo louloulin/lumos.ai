@@ -213,7 +213,8 @@ impl Workflow for DagWorkflow {
 
                 async move {
                     // Execute this level
-                    let results: Arc<RwLock<HashMap<String, Value>>> = Arc::new(RwLock::new(HashMap::new()));
+                    let results: Arc<RwLock<HashMap<String, Value>>> =
+                        Arc::new(RwLock::new(HashMap::new()));
                     // This is a simplified version - in production we'd need proper level execution
                     Ok(json!({
                         "level": level,
@@ -300,4 +301,3 @@ impl DagWorkflowBuilder {
         }
     }
 }
-

@@ -267,7 +267,7 @@ fn test_agent_type_check() {
 
     // 验证类型
     let _: &dyn Agent = &agent;
-    
+
     // 验证可以调用 Agent trait 的方法（编译时检查）
     // 注意：这里只是类型检查，不实际调用
     let _ = &agent;
@@ -299,4 +299,3 @@ fn test_agent_syntax_validity() {
         provider: create_test_zhipu_provider()
     };
 }
-

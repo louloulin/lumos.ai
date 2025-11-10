@@ -287,4 +287,3 @@ mod tests {
         assert_eq!(error.context["status_code"], 429);
     }
 }
-

@@ -36,12 +36,12 @@ impl<T: Poolable> PooledObject<T> {
     pub fn as_ref(&self) -> &T {
         self.object.as_ref().unwrap()
     }
-    
+
     /// 获取内部对象的可变引用
     pub fn as_mut(&mut self) -> &mut T {
         self.object.as_mut().unwrap()
     }
-    
+
     /// 获取对象的所有权（不归还到池中）
     pub fn take(mut self) -> T {
         self.object.take().unwrap()
@@ -61,7 +61,7 @@ impl<T: Poolable> Drop for PooledObject<T> {
 
 impl<T: Poolable> std::ops::Deref for PooledObject<T> {
     type Target = T;
-    
+
     fn deref(&self) -> &Self::Target {
         self.as_ref()
     }
@@ -99,15 +99,15 @@ impl<T: Poolable + 'static> ObjectPoolInner<T> {
             stats.total -= 1;
             stats.active -= 1;
             drop(stats);
-            
+
             // 释放信号量
             self.semaphore.add_permits(1);
             return;
         }
-        
+
         // 重置对象状态
         obj.reset();
-        
+
         // 检查对象生命周期
         if let Some(max_lifetime) = self.config.max_lifetime {
             if obj.created_at().elapsed() > max_lifetime {
@@ -117,17 +117,17 @@ impl<T: Poolable + 'static> ObjectPoolInner<T> {
                 stats.total -= 1;
                 stats.active -= 1;
                 drop(stats);
-                
+
                 self.semaphore.add_permits(1);
                 return;
             }
         }
-        
+
         // 归还对象到空闲池
         let mut idle = self.idle_objects.lock().await;
         idle.push(obj);
         drop(idle);
-        
+
         // 更新统计
         let mut stats = self.stats.lock().await;
         stats.total_releases += 1;
@@ -152,24 +152,28 @@ impl<T: Poolable + 'static> ObjectPool<T> {
             stats: Arc::new(Mutex::new(PoolStats::default())),
             factory,
         });
-        
+
         Self { inner }
     }
-    
+
     /// 获取对象
     pub async fn acquire(&self) -> Result<PooledObject<T>> {
         let start = Instant::now();
-        
+
         // 尝试获取信号量许可
         let permit = match timeout(
             self.inner.config.acquire_timeout,
-            self.inner.semaphore.acquire()
-        ).await {
+            self.inner.semaphore.acquire(),
+        )
+        .await
+        {
             Ok(Ok(permit)) => permit,
             Ok(Err(_)) => {
                 let mut stats = self.inner.stats.lock().await;
                 stats.acquire_timeouts += 1;
-                return Err(crate::Error::Timeout("Failed to acquire object".to_string()));
+                return Err(crate::Error::Timeout(
+                    "Failed to acquire object".to_string(),
+                ));
             }
             Err(_) => {
                 let mut stats = self.inner.stats.lock().await;
@@ -177,10 +181,10 @@ impl<T: Poolable + 'static> ObjectPool<T> {
                 return Err(crate::Error::Timeout("Object acquire timeout".to_string()));
             }
         };
-        
+
         // 忘记许可（我们手动管理）
         permit.forget();
-        
+
         // 尝试从空闲池获取对象
         let mut idle = self.inner.idle_objects.lock().await;
         let obj = if let Some(obj) = idle.pop() {
@@ -190,15 +194,15 @@ impl<T: Poolable + 'static> ObjectPool<T> {
             drop(idle);
             // 创建新对象
             let obj = self.inner.factory.create()?;
-            
+
             let mut stats = self.inner.stats.lock().await;
             stats.total_creates += 1;
             stats.total += 1;
             drop(stats);
-            
+
             obj
         };
-        
+
         // 更新统计
         let mut stats = self.inner.stats.lock().await;
         stats.total_acquires += 1;
@@ -206,57 +210,57 @@ impl<T: Poolable + 'static> ObjectPool<T> {
         if stats.idle > 0 {
             stats.idle -= 1;
         }
-        
+
         // 更新平均获取时间
         let acquire_time = start.elapsed().as_millis() as f64;
         if stats.total_acquires == 1 {
             stats.avg_acquire_time_ms = acquire_time;
         } else {
-            stats.avg_acquire_time_ms = 
-                (stats.avg_acquire_time_ms * (stats.total_acquires - 1) as f64 + acquire_time) 
-                / stats.total_acquires as f64;
+            stats.avg_acquire_time_ms =
+                (stats.avg_acquire_time_ms * (stats.total_acquires - 1) as f64 + acquire_time)
+                    / stats.total_acquires as f64;
         }
-        
+
         stats.calculate_utilization();
         drop(stats);
-        
+
         Ok(PooledObject {
             object: Some(obj),
             pool: self.inner.clone(),
             acquired_at: Instant::now(),
         })
     }
-    
+
     /// 获取池统计信息
     pub async fn stats(&self) -> PoolStats {
         self.inner.stats.lock().await.clone()
     }
-    
+
     /// 预热对象池（创建最小数量的对象）
     pub fn warmup(&self) -> Result<()> {
         let min_size = self.inner.config.min_size;
         let mut objects = Vec::new();
-        
+
         for _ in 0..min_size {
             let obj = self.inner.factory.create()?;
             objects.push(obj);
         }
-        
+
         // 使用 tokio::spawn 异步初始化
         let idle = self.inner.idle_objects.clone();
         let stats = self.inner.stats.clone();
-        
+
         tokio::spawn(async move {
             let mut idle = idle.lock().await;
             idle.extend(objects);
-            
+
             let mut stats = stats.lock().await;
             stats.total = min_size;
             stats.idle = min_size;
             stats.total_creates = min_size as u64;
             stats.calculate_utilization();
         });
-        
+
         Ok(())
     }
 }
@@ -268,4 +272,3 @@ impl<T: Poolable> Clone for ObjectPool<T> {
         }
     }
 }
-

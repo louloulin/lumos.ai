@@ -9,8 +9,8 @@
 //! cargo run --example zhipu_real_test
 //! ```
 
-use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
 use lumosai_core::agent::types::AgentGenerateOptions;
+use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
 use lumosai_core::llm::{Message, Role, ZhipuProvider};
 use std::sync::Arc;
 
@@ -22,17 +22,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("🚀 Zhipu AI Real API Test");
     println!("{}", "=".repeat(50));
-    println!("API Key: {}...{}", &api_key[..10], &api_key[api_key.len()-10..]);
+    println!(
+        "API Key: {}...{}",
+        &api_key[..10],
+        &api_key[api_key.len() - 10..]
+    );
     println!();
 
     // 创建 Zhipu provider
-    let zhipu = Arc::new(ZhipuProvider::new(api_key.clone(), Some("glm-4-plus".to_string())));
+    let zhipu = Arc::new(ZhipuProvider::new(
+        api_key.clone(),
+        Some("glm-4-plus".to_string()),
+    ));
     println!("✅ Created Zhipu provider with model: glm-4-plus");
 
     // 测试 1: 简单的文本生成
     println!("\n📝 Test 1: Simple Text Generation");
     println!("{}", "-".repeat(50));
-    
+
     let config = AgentConfig {
         name: "zhipu_assistant".to_string(),
         instructions: "你是一个有帮助的AI助手，请用中文回答问题。".to_string(),
@@ -40,18 +47,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let agent = BasicAgent::new(config, zhipu.clone());
-    
-    let messages = vec![
-        Message::new(
-            Role::User,
-            "你好！请用一句话介绍一下你自己。".to_string(),
-            None,
-            None,
-        ),
-    ];
+
+    let messages = vec![Message::new(
+        Role::User,
+        "你好！请用一句话介绍一下你自己。".to_string(),
+        None,
+        None,
+    )];
 
     let options = AgentGenerateOptions::default();
-    
+
     match agent.generate(&messages, &options).await {
         Ok(result) => {
             println!("✅ Response: {}", result.response);
@@ -66,14 +71,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n💬 Test 2: Multi-turn Conversation");
     println!("{}", "-".repeat(50));
 
-    let conversation = vec![
-        Message::new(
-            Role::User,
-            "请告诉我三个关于 Rust 编程语言的优点。".to_string(),
-            None,
-            None,
-        ),
-    ];
+    let conversation = vec![Message::new(
+        Role::User,
+        "请告诉我三个关于 Rust 编程语言的优点。".to_string(),
+        None,
+        None,
+    )];
 
     match agent.generate(&conversation, &options).await {
         Ok(result) => {
@@ -88,14 +91,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n💻 Test 3: Code Generation");
     println!("{}", "-".repeat(50));
 
-    let code_request = vec![
-        Message::new(
-            Role::User,
-            "请用 Rust 写一个简单的 Hello World 程序。".to_string(),
-            None,
-            None,
-        ),
-    ];
+    let code_request = vec![Message::new(
+        Role::User,
+        "请用 Rust 写一个简单的 Hello World 程序。".to_string(),
+        None,
+        None,
+    )];
 
     match agent.generate(&code_request, &options).await {
         Ok(result) => {
@@ -135,14 +136,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
 
-    let creative_request = vec![
-        Message::new(
-            Role::User,
-            "写一个关于月亮的诗句。".to_string(),
-            None,
-            None,
-        ),
-    ];
+    let creative_request = vec![Message::new(
+        Role::User,
+        "写一个关于月亮的诗句。".to_string(),
+        None,
+        None,
+    )];
 
     match agent.generate(&creative_request, &creative_options).await {
         Ok(result) => {
@@ -187,18 +186,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
 
-    let long_request = vec![
-        Message::new(
-            Role::User,
-            "请详细解释什么是机器学习，包括它的定义、主要类型和应用场景。".to_string(),
-            None,
-            None,
-        ),
-    ];
+    let long_request = vec![Message::new(
+        Role::User,
+        "请详细解释什么是机器学习，包括它的定义、主要类型和应用场景。".to_string(),
+        None,
+        None,
+    )];
 
     match agent.generate(&long_request, &long_options).await {
         Ok(result) => {
-            println!("✅ Long Response ({} chars):\n{}", result.response.len(), result.response);
+            println!(
+                "✅ Long Response ({} chars):\n{}",
+                result.response.len(),
+                result.response
+            );
         }
         Err(e) => {
             println!("❌ Error: {:?}", e);
@@ -209,14 +210,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n⚠️  Test 8: Error Handling - Empty Message");
     println!("{}", "-".repeat(50));
 
-    let empty_request = vec![
-        Message::new(
-            Role::User,
-            "".to_string(),
-            None,
-            None,
-        ),
-    ];
+    let empty_request = vec![Message::new(Role::User, "".to_string(), None, None)];
 
     match agent.generate(&empty_request, &options).await {
         Ok(result) => {
@@ -237,4 +231,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

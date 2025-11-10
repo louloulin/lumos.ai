@@ -504,11 +504,7 @@ impl Crew {
                     let result = crew.execute_task(&task_id_clone).await;
                     let elapsed = start_time.elapsed();
 
-                    tracing::debug!(
-                        "Task {} completed in {:?}",
-                        task_id_clone,
-                        elapsed
-                    );
+                    tracing::debug!("Task {} completed in {:?}", task_id_clone, elapsed);
 
                     result
                 });

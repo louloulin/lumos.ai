@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
+    use crate::llm::types::Temperature;
     use crate::llm::{
         AnthropicProvider, CohereProvider, DeepSeekProvider, GeminiProvider, LlmOptions,
         LlmProvider, Message, OllamaProvider, OpenAiProvider, Role, TogetherProvider,
     };
-    use crate::llm::types::Temperature;
 
     // 这些测试使用内联的测试数据，不依赖于外部HTTP模拟库
 

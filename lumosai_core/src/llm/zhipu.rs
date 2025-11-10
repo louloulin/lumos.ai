@@ -46,7 +46,7 @@ struct ZhipuStreamChoice {
 struct ZhipuStreamDelta {
     role: Option<String>,
     content: Option<String>,
-    reasoning_content: Option<String>,  // For glm-4.6+ models
+    reasoning_content: Option<String>, // For glm-4.6+ models
     #[serde(default)]
     tool_calls: Vec<ZhipuToolCall>,
 }
@@ -278,15 +278,11 @@ impl LlmProvider for ZhipuProvider {
         // Extract generated text
         // glm-4.6+ models may return reasoning_content instead of content
         let message = &response["choices"][0]["message"];
-        let content = message["content"]
-            .as_str()
-            .unwrap_or("");
+        let content = message["content"].as_str().unwrap_or("");
 
         // If content is empty, try reasoning_content (for glm-4.6+)
         let final_content = if content.is_empty() {
-            message["reasoning_content"]
-                .as_str()
-                .unwrap_or("")
+            message["reasoning_content"].as_str().unwrap_or("")
         } else {
             content
         };
@@ -368,15 +364,11 @@ impl LlmProvider for ZhipuProvider {
         // Extract generated text
         // glm-4.6+ models may return reasoning_content instead of content
         let message = &response["choices"][0]["message"];
-        let content = message["content"]
-            .as_str()
-            .unwrap_or("");
+        let content = message["content"].as_str().unwrap_or("");
 
         // If content is empty, try reasoning_content (for glm-4.6+)
         let final_content = if content.is_empty() {
-            message["reasoning_content"]
-                .as_str()
-                .unwrap_or("")
+            message["reasoning_content"].as_str().unwrap_or("")
         } else {
             content
         };
@@ -659,7 +651,10 @@ impl ZhipuProvider {
                                 Ok(stream_response) => {
                                     if let Some(choice) = stream_response.choices.first() {
                                         // Try content first, then reasoning_content (for glm-4.6+)
-                                        let content_to_use = choice.delta.content.as_ref()
+                                        let content_to_use = choice
+                                            .delta
+                                            .content
+                                            .as_ref()
                                             .or(choice.delta.reasoning_content.as_ref());
 
                                         if let Some(content) = content_to_use {
@@ -705,7 +700,8 @@ mod tests {
 
     #[test]
     fn test_zhipu_provider_with_custom_model() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus-plus".to_string()));
+        let provider =
+            ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus-plus".to_string()));
         assert_eq!(provider.model, "glm-4-plus-plus");
     }
 

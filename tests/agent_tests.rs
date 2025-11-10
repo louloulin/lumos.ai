@@ -1,8 +1,8 @@
 use lumosai_core::agent::trait_def::Agent;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{AgentConfig, BasicAgent};
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::llm::{Message, Role};
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::prelude::*;
 use std::sync::Arc;
 use std::time::{Duration, Instant};

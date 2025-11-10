@@ -681,7 +681,9 @@ pub fn extract_parameters(fn_item: &ItemFn) -> syn::Result<Vec<ParameterInfo>> {
 }
 
 /// 从参数的属性中提取 #[parameter(...)] 信息
-fn extract_parameter_attribute(attrs: &[syn::Attribute]) -> syn::Result<Option<ParameterAttributes>> {
+fn extract_parameter_attribute(
+    attrs: &[syn::Attribute],
+) -> syn::Result<Option<ParameterAttributes>> {
     for attr in attrs {
         if attr.path().is_ident("parameter") {
             // 解析 #[parameter(...)] 中的内容
@@ -709,6 +711,11 @@ fn analyze_type(ty: &Type) -> (Type, bool) {
 }
 
 /// 从属性中提取参数描述
+/// 支持多种格式:
+/// 1. `@param param_name: description` - 标准格式
+/// 2. `@param param_name - description` - 简化格式
+/// 3. `参数: param_name - description` - 中文格式
+/// 4. 包含参数名的普通文档注释
 fn extract_param_description(attrs: &[syn::Attribute], param_name: &str) -> Option<String> {
     for attr in attrs {
         if attr.path().is_ident("doc") {
@@ -719,6 +726,22 @@ fn extract_param_description(attrs: &[syn::Attribute], param_name: &str) -> Opti
                 }) = &meta.value
                 {
                     let doc = lit_str.value().trim().to_string();
+
+                    // 格式 1: @param param_name: description
+                    if doc.starts_with("@param ") || doc.starts_with("@parameter ") {
+                        if let Some(desc) = parse_param_doc(&doc, param_name) {
+                            return Some(desc);
+                        }
+                    }
+
+                    // 格式 2: 参数: param_name - description (中文)
+                    if doc.starts_with("参数:") || doc.starts_with("参数：") {
+                        if let Some(desc) = parse_chinese_param_doc(&doc, param_name) {
+                            return Some(desc);
+                        }
+                    }
+
+                    // 格式 3: 包含参数名的普通文档注释（回退方案）
                     if doc.to_lowercase().contains(&param_name.to_lowercase()) {
                         return Some(doc);
                     }
@@ -727,6 +750,63 @@ fn extract_param_description(attrs: &[syn::Attribute], param_name: &str) -> Opti
         }
     }
     None
+}
+
+/// 解析 @param 格式的文档注释
+/// 格式: @param param_name: description
+/// 或: @param param_name - description
+fn parse_param_doc(doc: &str, param_name: &str) -> Option<String> {
+    let doc = doc.trim();
+
+    // 移除 @param 或 @parameter 前缀
+    let doc = doc
+        .strip_prefix("@param ")
+        .or_else(|| doc.strip_prefix("@parameter "))?;
+
+    // 检查是否匹配参数名
+    if !doc.starts_with(param_name) {
+        return None;
+    }
+
+    // 移除参数名
+    let doc = doc.strip_prefix(param_name)?.trim();
+
+    // 移除分隔符 (: 或 -)
+    let doc = doc
+        .strip_prefix(':')
+        .or_else(|| doc.strip_prefix('-'))?
+        .trim();
+
+    Some(doc.to_string())
+}
+
+/// 解析中文格式的参数文档
+/// 格式: 参数: param_name - description
+fn parse_chinese_param_doc(doc: &str, param_name: &str) -> Option<String> {
+    let doc = doc.trim();
+
+    // 移除 "参数:" 或 "参数：" 前缀
+    let doc = doc
+        .strip_prefix("参数:")
+        .or_else(|| doc.strip_prefix("参数："))?
+        .trim();
+
+    // 检查是否匹配参数名
+    if !doc.starts_with(param_name) {
+        return None;
+    }
+
+    // 移除参数名
+    let doc = doc.strip_prefix(param_name)?.trim();
+
+    // 移除分隔符 (- 或 :)
+    let doc = doc
+        .strip_prefix('-')
+        .or_else(|| doc.strip_prefix(':'))
+        .or_else(|| doc.strip_prefix('：'))?
+        .trim();
+
+    Some(doc.to_string())
 }
 
 /// 将 Rust 类型转换为 JSON Schema 类型字符串

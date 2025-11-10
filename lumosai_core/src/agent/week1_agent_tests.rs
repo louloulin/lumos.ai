@@ -17,8 +17,8 @@ mod tests {
     use crate::agent::executor::BasicAgent;
     use crate::agent::trait_def::{Agent, AgentStatus};
     use crate::agent::types::AgentGenerateOptions;
-    use crate::llm::{LlmOptions, Message, Role};
     use crate::llm::test_helpers::create_test_zhipu_provider_arc;
+    use crate::llm::{LlmOptions, Message, Role};
     use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
     use serde_json::{json, Value};
     use std::sync::Arc;
@@ -40,9 +40,17 @@ mod tests {
                 Ok(result) => return Ok(result),
                 Err(e) => {
                     let error_msg = format!("{:?}", e);
-                    if error_msg.contains("429") || error_msg.contains("Too Many Requests") || error_msg.contains("1302") {
+                    if error_msg.contains("429")
+                        || error_msg.contains("Too Many Requests")
+                        || error_msg.contains("1302")
+                    {
                         if attempt < max_retries - 1 {
-                            eprintln!("⚠️  Rate limit hit (attempt {}/{}), retrying after {}ms...", attempt + 1, max_retries, delay);
+                            eprintln!(
+                                "⚠️  Rate limit hit (attempt {}/{}), retrying after {}ms...",
+                                attempt + 1,
+                                max_retries,
+                                delay
+                            );
                             tokio::time::sleep(Duration::from_millis(delay)).await;
                             delay *= 2; // Exponential backoff
                             continue;
@@ -388,7 +396,12 @@ mod tests {
         let agent = BasicAgent::new(config, llm);
 
         let special_input = "Test with special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?";
-        let messages = vec![Message::new(Role::User, special_input.to_string(), None, None)];
+        let messages = vec![Message::new(
+            Role::User,
+            special_input.to_string(),
+            None,
+            None,
+        )];
         let options = AgentGenerateOptions::default();
 
         // Add delay to avoid rate limiting
@@ -398,7 +411,8 @@ mod tests {
             || async { agent.generate(&messages, &options).await },
             5,
             2000,
-        ).await;
+        )
+        .await;
 
         assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
@@ -410,7 +424,12 @@ mod tests {
         let agent = BasicAgent::new(config, llm);
 
         let unicode_input = "你好，世界！🌍 こんにちは";
-        let messages = vec![Message::new(Role::User, unicode_input.to_string(), None, None)];
+        let messages = vec![Message::new(
+            Role::User,
+            unicode_input.to_string(),
+            None,
+            None,
+        )];
         let options = AgentGenerateOptions::default();
 
         // Add delay to avoid rate limiting
@@ -420,7 +439,8 @@ mod tests {
             || async { agent.generate(&messages, &options).await },
             5,
             2000,
-        ).await;
+        )
+        .await;
 
         assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
@@ -432,7 +452,12 @@ mod tests {
         let agent = BasicAgent::new(config, llm);
 
         let multiline_input = "Line 1\nLine 2\n\nLine 4";
-        let messages = vec![Message::new(Role::User, multiline_input.to_string(), None, None)];
+        let messages = vec![Message::new(
+            Role::User,
+            multiline_input.to_string(),
+            None,
+            None,
+        )];
         let options = AgentGenerateOptions::default();
         let result = agent.generate(&messages, &options).await;
 
@@ -454,7 +479,8 @@ mod tests {
             || async { agent.generate(&messages, &options).await },
             7,
             3000,
-        ).await;
+        )
+        .await;
 
         assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
@@ -474,7 +500,8 @@ mod tests {
             || async { agent.generate(&messages, &options).await },
             5,
             2000,
-        ).await;
+        )
+        .await;
 
         assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
@@ -498,7 +525,8 @@ fn main() {
             || async { agent.generate(&messages, &options).await },
             5,
             2000,
-        ).await;
+        )
+        .await;
 
         assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
@@ -518,7 +546,8 @@ fn main() {
             || async { agent.generate(&messages, &options).await },
             5,
             2000,
-        ).await;
+        )
+        .await;
 
         assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
@@ -536,11 +565,15 @@ fn main() {
 - Item 2
 **Bold** and *italic*
 "#;
-        let messages = vec![Message::new(Role::User, markdown_input.to_string(), None, None)];
+        let messages = vec![Message::new(
+            Role::User,
+            markdown_input.to_string(),
+            None,
+            None,
+        )];
         let options = AgentGenerateOptions::default();
         let result = agent.generate(&messages, &options).await;
 
         assert!(result.is_ok());
     }
 }
-

@@ -318,4 +318,3 @@ mod tests {
         assert_eq!(stats.hit_rate, 0.5);
     }
 }
-

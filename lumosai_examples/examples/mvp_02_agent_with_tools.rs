@@ -7,11 +7,11 @@
 //! cargo run --package lumosai_examples --example mvp_02_agent_with_tools
 //! ```
 
+use lumos_macro::tool;
 use lumosai_core::agent::{Agent, AgentBuilder};
 use lumosai_core::base::Base;
 use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use lumosai_core::tool::ToolExecutionContext;
-use lumos_macro::tool;
 use serde_json::json;
 
 // Re-export lumosai_core modules so macros can use crate:: paths in examples
@@ -34,31 +34,13 @@ mod telemetry {
     pub use lumosai_core::telemetry::*;
 }
 
-// 使用 #[tool] 宏创建计算器工具
+/// 计算器工具 - 执行基本的数学运算
+///
+/// @param operation: 数学运算类型 (add, subtract, multiply, divide)
+/// @param a: 第一个数字
+/// @param b: 第二个数字
 #[tool(name = "calculator", description = "执行基本的数学运算")]
-fn calculator(
-    #[parameter(
-        name = "operation",
-        description = "数学运算类型 (add, subtract, multiply, divide)",
-        r#type = "string",
-        required = true
-    )]
-    operation: String,
-    #[parameter(
-        name = "a",
-        description = "第一个数字",
-        r#type = "number",
-        required = true
-    )]
-    a: f64,
-    #[parameter(
-        name = "b",
-        description = "第二个数字",
-        r#type = "number",
-        required = true
-    )]
-    b: f64,
-) -> lumosai_core::Result<serde_json::Value> {
+async fn calculator(operation: String, a: f64, b: f64) -> lumosai_core::Result<serde_json::Value> {
     let result = match operation.as_str() {
         "add" => a + b,
         "subtract" => a - b,
@@ -85,22 +67,13 @@ fn calculator(
     }))
 }
 
-// 使用 #[tool] 宏创建文本处理工具
+/// 文本处理工具 - 处理文本字符串
+///
+/// @param text: 输入文本
+/// @param operation: 操作类型 (uppercase, lowercase, reverse, length)
 #[tool(name = "text_processor", description = "处理文本字符串")]
-fn text_processor(
-    #[parameter(
-        name = "text",
-        description = "输入文本",
-        r#type = "string",
-        required = true
-    )]
+async fn text_processor(
     text: String,
-    #[parameter(
-        name = "operation",
-        description = "操作类型 (uppercase, lowercase, reverse, length)",
-        r#type = "string",
-        required = true
-    )]
     operation: String,
 ) -> lumosai_core::Result<serde_json::Value> {
     let result = match operation.as_str() {
@@ -131,7 +104,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let text_processor = text_processor_tool();
     println!("✅ 创建了 2 个工具:");
     println!("   - {}: {}", calculator.id(), calculator.description());
-    println!("   - {}: {}", text_processor.id(), text_processor.description());
+    println!(
+        "   - {}: {}",
+        text_processor.id(),
+        text_processor.description()
+    );
 
     // 步骤 2: 测试工具调用
     println!("\n📝 步骤 2: 测试工具调用");
@@ -144,9 +121,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "a": 25.5,
         "b": 14.3
     });
-    
+
     let context = ToolExecutionContext::default();
-    let calc_result = calculator.execute(calc_params, context.clone(), &Default::default()).await?;
+    let calc_result = calculator
+        .execute(calc_params, context.clone(), &Default::default())
+        .await?;
     println!("   输入: 25.5 + 14.3");
     println!("   结果: {}", calc_result);
 
@@ -156,8 +135,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "text": "Hello World",
         "operation": "uppercase"
     });
-    
-    let text_result = text_processor.execute(text_params, context, &Default::default()).await?;
+
+    let text_result = text_processor
+        .execute(text_params, context, &Default::default())
+        .await?;
     println!("   输入: 'Hello World' -> uppercase");
     println!("   结果: {}", text_result);
 

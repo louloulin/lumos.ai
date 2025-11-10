@@ -63,13 +63,65 @@ pub fn tool(attr: TokenStream, item: TokenStream) -> TokenStream {
     tool_macro::tool_attribute_macro(attr, item)
 }
 
-/// Parameter attribute macro
-/// This is used inside #[tool] functions to annotate parameters
-/// It doesn't do anything by itself - it's parsed by the #[tool] macro
+/// Parameter attribute macro (DEPRECATED - 不推荐使用)
+///
+/// **⚠️ 重要警告**: 由于 Rust 语言限制，**不能在函数参数上使用自定义属性宏**。
+///
+/// ## 为什么不能使用？
+///
+/// 根据 [Rust Reference](https://doc.rust-lang.org/reference/items/functions.html#attributes-on-function-parameters)：
+///
+/// > Outer attributes are allowed on function parameters and the permitted built-in
+/// > attributes are restricted to `cfg`, `cfg_attr`, `allow`, `warn`, `deny`, and `forbid`.
+///
+/// 这意味着：
+/// - ✅ 函数参数**允许**外部属性（Outer attributes）
+/// - ❌ 但**仅限于**内置属性：`cfg`, `cfg_attr`, `allow`, `warn`, `deny`, `forbid`
+/// - ❌ **不允许**自定义过程宏属性（如 `#[parameter]`）
+///
+/// ## 推荐的替代方案
+///
+/// ### 方案 1: 使用函数级文档注释（推荐 ⭐⭐⭐⭐⭐）
+///
+/// ```rust
+/// /// 计算器工具 - 执行基本的数学运算
+/// ///
+/// /// 参数:
+/// /// - operation: 运算类型 (add, subtract, multiply, divide)
+/// /// - a: 第一个数字
+/// /// - b: 第二个数字
+/// #[tool(name = "calculator", description = "执行数学计算")]
+/// async fn calculator(operation: String, a: f64, b: f64) -> Result<Value> {
+///     // 实现...
+/// }
+/// ```
+///
+/// ### 方案 2: 使用 ToolBuilder（手动构建）
+///
+/// ```rust
+/// let tool = ToolBuilder::new()
+///     .name("calculator")
+///     .description("执行数学计算")
+///     .parameter("operation", "string", "运算类型", true)
+///     .parameter("a", "number", "第一个数字", true)
+///     .parameter("b", "number", "第二个数字", true)
+///     .handler(|params| async move {
+///         // 实现...
+///     })
+///     .build()?;
+/// ```
+///
+/// ## 技术细节
+///
+/// 这个宏被保留是为了向后兼容，但它实际上不做任何事情。
+/// `#[tool]` 宏会从函数的文档注释中提取参数描述。
+///
+/// 详细分析请参考：`docs/PARAMETER_MACRO_ANALYSIS.md`
 #[proc_macro_attribute]
 pub fn parameter(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    // Just pass through the item unchanged
-    // The actual parsing is done by the #[tool] macro
+    // 这个宏被保留是为了向后兼容，但实际上不做任何事情
+    // 由于 Rust 限制，不能在函数参数上使用自定义属性宏
+    // 请使用函数级文档注释来描述参数
     item
 }
 

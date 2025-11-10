@@ -188,9 +188,9 @@ pub use crate::vector::{
 };
 
 pub use crate::agent::{AgentGenerateResult, AgentStep};
+use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 /// 消息和配置类型
 pub use crate::llm::{Message, Role};
-    use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 
 // ============================================================================
 // Agent 便利创建函数 - 统一的 Agent 创建接口
@@ -305,7 +305,7 @@ pub fn memory_vector_storage(
 mod tests {
     use super::*;
     use crate::agent::trait_def::Agent as AgentTrait;
-        use std::sync::Arc;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_prelude_quick_agent() {

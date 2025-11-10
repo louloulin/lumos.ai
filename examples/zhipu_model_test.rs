@@ -1,6 +1,6 @@
 //! 测试不同的智谱 AI 模型名称
 
-use lumosai_core::llm::{LlmProvider, LlmOptions, ZhipuProvider};
+use lumosai_core::llm::{LlmOptions, LlmProvider, ZhipuProvider};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,18 +25,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", "-".repeat(60));
 
         let provider = ZhipuProvider::new(api_key.to_string(), Some(model_name.to_string()));
-        
+
         let options = LlmOptions {
             max_tokens: Some(50),
             ..Default::default()
         };
 
-        match provider.generate("你好，请用一句话介绍你自己。", &options).await {
+        match provider
+            .generate("你好，请用一句话介绍你自己。", &options)
+            .await
+        {
             Ok(response) => {
                 if response.is_empty() {
                     println!("⚠️  Model {} returned EMPTY response", model_name);
                 } else {
-                    println!("✅ Model {} SUCCESS: {}", model_name, response.chars().take(100).collect::<String>());
+                    println!(
+                        "✅ Model {} SUCCESS: {}",
+                        model_name,
+                        response.chars().take(100).collect::<String>()
+                    );
                 }
             }
             Err(e) => {
@@ -50,4 +57,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

@@ -16,7 +16,7 @@ mod tests {
     use crate::agent::types::AgentGenerateOptions;
     use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     use crate::llm::{LlmOptions, Message, Role};
-    use crate::tool::{FunctionTool, ParameterSchema, Tool, ToolSchema, SchemaFormat};
+    use crate::tool::{FunctionTool, ParameterSchema, SchemaFormat, Tool, ToolSchema};
     use serde_json::{json, Value};
     use std::sync::Arc;
     use std::time::Duration;
@@ -213,10 +213,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_builder_validation_missing_instructions() {
         let llm = create_test_zhipu_provider_arc();
-        let result = AgentBuilder::new()
-            .name("test")
-            .model(llm)
-            .build();
+        let result = AgentBuilder::new().name("test").model(llm).build();
 
         assert!(result.is_err());
     }
@@ -480,5 +477,3 @@ mod tests {
         assert_eq!(agent.get_name(), "function_agent");
     }
 }
-
-

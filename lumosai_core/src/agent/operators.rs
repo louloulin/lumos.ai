@@ -32,8 +32,8 @@
 
 use crate::agent::Agent;
 use crate::error::Result;
+use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use crate::llm::{Message, Role};
-    use crate::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use std::sync::Arc;
 
 /// Agent 管道链
@@ -310,9 +310,17 @@ mod tests {
                 Ok(result) => return Ok(result),
                 Err(e) => {
                     let error_msg = format!("{:?}", e);
-                    if error_msg.contains("429") || error_msg.contains("Too Many Requests") || error_msg.contains("1302") {
+                    if error_msg.contains("429")
+                        || error_msg.contains("Too Many Requests")
+                        || error_msg.contains("1302")
+                    {
                         if attempt < max_retries - 1 {
-                            eprintln!("⚠️  Rate limit hit (attempt {}/{}), retrying after {}ms...", attempt + 1, max_retries, delay);
+                            eprintln!(
+                                "⚠️  Rate limit hit (attempt {}/{}), retrying after {}ms...",
+                                attempt + 1,
+                                max_retries,
+                                delay
+                            );
                             tokio::time::sleep(Duration::from_millis(delay)).await;
                             delay *= 2; // Exponential backoff
                             continue;
@@ -353,14 +361,15 @@ mod tests {
 
         let pipeline = AgentPipeline::new(agent1).pipe(agent2);
 
-        let result = retry_with_backoff(
-            || async { pipeline.execute("input").await },
-            5,
-            2000,
-        ).await;
+        let result =
+            retry_with_backoff(|| async { pipeline.execute("input").await }, 5, 2000).await;
 
         // Real LLM returns variable responses, just check it's successful
-        assert!(result.is_ok(), "Pipeline execution failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Pipeline execution failed: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         assert!(!output.is_empty(), "Pipeline output should not be empty");
     }

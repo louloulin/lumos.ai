@@ -30,20 +30,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     println!("✅ Agent '{}' 创建成功", agent.name().unwrap_or("unknown"));
-    
+
     // 步骤 3: 发送消息并获取响应
     println!("\n📝 步骤 3: 与 Agent 对话");
     println!("{}", "━".repeat(50));
-    
+
     let questions = vec![
         "Hello! What can you help me with?",
         "What is 2 + 2?",
         "Tell me a fun fact about Rust programming language.",
     ];
-    
+
     for (i, question) in questions.iter().enumerate() {
         println!("\n💬 问题 {}: {}", i + 1, question);
-        
+
         match agent.generate_simple(question).await {
             Ok(response) => {
                 println!("🤖 Agent: {}", response);
@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    
+
     println!("\n{}", "=".repeat(50));
     println!("✅ 示例完成！");
     println!("\n💡 提示:");
@@ -64,4 +64,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

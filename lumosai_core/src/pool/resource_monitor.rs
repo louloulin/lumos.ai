@@ -57,21 +57,21 @@ impl ResourceStats {
     /// 是否需要扩容
     pub fn should_scale_up(&self) -> bool {
         // 多个条件触发扩容
-        self.pool_utilization > 0.85 || 
-        self.queue_length > 10 ||
-        self.cpu_usage > 0.8 ||
-        self.memory_usage_percent > 0.85
+        self.pool_utilization > 0.85
+            || self.queue_length > 10
+            || self.cpu_usage > 0.8
+            || self.memory_usage_percent > 0.85
     }
-    
+
     /// 是否需要缩容
     pub fn should_scale_down(&self) -> bool {
         // 资源利用率低且没有排队请求
-        self.pool_utilization < 0.3 && 
-        self.queue_length == 0 &&
-        self.cpu_usage < 0.3 &&
-        self.memory_usage_percent < 0.5
+        self.pool_utilization < 0.3
+            && self.queue_length == 0
+            && self.cpu_usage < 0.3
+            && self.memory_usage_percent < 0.5
     }
-    
+
     /// 建议的扩容数量
     pub fn suggested_scale_up_count(&self) -> usize {
         if self.queue_length > 20 {
@@ -84,7 +84,7 @@ impl ResourceStats {
             1
         }
     }
-    
+
     /// 建议的缩容数量
     pub fn suggested_scale_down_count(&self) -> usize {
         let idle = self.idle_connections;
@@ -175,13 +175,13 @@ impl ResourceMonitor {
             last_scale_down: Arc::new(RwLock::new(None)),
         }
     }
-    
+
     /// 更新资源统计
     pub async fn update_stats(&self, stats: ResourceStats) {
         let mut current_stats = self.stats.write().await;
         *current_stats = stats;
     }
-    
+
     /// 更新池统计
     pub async fn update_pool_stats(&self, pool_stats: &PoolStats) {
         let mut stats = self.stats.write().await;
@@ -193,21 +193,21 @@ impl ResourceMonitor {
         stats.avg_response_time_ms = pool_stats.avg_acquire_time_ms;
         stats.sampled_at = Instant::now();
     }
-    
+
     /// 获取当前资源统计
     pub async fn get_stats(&self) -> ResourceStats {
         self.stats.read().await.clone()
     }
-    
+
     /// 检查是否需要扩缩容
     pub async fn check_scaling(&self) -> Option<ScalingEvent> {
         if !self.config.auto_scaling_enabled {
             return None;
         }
-        
+
         let stats = self.stats.read().await;
         let current = stats.total_connections;
-        
+
         // 检查扩容
         if stats.should_scale_up() {
             // 检查冷却时间
@@ -218,15 +218,15 @@ impl ResourceMonitor {
                 }
             }
             drop(last_scale_up);
-            
+
             let count = stats.suggested_scale_up_count();
             let target = (current + count).min(self.config.max_instances);
-            
+
             if target > current {
                 // 更新最后扩容时间
                 let mut last_scale_up = self.last_scale_up.write().await;
                 *last_scale_up = Some(Instant::now());
-                
+
                 return Some(ScalingEvent::ScaleUp {
                     current,
                     target,
@@ -239,7 +239,7 @@ impl ResourceMonitor {
                 });
             }
         }
-        
+
         // 检查缩容
         if stats.should_scale_down() {
             // 检查冷却时间
@@ -250,15 +250,15 @@ impl ResourceMonitor {
                 }
             }
             drop(last_scale_down);
-            
+
             let count = stats.suggested_scale_down_count();
             let target = (current.saturating_sub(count)).max(self.config.min_instances);
-            
+
             if target < current {
                 // 更新最后缩容时间
                 let mut last_scale_down = self.last_scale_down.write().await;
                 *last_scale_down = Some(Instant::now());
-                
+
                 return Some(ScalingEvent::ScaleDown {
                     current,
                     target,
@@ -271,20 +271,20 @@ impl ResourceMonitor {
                 });
             }
         }
-        
+
         None
     }
-    
+
     /// 启动监控循环
     pub async fn start_monitoring<F>(&self, mut callback: F)
     where
         F: FnMut(ScalingEvent) + Send + 'static,
     {
         let mut ticker = interval(self.config.monitor_interval);
-        
+
         loop {
             ticker.tick().await;
-            
+
             if let Some(event) = self.check_scaling().await {
                 callback(event);
             }
@@ -302,4 +302,3 @@ impl Clone for ResourceMonitor {
         }
     }
 }
-

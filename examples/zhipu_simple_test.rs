@@ -6,8 +6,8 @@
 //! cargo run --example zhipu_simple_test
 //! ```
 
-use lumosai_core::llm::{LlmProvider, LlmOptions, Message, Role, ZhipuProvider};
 use lumosai_core::llm::types::Temperature;
+use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role, ZhipuProvider};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,7 +16,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("🚀 智谱 AI 简单测试");
     println!("{}", "=".repeat(50));
-    println!("API Key: {}...{}\n", &api_key[..10], &api_key[api_key.len()-10..]);
+    println!(
+        "API Key: {}...{}\n",
+        &api_key[..10],
+        &api_key[api_key.len() - 10..]
+    );
 
     // 创建 Zhipu provider
     let zhipu = ZhipuProvider::new(api_key, Some("glm-4-plus".to_string()));
@@ -24,14 +28,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 测试 1: 使用 generate 方法（简单字符串输入）
     println!("📝 Test 1: generate() method");
     println!("{}", "-".repeat(50));
-    
+
     let options1 = LlmOptions {
         temperature: Some(Temperature::BALANCED),
         max_tokens: Some(100),
         ..Default::default()
     };
 
-    match zhipu.generate("你好！请用一句话介绍你自己。", &options1).await {
+    match zhipu
+        .generate("你好！请用一句话介绍你自己。", &options1)
+        .await
+    {
         Ok(response) => {
             println!("✅ Response: {}", response);
         }
@@ -44,14 +51,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n💬 Test 2: generate_with_messages() method");
     println!("{}", "-".repeat(50));
 
-    let messages = vec![
-        Message::new(
-            Role::User,
-            "请告诉我三个关于 Rust 编程语言的优点。".to_string(),
-            None,
-            None,
-        ),
-    ];
+    let messages = vec![Message::new(
+        Role::User,
+        "请告诉我三个关于 Rust 编程语言的优点。".to_string(),
+        None,
+        None,
+    )];
 
     let options2 = LlmOptions {
         temperature: Some(Temperature::BALANCED),
@@ -116,7 +121,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
 
-    match zhipu.generate("请用 Rust 写一个 Hello World 程序。", &options5).await {
+    match zhipu
+        .generate("请用 Rust 写一个 Hello World 程序。", &options5)
+        .await
+    {
         Ok(response) => {
             println!("✅ Response:\n{}", response);
         }
@@ -130,4 +138,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

@@ -1,8 +1,8 @@
 use lumosai_core::agent::config::AgentConfig;
 use lumosai_core::agent::executor::BasicAgent;
 use lumosai_core::agent::trait_def::Agent;
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::llm::{mock::Message, Role};
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::tool::builtin::CalculatorTool;
 use serde_json::json;
 use std::sync::Arc;

@@ -2257,7 +2257,8 @@ mod tests {
             serde_json::to_string(&json!({"test": "data"})).unwrap(),
         );
 
-        let response = original.create_response(serde_json::to_string(&json!({"response": "data"})).unwrap());
+        let response =
+            original.create_response(serde_json::to_string(&json!({"response": "data"})).unwrap());
 
         assert_eq!(response.sender_id, original.recipients[0]);
         assert_eq!(response.recipients, vec![original.sender_id.clone()]);

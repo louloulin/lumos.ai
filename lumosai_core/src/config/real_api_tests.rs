@@ -5,8 +5,8 @@
 #[cfg(test)]
 mod tests {
     use crate::config::{
-        AgentConfig, ConfigLoader, MemoryConfig, ProjectConfig, WorkflowConfig,
-        WorkflowStepConfig, YamlConfig,
+        AgentConfig, ConfigLoader, MemoryConfig, ProjectConfig, WorkflowConfig, WorkflowStepConfig,
+        YamlConfig,
     };
     use std::collections::HashMap;
     use std::fs;
@@ -62,7 +62,10 @@ mod tests {
 
         let result = config.validate();
         assert!(result.is_err(), "Empty agent model should fail validation");
-        assert!(result.unwrap_err().to_string().contains("must have a model"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("must have a model"));
     }
 
     #[test]
@@ -266,7 +269,10 @@ project:
         assert_eq!(agent.unwrap().model, "gpt-4");
 
         let missing_agent = config.get_agent("nonexistent");
-        assert!(missing_agent.is_none(), "Should return None for missing agent");
+        assert!(
+            missing_agent.is_none(),
+            "Should return None for missing agent"
+        );
     }
 
     #[test]
@@ -311,4 +317,3 @@ project:
         );
     }
 }
-

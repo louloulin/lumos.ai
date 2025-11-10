@@ -25,7 +25,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .instructions("You are a project planner. Create clear, actionable project plans with specific steps.")
         .model(llm1)
         .build()?;
-    println!("✅ Planner Agent '{}' 创建成功", planner.name().unwrap_or("unknown"));
+    println!(
+        "✅ Planner Agent '{}' 创建成功",
+        planner.name().unwrap_or("unknown")
+    );
 
     let llm2 = create_test_zhipu_provider_arc();
     let executor = AgentBuilder::new()
@@ -33,15 +36,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .instructions("You are a project executor. Follow the plan and describe how you would execute each step.")
         .model(llm2)
         .build()?;
-    println!("✅ Executor Agent '{}' 创建成功", executor.name().unwrap_or("unknown"));
+    println!(
+        "✅ Executor Agent '{}' 创建成功",
+        executor.name().unwrap_or("unknown")
+    );
 
     let llm3 = create_test_zhipu_provider_arc();
     let reviewer = AgentBuilder::new()
         .name("reviewer")
-        .instructions("You are a project reviewer. Review the execution and provide constructive feedback.")
+        .instructions(
+            "You are a project reviewer. Review the execution and provide constructive feedback.",
+        )
         .model(llm3)
         .build()?;
-    println!("✅ Reviewer Agent '{}' 创建成功", reviewer.name().unwrap_or("unknown"));
+    println!(
+        "✅ Reviewer Agent '{}' 创建成功",
+        reviewer.name().unwrap_or("unknown")
+    );
 
     // 步骤 2: 可视化工作流结构
     println!("\n📝 步骤 2: 工作流结构");
@@ -78,7 +89,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 阶段 2: 执行
     println!("🟢 阶段 2: 执行");
-    let execute_prompt = format!("Based on this plan:\n{}\n\nDescribe how you would execute it.", plan);
+    let execute_prompt = format!(
+        "Based on this plan:\n{}\n\nDescribe how you would execute it.",
+        plan
+    );
     let execution = executor.generate_simple(&execute_prompt).await?;
     println!("⚙️  执行:\n{}\n", execution);
 

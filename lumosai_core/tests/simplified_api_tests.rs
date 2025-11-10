@@ -5,8 +5,8 @@
 
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::AgentBuilder;
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::llm::{Message, Role};
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::tool::{create_tool, ToolBuilder};
 use lumosai_core::{Agent, Error, Tool};
 use serde_json::json;

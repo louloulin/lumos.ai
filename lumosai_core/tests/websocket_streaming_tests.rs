@@ -10,8 +10,8 @@ use lumosai_core::agent::{
     AgentConfig, AgentEvent, BasicAgent, IntoWebSocketStreaming, StreamingConfig, WebSocketConfig,
     WebSocketMessage,
 };
-use lumosai_core::llm::{LlmOptions};
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::llm::LlmOptions;
 use lumosai_core::memory::WorkingMemoryConfig;
 
 #[tokio::test]

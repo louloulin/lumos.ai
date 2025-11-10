@@ -1,7 +1,7 @@
 //! Agent 综合单元测试
 //!
 //! P0-1.1 任务：增加 Agent 模块的单元测试覆盖率到 >95%
-//! 
+//!
 //! 测试范围：
 //! - Agent 创建和配置（基本、高级、边界情况）
 //! - Tool 注册和管理（添加、删除、查询、执行）
@@ -10,10 +10,10 @@
 //! - 错误处理（配置错误、运行时错误、恢复机制）
 //! - 性能测试（并发、资源使用）
 
-use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
 use lumosai_core::agent::trait_def::AgentStatus;
+use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
 use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
-use lumosai_core::tool::{Tool, FunctionTool, ToolSchema};
+use lumosai_core::tool::{FunctionTool, Tool, ToolSchema};
 use serde_json::json;
 
 // ============================================================================
@@ -58,9 +58,9 @@ fn test_agent_creation_with_minimal_config() {
         instructions: "Test".to_string(),
         ..Default::default()
     };
-    
+
     let agent = BasicAgent::new(config, llm);
-    
+
     assert_eq!(agent.get_name(), "minimal");
     assert_eq!(agent.get_instructions(), "Test");
 }
@@ -69,11 +69,14 @@ fn test_agent_creation_with_minimal_config() {
 fn test_agent_creation_with_full_config() {
     let llm = create_test_zhipu_provider_arc();
     let config = create_test_config("full_config");
-    
+
     let agent = BasicAgent::new(config.clone(), llm);
-    
+
     assert_eq!(agent.get_name(), "full_config");
-    assert_eq!(agent.get_instructions(), "You are full_config, a test assistant");
+    assert_eq!(
+        agent.get_instructions(),
+        "You are full_config, a test assistant"
+    );
 }
 
 #[test]
@@ -81,7 +84,7 @@ fn test_agent_default_config() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let agent = BasicAgent::new(config, llm);
-    
+
     // 默认配置应该有合理的值
     assert!(!agent.get_name().is_empty());
     assert!(!agent.get_instructions().is_empty());
@@ -90,7 +93,7 @@ fn test_agent_default_config() {
 #[test]
 fn test_agent_name_validation() {
     let llm = create_test_zhipu_provider_arc();
-    
+
     // 测试空名称
     let config = AgentConfig {
         name: "".to_string(),
@@ -100,7 +103,7 @@ fn test_agent_name_validation() {
     let agent = BasicAgent::new(config, llm.clone());
     // 空名称应该被接受（或使用默认值）
     assert!(!agent.get_name().is_empty() || agent.get_name().is_empty());
-    
+
     // 测试长名称
     let long_name = "a".repeat(1000);
     let config = AgentConfig {
@@ -115,7 +118,7 @@ fn test_agent_name_validation() {
 #[test]
 fn test_agent_instructions_validation() {
     let llm = create_test_zhipu_provider_arc();
-    
+
     // 测试空指令
     let config = AgentConfig {
         name: "test".to_string(),
@@ -124,7 +127,7 @@ fn test_agent_instructions_validation() {
     };
     let agent = BasicAgent::new(config, llm.clone());
     assert!(!agent.get_instructions().is_empty() || agent.get_instructions().is_empty());
-    
+
     // 测试长指令
     let long_instructions = "instruction ".repeat(1000);
     let config = AgentConfig {
@@ -141,11 +144,11 @@ fn test_agent_config_update() {
     let llm = create_test_zhipu_provider_arc();
     let config = create_test_config("updatable");
     let mut agent = BasicAgent::new(config, llm);
-    
+
     // 更新指令
     agent.set_instructions("New instructions".to_string());
     assert_eq!(agent.get_instructions(), "New instructions");
-    
+
     // 多次更新
     agent.set_instructions("Another update".to_string());
     assert_eq!(agent.get_instructions(), "Another update");
@@ -190,14 +193,14 @@ fn test_agent_clone_independence() {
     let llm = create_test_zhipu_provider_arc();
     let config = create_test_config("original");
     let mut agent1 = BasicAgent::new(config, llm.clone());
-    
+
     // 克隆 agent（如果支持）或创建新的
     let config2 = create_test_config("clone");
     let agent2 = BasicAgent::new(config2, llm);
-    
+
     // 修改 agent1 不应影响 agent2
     agent1.set_instructions("Modified".to_string());
-    
+
     assert_eq!(agent1.get_instructions(), "Modified");
     assert_eq!(agent2.get_instructions(), "You are clone, a test assistant");
 }
@@ -205,7 +208,7 @@ fn test_agent_clone_independence() {
 #[test]
 fn test_agent_multiple_instances() {
     let llm = create_test_zhipu_provider_arc();
-    
+
     // 创建多个 agent 实例
     let agents: Vec<BasicAgent> = (0..10)
         .map(|i| {
@@ -213,7 +216,7 @@ fn test_agent_multiple_instances() {
             BasicAgent::new(config, llm.clone())
         })
         .collect();
-    
+
     // 验证每个 agent 都是独立的
     for (i, agent) in agents.iter().enumerate() {
         assert_eq!(agent.get_name(), format!("agent_{}", i));
@@ -244,7 +247,7 @@ fn test_agent_status_transitions() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let mut agent = BasicAgent::new(config, llm);
-    
+
     // 测试状态转换序列
     let transitions = vec![
         AgentStatus::Running,
@@ -252,7 +255,7 @@ fn test_agent_status_transitions() {
         AgentStatus::Running,
         AgentStatus::Stopped,
     ];
-    
+
     for status in transitions {
         let _ = agent.set_status(status.clone());
         assert_eq!(agent.get_status(), status);
@@ -264,11 +267,11 @@ fn test_agent_error_status() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let mut agent = BasicAgent::new(config, llm);
-    
+
     // 设置错误状态
     let error_msg = "Test error occurred";
     let _ = agent.set_status(AgentStatus::Error(error_msg.to_string()));
-    
+
     // 验证错误状态
     match agent.get_status() {
         AgentStatus::Error(msg) => assert_eq!(msg, error_msg),
@@ -281,10 +284,10 @@ fn test_agent_status_from_error_recovery() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let mut agent = BasicAgent::new(config, llm);
-    
+
     // 设置错误状态
     let _ = agent.set_status(AgentStatus::Error("Error".to_string()));
-    
+
     // 从错误状态恢复
     let _ = agent.set_status(AgentStatus::Ready);
     assert_eq!(agent.get_status(), AgentStatus::Ready);
@@ -295,7 +298,7 @@ fn test_agent_status_idempotent() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
     let mut agent = BasicAgent::new(config, llm);
-    
+
     // 多次设置相同状态应该是幂等的
     for _ in 0..5 {
         let _ = agent.set_status(AgentStatus::Running);
@@ -310,11 +313,11 @@ fn test_agent_status_idempotent() {
 #[test]
 fn test_agent_config_serialization() {
     let config = create_test_config("serializable");
-    
+
     // 测试序列化
     let json = serde_json::to_string(&config).expect("Failed to serialize");
     assert!(json.contains("serializable"));
-    
+
     // 测试反序列化
     let deserialized: AgentConfig = serde_json::from_str(&json).expect("Failed to deserialize");
     assert_eq!(deserialized.name, "serializable");
@@ -323,7 +326,7 @@ fn test_agent_config_serialization() {
 #[test]
 fn test_agent_config_default_values() {
     let config = AgentConfig::default();
-    
+
     // 验证默认值
     assert!(!config.name.is_empty());
     assert!(!config.instructions.is_empty());
@@ -356,7 +359,7 @@ fn test_agent_with_unicode_name() {
         instructions: "Unicode test".to_string(),
         ..Default::default()
     };
-    
+
     let agent = BasicAgent::new(config, llm);
     assert_eq!(agent.get_name(), "测试Agent🤖");
 }
@@ -370,7 +373,7 @@ fn test_agent_with_special_characters() {
         instructions: "Test".to_string(),
         ..Default::default()
     };
-    
+
     let agent = BasicAgent::new(config, llm);
     assert_eq!(agent.get_name(), special_name);
 }
@@ -384,7 +387,7 @@ fn test_agent_with_newlines_in_instructions() {
         instructions: instructions.to_string(),
         ..Default::default()
     };
-    
+
     let agent = BasicAgent::new(config, llm);
     assert_eq!(agent.get_instructions(), instructions);
 }
@@ -560,8 +563,8 @@ fn test_agent_tool_case_sensitivity() {
 
 #[test]
 fn test_agent_concurrent_status_updates() {
-    use std::thread;
     use std::sync::{Arc, Mutex};
+    use std::thread;
 
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
@@ -596,8 +599,8 @@ fn test_agent_concurrent_status_updates() {
 
 #[test]
 fn test_agent_concurrent_tool_registration() {
-    use std::thread;
     use std::sync::{Arc, Mutex};
+    use std::thread;
 
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
@@ -645,7 +648,11 @@ fn test_agent_creation_performance() {
     let duration = start.elapsed();
 
     // Agent 创建应该很快（<1秒）
-    assert!(duration.as_secs() < 1, "Agent creation took too long: {:?}", duration);
+    assert!(
+        duration.as_secs() < 1,
+        "Agent creation took too long: {:?}",
+        duration
+    );
     println!("Created 100 agents in {:?}", duration);
 }
 
@@ -709,7 +716,11 @@ fn test_agent_status_update_performance() {
     let duration = start.elapsed();
 
     println!("Performed 1000 status updates in {:?}", duration);
-    assert!(duration.as_millis() < 100, "Status updates too slow: {:?}", duration);
+    assert!(
+        duration.as_millis() < 100,
+        "Status updates too slow: {:?}",
+        duration
+    );
 }
 
 #[test]
@@ -727,7 +738,11 @@ fn test_agent_config_clone_performance() {
     let duration = start.elapsed();
 
     println!("Cloned config 1000 times in {:?}", duration);
-    assert!(duration.as_millis() < 50, "Config cloning too slow: {:?}", duration);
+    assert!(
+        duration.as_millis() < 50,
+        "Config cloning too slow: {:?}",
+        duration
+    );
 }
 
 // ============================================================================
@@ -826,7 +841,8 @@ fn test_agent_handles_extreme_config_values() {
     // 测试极端配置值
     let config = AgentConfig {
         name: "extreme".to_string(),
-        instructions: "Test with very long instructions that might exceed normal limits. ".repeat(100),
+        instructions: "Test with very long instructions that might exceed normal limits. "
+            .repeat(100),
         model_id: Some("test-model-extreme".to_string()),
         ..Default::default()
     };
@@ -973,4 +989,3 @@ fn test_suite_summary() {
     println!("- 并发安全 ✅");
     println!("- 集成测试 ✅");
 }
-

@@ -13,8 +13,8 @@ use lumosai_core::agent::dynamic_config::{
 };
 use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
 use lumosai_core::error::Result;
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::llm::{Message, Role};
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use std::sync::Arc;
 
 /// 场景 1: 基于用户角色的动态指令

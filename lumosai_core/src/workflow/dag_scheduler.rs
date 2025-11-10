@@ -59,7 +59,8 @@ impl Dag {
         }
 
         // 初始化入度
-        self.in_degree.insert(node_id.clone(), node.dependencies.len());
+        self.in_degree
+            .insert(node_id.clone(), node.dependencies.len());
 
         // 更新邻接表
         for dep_id in &node.dependencies {
@@ -233,8 +234,7 @@ impl DagScheduler {
         );
 
         // 存储每个节点的执行结果
-        let results: Arc<RwLock<HashMap<String, Value>>> =
-            Arc::new(RwLock::new(HashMap::new()));
+        let results: Arc<RwLock<HashMap<String, Value>>> = Arc::new(RwLock::new(HashMap::new()));
 
         // 按层级执行
         for (level_idx, level) in levels.iter().enumerate() {
@@ -281,16 +281,13 @@ impl DagScheduler {
 
             join_set.spawn(async move {
                 // 获取信号量许可
-                let _permit = semaphore_clone.acquire().await.map_err(|e| {
-                    Error::Workflow(format!("Failed to acquire semaphore: {}", e))
-                })?;
+                let _permit = semaphore_clone
+                    .acquire()
+                    .await
+                    .map_err(|e| Error::Workflow(format!("Failed to acquire semaphore: {}", e)))?;
 
                 // 准备输入：合并初始输入和依赖节点的输出
-                let input = Self::prepare_input(
-                    &node,
-                    &results_clone,
-                    initial_input_clone,
-                ).await?;
+                let input = Self::prepare_input(&node, &results_clone, initial_input_clone).await?;
 
                 // 执行节点
                 tracing::debug!("Executing node: {} ({})", node.id, node.name);
@@ -299,11 +296,7 @@ impl DagScheduler {
                 let output = node.step.execute.execute(input, &context_clone).await?;
 
                 let elapsed = start.elapsed();
-                tracing::debug!(
-                    "Node {} completed in {:?}",
-                    node.id,
-                    elapsed
-                );
+                tracing::debug!("Node {} completed in {:?}", node.id, elapsed);
 
                 Ok((node.id.clone(), output))
             });
@@ -311,9 +304,8 @@ impl DagScheduler {
 
         // 收集所有结果
         while let Some(result) = join_set.join_next().await {
-            let (node_id, output) = result.map_err(|e| {
-                Error::Workflow(format!("Task join error: {}", e))
-            })??;
+            let (node_id, output) =
+                result.map_err(|e| Error::Workflow(format!("Task join error: {}", e)))??;
 
             results.write().await.insert(node_id, output);
         }
@@ -354,4 +346,3 @@ impl DagScheduler {
         Ok(Value::Object(merged_input))
     }
 }
-

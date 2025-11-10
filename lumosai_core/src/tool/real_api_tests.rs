@@ -90,7 +90,11 @@ mod tests {
 
         // Register tool
         let result = registry.register_tool(tool.clone(), metadata);
-        assert!(result.is_ok(), "Failed to register tool: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Failed to register tool: {:?}",
+            result.err()
+        );
 
         // Get tool
         let retrieved = registry.get_tool("test-tool").unwrap();
@@ -126,7 +130,9 @@ mod tests {
         };
 
         // First registration should succeed
-        assert!(registry.register_tool(tool.clone(), metadata.clone()).is_ok());
+        assert!(registry
+            .register_tool(tool.clone(), metadata.clone())
+            .is_ok());
 
         // Second registration should fail
         let result = registry.register_tool(tool, metadata);
@@ -163,7 +169,11 @@ mod tests {
 
         // Unregister and verify
         let result = registry.unregister_tool("temp-tool");
-        assert!(result.is_ok(), "Failed to unregister tool: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Failed to unregister tool: {:?}",
+            result.err()
+        );
         assert!(registry.get_tool("temp-tool").unwrap().is_none());
     }
 
@@ -197,7 +207,9 @@ mod tests {
         }
 
         // Find tools by category
-        let math_tools = registry.find_tools_by_category(&ToolCategory::Math).unwrap();
+        let math_tools = registry
+            .find_tools_by_category(&ToolCategory::Math)
+            .unwrap();
         assert_eq!(math_tools.len(), 3, "Should find 3 math tools");
     }
 
@@ -265,7 +277,10 @@ mod tests {
 
         // Search by description
         let results = registry.search_tools("processing").unwrap();
-        assert!(!results.is_empty(), "Should find tools matching 'processing'");
+        assert!(
+            !results.is_empty(),
+            "Should find tools matching 'processing'"
+        );
 
         // Search by tag
         let results = registry.search_tools("data").unwrap();
@@ -309,4 +324,3 @@ mod tests {
         assert_eq!(tools[0], "list-test-tool");
     }
 }
-

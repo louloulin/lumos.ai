@@ -7,7 +7,7 @@ use lumosai_core::agent::collaboration::{
     IntelligentTaskDecomposer, SchedulingStrategy, TaskDecomposer,
 };
 use lumosai_core::agent::simplified_api::Agent;
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use std::sync::Arc;
 use std::time::Duration;
 

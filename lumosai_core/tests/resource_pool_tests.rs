@@ -2,11 +2,11 @@
 //!
 //! 资源池功能测试
 
-use lumosai_core::pool::{
-    ConnectionPool, ConnectionPoolConfig, ObjectPool, ObjectPoolConfig,
-    ResourceMonitor, ResourceStats,
-};
 use lumosai_core::pool::resource_monitor::ResourceMonitorConfig;
+use lumosai_core::pool::{
+    ConnectionPool, ConnectionPoolConfig, ObjectPool, ObjectPoolConfig, ResourceMonitor,
+    ResourceStats,
+};
 use lumosai_core::Result;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -29,11 +29,11 @@ impl lumosai_core::pool::connection_pool::Connection for MockConnection {
     async fn is_healthy(&self) -> bool {
         self.healthy
     }
-    
+
     async fn reset(&mut self) -> Result<()> {
         Ok(())
     }
-    
+
     fn created_at(&self) -> Instant {
         self.created_at
     }
@@ -53,7 +53,9 @@ impl MockConnectionFactory {
 }
 
 #[async_trait::async_trait]
-impl lumosai_core::pool::connection_pool::ConnectionFactory<MockConnection> for MockConnectionFactory {
+impl lumosai_core::pool::connection_pool::ConnectionFactory<MockConnection>
+    for MockConnectionFactory
+{
     async fn create(&self) -> Result<MockConnection> {
         let mut counter = self.counter.lock().await;
         *counter += 1;
@@ -77,11 +79,11 @@ impl lumosai_core::pool::object_pool::Poolable for MockObject {
     fn reset(&mut self) {
         // 重置对象状态
     }
-    
+
     fn is_valid(&self) -> bool {
         self.valid
     }
-    
+
     fn created_at(&self) -> Instant {
         self.created_at
     }
@@ -119,105 +121,105 @@ impl lumosai_core::pool::object_pool::ObjectFactory<MockObject> for MockObjectFa
 #[tokio::test]
 async fn test_connection_pool_creation() {
     println!("🧪 测试连接池创建");
-    
+
     let config = ConnectionPoolConfig {
         min_size: 5,
         max_size: 20,
         ..Default::default()
     };
-    
+
     let factory = Arc::new(MockConnectionFactory::new());
     let pool = ConnectionPool::new(config, factory);
-    
+
     let stats = pool.stats().await;
     assert_eq!(stats.total, 0);
     assert_eq!(stats.active, 0);
     assert_eq!(stats.idle, 0);
-    
+
     println!("✅ 连接池创建测试通过");
 }
 
 #[tokio::test]
 async fn test_connection_pool_acquire_release() {
     println!("🧪 测试连接池获取和释放");
-    
+
     let config = ConnectionPoolConfig {
         min_size: 2,
         max_size: 10,
         ..Default::default()
     };
-    
+
     let factory = Arc::new(MockConnectionFactory::new());
     let pool = ConnectionPool::new(config, factory);
-    
+
     // 获取连接
     let conn1 = pool.acquire().await.unwrap();
     let stats = pool.stats().await;
     assert_eq!(stats.active, 1);
     assert_eq!(stats.total_acquires, 1);
-    
+
     // 获取第二个连接
     let conn2 = pool.acquire().await.unwrap();
     let stats = pool.stats().await;
     assert_eq!(stats.active, 2);
-    
+
     // 释放连接
     drop(conn1);
     sleep(Duration::from_millis(10)).await;
-    
+
     let stats = pool.stats().await;
     assert_eq!(stats.active, 1);
     assert_eq!(stats.idle, 1);
-    
+
     drop(conn2);
     sleep(Duration::from_millis(10)).await;
-    
+
     let stats = pool.stats().await;
     assert_eq!(stats.active, 0);
     assert_eq!(stats.idle, 2);
-    
+
     println!("✅ 连接池获取和释放测试通过");
 }
 
 #[tokio::test]
 async fn test_connection_pool_warmup() {
     println!("🧪 测试连接池预热");
-    
+
     let config = ConnectionPoolConfig {
         min_size: 5,
         max_size: 20,
         ..Default::default()
     };
-    
+
     let factory = Arc::new(MockConnectionFactory::new());
     let pool = ConnectionPool::new(config, factory);
-    
+
     // 预热连接池
     pool.warmup().await.unwrap();
-    
+
     let stats = pool.stats().await;
     assert_eq!(stats.total, 5);
     assert_eq!(stats.idle, 5);
     assert_eq!(stats.total_creates, 5);
-    
+
     println!("✅ 连接池预热测试通过");
 }
 
 #[tokio::test]
 async fn test_connection_pool_concurrent_access() {
     println!("🧪 测试连接池并发访问");
-    
+
     let config = ConnectionPoolConfig {
         min_size: 2,
         max_size: 10,
         ..Default::default()
     };
-    
+
     let factory = Arc::new(MockConnectionFactory::new());
     let pool = ConnectionPool::new(config, factory);
-    
+
     let start = Instant::now();
-    
+
     // 并发获取连接
     let mut handles = vec![];
     for _ in 0..5 {
@@ -228,18 +230,18 @@ async fn test_connection_pool_concurrent_access() {
         });
         handles.push(handle);
     }
-    
+
     // 等待所有任务完成
     for handle in handles {
         handle.await.unwrap();
     }
-    
+
     let duration = start.elapsed();
-    
+
     let stats = pool.stats().await;
     assert_eq!(stats.total_acquires, 5);
     assert!(duration < Duration::from_millis(100));
-    
+
     println!("✅ 连接池并发访问测试通过 (耗时: {:?})", duration);
 }
 
@@ -250,48 +252,48 @@ async fn test_connection_pool_concurrent_access() {
 #[tokio::test]
 async fn test_object_pool_creation() {
     println!("🧪 测试对象池创建");
-    
+
     let config = ObjectPoolConfig {
         min_size: 5,
         max_size: 20,
         ..Default::default()
     };
-    
+
     let factory = Arc::new(MockObjectFactory::new());
     let pool = ObjectPool::new(config, factory);
-    
+
     let stats = pool.stats().await;
     assert_eq!(stats.total, 0);
-    
+
     println!("✅ 对象池创建测试通过");
 }
 
 #[tokio::test]
 async fn test_object_pool_acquire_release() {
     println!("🧪 测试对象池获取和释放");
-    
+
     let config = ObjectPoolConfig {
         min_size: 2,
         max_size: 10,
         ..Default::default()
     };
-    
+
     let factory = Arc::new(MockObjectFactory::new());
     let pool = ObjectPool::new(config, factory);
-    
+
     // 获取对象
     let obj1 = pool.acquire().await.unwrap();
     let stats = pool.stats().await;
     assert_eq!(stats.active, 1);
-    
+
     // 释放对象
     drop(obj1);
     sleep(Duration::from_millis(10)).await;
-    
+
     let stats = pool.stats().await;
     assert_eq!(stats.active, 0);
     assert_eq!(stats.idle, 1);
-    
+
     println!("✅ 对象池获取和释放测试通过");
 }
 
@@ -441,7 +443,12 @@ async fn test_resource_monitor_scale_up_detection() {
     let event = monitor.check_scaling().await;
     assert!(event.is_some());
 
-    if let Some(lumosai_core::pool::resource_monitor::ScalingEvent::ScaleUp { current, target, reason }) = event {
+    if let Some(lumosai_core::pool::resource_monitor::ScalingEvent::ScaleUp {
+        current,
+        target,
+        reason,
+    }) = event
+    {
         println!("📈 扩容事件: {} -> {} (原因: {})", current, target, reason);
         assert!(target > current);
     } else {
@@ -485,7 +492,12 @@ async fn test_resource_monitor_scale_down_detection() {
     let event = monitor.check_scaling().await;
     assert!(event.is_some());
 
-    if let Some(lumosai_core::pool::resource_monitor::ScalingEvent::ScaleDown { current, target, reason }) = event {
+    if let Some(lumosai_core::pool::resource_monitor::ScalingEvent::ScaleDown {
+        current,
+        target,
+        reason,
+    }) = event
+    {
         println!("📉 缩容事件: {} -> {} (原因: {})", current, target, reason);
         assert!(target < current);
     } else {
@@ -533,4 +545,3 @@ async fn test_resource_stats_utilization() {
 
     println!("✅ 资源统计利用率计算测试通过");
 }
-

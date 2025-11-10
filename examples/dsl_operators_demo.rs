@@ -6,8 +6,8 @@
 //! - `delegate_to()` - 委托操作符（类似 `<=`）
 
 use lumosai_core::agent::{create_basic_agent, delegate, Agent, AgentParallel, AgentPipeline};
-use lumosai_core::llm::{LlmProvider};
-    use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::llm::LlmProvider;
 use std::sync::Arc;
 
 #[tokio::main]

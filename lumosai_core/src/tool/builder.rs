@@ -2,6 +2,99 @@
 //!
 //! This module provides a fluent builder API for creating tools,
 //! inspired by Mastra's design but optimized for Rust.
+//!
+//! # Overview
+//!
+//! The `ToolBuilder` provides a convenient way to create tools without
+//! implementing the `Tool` trait manually. It uses the builder pattern
+//! to configure tool properties step by step.
+//!
+//! # Examples
+//!
+//! ## Basic Tool
+//!
+//! ```rust
+//! use lumosai_core::tool::ToolBuilder;
+//! use serde_json::json;
+//!
+//! # fn example() -> lumosai_core::Result<()> {
+//! let tool = ToolBuilder::new()
+//!     .name("echo")
+//!     .description("Echoes the input")
+//!     .parameter("message", "string", "Message to echo", true)
+//!     .handler(|params| {
+//!         let message = params.get("message")
+//!             .and_then(|v| v.as_str())
+//!             .unwrap_or("");
+//!         Ok(json!({"echo": message}))
+//!     })
+//!     .build()?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ## Calculator Tool
+//!
+//! ```rust
+//! use lumosai_core::tool::ToolBuilder;
+//! use serde_json::json;
+//!
+//! # fn example() -> lumosai_core::Result<()> {
+//! let tool = ToolBuilder::new()
+//!     .name("calculator")
+//!     .description("Performs basic math operations")
+//!     .parameter("a", "number", "First number", true)
+//!     .parameter("b", "number", "Second number", true)
+//!     .parameter("operation", "string", "Operation (+, -, *, /)", true)
+//!     .handler(|params| {
+//!         let a = params["a"].as_f64().unwrap_or(0.0);
+//!         let b = params["b"].as_f64().unwrap_or(0.0);
+//!         let op = params["operation"].as_str().unwrap_or("+");
+//!
+//!         let result = match op {
+//!             "+" => a + b,
+//!             "-" => a - b,
+//!             "*" => a * b,
+//!             "/" => if b != 0.0 { a / b } else { 0.0 },
+//!             _ => 0.0,
+//!         };
+//!
+//!         Ok(json!({"result": result}))
+//!     })
+//!     .build()?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ## Tool with Default Values
+//!
+//! ```rust
+//! use lumosai_core::tool::ToolBuilder;
+//! use serde_json::json;
+//!
+//! # fn example() -> lumosai_core::Result<()> {
+//! let tool = ToolBuilder::new()
+//!     .name("greet")
+//!     .description("Greets a person")
+//!     .parameter("name", "string", "Person's name", true)
+//!     .parameter_with_default(
+//!         "greeting",
+//!         "string",
+//!         "Greeting message",
+//!         false,
+//!         json!("Hello")
+//!     )
+//!     .handler(|params| {
+//!         let name = params["name"].as_str().unwrap_or("stranger");
+//!         let greeting = params.get("greeting")
+//!             .and_then(|v| v.as_str())
+//!             .unwrap_or("Hello");
+//!         Ok(json!({"message": format!("{}, {}!", greeting, name)}))
+//!     })
+//!     .build()?;
+//! # Ok(())
+//! # }
+//! ```
 
 use serde_json::Value;
 use std::collections::HashMap;
@@ -11,44 +104,89 @@ use crate::{Error, Result};
 
 /// Builder for creating tools with a fluent API
 ///
-/// # Example
+/// `ToolBuilder` provides a convenient way to create tools using the builder
+/// pattern. It handles parameter schema construction, validation, and tool
+/// creation.
+///
+/// # Required Fields
+///
+/// - **name**: Unique tool identifier
+/// - **description**: Human-readable description
+/// - **handler**: Function that executes the tool
+///
+/// # Optional Fields
+///
+/// - **parameters**: Tool parameters (can be empty)
+///
+/// # Examples
+///
+/// ## Minimal Tool
 ///
 /// ```rust
 /// use lumosai_core::tool::ToolBuilder;
+/// use serde_json::json;
 ///
+/// # fn example() -> lumosai_core::Result<()> {
 /// let tool = ToolBuilder::new()
-///     .name("calculator")
-///     .description("Performs basic math operations")
-///     .parameter("a", "number", "First number", true)
-///     .parameter("b", "number", "Second number", true)
-///     .parameter("operation", "string", "Operation (+, -, *, /)", true)
-///     .handler(|params| {
-///         let a = params.get("a")?.as_f64().ok_or("Invalid number a")?;
-///         let b = params.get("b")?.as_f64().ok_or("Invalid number b")?;
-///         let op = params.get("operation")?.as_str().ok_or("Invalid operation")?;
-///
-///         let result = match op {
-///             "+" => a + b,
-///             "-" => a - b,
-///             "*" => a * b,
-///             "/" => a / b,
-///             _ => return Err("Unknown operation".into()),
-///         };
-///
-///         Ok(serde_json::json!({"result": result}))
-///     })
-///     .build()
-///     .expect("Failed to build tool");
+///     .name("ping")
+///     .description("Returns pong")
+///     .handler(|_params| Ok(json!({"response": "pong"})))
+///     .build()?;
+/// # Ok(())
+/// # }
 /// ```
+///
+/// ## Tool with Multiple Parameters
+///
+/// ```rust
+/// use lumosai_core::tool::ToolBuilder;
+/// use serde_json::json;
+///
+/// # fn example() -> lumosai_core::Result<()> {
+/// let tool = ToolBuilder::new()
+///     .name("user_info")
+///     .description("Creates user information")
+///     .parameter("name", "string", "User's name", true)
+///     .parameter("age", "number", "User's age", true)
+///     .parameter("email", "string", "User's email", false)
+///     .handler(|params| {
+///         Ok(json!({
+///             "name": params["name"],
+///             "age": params["age"],
+///             "email": params.get("email").unwrap_or(&json!(null))
+///         }))
+///     })
+///     .build()?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # See Also
+///
+/// - [`Tool`](crate::tool::Tool) - Tool trait
+/// - [`FunctionTool`](crate::tool::FunctionTool) - Function-based tool implementation
+/// - [`ToolSchema`](crate::tool::ToolSchema) - Tool parameter schema
 pub struct ToolBuilder {
+    /// Tool name (required)
     name: Option<String>,
+    /// Tool description (required)
     description: Option<String>,
+    /// Tool parameters
     parameters: Vec<ParameterSchema>,
+    /// Tool handler function (required)
     handler: Option<Box<dyn Fn(Value) -> Result<Value> + Send + Sync>>,
 }
 
 impl ToolBuilder {
-    /// Create a new tool builder
+    /// Creates a new tool builder
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::tool::ToolBuilder;
+    ///
+    /// let builder = ToolBuilder::new();
+    /// ```
     pub fn new() -> Self {
         Self {
             name: None,
@@ -58,19 +196,75 @@ impl ToolBuilder {
         }
     }
 
-    /// Set the tool name
+    /// Sets the tool name (required)
+    ///
+    /// The name is used as the tool's unique identifier and should be
+    /// descriptive and follow naming conventions (lowercase, underscores).
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Tool name (e.g., "calculator", "web_search")
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::tool::ToolBuilder;
+    ///
+    /// let builder = ToolBuilder::new()
+    ///     .name("calculator");
+    /// ```
     pub fn name<S: Into<String>>(mut self, name: S) -> Self {
         self.name = Some(name.into());
         self
     }
 
-    /// Set the tool description
+    /// Sets the tool description (required)
+    ///
+    /// The description explains what the tool does and is used by the LLM
+    /// to decide when to use the tool. Be clear and concise.
+    ///
+    /// # Arguments
+    ///
+    /// * `description` - Human-readable description
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::tool::ToolBuilder;
+    ///
+    /// let builder = ToolBuilder::new()
+    ///     .name("calculator")
+    ///     .description("Performs basic arithmetic operations");
+    /// ```
     pub fn description<S: Into<String>>(mut self, description: S) -> Self {
         self.description = Some(description.into());
         self
     }
 
-    /// Add a parameter to the tool
+    /// Adds a parameter to the tool
+    ///
+    /// Parameters define the inputs the tool accepts. Each parameter has a
+    /// name, type, description, and required flag.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Parameter name
+    /// * `param_type` - Parameter type ("string", "number", "boolean", "object", "array")
+    /// * `description` - Parameter description
+    /// * `required` - Whether the parameter is required
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::tool::ToolBuilder;
+    ///
+    /// let builder = ToolBuilder::new()
+    ///     .name("calculator")
+    ///     .description("Performs math operations")
+    ///     .parameter("a", "number", "First number", true)
+    ///     .parameter("b", "number", "Second number", true)
+    ///     .parameter("operation", "string", "Operation type", true);
+    /// ```
     pub fn parameter<S: Into<String>>(
         mut self,
         name: S,
@@ -90,7 +284,36 @@ impl ToolBuilder {
         self
     }
 
-    /// Add a parameter with default value
+    /// Adds a parameter with a default value
+    ///
+    /// Use this for optional parameters that have a sensible default value.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Parameter name
+    /// * `param_type` - Parameter type
+    /// * `description` - Parameter description
+    /// * `required` - Whether the parameter is required
+    /// * `default` - Default value as JSON
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::tool::ToolBuilder;
+    /// use serde_json::json;
+    ///
+    /// let builder = ToolBuilder::new()
+    ///     .name("greet")
+    ///     .description("Greets a person")
+    ///     .parameter("name", "string", "Person's name", true)
+    ///     .parameter_with_default(
+    ///         "greeting",
+    ///         "string",
+    ///         "Greeting message",
+    ///         false,
+    ///         json!("Hello")
+    ///     );
+    /// ```
     pub fn parameter_with_default<S: Into<String>>(
         mut self,
         name: S,
@@ -111,7 +334,45 @@ impl ToolBuilder {
         self
     }
 
-    /// Add a complex parameter with properties (for object types)
+    /// Adds a complex parameter with nested properties
+    ///
+    /// Use this for object-type parameters that have nested fields.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Parameter name
+    /// * `param_type` - Parameter type (typically "object")
+    /// * `description` - Parameter description
+    /// * `required` - Whether the parameter is required
+    /// * `properties` - Nested parameter schemas
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::tool::{ToolBuilder, ParameterSchema};
+    /// use std::collections::HashMap;
+    ///
+    /// let mut properties = HashMap::new();
+    /// properties.insert("street".to_string(), ParameterSchema {
+    ///     name: "street".to_string(),
+    ///     description: "Street address".to_string(),
+    ///     r#type: "string".to_string(),
+    ///     required: true,
+    ///     properties: None,
+    ///     default: None,
+    /// });
+    ///
+    /// let builder = ToolBuilder::new()
+    ///     .name("create_user")
+    ///     .description("Creates a user")
+    ///     .parameter_with_properties(
+    ///         "address",
+    ///         "object",
+    ///         "User's address",
+    ///         false,
+    ///         properties
+    ///     );
+    /// ```
     pub fn parameter_with_properties<S: Into<String>>(
         mut self,
         name: S,
@@ -132,7 +393,34 @@ impl ToolBuilder {
         self
     }
 
-    /// Set the tool handler function
+    /// Sets the tool handler function (required)
+    ///
+    /// The handler is the function that executes when the tool is called.
+    /// It receives parameters as a JSON value and returns a result.
+    ///
+    /// # Arguments
+    ///
+    /// * `handler` - Function that takes `Value` and returns `Result<Value>`
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::tool::ToolBuilder;
+    /// use serde_json::json;
+    ///
+    /// # fn example() -> lumosai_core::Result<()> {
+    /// let tool = ToolBuilder::new()
+    ///     .name("echo")
+    ///     .description("Echoes input")
+    ///     .parameter("message", "string", "Message to echo", true)
+    ///     .handler(|params| {
+    ///         let message = params["message"].as_str().unwrap_or("");
+    ///         Ok(json!({"echo": message}))
+    ///     })
+    ///     .build()?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn handler<F>(mut self, handler: F) -> Self
     where
         F: Fn(Value) -> Result<Value> + Send + Sync + 'static,
@@ -141,7 +429,42 @@ impl ToolBuilder {
         self
     }
 
-    /// Build the tool
+    /// Builds the tool
+    ///
+    /// Validates that all required fields are set and creates a `FunctionTool`.
+    ///
+    /// # Returns
+    ///
+    /// A `FunctionTool` instance ready to be used by agents.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Tool name is not set
+    /// - Tool description is not set
+    /// - Tool handler is not set
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::tool::ToolBuilder;
+    /// use serde_json::json;
+    ///
+    /// # fn example() -> lumosai_core::Result<()> {
+    /// let tool = ToolBuilder::new()
+    ///     .name("calculator")
+    ///     .description("Performs math operations")
+    ///     .parameter("a", "number", "First number", true)
+    ///     .parameter("b", "number", "Second number", true)
+    ///     .handler(|params| {
+    ///         let a = params["a"].as_f64().unwrap_or(0.0);
+    ///         let b = params["b"].as_f64().unwrap_or(0.0);
+    ///         Ok(json!(a + b))
+    ///     })
+    ///     .build()?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn build(self) -> Result<FunctionTool> {
         // Validate required fields
         let name = self
@@ -163,6 +486,7 @@ impl ToolBuilder {
 }
 
 impl Default for ToolBuilder {
+    /// Creates a new tool builder (same as `new()`)
     fn default() -> Self {
         Self::new()
     }
@@ -170,21 +494,47 @@ impl Default for ToolBuilder {
 
 /// Convenience function to create a simple tool
 ///
-/// # Example
+/// This function provides a quick way to create tools without using the
+/// builder pattern. It's useful for simple tools with basic parameters.
+///
+/// # Arguments
+///
+/// * `name` - Tool name
+/// * `description` - Tool description
+/// * `parameters` - Vector of (name, type, description, required) tuples
+/// * `handler` - Function that executes the tool
+///
+/// # Returns
+///
+/// A `FunctionTool` instance.
+///
+/// # Errors
+///
+/// Returns an error if the tool cannot be created.
+///
+/// # Examples
 ///
 /// ```rust
 /// use lumosai_core::tool::create_tool;
+/// use serde_json::json;
 ///
+/// # fn example() -> lumosai_core::Result<()> {
 /// let tool = create_tool(
 ///     "echo",
-///     "Echo a message",
+///     "Echoes a message",
 ///     vec![("message", "string", "Message to echo", true)],
 ///     |params| {
-///         let message = params.get("message")?.as_str().ok_or("Invalid message")?;
-///         Ok(serde_json::json!({"echo": message}))
+///         let message = params["message"].as_str().unwrap_or("");
+///         Ok(json!({"echo": message}))
 ///     }
-/// ).expect("Failed to create tool");
+/// )?;
+/// # Ok(())
+/// # }
 /// ```
+///
+/// # See Also
+///
+/// - [`ToolBuilder`] - For more complex tool creation
 pub fn create_tool<F>(
     name: &str,
     description: &str,

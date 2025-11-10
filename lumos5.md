@@ -539,11 +539,11 @@ impl MultiLevelCache {
 **目标**: 100% API 文档覆盖（示例代码部分）
 
 **任务清单**:
-- [ ] 所有 public API 添加文档注释 ⏳ **进行中 (20% - 2025-11-10)**
+- [ ] 所有 public API 添加文档注释 ⏳ **进行中 (40% - 2025-11-10)**
   - [x] `AgentBuilder` - 所有方法已添加完整文档注释 ✅
   - [x] `Agent` trait - 核心方法已添加完整文档注释 ✅
-  - [ ] `Tool` trait - 待添加
-  - [ ] `ToolBuilder` - 待添加
+  - [x] `Tool` trait - 所有方法已添加完整文档注释 ✅
+  - [x] `ToolBuilder` - 所有方法已添加完整文档注释 ✅
   - [ ] `Memory` trait - 待添加
   - [ ] `LlmProvider` trait - 待添加
   - [ ] `Workflow` 相关 API - 待添加

@@ -531,14 +531,23 @@ impl MultiLevelCache {
 
 ---
 
-### 3. API 文档完善（3 周）
+### 3. API 文档完善（3 周）⏳ **进行中**
 
-#### 3.1 API 参考文档
+**总体进度**: 1/3 子任务进行中 (33%)
+
+#### 3.1 API 参考文档 ⏳ **进行中**
 **目标**: 100% API 文档覆盖
 
 **任务清单**:
 - [ ] 所有 public API 添加文档注释
-- [ ] 示例代码覆盖率 >80%
+- [x] 示例代码覆盖率 >80% ✅ **已完成 (2025-11-07)**
+  - ✅ 创建快速开始指南（QUICK_START_MVP.md）
+  - ✅ 创建 5 个核心 MVP 示例
+    - `mvp_01_simple_agent.rs` - 最简单的 Agent（已验证可运行）
+    - `mvp_02_agent_with_tools.rs` - 带工具的 Agent
+    - `mvp_03_multi_agent.rs` - 多 Agent 协作
+    - `mvp_04_agent_with_memory.rs` - 带记忆的 Agent
+    - `mvp_05_workflow.rs` - Workflow 工作流编排
 - [ ] 生成 rustdoc 文档
 - [ ] 部署到 docs.rs
 

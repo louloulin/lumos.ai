@@ -63,6 +63,16 @@ pub fn tool(attr: TokenStream, item: TokenStream) -> TokenStream {
     tool_macro::tool_attribute_macro(attr, item)
 }
 
+/// Parameter attribute macro
+/// This is used inside #[tool] functions to annotate parameters
+/// It doesn't do anything by itself - it's parsed by the #[tool] macro
+#[proc_macro_attribute]
+pub fn parameter(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Just pass through the item unchanged
+    // The actual parsing is done by the #[tool] macro
+    item
+}
+
 struct ToolAttributes {
     name: LitStr,
     description: LitStr,

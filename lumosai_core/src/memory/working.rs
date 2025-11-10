@@ -1,4 +1,45 @@
-//! 工作内存模块，提供工作内存的实现和操作
+//! Working memory module for short-term context storage
+//!
+//! This module provides working memory implementations that maintain
+//! short-term context with limited capacity, using LRU eviction when full.
+//!
+//! # Overview
+//!
+//! Working memory is designed for:
+//! - Maintaining recent conversation context
+//! - Storing temporary state during agent execution
+//! - Key-value storage with automatic eviction
+//! - Fast access to frequently used data
+//!
+//! # Examples
+//!
+//! ```rust
+//! use lumosai_core::memory::{create_working_memory, WorkingMemory, WorkingMemoryConfig};
+//! use serde_json::json;
+//!
+//! # async fn example() -> lumosai_core::Result<()> {
+//! let config = WorkingMemoryConfig {
+//!     enabled: true,
+//!     max_capacity: Some(100),
+//!     content_type: Some("application/json".to_string()),
+//!     template: None,
+//! };
+//!
+//! let memory = create_working_memory(&config)?;
+//!
+//! // Set a value
+//! memory.set_value("user_name", json!("Alice")).await?;
+//!
+//! // Get a value
+//! if let Some(name) = memory.get_value("user_name").await? {
+//!     println!("User name: {}", name);
+//! }
+//!
+//! // Clear memory
+//! memory.clear().await?;
+//! # Ok(())
+//! # }
+//! ```
 
 use crate::compat::{Component, MemoryMetrics, MetricsCollector};
 use async_trait::async_trait;
@@ -13,33 +54,70 @@ use crate::error::{Error, Result};
 // use crate::compat::metrics::{MemoryMetrics, MetricsCollector};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// 工作内存配置
+/// Configuration for working memory
+///
+/// # Examples
+///
+/// ```rust
+/// use lumosai_core::memory::WorkingMemoryConfig;
+///
+/// let config = WorkingMemoryConfig {
+///     enabled: true,
+///     max_capacity: Some(1000),
+///     content_type: Some("application/json".to_string()),
+///     template: None,
+/// };
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkingMemoryConfig {
-    /// 是否启用工作内存
+    /// Whether working memory is enabled
     pub enabled: bool,
-    /// 内存模板
+    /// Template for formatting memory content
     pub template: Option<String>,
-    /// 内容类型
+    /// Content type (e.g., "application/json")
     pub content_type: Option<String>,
-    /// 最大容量
+    /// Maximum capacity (number of entries)
     pub max_capacity: Option<usize>,
 }
 
-/// 工作内存内容
+/// Working memory content container
+///
+/// Stores the actual content along with metadata and timestamps.
+///
+/// # Examples
+///
+/// ```rust
+/// use lumosai_core::memory::WorkingMemoryContent;
+/// use serde_json::json;
+///
+/// let content = WorkingMemoryContent {
+///     content: json!({"key": "value"}),
+///     content_type: "application/json".to_string(),
+///     updated_at: chrono::Utc::now(),
+///     metadata: Default::default(),
+/// };
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkingMemoryContent {
-    /// 内容
+    /// The actual content (typically a JSON object)
     pub content: Value,
-    /// 内容类型
+    /// Content MIME type
     pub content_type: String,
-    /// 更新时间
+    /// Last update timestamp
     pub updated_at: chrono::DateTime<chrono::Utc>,
-    /// 元数据
+    /// Additional metadata
     pub metadata: HashMap<String, Value>,
 }
 
 impl Default for WorkingMemoryContent {
+    /// Creates default working memory content
+    ///
+    /// # Default Values
+    ///
+    /// - `content`: Empty JSON object
+    /// - `content_type`: "application/json"
+    /// - `updated_at`: Current UTC time
+    /// - `metadata`: Empty HashMap
     fn default() -> Self {
         Self {
             content: Value::Object(serde_json::Map::new()),
@@ -50,19 +128,158 @@ impl Default for WorkingMemoryContent {
     }
 }
 
-/// 工作内存接口
+/// Trait for working memory implementations
+///
+/// Working memory provides short-term storage with limited capacity,
+/// automatically evicting old entries when full (LRU policy).
+///
+/// # Overview
+///
+/// Working memory is useful for:
+/// - Maintaining recent conversation context
+/// - Storing temporary agent state
+/// - Caching frequently accessed data
+/// - Managing session-specific information
+///
+/// # Examples
+///
+/// ## Basic Usage
+///
+/// ```rust
+/// use lumosai_core::memory::{WorkingMemory, WorkingMemoryContent};
+/// use serde_json::json;
+///
+/// # async fn example(memory: &dyn WorkingMemory) -> lumosai_core::Result<()> {
+/// // Set a value
+/// memory.set_value("counter", json!(42)).await?;
+///
+/// // Get a value
+/// if let Some(value) = memory.get_value("counter").await? {
+///     println!("Counter: {}", value);
+/// }
+///
+/// // Delete a value
+/// memory.delete_value("counter").await?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// ## Storing Complex Data
+///
+/// ```rust
+/// use lumosai_core::memory::WorkingMemory;
+/// use serde_json::json;
+///
+/// # async fn example(memory: &dyn WorkingMemory) -> lumosai_core::Result<()> {
+/// let user_data = json!({
+///     "name": "Alice",
+///     "age": 30,
+///     "preferences": {
+///         "theme": "dark",
+///         "language": "en"
+///     }
+/// });
+///
+/// memory.set_value("user", user_data).await?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Thread Safety
+///
+/// All working memory implementations must be `Send + Sync`.
+///
+/// # See Also
+///
+/// - [`BasicWorkingMemory`] - Basic working memory implementation
+/// - [`create_working_memory`] - Factory function for creating working memory
 #[async_trait]
 pub trait WorkingMemory: Base + Send + Sync {
-    /// 获取工作内存内容
+    /// Retrieves the entire working memory content
+    ///
+    /// # Returns
+    ///
+    /// The current working memory content including metadata.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::WorkingMemory;
+    ///
+    /// # async fn example(memory: &dyn WorkingMemory) -> lumosai_core::Result<()> {
+    /// let content = memory.get().await?;
+    /// println!("Content type: {}", content.content_type);
+    /// println!("Updated at: {}", content.updated_at);
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn get(&self) -> Result<WorkingMemoryContent>;
 
-    /// 更新工作内存内容
+    /// Updates the entire working memory content
+    ///
+    /// Replaces the current content with new content.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - New content to store
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::{WorkingMemory, WorkingMemoryContent};
+    /// use serde_json::json;
+    ///
+    /// # async fn example(memory: &dyn WorkingMemory) -> lumosai_core::Result<()> {
+    /// let mut content = memory.get().await?;
+    /// content.content = json!({"new": "data"});
+    /// content.updated_at = chrono::Utc::now();
+    /// memory.update(content).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn update(&self, content: WorkingMemoryContent) -> Result<()>;
 
-    /// 清空工作内存
+    /// Clears all working memory content
+    ///
+    /// Removes all stored data and resets to default state.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::WorkingMemory;
+    ///
+    /// # async fn example(memory: &dyn WorkingMemory) -> lumosai_core::Result<()> {
+    /// memory.clear().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn clear(&self) -> Result<()>;
 
-    /// 获取特定键的值
+    /// Retrieves a specific value by key
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to look up
+    ///
+    /// # Returns
+    ///
+    /// - `Some(value)` if the key exists
+    /// - `None` if the key does not exist
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::WorkingMemory;
+    ///
+    /// # async fn example(memory: &dyn WorkingMemory) -> lumosai_core::Result<()> {
+    /// if let Some(value) = memory.get_value("user_name").await? {
+    ///     println!("User name: {}", value);
+    /// } else {
+    ///     println!("User name not found");
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn get_value(&self, key: &str) -> Result<Option<Value>> {
         let content = self.get().await?;
         if let Value::Object(map) = &content.content {
@@ -72,7 +289,33 @@ pub trait WorkingMemory: Base + Send + Sync {
         }
     }
 
-    /// 设置特定键的值
+    /// Sets a specific value by key
+    ///
+    /// If the key already exists, its value is updated. Otherwise, a new
+    /// key-value pair is created.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to set
+    /// * `value` - The value to store
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the content is not a JSON object.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::WorkingMemory;
+    /// use serde_json::json;
+    ///
+    /// # async fn example(memory: &dyn WorkingMemory) -> lumosai_core::Result<()> {
+    /// memory.set_value("counter", json!(1)).await?;
+    /// memory.set_value("name", json!("Alice")).await?;
+    /// memory.set_value("active", json!(true)).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn set_value(&self, key: &str, value: Value) -> Result<()> {
         let mut content = self.get().await?;
         if let Value::Object(map) = &mut content.content {
@@ -81,13 +324,34 @@ pub trait WorkingMemory: Base + Send + Sync {
             self.update(content).await
         } else {
             Err(Error::Parsing(format!(
-                "工作内存内容不是对象: {:?}",
+                "Working memory content is not an object: {:?}",
                 content.content
             )))
         }
     }
 
-    /// 删除特定键
+    /// Deletes a specific value by key
+    ///
+    /// Removes the key-value pair from working memory.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to delete
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the content is not a JSON object.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::WorkingMemory;
+    ///
+    /// # async fn example(memory: &dyn WorkingMemory) -> lumosai_core::Result<()> {
+    /// memory.delete_value("old_key").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn delete_value(&self, key: &str) -> Result<()> {
         let mut content = self.get().await?;
         if let Value::Object(map) = &mut content.content {
@@ -96,7 +360,7 @@ pub trait WorkingMemory: Base + Send + Sync {
             self.update(content).await
         } else {
             Err(Error::Parsing(format!(
-                "工作内存内容不是对象: {:?}",
+                "Working memory content is not an object: {:?}",
                 content.content
             )))
         }

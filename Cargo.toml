@@ -15,7 +15,7 @@ members = [
     # 基础设施层包
     "lumosai_auth",
     "lumosai_enterprise",
-    "lumosai_cloud",
+    # "lumosai_cloud",  # 暂时排除（Kubernetes API 需要重构）
     "lumosai_security",
     "lumosai_telemetry",
 

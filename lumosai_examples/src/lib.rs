@@ -3,6 +3,9 @@
 //! This library contains example implementations and demonstrations
 //! of the Lumosai AI framework capabilities.
 
+// Re-export lumosai_core modules so that macros can use crate:: paths
+pub use lumosai_core::{error, tool, base, compat, logger, telemetry, Result};
+
 pub mod advanced_tools;
 pub mod agent_tools;
 pub mod agent_tools_simple;

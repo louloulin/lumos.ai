@@ -5,10 +5,68 @@ use std::str::FromStr;
 use syn::spanned::Spanned;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, Expr, FnArg, Ident, ItemFn, LitStr, Pat, PatType, Token, Type,
+    parse_macro_input, Expr, FnArg, Ident, ItemFn, LitBool, LitStr, Pat, PatType, Token, Type,
 };
 
 use crate::parser::{parse_tool_macro, ToolDef};
+
+/// Parameter attribute structure (local copy for tool_macro module)
+#[derive(Debug, Clone)]
+struct ParameterAttributes {
+    name: LitStr,
+    description: LitStr,
+    type_: LitStr,
+    required: bool,
+}
+
+impl Parse for ParameterAttributes {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut name = None;
+        let mut description = None;
+        let mut type_ = None;
+        let mut required = None;
+
+        while !input.is_empty() {
+            let ident: Ident = input.parse()?;
+            input.parse::<Token![=]>()?;
+
+            if ident == "name" {
+                name = Some(input.parse()?);
+            } else if ident == "description" {
+                description = Some(input.parse()?);
+            } else if ident == "r#type" || ident == "type" {
+                type_ = Some(input.parse()?);
+            } else if ident == "required" {
+                let expr: Expr = input.parse()?;
+                if let Expr::Lit(lit) = &expr {
+                    if let syn::Lit::Bool(b) = &lit.lit {
+                        required = Some(b.value);
+                    }
+                }
+            } else {
+                return Err(syn::Error::new(ident.span(), "Unknown parameter attribute"));
+            }
+
+            // Allow trailing comma
+            if input.peek(Token![,]) {
+                input.parse::<Token![,]>()?;
+            }
+        }
+
+        let name = name.ok_or_else(|| syn::Error::new(input.span(), "Missing name attribute"))?;
+        let description = description
+            .ok_or_else(|| syn::Error::new(input.span(), "Missing description attribute"))?;
+        let type_ = type_.ok_or_else(|| syn::Error::new(input.span(), "Missing type attribute"))?;
+        let required = required.unwrap_or(false);
+
+        Ok(ParameterAttributes {
+            name,
+            description,
+            type_,
+            required,
+        })
+    }
+}
 
 // 工具属性解析
 pub struct ToolAttributes {
@@ -56,9 +114,6 @@ impl Parse for ToolAttributes {
         Ok(ToolAttributes { name, description })
     }
 }
-
-// Import ParameterAttributes from parent module
-use crate::ParameterAttributes;
 
 // ToolExecuteArgs结构体定义
 pub struct ToolExecuteArgs {
@@ -573,18 +628,34 @@ pub struct ParameterInfo {
     pub examples: Vec<String>,
 }
 
-/// 从函数签名提取参数信息
+/// 从函数签名提取参数信息（支持 #[parameter] 属性）
 pub fn extract_parameters(fn_item: &ItemFn) -> syn::Result<Vec<ParameterInfo>> {
     let mut params = Vec::new();
 
     for input in &fn_item.sig.inputs {
         match input {
-            FnArg::Typed(PatType { pat, ty, .. }) => {
-                if let Pat::Ident(pat_ident) = pat.as_ref() {
-                    let name = pat_ident.ident.to_string();
+            FnArg::Typed(pat_type) => {
+                if let Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
+                    let param_name = pat_ident.ident.to_string();
+                    let (rust_type, auto_required) = analyze_type(&pat_type.ty);
 
-                    let (rust_type, required) = analyze_type(ty);
-                    let description = extract_param_description(&fn_item.attrs, &name);
+                    // 尝试从 #[parameter] 属性中提取信息
+                    let param_attr = extract_parameter_attribute(&pat_type.attrs)?;
+
+                    let name = param_attr
+                        .as_ref()
+                        .and_then(|attr| Some(attr.name.value()))
+                        .unwrap_or(param_name.clone());
+
+                    let description = param_attr
+                        .as_ref()
+                        .and_then(|attr| Some(attr.description.value()))
+                        .or_else(|| extract_param_description(&fn_item.attrs, &param_name));
+
+                    let required = param_attr
+                        .as_ref()
+                        .map(|attr| attr.required)
+                        .unwrap_or(auto_required);
 
                     params.push(ParameterInfo {
                         name,
@@ -607,6 +678,18 @@ pub fn extract_parameters(fn_item: &ItemFn) -> syn::Result<Vec<ParameterInfo>> {
     }
 
     Ok(params)
+}
+
+/// 从参数的属性中提取 #[parameter(...)] 信息
+fn extract_parameter_attribute(attrs: &[syn::Attribute]) -> syn::Result<Option<ParameterAttributes>> {
+    for attr in attrs {
+        if attr.path().is_ident("parameter") {
+            // 解析 #[parameter(...)] 中的内容
+            let param_attrs: ParameterAttributes = attr.parse_args()?;
+            return Ok(Some(param_attrs));
+        }
+    }
+    Ok(None)
 }
 
 /// 分析类型，判断是否为 Option 类型

@@ -6,7 +6,9 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/louloulin/lumos.ai)
+[![CI](https://github.com/louloulin/lumos.ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/louloulin/lumos.ai/actions/workflows/ci.yml)
+[![Release](https://github.com/louloulin/lumos.ai/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/louloulin/lumos.ai/actions/workflows/release.yml)
+[![Docker Publish](https://github.com/louloulin/lumos.ai/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/louloulin/lumos.ai/actions/workflows/docker-publish.yml)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/lumosai)
 
 [📖 英文文档](docs/index.md) | [🌏 中文文档索引](docs/README_CN.md) | [🚀 快速开始](docs/quick-start/README.md) | [💡 示例](#示例) | [🤝 参与贡献](#参与贡献)
@@ -107,6 +109,20 @@ async fn main() -> Result<()> {
 }
 ```
 
+### 🐳 Docker 快速启动
+
+使用脚本启动本地开发环境：
+
+```bash
+# 启动本地开发服务（需要 Docker）
+./scripts/quick-start.sh
+
+# 服务就绪后运行示例
+cargo run --example basic_agent
+```
+
+提示：请确认已安装并启动 Docker。部分示例可能需要外部提供商的 API Key。
+
 ### 进阶示例：RAG 系统
 
 ```rust
@@ -145,6 +161,16 @@ async fn main() -> Result<()> {
 - 支持 macOS、Linux、Windows（当前主要在 macOS 验证）
 - 可选：如启用集成，需具备外部模型提供商访问权限
 
+## ✅ 测试与质量
+
+本地运行测试与静态检查：
+
+```bash
+cargo test
+cargo clippy
+cargo fmt --check
+```
+
 ## 💡 示例
 
 我们的示例套件覆盖真实使用场景：
@@ -174,6 +200,12 @@ cargo run --example multi_agent_workflow
 
 # 完整 API 演示
 cargo run --example simplified_api_complete_demo
+```
+
+提示：部分示例需要外部提供商的 API Key。以 DeepSeek 为例：
+
+```bash
+export DEEPSEEK_API_KEY=sk_你的_api_key
 ```
 
 ---

@@ -6,7 +6,9 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/louloulin/lumos.ai)
+[![CI](https://github.com/louloulin/lumos.ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/louloulin/lumos.ai/actions/workflows/ci.yml)
+[![Release](https://github.com/louloulin/lumos.ai/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/louloulin/lumos.ai/actions/workflows/release.yml)
+[![Docker Publish](https://github.com/louloulin/lumos.ai/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/louloulin/lumos.ai/actions/workflows/docker-publish.yml)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/lumosai)
 [![Tests](https://img.shields.io/badge/tests-7%2F7%20passing-brightgreen.svg)](tests/)
 
@@ -147,12 +149,37 @@ async fn main() -> Result<()> {
 ```
 
 ---
+### 🐳 Docker Quick Start
+
+Use the provided script to spin up a local environment:
+
+```bash
+# Start local dev services (requires Docker)
+./scripts/quick-start.sh
+
+# After services are ready, run an example
+cargo run --example basic_agent
+```
+
+Note: Ensure Docker is installed and running. Some examples may require provider API keys.
+
+---
 
 ## 🧩 Requirements
 - `Rust` >= `1.70` (workspace uses Rust 2021 edition)
 - `tokio` 1.x (async runtime)
 - macOS, Linux, or Windows (primary CI validated on macOS)
 - Optional: access to external model providers when using integrations
+
+## ✅ Tests & Quality
+
+Run unit tests and static analysis locally:
+
+```bash
+cargo test
+cargo clippy
+cargo fmt --check
+```
 
 ## 💡 Examples
 
@@ -190,6 +217,12 @@ cargo run --example multi_agent_workflow
 
 # Complete API demonstration
 cargo run --example simplified_api_complete_demo
+```
+
+Note: Some demos require provider API keys. For DeepSeek:
+
+```bash
+export DEEPSEEK_API_KEY=sk_your_key_here
 ```
 
 ---

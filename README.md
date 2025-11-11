@@ -20,7 +20,7 @@
 >
 > 📖 See [Implementation Summary](docs/overview/IMPLEMENTATION_SUMMARY.md) for detailed information
 
-[📖 Documentation](docs/index.md) | [📚 Docs Index](docs/index.md) | [🌏 中文文档](docs/README_CN.md) | [🚀 Quick Start](docs/quick-start/README.md) | [💡 Examples](#examples) | [🤝 Contributing](#contributing)
+[📖 文档中心](docs/README.md) | [🚀 快速开始](docs/learn/getting-started/quick-start.md) | [📚 API文档](docs/reference/api/README.md) | [💡 示例](examples/) | [🤝 贡献指南](docs/contribute/development.md)
 
 </div>
 

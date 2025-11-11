@@ -84,6 +84,9 @@ ring = "0.17"
 bytes = "1.5"
 tempfile = "3.8"
 
+# Configuration management dependencies
+validator = { version = "0.18", features = ["derive"] }
+
 # SQLite dependencies (temporarily disabled due to dependency conflicts)
 # rusqlite = { version = "0.29", optional = true }
 

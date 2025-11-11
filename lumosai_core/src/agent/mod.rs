@@ -2,6 +2,8 @@
 
 pub mod api_consistency;
 pub mod builder;
+pub mod structured_output;
+pub mod rag_integration;
 pub mod chain;
 pub mod collaboration;
 pub mod communication;
@@ -68,10 +70,12 @@ pub use config::{AgentConfig, AgentGenerateOptions};
 pub use executor::BasicAgent;
 pub use message_utils::{assistant_message, system_message, tool_message, user_message};
 pub use runtime_context::{create_context_manager, ContextManager, RuntimeContext, ToolCallRecord};
-pub use trait_def::Agent;
+pub use trait_def::{Agent, AgentStructuredOutput};
 
 // Re-export builder
 pub use builder::AgentBuilder;
+pub use structured_output::StructuredOutputExt;
+pub use rag_integration::{RagAgent, RagConfig, RagIntegrationExt};
 
 // Re-export streaming types
 pub use streaming::{AgentEvent, IntoStreaming, MemoryOperation, StreamingAgent, StreamingConfig};

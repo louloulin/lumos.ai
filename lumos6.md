@@ -1113,11 +1113,44 @@ test result: ok. 8 passed; 0 failed; 0 ignored
 
 #### 🟡 Week 2: 易用性提升（P1）
 
-##### Task P1-A: 结构化输出实现 ⭐⭐⭐⭐
+##### Task P1-A: 结构化输出实现 ⭐⭐⭐⭐ ✅ **完成 (2025-11-11)**
 
 **目标**: 实现强类型结构化输出
 
-**工作量**: 3 天
+**工作量**: 3 天 → **实际: 0.5 天**
+
+**完成情况**:
+- ✅ 实现 `AgentStructuredOutput` trait
+- ✅ 9 个测试全部通过 (100%)
+- ✅ 提供 3 个便捷 API 方法
+- ✅ 智能 JSON 提取（5种场景）
+- ✅ 完整的使用示例
+
+**实现方法**:
+1. `generate_structured<T>()` - 基于消息生成
+2. `generate_structured_simple<T>()` - 简化方法
+3. `generate_with_schema<T>()` - 自定义 Schema
+
+**测试结果**:
+```bash
+cargo test -p lumosai_core --test structured_output_tests -- --test-threads=1
+test result: ok. 9 passed; 0 failed; 0 ignored
+执行时间: 44.10秒
+```
+
+**使用示例**:
+```rust
+let result: TaskBreakdown = agent
+    .generate_structured_simple("Break down project")
+    .await?;
+```
+
+**文件**:
+- `lumosai_core/src/agent/structured_output.rs` - 实现（215行）
+- `lumosai_core/tests/structured_output_tests.rs` - 测试（9个）
+- `examples/structured_output_demo.rs` - 示例
+
+**评分**: 0/100 → **90/100** (+90%)
 
 **现状分析**:
 - ✅ Trait 定义完整（AgentStructuredOutput）
@@ -1227,19 +1260,65 @@ let response = agent.generate_simple("What is LumosAI?").await?;
 - ✅ 测试覆盖率 >90%
 - ✅ 示例文档完整
 
-##### Task 1.2: 结构化输出实现 ⭐⭐⭐⭐⭐
+##### Task P1-B: Agent + RAG 简化 ⭐⭐⭐⭐ ✅ **完成 (2025-11-11)**
 
-**目标**: 实现强类型结构化输出
+**目标**: 简化 Agent + RAG 集成，实现一行代码添加 RAG 能力
 
-**工作量**: 3-4 天
+**工作量**: 3 天 → **实际: 0.5 天**
+
+**完成情况**:
+- ✅ 实现 `RagIntegrationExt` trait
+- ✅ 4 个测试全部通过 (100%)
+- ✅ 一行代码添加 RAG 能力
+- ✅ 自动上下文检索和注入
+- ✅ 完整的使用示例
+
+**实现方法**:
+1. `.with_rag_simple(vector_store)` - 一行代码集成
+2. `.with_rag(config)` - 高级配置
+3. `add_documents()` - 批量添加知识
+4. `generate_with_rag()` - 自动检索增强
+
+**测试结果**:
+```bash
+cargo test -p lumosai_core --test rag_integration_tests -- --test-threads=1
+test result: ok. 4 passed; 0 failed; 0 ignored
+执行时间: 14.54秒
+```
+
+**使用示例**:
+```rust
+// 一行代码添加 RAG！
+let rag_agent = AgentBuilder::new()
+    .name("assistant")
+    .model(llm)
+    .with_rag_simple(vector_store)?;
+
+// 添加知识
+rag_agent.add_documents(vec![
+    ("id1", "Document content"),
+]).await?;
+
+// 自动 RAG 查询
+let answer = rag_agent.generate_with_rag("Question").await?;
+```
+
+**文件**:
+- `lumosai_core/src/agent/rag_integration.rs` - 实现（223行）
+- `lumosai_core/tests/rag_integration_tests.rs` - 测试（4个）
+- `examples/rag_agent_simple.rs` - 示例
+
+**评分**: 40/100 → **85/100** (+45%)
+
+##### Task 1.2: 结构化输出实现 ⭐⭐⭐⭐⭐ ✅ **完成（同P1-A）**
 
 **任务清单**:
-- [ ] 实现 `AgentStructuredOutput` trait
-- [ ] 支持 JSON Schema 定义
-- [ ] 支持类型验证
-- [ ] 集成到 AgentBuilder
-- [ ] 编写单元测试
-- [ ] 编写示例
+- [x] 实现 `AgentStructuredOutput` trait
+- [x] 支持 JSON Schema 定义
+- [x] 支持类型验证
+- [x] 集成到 AgentBuilder
+- [x] 编写单元测试
+- [x] 编写示例
 
 **技术方案**:
 ```rust

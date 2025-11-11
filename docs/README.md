@@ -5,7 +5,7 @@
 ## 🚀 快速导航
 
 ### 📖 入门与概览
-- `docs/getting_started.md` 入门指南（First steps）
+- `docs/quick-start/README.md` 入门指南（First steps）
 - `docs/1_overview.md` 项目概览与核心价值
 - `docs/2_architecture.md` 系统架构与模块设计
 - `docs/3_tech_stack.md` 技术栈与依赖说明
@@ -51,7 +51,7 @@
 ## 🎯 按角色导航
 
 ### 👨‍💻 开发者
-- 首选 `getting_started.md`，继续阅读 `4_core_components.md` 与 `5_api_reference.md`
+- 首选 `quick-start/README.md`，继续阅读 `4_core_components.md` 与 `5_api_reference.md`
 
 ### 🏗️ 架构师
 - 查阅 `2_architecture.md`、`3_tech_stack.md` 与 `VECTOR_DATABASES.md`

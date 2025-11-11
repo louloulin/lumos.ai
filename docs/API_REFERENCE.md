@@ -1,4 +1,6 @@
-# LumosAI 工具系统 API 参考
+> ℹ️ 统一入口迁移提示：本页面为历史/补充版。最新 API 参考请访问 [api-reference/README.md](./api-reference/README.md)。参阅 [CONTENT_MAP.md](./CONTENT_MAP.md) 了解统一入口与迁移策略。
+
+ # LumosAI 工具系统 API 参考
 
 本文档提供了 LumosAI 宏驱动工具系统的完整 API 参考。
 

@@ -1,4 +1,6 @@
-# 5. API参考
+> ℹ️ 统一入口迁移提示：本页面为历史/补充版。请使用规范入口 [api-reference/README.md](./api-reference/README.md) 浏览最新 API 文档。更多详情见 [CONTENT_MAP.md](./CONTENT_MAP.md)。
+
+ # 5. API参考
 
 本章节详细说明Lumos-X提供的主要API接口、数据结构和使用示例，帮助开发者更好地理解和使用Lumos-X平台。
 
@@ -972,4 +974,4 @@ async function memoryManagementExample() {
 }
 
 memoryManagementExample().catch(console.error);
-``` 
+```

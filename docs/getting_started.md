@@ -1,4 +1,6 @@
-# LumosAI 快速开始指南
+> ℹ️ 统一入口迁移提示：本页面为历史/补充版。请前往规范入口 [quick-start/README.md](./quick-start/README.md) 获取最新的快速开始指南。更多映射与说明见 [CONTENT_MAP.md](./CONTENT_MAP.md)。
+
+ # LumosAI 快速开始指南
 
 ## 概述
 

@@ -15,7 +15,7 @@
 | [02. 工具集成详解](./02-tool-integration.md) | 30分钟 | 初级 | 为 Agent 添加工具能力 |
 | [03. 内存系统深入](./03-memory-systems.md) | 30分钟 | 中级 | 理解和使用不同类型的内存系统 |
 | [04. RAG 系统构建](./04-rag-systems.md) | 45分钟 | 中级 | 构建检索增强生成系统 |
-| [向量数据库集成](./vector-databases.md) | 30分钟 | 中级 | 选择与配置向量数据库，示例连接 |
+| [向量数据库集成指南](./vector-databases.md) | 30分钟 | 中级 | 选择与配置向量数据库，示例连接 |
 
 ### 🚀 高级教程
 
@@ -31,7 +31,7 @@
 
 | 教程 | 时长 | 难度 | 描述 |
 |------|------|------|------|
-| [向量数据库选择](./vector-databases.md) | 30分钟 | 中级 | 选择和配置向量数据库 |
+| [向量数据库集成指南](./vector-databases.md) | 30分钟 | 中级 | 选择和配置向量数据库 |
 | [自定义工具开发](./custom-tools.md) | 45分钟 | 中级 | 开发自定义工具和插件 |
 | [错误处理最佳实践](./error-handling.md) | 30分钟 | 中级 | 优雅的错误处理和调试 |
 | [安全性配置](./security-configuration.md) | 45分钟 | 高级 | 安全配置和权限管理 |
@@ -44,13 +44,13 @@
 2. [01. 创建您的第一个 Agent](./01-first-agent.md) → 
 3. [02. 工具集成详解](./02-tool-integration.md) → 
 4. [03. 内存系统深入](./03-memory-systems.md)
-5. [向量数据库集成](./vector-databases.md)（选修） → 
+5. [向量数据库集成指南](./vector-databases.md)（选修） → 
 6. [09. 架构深度解析与完整用法指南](./09-architecture-deep-dive.md)（建议阅读）
 
 ### 开发者路径（1 周）
 1. 完成新手路径 → 
 2. [04. RAG 系统构建](./04-rag-systems.md) → 
-3. [向量数据库集成](./vector-databases.md) → 
+3. [向量数据库集成指南](./vector-databases.md) → 
 4. [自定义工具开发](./custom-tools.md) → 
 5. [错误处理最佳实践](./error-handling.md)
 6. [09. 架构深度解析与完整用法指南](./09-architecture-deep-dive.md)

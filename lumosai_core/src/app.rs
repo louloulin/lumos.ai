@@ -1,5 +1,5 @@
 use crate::agent::{trait_def::Agent, AgentBuilder, ModelResolver};
-use crate::config::{ConfigLoader, WorkflowConfig, YamlConfig};
+use crate::config::{ConfigLoader, YamlConfig, WorkflowConfig};
 use crate::rag::RagPipeline;
 use crate::tool::Tool;
 use crate::workflow::EnhancedWorkflow;
@@ -46,7 +46,7 @@ impl LumosApp {
 
     /// 从配置文件创建应用实例
     pub async fn from_config<P: AsRef<Path>>(config_path: P) -> Result<Self> {
-        let config = ConfigLoader::load(config_path)?;
+        let config = YamlConfig::from_file(config_path)?;
         Self::from_yaml_config(config).await
     }
 
@@ -89,7 +89,22 @@ impl LumosApp {
 
     /// 自动检测并加载配置文件
     pub async fn auto_load() -> Result<Self> {
-        let config = ConfigLoader::auto_detect()?;
+        // Try to load from common config file locations
+        let config_files = [
+            "lumosai.yaml",
+            "lumosai.yml",
+            ".lumosai.yaml",
+            ".lumosai.yml",
+        ];
+
+        for file in &config_files {
+            if Path::new(file).exists() {
+                return Self::from_config(file).await;
+            }
+        }
+
+        // If no config file found, use default configuration
+        let config = YamlConfig::default();
         Self::from_yaml_config(config).await
     }
 

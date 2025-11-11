@@ -15,6 +15,20 @@
 
 ---
 
+## 目录
+- [特色能力](#特色能力)
+- [快速开始](#快速开始)
+- [系统要求](#系统要求)
+- [示例](#示例)
+- [架构](#架构)
+- [工作区总览](#工作区总览)
+- [特性开关](#特性开关)
+- [文档](#文档)
+- [更新日志与版本发布](#更新日志与版本发布)
+- [参与贡献](#参与贡献)
+- [社区与支持](#社区与支持)
+- [许可协议](#许可协议)
+
 ## ✨ 特色能力
 
 ### 🤖 智能 Agent 系统
@@ -125,6 +139,12 @@ async fn main() -> Result<()> {
 
 ---
 
+## 🧩 系统要求
+- `Rust` >= `1.70`（工作区使用 Rust 2021 edition）
+- `tokio` 1.x（异步运行时）
+- 支持 macOS、Linux、Windows（当前主要在 macOS 验证）
+- 可选：如启用集成，需具备外部模型提供商访问权限
+
 ## 💡 示例
 
 我们的示例套件覆盖真实使用场景：
@@ -201,6 +221,46 @@ LumosAI 采用模块化分层架构，强调可扩展与可维护性：
 
 ---
 
+## 🧭 工作区总览
+项目为 Rust 工作区，模块化拆分如下：
+
+- `lumosai_core` — 核心 Traits、类型、配置与简化 API
+- `lumosai_vector` — 统一向量存储层（默认启用内存后端）
+- `lumosai_rag` — RAG 引擎与流水线
+- `lumosai_cli` — 命令行工具与示例运行器
+- `lumosai_evals` — 评测与基准工具（可选）
+- `lumosai_network` — 网络与集成工具（可选）
+- `lumosai_mcp` — MCP 集成（可选）
+- `lumosai_auth` — 认证与安全基础能力
+- `lumosai_enterprise` — 企业级功能（RBAC、多租户、审计）
+- `lumosai_security` — 安全策略与工具
+- `lumosai_telemetry` — 监控与可观测性
+- `lumosai_voice` — 语音接口与音频处理
+- `lumosai_bindings` — 语言绑定（Python/Node）与互操作
+- `lumos_macro` — 过程宏与 DSL 支持
+- `lumosai_derive` — 常用模式的派生宏
+- `lumosai_multimodal` — 多模态处理工具
+- `lumosai_examples` — 示例与演示集合
+
+更多成员与暂时排除的包详见 `Cargo.toml`。
+
+---
+
+## 🧱 特性开关
+通过 Cargo 特性开关灵活裁剪构建（摘自 `Cargo.toml`）：
+
+- `default = ["integrations", "vector-memory"]`
+- `integrations` — 启用 HTTP 客户端集成（如基于 `reqwest` 的远端 API）
+- `vector-memory` — 启用内存向量存储（`lumosai_vector/memory`）
+- （暂未启用）`vector-qdrant`、`vector-weaviate`、`vector-postgres` — 其他向量数据库
+
+在你的 `Cargo.toml` 中启用/禁用：
+
+```toml
+[dependencies]
+lumosai = { version = "0.2.0", features = ["integrations", "vector-memory"] }
+```
+
 ## 📚 文档
 
 - [📖 文档索引](docs/index.md) — 英文索引入口
@@ -210,6 +270,13 @@ LumosAI 采用模块化分层架构，强调可扩展与可维护性：
 - [📊 向量 API 参考](docs/vector_api_reference.md)
 
 ---
+
+## 📜 更新日志与版本发布
+- 发布记录：`docs/releases/`
+- 更新历史：`docs/updates/`
+- 发布配置：`release.toml`
+
+遵循语义化版本管理。详情参阅 `docs/RELEASE_GUIDE.md`。
 
 ## 🤝 参与贡献
 

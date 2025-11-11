@@ -24,6 +24,20 @@
 
 ---
 
+## Table of Contents
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Requirements](#requirements)
+- [Examples](#examples)
+- [Architecture](#architecture)
+- [Workspace Overview](#workspace-overview)
+- [Feature Flags](#feature-flags)
+- [Documentation](#documentation)
+- [Changelog & Releases](#changelog--releases)
+- [Contributing](#contributing)
+- [Community & Support](#community--support)
+- [License](#license)
+
 ## ✨ Features
 
 ### 🤖 **Intelligent Agent System**
@@ -83,6 +97,7 @@ tokio = { version = "1.0", features = ["full"] }
 ```rust
 use lumosai::prelude::*;
 
+/// Entry point: demonstrate Agent creation and chat
 #[tokio::main]
 async fn main() -> Result<()> {
     // 🤖 Create a simple agent
@@ -106,6 +121,7 @@ async fn main() -> Result<()> {
 ```rust
 use lumosai::prelude::*;
 
+/// Entry point: demonstrate RAG creation and retrieval
 #[tokio::main]
 async fn main() -> Result<()> {
     // 📦 Create vector storage
@@ -131,6 +147,12 @@ async fn main() -> Result<()> {
 ```
 
 ---
+
+## 🧩 Requirements
+- `Rust` >= `1.70` (workspace uses Rust 2021 edition)
+- `tokio` 1.x (async runtime)
+- macOS, Linux, or Windows (primary CI validated on macOS)
+- Optional: access to external model providers when using integrations
 
 ## 💡 Examples
 
@@ -225,6 +247,46 @@ LumosAI follows a modular, layered architecture designed for scalability and mai
 
 ---
 
+## 🧭 Workspace Overview
+The project is organized as a Rust workspace with modular crates:
+
+- `lumosai_core` — Core traits, types, configs, and simplified APIs
+- `lumosai_vector` — Unified vector storage layer (memory backend enabled by default)
+- `lumosai_rag` — Retrieval-Augmented Generation engine and pipelines
+- `lumosai_cli` — Command-line tooling and example runners
+- `lumosai_evals` — Evaluation utilities and benchmarking (optional)
+- `lumosai_network` — Networking utilities and integrations (optional)
+- `lumosai_mcp` — MCP integrations (optional)
+- `lumosai_auth` — Authentication and security primitives
+- `lumosai_enterprise` — Enterprise features (RBAC, multi-tenant, auditing)
+- `lumosai_security` — Security policies and helper utilities
+- `lumosai_telemetry` — Monitoring and observability instrumentation
+- `lumosai_voice` — Voice interfaces and audio processing
+- `lumosai_bindings` — Language bindings (Python/Node) and interop
+- `lumos_macro` — Procedural macros and DSL support
+- `lumosai_derive` — Derive macros for common patterns
+- `lumosai_multimodal` — Multimodal processing utilities
+- `lumosai_examples` — Comprehensive examples and demos
+
+Refer to `Cargo.toml` for the full workspace member list and temporarily excluded crates.
+
+---
+
+## 🧱 Feature Flags
+Feature flags allow tailoring builds to your needs (from `Cargo.toml`):
+
+- `default = ["integrations", "vector-memory"]`
+- `integrations` — Enables HTTP client integrations (e.g., `reqwest`-based remote APIs)
+- `vector-memory` — Enables in-memory vector storage via `lumosai_vector/memory`
+- (temporarily disabled) `vector-qdrant`, `vector-weaviate`, `vector-postgres` — alternative vector databases
+
+Enable/disable features in your `Cargo.toml`:
+
+```toml
+[dependencies]
+lumosai = { version = "0.2.0", features = ["integrations", "vector-memory"] }
+```
+
 ## 📚 Documentation
 
 ### 📖 User Guides
@@ -252,6 +314,13 @@ LumosAI follows a modular, layered architecture designed for scalability and mai
 - [🚀 Quick Start](docs/quick-start/README.md) - Quick start guide
 
 ---
+
+## 📜 Changelog & Releases
+- Release notes: `docs/releases/`
+- Update history: `docs/updates/`
+- Release configuration: `release.toml`
+
+We follow semantic versioning where applicable. Refer to the release guide for details: `docs/RELEASE_GUIDE.md`.
 
 ## 🤝 Contributing
 
@@ -362,48 +431,11 @@ Contact us at [enterprise@lumosai.com](mailto:enterprise@lumosai.com) for more i
 
 ---
 
-## 🎉 Recent Updates (v0.2.0)
+## License
 
-### 第五-六周：集成和优化 (2025-01-16)
+This project is licensed under the MIT License — see `LICENSE` for details.
 
-我们完成了 LumosAI v2.0 重构计划的第五-六周任务，专注于系统集成和优化：
 
-👉 详细更新请参见：[WEEK_5_6_INTEGRATION_OPTIMIZATION.md](docs/WEEK_5_6_INTEGRATION_OPTIMIZATION.md)
-
-#### ⚡ 性能优化
-- **编译时间优化**: 核心包编译时间从 45+ 秒优化到 38.03 秒
-- **依赖树分析**: 识别并优化了关键依赖路径
-- **代码膨胀控制**: 减少了不必要的代码重复和依赖
-
-#### ❌ 友好错误处理
-- **用户友好错误**: 实现了完整的友好错误系统，包含上下文信息和修复建议
-- **错误分类**: 按类型和严重性对错误进行分类（Configuration, Tool, Agent, Network 等）
-- **智能建议**: 自动生成针对性的修复建议和调试提示
-- **结构化输出**: 提供清晰的错误格式，包含表情符号和技术细节
-
-#### 📚 文档完善
-- **示例更新**: 新增与完善演示示例（工具宏、统一内存、友好错误）
-- **版本更新**: 更新到 v0.2.0，反映最新功能
-- **文档同步**: 确保所有文档与代码实现保持同步
-
-#### 🧪 集成测试
-- **编译验证**: 所有核心包编译通过，警告数量控制在合理范围
-- **功能测试**: 新功能的完整测试覆盖
-- **示例验证**: 所有示例代码正常运行
-
-### 累计成果总结
-
-经过 6 周的系统性重构，LumosAI 已经完成：
-
-1. **第一周**: lumosai_core 瘦身 - 从 38 个模块减少到 16 个核心模块
-2. **第二周**: 渐进式 API 实现 - 三层 API 设计，智能模型检测
-3. **第三周**: 工具系统宏实现 - `#[tool]` 过程宏，简化工具开发
-4. **第四周**: 内存系统统一 - 统一内存接口，支持 4 种内存类型
-5. **第五-六周**: 集成和优化 - 性能优化、友好错误、文档完善
-
-🎯 **项目状态**: 所有核心功能已完成，系统稳定性和开发体验显著提升！
-
----
 
 ## 📄 License
 

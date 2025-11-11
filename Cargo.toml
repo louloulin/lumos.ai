@@ -156,20 +156,20 @@ debug = true
 strip = false
 
 [features]
-default = ["integrations"]
+default = ["integrations", "vector-memory"]
 # 暂时移除 macros 功能
 # macros = ["lumos_macro"]
 integrations = ["reqwest"]
 # 暂时移除 UI 功能
 # ui = ["lumosai_ui"]
 # ui-full = ["ui"]
-# Vector database features - 仅保留内存存储
-vector-memory = ["lumosai_vector/memory"]
-# 暂时移除其他向量数据库
-# vector-qdrant = ["lumosai_vector/qdrant"]
-# vector-weaviate = ["lumosai_vector/weaviate"]
-# vector-postgres = ["lumosai_vector"]
-# vector-all = ["vector-qdrant", "vector-weaviate", "vector-postgres"]
+# Vector database features - 默认启用内存存储
+vector-memory = ["dep:lumosai_vector", "lumosai_vector/memory"]
+# 暂时移除其他向量数据库（保留占位便于后续恢复）
+# vector-qdrant = ["dep:lumosai_vector", "lumosai_vector/qdrant"]
+# vector-weaviate = ["dep:lumosai_vector", "lumosai_vector/weaviate"]
+# vector-postgres = ["dep:lumosai_vector", "lumosai_vector/postgres"]
+# vector-all = ["vector-qdrant", "vector-weaviate", "vector-postgres", "vector-memory"]
 # Additional features for cfg conditions
 # postgres = ["sqlx/postgres"]
 # qdrant = ["vector-qdrant"]
@@ -178,7 +178,7 @@ vector-memory = ["lumosai_vector/memory"]
 [dependencies]
 # 仅保留核心依赖
 lumosai_core = { path = "lumosai_core" }
-lumosai_vector = { path = "lumosai_vector", features = ["memory"], optional = true }
+lumosai_vector = { path = "lumosai_vector", optional = true }
 lumosai-vector-core = { path = "lumosai_vector/core" }
 lumosai_multimodal = { path = "lumosai_multimodal" }
 lumosai_rag = { path = "lumosai_rag" }

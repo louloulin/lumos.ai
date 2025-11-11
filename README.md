@@ -72,9 +72,11 @@ Add LumosAI to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lumosai = "0.1.4"
+lumosai = "0.2.0"
 tokio = { version = "1.0", features = ["full"] }
 ```
+
+默认启用内存向量存储（`vector-memory`），无需额外配置即可运行 RAG 与向量示例。
 
 ### Basic Usage
 
@@ -107,10 +109,10 @@ use lumosai::prelude::*;
 #[tokio::main]
 async fn main() -> Result<()> {
     // 📦 Create vector storage
-    let storage = VectorStorage::memory().await?;
+    let storage = lumosai::vector::memory().await?;
 
     // 🧠 Create RAG system
-    let rag = RagSystem::builder()
+    let rag = lumosai::rag::builder()
         .storage(storage)
         .embedding_provider("openai")
         .chunking_strategy("recursive")

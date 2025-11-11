@@ -8,7 +8,9 @@ use std::sync::Arc;
 /// 向量存储抽象 - 使用enum来支持多种存储类型
 #[derive(Clone)]
 pub enum VectorStorage {
-    // Memory(Arc<lumosai_vector::memory::MemoryVectorStorage>), // Temporarily disabled - package excluded
+    /// 内存存储（在启用 `vector-memory` 特性时可用）
+    #[cfg(feature = "vector-memory")]
+    Memory(Arc<lumosai_vector::memory::MemoryVectorStorage>),
     #[cfg(feature = "vector-postgres")]
     Postgres(Arc<lumosai_vector::postgres::PostgresVectorStorage>),
     #[cfg(feature = "vector-qdrant")]
@@ -18,7 +20,8 @@ pub enum VectorStorage {
 }
 
 /// 内存向量存储
-// pub type MemoryStorage = lumosai_vector::memory::MemoryVectorStorage; // Temporarily disabled - package excluded
+#[cfg(feature = "vector-memory")]
+pub type MemoryStorage = lumosai_vector::memory::MemoryVectorStorage;
 
 /// Qdrant向量存储
 #[cfg(feature = "vector-qdrant")]
@@ -44,10 +47,20 @@ pub type PostgresStorage = lumosai_vector::postgres::PostgresVectorStorage;
 ///     Ok(())
 /// }
 /// ```
+#[cfg(feature = "vector-memory")]
 pub async fn memory() -> Result<VectorStorage> {
-    // Temporarily disabled - lumosai_vector package excluded
+    // 默认容量 1000，可根据需要调整
+    let storage = MemoryStorage::with_capacity(1000)
+        .await
+        .map_err(|e| Error::VectorStore(format!("Failed to create Memory storage: {}", e)))?;
+    Ok(VectorStorage::Memory(Arc::new(storage)))
+}
+
+/// 当未启用 `vector-memory` 特性时的兼容实现
+#[cfg(not(feature = "vector-memory"))]
+pub async fn memory() -> Result<VectorStorage> {
     Err(Error::VectorStore(
-        "Memory storage temporarily disabled".to_string(),
+        "Memory vector storage not enabled. Enable 'vector-memory' feature".to_string(),
     ))
 }
 
@@ -352,7 +365,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         config: lumosai_vector_core::IndexConfig,
     ) -> lumosai_vector_core::Result<()> {
         match self {
-            // VectorStorage::Memory(storage) => storage.create_index(config).await, // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.create_index(config).await,
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.create_index(config).await,
             #[cfg(feature = "vector-qdrant")]
@@ -368,7 +382,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
 
     async fn delete_index(&self, index_name: &str) -> lumosai_vector_core::Result<()> {
         match self {
-            // VectorStorage::Memory(storage) => storage.delete_index(index_name).await, // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.delete_index(index_name).await,
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.delete_index(index_name).await,
             #[cfg(feature = "vector-qdrant")]
@@ -384,7 +399,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
 
     async fn list_indexes(&self) -> lumosai_vector_core::Result<Vec<String>> {
         match self {
-            // VectorStorage::Memory(storage) => storage.list_indexes().await, // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.list_indexes().await,
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.list_indexes().await,
             #[cfg(feature = "vector-qdrant")]
@@ -403,7 +419,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         index_name: &str,
     ) -> lumosai_vector_core::Result<lumosai_vector_core::IndexInfo> {
         match self {
-            // VectorStorage::Memory(storage) => storage.describe_index(index_name).await, // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.describe_index(index_name).await,
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.describe_index(index_name).await,
             #[cfg(feature = "vector-qdrant")]
@@ -423,7 +440,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         documents: Vec<lumosai_vector_core::Document>,
     ) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::DocumentId>> {
         match self {
-            // VectorStorage::Memory(storage) => storage.upsert_documents(index_name, documents).await, // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.upsert_documents(index_name, documents).await,
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => {
                 storage.upsert_documents(index_name, documents).await
@@ -446,7 +464,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         request: lumosai_vector_core::SearchRequest,
     ) -> lumosai_vector_core::Result<lumosai_vector_core::SearchResponse> {
         match self {
-            // VectorStorage::Memory(storage) => storage.search(request).await, // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.search(request).await,
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.search(request).await,
             #[cfg(feature = "vector-qdrant")]
@@ -466,7 +485,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         document: lumosai_vector_core::Document,
     ) -> lumosai_vector_core::Result<()> {
         match self {
-            // VectorStorage::Memory(storage) => storage.update_document(index_name, document).await, // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.update_document(index_name, document).await,
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.update_document(index_name, document).await,
             #[cfg(feature = "vector-qdrant")]
@@ -486,7 +506,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         ids: Vec<lumosai_vector_core::DocumentId>,
     ) -> lumosai_vector_core::Result<()> {
         match self {
-            // VectorStorage::Memory(storage) => storage.delete_documents(index_name, ids).await, // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.delete_documents(index_name, ids).await,
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.delete_documents(index_name, ids).await,
             #[cfg(feature = "vector-qdrant")]
@@ -507,11 +528,12 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
         include_vectors: bool,
     ) -> lumosai_vector_core::Result<Vec<lumosai_vector_core::Document>> {
         match self {
-            // VectorStorage::Memory(storage) => { // Temporarily disabled
-            //     storage
-            //         .get_documents(index_name, ids, include_vectors)
-            //         .await
-            // }
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => {
+                storage
+                    .get_documents(index_name, ids, include_vectors)
+                    .await
+            }
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => {
                 storage
@@ -539,7 +561,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
 
     async fn health_check(&self) -> lumosai_vector_core::Result<()> {
         match self {
-            // VectorStorage::Memory(storage) => storage.health_check().await, // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.health_check().await,
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.health_check().await,
             #[cfg(feature = "vector-qdrant")]
@@ -555,7 +578,8 @@ impl lumosai_vector_core::VectorStorage for VectorStorage {
 
     fn backend_info(&self) -> lumosai_vector_core::BackendInfo {
         match self {
-            // VectorStorage::Memory(storage) => storage.backend_info(), // Temporarily disabled
+            #[cfg(feature = "vector-memory")]
+            VectorStorage::Memory(storage) => storage.backend_info(),
             #[cfg(feature = "vector-postgres")]
             VectorStorage::Postgres(storage) => storage.backend_info(),
             #[cfg(feature = "vector-qdrant")]

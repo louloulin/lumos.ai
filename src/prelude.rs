@@ -10,6 +10,8 @@ pub use crate::{Error, Message, Result, Role};
 #[cfg(feature = "postgres")]
 pub use crate::vector::PostgresStorage;
 pub use crate::vector::VectorStorage; // MemoryStorage temporarily disabled
+#[cfg(feature = "vector-memory")]
+pub use crate::vector::MemoryStorage;
 
 // RAG系统相关
 pub use crate::rag::{Document, RagSystem, SearchResult}; // SimpleRag temporarily disabled

@@ -1,62 +1,77 @@
-# 📚 LumosAI Documentation
+# 📚 LumosAI 文档总览
 
-Welcome to the comprehensive documentation for LumosAI, the enterprise-grade AI framework built in Rust.
+欢迎查阅 LumosAI 文档。LumosAI 是一个用 Rust 构建的企业级 AI 框架，专注于性能、安全与可扩展性。本页为中文索引，提供从入门到生产的完整导航。
 
-## 🚀 Quick Navigation
+## 🚀 快速导航
 
-### 📖 Getting Started
-- [🚀 Getting Started Guide](getting_started.md) - Your first steps with LumosAI
-- [📋 Overview](1_overview.md) - Project background and core values
-- [🏗️ Architecture](2_architecture.md) - System design and components
-- [🔧 Tech Stack](3_tech_stack.md) - Technology stack details
+### 📖 入门与概览
+- `docs/getting_started.md` 入门指南（First steps）
+- `docs/1_overview.md` 项目概览与核心价值
+- `docs/2_architecture.md` 系统架构与模块设计
+- `docs/3_tech_stack.md` 技术栈与依赖说明
+- `docs/ARCHITECTURE.md` 架构图与结构化示意
 
-### 🤖 Core Concepts
-- [🧩 Core Components](4_core_components.md) - Main component implementations
-- [📋 API Reference](5_api_reference.md) - Complete API documentation
-- [🔧 Development Guide](6_development_guide.md) - Development and extension guide
-- [🚀 Deployment Guide](7_deployment_guide.md) - Deployment configurations
+### 🤖 核心与参考
+- `docs/4_core_components.md` 核心组件（Agent、Tool、Memory、LLM、RAG、Workflow）
+- `docs/5_api_reference.md` API 参考
+- `docs/API_REFERENCE.md` API 参考（补充版）
+- `docs/6_development_guide.md` 开发指南（环境、规范、扩展）
+- `docs/7_deployment_guide.md` 部署指南（本地、容器与云）
 
-### 🛡️ Enterprise Features
-- [🔍 Vector Databases](VECTOR_DATABASES.md) - Vector storage implementations
-- [⚡ FastEmbed Implementation](FASTEMBED_IMPLEMENTATION.md) - Embedding system
-- [🗄️ LanceDB Implementation](LANCEDB_IMPLEMENTATION.md) - Vector database integration
+### 🛡️ RAG 与向量
+- `docs/VECTOR_DATABASES.md` 向量数据库与适配
+- `docs/FASTEMBED_IMPLEMENTATION.md` FastEmbed 嵌入实现
+- `docs/LANCEDB_IMPLEMENTATION.md` LanceDB 集成
+- `docs/vector_api_reference.md` 向量 API 参考
+- `docs/vector_database_optimization.md` 向量数据库优化
 
-### 🔧 Development Resources
-- [🎯 Simplified API](simplified_api_final.md) - Simplified API design
-- [🔮 DSL Macros](dsl_macros.md) - Domain-specific language macros
-- [📊 Implementation Roadmap](implementation_roadmap.md) - Development roadmap
-- [📈 Implementation Summary](implementation_summary.md) - Progress summary
+### 🔧 宏与 DSL
+- `docs/dsl_macros.md` DSL 宏与工作流声明式用法
+- `docs/PARAMETER_MACRO_ANALYSIS.md` 参数宏分析
 
-### 📋 Reference & Guides
-- [❓ FAQ](8_faq.md) - Frequently asked questions
-- [📦 Release Guide](RELEASE_GUIDE.md) - Release process and versioning
-- [🔄 Updates](updates/) - Latest updates and changes
-- [📊 Analysis](lumos_vs_mastra_analysis.md) - Framework comparisons
+### 👥 多代理与工作流
+- `docs/MULTI_AGENT_COLLABORATION_PATTERNS.md` 多代理协作模式
+- `docs/MULTI_AGENT_QUICK_REFERENCE.md` 多代理快速参考
+- `docs/examples/README.md` 示例索引（Chatbot、RAG、Workflow 等）
 
-## 🎯 Documentation by Role
+### 🧪 测试与质量
+- `docs/testing/README.md` 测试策略与最佳实践
+- `docs/analysis/CARGO_TEST_ANALYSIS_SUMMARY.md` Cargo 测试分析摘要
+- `docs/analysis/COMPLETE_TEST_ANALYSIS_SUMMARY.md` 完整测试分析摘要
 
-### 👨‍💻 **For Developers**
-Start with [Getting Started](getting_started.md), then explore [Core Components](4_core_components.md) and [API Reference](5_api_reference.md).
+### 📋 发行与更新
+- `docs/RELEASE_GUIDE.md` 发布与版本管理
+- `docs/releases/CHANGELOG.md` 版本变更记录
+- `docs/updates/` 更新日志与周报
 
-### 🏗️ **For Architects**
-Review [System Architecture](2_architecture.md), [Tech Stack](3_tech_stack.md), and [Vector Databases](VECTOR_DATABASES.md).
+### 📚 指南与其他
+- `docs/guides/README.md` 深度指南导航（架构、开发、部署、安全、监控、集成）
+- `docs/FRAMEWORK_COMPARISON.md` 框架对比分析
+- `docs/8_faq.md` 常见问题（FAQ）
+- `docs/contributing/CONTRIBUTING.md` 贡献指南
 
-### 🚀 **For DevOps**
-Focus on [Deployment Guide](7_deployment_guide.md) and [Release Guide](RELEASE_GUIDE.md).
+## 🎯 按角色导航
 
-### 👔 **For Product Managers**
-Check out [Overview](1_overview.md), [Implementation Summary](implementation_summary.md), and [FAQ](8_faq.md).
+### 👨‍💻 开发者
+- 首选 `getting_started.md`，继续阅读 `4_core_components.md` 与 `5_api_reference.md`
 
-## 🆘 Need Help?
+### 🏗️ 架构师
+- 查阅 `2_architecture.md`、`3_tech_stack.md` 与 `VECTOR_DATABASES.md`
 
-- **🐛 Found a bug?** [Report it on GitHub](https://github.com/louloulin/lumos.ai/issues)
-- **💡 Have a question?** Check our [FAQ](8_faq.md)
-- **📧 Need enterprise support?** [Contact us](mailto:enterprise@lumosai.com)
+### 🚀 运维
+- 查看 `7_deployment_guide.md` 与 `RELEASE_GUIDE.md`
 
-## 🤝 Contributing to Documentation
+### 👔 产品经理
+- 推荐 `1_overview.md`、`implementation_summary.md`（若存在）与 `8_faq.md`
 
-We welcome contributions to improve our documentation! See our [Development Guide](6_development_guide.md) for details.
+## 🆘 获取帮助
+- 🐛 问题反馈: https://github.com/louloulin/lumos.ai/issues
+- 💡 常见问题: `docs/8_faq.md`
+- 📧 企业支持: enterprise@lumosai.com
+
+## 🤝 文档贡献
+欢迎贡献文档改进！请参阅 `docs/6_development_guide.md` 了解贡献指引。
 
 ---
 
-**📖 Happy reading, and welcome to the LumosAI community!**
+**📖 祝阅读愉快，欢迎加入 LumosAI 社区！**

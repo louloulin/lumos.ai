@@ -18,7 +18,7 @@
 >
 > 📖 See [Project Completion Report](docs/PROJECT_COMPLETION_REPORT.md) for detailed information
 
-[📖 Documentation](docs/README.md) | [🚀 Quick Start](docs/QUICK_START.md) | [💡 Examples](#examples) | [🤝 Contributing](#contributing)
+[📖 Documentation](docs/README.md) | [📚 Docs Index](docs/index.md) | [🌏 中文文档](docs/README_CN.md) | [🚀 Quick Start](docs/QUICK_START.md) | [💡 Examples](#examples) | [🤝 Contributing](#contributing)
 
 </div>
 

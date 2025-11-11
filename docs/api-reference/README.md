@@ -1,214 +1,481 @@
-# LumosAI API 参考文档
+# 🔧 API 参考
 
-欢迎来到 LumosAI API 参考文档！这里提供完整的 API 接口说明和使用示例。
+> LumosAI 完整 API 接口文档
 
-## 📚 API 模块
+## 概览
 
-### 🤖 核心模块
+LumosAI 提供了简洁而强大的 API，支持 Agent 创建、RAG 系统、向量存储、工作流编排等核心功能。
 
-| 模块 | 描述 | 文档链接 |
-|------|------|----------|
-| [Agent](./agent.md) | AI Agent 核心接口 | 创建、配置和管理 Agent |
-| [Tool](./tool.md) | 工具系统接口 | 工具定义、注册和执行 |
-| [Memory](./memory.md) | 内存系统接口 | 内存管理和检索 |
-| [Message](./message.md) | 消息处理接口 | 消息格式和处理 |
+### 核心 API 结构
 
-### 🧠 LLM 模块
+```rust
+use lumosai::prelude::*;
 
-| 模块 | 描述 | 文档链接 |
-|------|------|----------|
-| [LLM Provider](./llm-provider.md) | LLM 提供商接口 | 模型配置和调用 |
-| [Model Config](./model-config.md) | 模型配置接口 | 参数设置和优化 |
-| [Streaming](./streaming.md) | 流式响应接口 | 实时响应处理 |
-
-### 🔧 工具模块
-
-| 模块 | 描述 | 文档链接 |
-|------|------|----------|
-| [Tool Macro](./tool-macro.md) | 工具宏接口 | `#[tool]` 宏使用 |
-| [Function Tool](./function-tool.md) | 函数工具接口 | 函数工具定义 |
-| [Tool Execution](./tool-execution.md) | 工具执行接口 | 工具调用和结果处理 |
-
-### 💾 存储模块
-
-| 模块 | 描述 | 文档链接 |
-|------|------|----------|
-| [Vector Store](./vector-store.md) | 向量存储接口 | 向量数据库操作 |
-| [Document](./document.md) | 文档处理接口 | 文档解析和分块 |
-| [Embedding](./embedding.md) | 嵌入生成接口 | 文本向量化 |
-
-### 🔍 RAG 模块
-
-| 模块 | 描述 | 文档链接 |
-|------|------|----------|
-| [RAG System](./rag-system.md) | RAG 系统接口 | 检索增强生成 |
-| [Retriever](./retriever.md) | 检索器接口 | 文档检索策略 |
-| [Chunker](./chunker.md) | 分块器接口 | 文档分块策略 |
-
-### 🌐 网络模块
-
-| 模块 | 描述 | 文档链接 |
-|------|------|----------|
-| [Network](./network.md) | 网络通信接口 | Agent 间通信 |
-| [Router](./router.md) | 消息路由接口 | 消息路由和分发 |
-| [Discovery](./discovery.md) | 服务发现接口 | 服务注册和发现 |
-
-### 🏢 企业模块
-
-| 模块 | 描述 | 文档链接 |
-|------|------|----------|
-| [Auth](./auth.md) | 认证授权接口 | 用户认证和权限 |
-| [Monitoring](./monitoring.md) | 监控接口 | 性能监控和日志 |
-| [Billing](./billing.md) | 计费接口 | 使用量统计和计费 |
-
-### 🎨 UI 模块
-
-| 模块 | 描述 | 文档链接 |
-|------|------|----------|
-| [Web UI](./web-ui.md) | Web 界面接口 | Web 界面组件 |
-| [Components](./components.md) | UI 组件接口 | 可复用 UI 组件 |
-
-## 🚀 快速导航
-
-### 按使用频率
-
-#### 🔥 最常用 API
-1. [Agent::builder()](./agent.md#builder) - 创建 Agent
-2. [Agent::generate()](./agent.md#generate) - 生成回复
-3. [#[tool] 宏](./tool-macro.md) - 定义工具
-4. [Memory::basic()](./memory.md#basic) - 创建基础内存
-
-#### ⭐ 常用 API
-1. [Tool::execute()](./tool-execution.md#execute) - 执行工具
-2. [SimpleRag::builder()](./rag-system.md#builder) - 创建 RAG 系统
-3. [VectorStore::search()](./vector-store.md#search) - 向量搜索
-4. [Agent::with_tools()](./agent.md#with_tools) - 添加工具
-
-#### 📚 高级 API
-1. [NetworkManager](./network.md) - 网络管理
-2. [EnterpriseAuth](./auth.md) - 企业认证
-3. [MonitoringSystem](./monitoring.md) - 监控系统
-
-### 按开发阶段
-
-#### 🎯 入门阶段
-- [Agent API](./agent.md) - 基础 Agent 操作
-- [Message API](./message.md) - 消息处理
-- [Tool Macro](./tool-macro.md) - 简单工具定义
-
-#### 🔧 开发阶段
-- [Memory API](./memory.md) - 内存管理
-- [RAG System API](./rag-system.md) - 知识检索
-- [Vector Store API](./vector-store.md) - 向量存储
-
-#### 🚀 生产阶段
-- [Monitoring API](./monitoring.md) - 性能监控
-- [Auth API](./auth.md) - 安全认证
-- [Network API](./network.md) - 分布式部署
-
-## 📖 API 文档约定
-
-### 文档格式
-
-每个 API 文档包含以下部分：
-
-```markdown
-# 模块名称
-
-## 概述
-模块的基本介绍和用途
-
-## 核心类型
-主要的结构体和枚举
-
-## 方法列表
-所有公开方法的列表
-
-## 详细说明
-每个方法的详细说明，包括：
-- 函数签名
-- 参数说明
-- 返回值说明
-- 使用示例
-- 错误处理
-
-## 示例代码
-完整的使用示例
-
-## 相关链接
-相关模块和文档的链接
+// 核心 API
+lumosai::agent::simple()           // 创建简单 Agent
+lumosai::vector::memory()         // 创建向量存储
+lumosai::rag::simple()            // 创建 RAG 系统
+lumosai::workflow::task()         // 创建工作流任务
 ```
-
-### 代码示例约定
-
-- 所有示例都是完整可运行的代码
-- 包含必要的导入语句
-- 提供错误处理示例
-- 使用中文注释说明
-
-### 版本兼容性
-
-- 🟢 **稳定 API**: 保证向后兼容
-- 🟡 **实验性 API**: 可能在未来版本中变更
-- 🔴 **已废弃 API**: 将在未来版本中移除
-
-## 🔍 搜索和导航
-
-### 快速搜索
-
-使用浏览器的搜索功能（Ctrl+F / Cmd+F）快速查找：
-
-- **按功能搜索**: 如 "generate", "execute", "search"
-- **按类型搜索**: 如 "Agent", "Tool", "Memory"
-- **按错误搜索**: 如 "Error", "Result"
-
-### 交叉引用
-
-文档中的链接类型：
-
-- `[Agent]` - 链接到 Agent 模块
-- `[Agent::generate()]` - 链接到具体方法
-- `[示例: 基础用法]` - 链接到示例代码
-
-## 🤝 贡献 API 文档
-
-### 文档改进
-
-我们欢迎以下类型的贡献：
-
-1. **错误修正**: 修复文档中的错误
-2. **示例改进**: 提供更好的代码示例
-3. **说明完善**: 补充缺失的说明
-4. **新 API 文档**: 为新功能编写文档
-
-### 提交流程
-
-1. Fork 项目仓库
-2. 修改相关文档文件
-3. 测试所有代码示例
-4. 提交 Pull Request
-
-### 文档标准
-
-- **准确性**: 确保 API 签名和行为描述准确
-- **完整性**: 包含所有公开 API
-- **一致性**: 遵循统一的文档格式
-- **可用性**: 提供实用的示例和说明
-
-## 📞 获取帮助
-
-### API 使用问题
-
-- 📖 查看具体模块的文档
-- 🔍 搜索相关示例代码
-- 💬 在社区提问
-
-### 文档问题
-
-- 🐛 提交文档 Issue
-- 📧 联系文档维护团队
-- 🤝 参与文档改进
 
 ---
 
-*完整、准确、实用的 API 参考，助力您的 LumosAI 开发之旅！* 📚
+## 🤖 Agent API
+
+### 快速创建
+
+#### `lumosai::agent::simple()`
+
+创建一个简单的 AI Agent。
+
+```rust
+use lumosai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let agent = lumosai::agent::simple("gpt-4", "You are helpful").await?;
+    
+    let response = agent.chat("Hello!").await?;
+    println!("{}", response);
+    
+    Ok(())
+}
+```
+
+**参数:**
+- `model: &str` - 模型名称（支持 "gpt-4", "claude-3", "deepseek-chat" 等）
+- `system_prompt: &str` - 系统提示词
+
+**返回:** `Result<Agent>` - Agent 实例
+
+### AgentBuilder
+
+#### `Agent::builder()`
+
+使用构建器模式创建复杂的 Agent。
+
+```rust
+use lumosai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let agent = Agent::builder()
+        .name("assistant")
+        .model("gpt-4")
+        .system_prompt("You are a helpful AI assistant")
+        .max_tokens(1000)
+        .temperature(0.7)
+        .build()
+        .await?;
+    
+    Ok(())
+}
+```
+
+**构建器方法:**
+
+| 方法 | 类型 | 描述 | 默认值 |
+|------|------|------|--------|
+| `name(name: &str)` | 必需 | Agent 名称 | - |
+| `model(model: &str)` | 必需 | LLM 模型 | - |
+| `system_prompt(prompt: &str)` | 必需 | 系统提示词 | - |
+| `max_tokens(limit: u32)` | 可选 | 最大生成 token 数 | 2048 |
+| `temperature(temp: f64)` | 可选 | 生成随机性 (0.0-2.0) | 1.0 |
+| `max_tool_calls(limit: u32)` | 可选 | 最大工具调用次数 | 10 |
+
+### Agent 方法
+
+#### `chat(message: &str)`
+
+与 Agent 进行对话。
+
+```rust
+let response = agent.chat("Hello, how are you?").await?;
+```
+
+**参数:**
+- `message: &str` - 用户消息
+
+**返回:** `Result<String>` - Agent 回复
+
+#### `generate_simple(prompt: &str)`
+
+生成简单回复（不保存对话历史）。
+
+```rust
+let response = agent.generate_simple("Explain quantum computing").await?;
+```
+
+---
+
+## 🧠 RAG API
+
+### 快速创建
+
+#### `lumosai::rag::simple()`
+
+创建一个 RAG（检索增强生成）系统。
+
+```rust
+use lumosai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // 创建向量存储
+    let storage = lumosai::vector::memory().await?;
+    
+    // 创建 RAG 系统
+    let rag = lumosai::rag::simple(storage, "openai").await?;
+    
+    // 添加文档
+    rag.add_document("Rust is a systems programming language.").await?;
+    
+    // 搜索并生成
+    let response = rag.search_and_generate("What is Rust?", 5).await?;
+    println!("{}", response);
+    
+    Ok(())
+}
+```
+
+**参数:**
+- `storage: VectorStorage` - 向量存储实例
+- `embedding_provider: &str` - 嵌入模型提供商
+
+**返回:** `Result<RagEngine>` - RAG 引擎实例
+
+### RAGBuilder
+
+#### `lumosai::rag::builder()`
+
+使用构建器创建自定义 RAG 系统。
+
+```rust
+use lumosai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let storage = lumosai::vector::memory().await?;
+    
+    let rag = lumosai::rag::builder()
+        .storage(storage)
+        .embedding_provider("openai")
+        .chunk_size(1000)
+        .chunk_overlap(200)
+        .build()
+        .await?;
+    
+    Ok(())
+}
+```
+
+**构建器方法:**
+
+| 方法 | 类型 | 描述 | 默认值 |
+|------|------|------|--------|
+| `storage(storage: VectorStorage)` | 必需 | 向量存储 | - |
+| `embedding_provider(provider: &str)` | 必需 | 嵌入模型 | - |
+| `chunk_size(size: usize)` | 可选 | 文档块大小 | 1000 |
+| `chunk_overlap(overlap: usize)` | 可选 | 块重叠大小 | 200 |
+
+### RAG 方法
+
+#### `add_document(content: &str)`
+
+添加文档到 RAG 系统。
+
+```rust
+rag.add_document("This is a document about AI.").await?;
+```
+
+#### `search(query: &str, limit: usize)`
+
+搜索相关文档。
+
+```rust
+let results = rag.search("artificial intelligence", 5).await?;
+```
+
+**参数:**
+- `query: &str` - 搜索查询
+- `limit: usize` - 结果数量限制
+
+**返回:** `Result<Vec<SearchResult>>` - 搜索结果列表
+
+#### `search_and_generate(query: &str, limit: usize)`
+
+搜索并基于搜索结果生成回答。
+
+```rust
+let response = rag.search_and_generate("What is AI?", 5).await?;
+```
+
+---
+
+## 💾 向量存储 API
+
+### 内存向量存储
+
+#### `lumosai::vector::memory()`
+
+创建内存向量存储（适合开发和测试）。
+
+```rust
+use lumosai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let storage = lumosai::vector::memory().await?;
+    
+    // 添加向量
+    let vector = vec![0.1, 0.2, 0.3, 0.4];
+    let id = storage.add_vector(vector).await?;
+    
+    // 搜索相似向量
+    let query = vec![0.1, 0.2, 0.3, 0.4];
+    let results = storage.search(&query, 5).await?;
+    
+    Ok(())
+}
+```
+
+**返回:** `Result<MemoryVectorStorage>` - 内存向量存储实例
+
+### VectorStorage Trait
+
+所有向量存储都必须实现 `VectorStorage` trait：
+
+```rust
+#[async_trait]
+pub trait VectorStorage: Send + Sync {
+    async fn add_vector(&self, vector: Vec<f32>) -> Result<String>;
+    async fn add_vector_with_metadata(&self, vector: Vec<f32>, metadata: serde_json::Value) -> Result<String>;
+    async fn search(&self, query: &[f32], limit: usize) -> Result<Vec<SearchResult>>;
+    async fn delete_vector(&self, id: &str) -> Result<()>;
+    async fn update_vector(&self, id: &str, vector: Vec<f32>) -> Result<()>;
+}
+```
+
+---
+
+## 🔄 工作流 API
+
+### 任务创建
+
+#### `lumosai::workflow::task()`
+
+创建工作流任务。
+
+```rust
+use lumosai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let agent = lumosai::agent::simple("gpt-4", "You are a researcher").await?;
+    
+    let task = lumosai::workflow::task()
+        .name("Research Task")
+        .description("Research about AI trends")
+        .agent(agent)
+        .build();
+    
+    // 执行任务
+    let result = task.execute().await?;
+    println!("{}", result);
+    
+    Ok(())
+}
+```
+
+### TaskBuilder
+
+```rust
+let task = lumosai::workflow::task()
+    .name("My Task")
+    .description("Task description")
+    .agent(agent)
+    .input_data(json!({"query": "AI trends"}))
+    .build();
+```
+
+---
+
+## 🛠️ 工具 API
+
+### 添加工具
+
+#### `agent.add_tool()`
+
+为 Agent 添加工具。
+
+```rust
+use lumosai::prelude::*;
+use serde_json::json;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let agent = Agent::builder()
+        .name("assistant")
+        .model("gpt-4")
+        .build()
+        .await?;
+    
+    // 添加自定义工具
+    agent.add_tool(
+        "get_weather",
+        "Get current weather for a location",
+        vec![
+            ("location", "City name", "string"),
+        ]
+    ).await?;
+    
+    // Agent 现在可以调用 get_weather 工具
+    let response = agent.chat("What's the weather in Tokyo?").await?;
+    
+    Ok(())
+}
+```
+
+### 自定义工具实现
+
+```rust
+use lumosai_core::tool::*;
+use async_trait::async_trait;
+use serde_json::{json, Value};
+
+struct WeatherTool;
+
+#[async_trait]
+impl Tool for WeatherTool {
+    fn name(&self) -> &str {
+        "get_weather"
+    }
+    
+    fn description(&self) -> &str {
+        "Get current weather for a location"
+    }
+    
+    fn parameters(&self) -> Vec<ToolParameter> {
+        vec![
+            ToolParameter {
+                name: "location".to_string(),
+                description: "City name".to_string(),
+                parameter_type: "string".to_string(),
+                required: true,
+            }
+        ]
+    }
+    
+    async fn execute(&self, args: Value) -> Result<Value> {
+        let location = args["location"].as_str().unwrap_or("Unknown");
+        
+        // 这里实现实际的天气查询逻辑
+        let weather = json!({
+            "location": location,
+            "temperature": "22°C",
+            "condition": "Sunny"
+        });
+        
+        Ok(weather)
+    }
+}
+
+// 使用自定义工具
+let weather_tool = Box::new(WeatherTool);
+agent.add_custom_tool(weather_tool).await?;
+```
+
+---
+
+## 📊 错误处理
+
+LumosAI 使用统一的 `Result<T>` 类型进行错误处理：
+
+```rust
+use lumosai::prelude::*;
+
+#[tokio::main]
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    match lumosai::agent::simple("gpt-4", "Hello").await {
+        Ok(agent) => {
+            println!("Agent created successfully");
+            // 使用 agent...
+        }
+        Err(e) => {
+            eprintln!("Failed to create agent: {}", e);
+            return Err(e.into());
+        }
+    }
+    
+    Ok(())
+}
+```
+
+### 常见错误类型
+
+- `ConfigError` - 配置错误
+- `ProviderError` - LLM 提供商错误
+- `StorageError` - 存储相关错误
+- `NetworkError` - 网络连接错误
+- `ValidationError` - 输入验证错误
+
+---
+
+## 🔗 类型参考
+
+### 核心类型
+
+```rust
+// Agent 相关
+pub struct Agent { /* ... */ }
+pub struct AgentBuilder { /* ... */ }
+
+// RAG 相关
+pub struct RagEngine { /* ... */ }
+pub struct RagBuilder { /* ... */ }
+pub struct SearchResult { /* ... */ }
+
+// 向量存储
+#[async_trait]
+pub trait VectorStorage { /* ... */ }
+pub struct MemoryVectorStorage { /* ... */ }
+
+// 工具相关
+#[async_trait]
+pub trait Tool { /* ... */ }
+pub struct ToolParameter { /* ... */ }
+
+// 工作流
+pub struct Task { /* ... */ }
+pub struct TaskBuilder { /* ... */ }
+```
+
+### 便捷类型别名
+
+```rust
+pub type Result<T> = std::result::Result<T, Error>;
+pub type Message = lumosai_core::llm::Message;
+pub type Role = lumosai_core::llm::Role;
+```
+
+---
+
+## 📚 更多示例
+
+- [完整示例集合](../../../examples/)
+- [Agent 教程](../tutorials/basics/agent-basics.md)
+- [RAG 教程](../tutorials/basics/rag-basics.md)
+- [工具集成教程](../tutorials/basics/tool-integration.md)
+
+---
+
+## 🆘 获取帮助
+
+- **📖 完整文档**: [文档中心](../README.md)
+- **💡 示例代码**: [examples/](../../../examples/)
+- **🐛 问题反馈**: [GitHub Issues](https://github.com/louloulin/lumos.ai/issues)
+- **❓ FAQ**: [常见问题](../resources/faq.md)
+
+---
+
+> **💡 提示**: 所有 API 都是异步的，请确保在 `#[tokio::main]` 函数中调用。

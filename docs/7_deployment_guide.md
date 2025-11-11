@@ -1,10 +1,10 @@
 # 7. 部署指南
 
-本章节介绍Lumos-X的各种部署选项，从本地开发环境到生产环境的完整部署指南。
+本章节介绍LumosAI的各种部署选项，从本地开发环境到生产环境的完整部署指南。
 
 ## 7.1 部署架构概述
 
-Lumos-X提供三种主要部署模式：
+LumosAI提供三种主要部署模式：
 
 1. **单机部署** - 适用于个人使用和小型团队
 2. **服务器部署** - 适用于团队和企业内部使用
@@ -12,7 +12,7 @@ Lumos-X提供三种主要部署模式：
 
 ### 7.1.1 部署组件
 
-一个完整的Lumos-X部署通常包含以下组件：
+一个完整的LumosAI部署通常包含以下组件：
 
 - **Frontend UI** - React前端界面
 - **Agent Server** - Rust后端服务器
@@ -71,7 +71,7 @@ P2P网络 ←→ 其他节点
 
 ## 7.3 Docker部署
 
-Docker是部署Lumos-X最简单的方式，适用于大多数使用场景。
+Docker是部署LumosAI最简单的方式，适用于大多数使用场景。
 
 ### 7.3.1 使用预构建镜像
 
@@ -100,7 +100,7 @@ docker run -d --name lumos-ui \
   lumosai/lumos-ui:latest
 ```
 
-现在可以通过 `http://localhost:3000` 访问Lumos-X界面。
+现在可以通过 `http://localhost:3000` 访问LumosAI界面。
 
 ### 7.3.2 使用Docker Compose
 
@@ -438,7 +438,7 @@ kubectl apply -f ingress.yaml
 
 ### 7.4.3 使用Helm部署
 
-如果您更喜欢使用Helm，可以创建一个Lumos-X的Helm Chart，或者使用我们提供的官方Chart:
+如果您更喜欢使用Helm，可以创建一个LumosAI的Helm Chart，或者使用我们提供的官方Chart:
 
 ```bash
 # 添加Lumos Helm仓库
@@ -447,7 +447,7 @@ helm repo add lumosai https://charts.lumosai.com
 # 更新仓库
 helm repo update
 
-# 部署Lumos-X
+# 部署LumosAI
 helm install lumos lumosai/lumos-x \
   --namespace lumos \
   --create-namespace \
@@ -458,7 +458,7 @@ helm install lumos lumosai/lumos-x \
 
 ## 7.5 裸机/VM部署
 
-对于不使用容器化的环境，可以直接在服务器上部署Lumos-X。
+对于不使用容器化的环境，可以直接在服务器上部署LumosAI。
 
 ### 7.5.1 系统准备
 
@@ -521,7 +521,7 @@ EOF
 # 创建系统服务
 cat << EOF | sudo tee /etc/systemd/system/lumos-server.service
 [Unit]
-Description=Lumos-X Server
+Description=LumosAI Server
 After=network.target postgresql.service
 
 [Service]

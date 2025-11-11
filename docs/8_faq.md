@@ -1,16 +1,16 @@
 # 8. 常见问题解答 (FAQ)
 
-本章节包含Lumos-X的常见问题和解答，帮助用户快速解决使用过程中遇到的问题。
+本章节包含LumosAI的常见问题和解答，帮助用户快速解决使用过程中遇到的问题。
 
 ## 8.1 一般问题
 
-### 什么是Lumos-X？
+### 什么是LumosAI？
 
-Lumos-X是一个开源的智能代理平台，基于去中心化架构设计，支持多模态代理协作和P2P网络通信。它允许用户创建、部署和管理智能代理，这些代理可以自主执行任务、相互协作并与人类用户交互。
+LumosAI是一个开源的智能代理平台，基于去中心化架构设计，支持多模态代理协作和P2P网络通信。它允许用户创建、部署和管理智能代理，这些代理可以自主执行任务、相互协作并与人类用户交互。
 
-### Lumos-X与其他代理框架有何不同？
+### LumosAI与其他代理框架有何不同？
 
-Lumos-X的主要区别在于：
+LumosAI的主要区别在于：
 
 1. **去中心化架构**：基于libp2p构建，支持点对点通信，不依赖中央服务器
 2. **多模态支持**：集成处理文本、图像、音频等多种模态
@@ -18,18 +18,18 @@ Lumos-X的主要区别在于：
 4. **本地优先**：支持完全本地运行，保护用户隐私
 5. **开源开放**：采用开放许可证，鼓励社区贡献和定制
 
-### Lumos-X支持哪些操作系统？
+### LumosAI支持哪些操作系统？
 
-Lumos-X支持以下操作系统：
+LumosAI支持以下操作系统：
 
 - **Windows** 10/11 (64位)
 - **macOS** 10.15+
 - **Linux** (主流发行版如Ubuntu 20.04+, Debian 11+, Fedora 34+)
 - 基于浏览器的Web应用可在任何现代浏览器运行
 
-### Lumos-X适合什么场景使用？
+### LumosAI适合什么场景使用？
 
-Lumos-X适合以下场景：
+LumosAI适合以下场景：
 
 - 个人知识管理和辅助
 - 企业内部智能助手系统
@@ -49,7 +49,7 @@ Lumos-X适合以下场景：
 
 ## 8.2 安装与配置
 
-### 如何安装Lumos-X？
+### 如何安装LumosAI？
 
 **桌面应用安装**:
 
@@ -70,7 +70,7 @@ docker-compose up -d
 
 ### 初次使用需要配置什么？
 
-首次启动Lumos-X时，您需要配置：
+首次启动LumosAI时，您需要配置：
 
 1. **API密钥**（如果使用第三方模型服务）
 2. **数据存储位置**（本地文件路径或数据库连接）
@@ -108,8 +108,8 @@ docker-compose up -d
 配置文件的位置取决于您的部署方式：
 
 **桌面应用**：
-- Windows: `%APPDATA%\Lumos-X\config.toml`
-- macOS: `~/Library/Application Support/Lumos-X/config.toml`
+- Windows: `%APPDATA%\LumosAI\config.toml`
+- macOS: `~/Library/Application Support/LumosAI/config.toml`
 - Linux: `~/.config/lumos-x/config.toml`
 
 **Docker部署**：
@@ -159,7 +159,7 @@ const agent = await client.createAgent({
 
 ### Agent之间如何协作？
 
-Lumos-X支持多种Agent协作方式：
+LumosAI支持多种Agent协作方式：
 
 1. **消息传递**：Agent之间通过P2P网络直接传递消息
 2. **工作流**：定义Agent之间的工作流程
@@ -210,7 +210,7 @@ console.log(`内容ID: ${cid}`);
 
 ### 如何管理Agent记忆？
 
-Lumos-X提供多种记忆管理方式：
+LumosAI提供多种记忆管理方式：
 
 1. **查看记忆**：通过UI界面或API查询Agent记忆
 2. **编辑记忆**：修改或删除特定记忆项
@@ -242,7 +242,7 @@ await memory.delete(memoryId);
 
 ### Agent能使用哪些外部工具？
 
-Lumos-X支持多种外部工具，包括：
+LumosAI支持多种外部工具，包括：
 
 1. **网络搜索**：Google、Bing等搜索引擎
 2. **知识库检索**：向量数据库和文档存储
@@ -261,7 +261,7 @@ Lumos-X支持多种外部工具，包括：
 2. **验证API密钥**：确保第三方服务的API密钥有效
 3. **检查网络连接**：确保能访问所需服务
 4. **重启Agent**：有时简单重启可以解决问题
-5. **更新版本**：确保使用最新版本的Lumos-X
+5. **更新版本**：确保使用最新版本的LumosAI
 
 ### 无法连接到P2P网络怎么办？
 
@@ -305,9 +305,9 @@ Lumos-X支持多种外部工具，包括：
 
 ## 8.5 开发相关问题
 
-### 如何扩展Lumos-X的功能？
+### 如何扩展LumosAI的功能？
 
-扩展Lumos-X功能的主要方式：
+扩展LumosAI功能的主要方式：
 
 1. **开发自定义能力**：为Agent添加新能力
 2. **创建工具插件**：实现新的外部工具

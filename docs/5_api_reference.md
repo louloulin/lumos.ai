@@ -2,7 +2,7 @@
 
  # 5. API参考
 
-本章节详细说明Lumos-X提供的主要API接口、数据结构和使用示例，帮助开发者更好地理解和使用Lumos-X平台。
+本章节详细说明LumosAI提供的主要API接口、数据结构和使用示例，帮助开发者更好地理解和使用LumosAI平台。
 
 ## 5.1 客户端API (@lomusai/client-js)
 

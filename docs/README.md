@@ -1,75 +1,175 @@
-# 📚 LumosAI 文档总览
+# 📚 LumosAI 文档中心
 
-欢迎查阅 LumosAI 文档。LumosAI 是一个用 Rust 构建的企业级 AI 框架，专注于性能、安全与可扩展性。本页为中文索引，提供从入门到生产的完整导航。
+> 🚀 **企业级 AI 应用开发框架** - 基于 Rust 的高性能、类型安全、可扩展的 AI 框架
 
-## 🚀 快速导航
+[![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](docs/index.md)
+[![Crates.io](https://img.shields.io/crates/v/lumosai.svg)](https://crates.io/crates/lumosai)
 
-### 📖 入门与概览
-- `docs/quick-start/README.md` 入门指南（First steps）
-- `docs/1_overview.md` 项目概览与核心价值
-- `docs/2_architecture.md` 系统架构与模块设计
-- `docs/3_tech_stack.md` 技术栈与依赖说明
-- `docs/ARCHITECTURE.md` 架构图与结构化示意
+## 🚀 快速开始
 
-### 🤖 核心与参考
-- `docs/4_core_components.md` 核心组件（Agent、Tool、Memory、LLM、RAG、Workflow）
-- `docs/5_api_reference.md` API 参考
-- `docs/API_REFERENCE.md` API 参考（补充版）
-- `docs/6_development_guide.md` 开发指南（环境、规范、扩展）
-- `docs/7_deployment_guide.md` 部署指南（本地、容器与云）
+### 新手入门
+如果你是 LumosAI 新手，推荐按以下路径学习：
 
-### 🛡️ RAG 与向量
-- `docs/VECTOR_DATABASES.md` 向量数据库与适配
-- `docs/vector_api_reference.md` 向量 API 参考
-- `docs/vector_database_optimization.md` 向量数据库优化
+1. **[安装指南](getting-started/installation.md)** - 5分钟完成环境搭建
+2. **[快速体验](getting-started/quick-start.md)** - 创建你的第一个 AI Agent
+3. **[基础教程](tutorials/basics/)** - 掌握核心概念和用法
 
-### 🔧 宏与 DSL
-- `docs/dsl_macros.md` DSL 宏与工作流声明式用法
-- `docs/PARAMETER_MACRO_ANALYSIS.md` 参数宏分析
-
-### 👥 多代理与工作流
-- `docs/MULTI_AGENT_COLLABORATION_PATTERNS.md` 多代理协作模式
-- `docs/MULTI_AGENT_QUICK_REFERENCE.md` 多代理快速参考
-- `docs/examples/README.md` 示例索引（Chatbot、RAG、Workflow 等）
-
-### 🧪 测试与质量
-- `docs/testing/README.md` 测试策略与最佳实践
-- `docs/analysis/CARGO_TEST_ANALYSIS_SUMMARY.md` Cargo 测试分析摘要
-- `docs/analysis/COMPLETE_TEST_ANALYSIS_SUMMARY.md` 完整测试分析摘要
-
-### 📋 发行与更新
-- `docs/RELEASE_GUIDE.md` 发布与版本管理
-- `docs/releases/CHANGELOG.md` 版本变更记录
-- `docs/updates/` 更新日志与周报
-
-### 📚 指南与其他
-- `docs/guides/README.md` 深度指南导航（架构、开发、部署、安全、监控、集成）
-- `docs/FRAMEWORK_COMPARISON.md` 框架对比分析
-- `docs/8_faq.md` 常见问题（FAQ）
-- `docs/contributing/CONTRIBUTING.md` 贡献指南
-
-## 🎯 按角色导航
-
-### 👨‍💻 开发者
-- 首选 `quick-start/README.md`，继续阅读 `4_core_components.md` 与 `5_api_reference.md`
-
-### 🏗️ 架构师
-- 查阅 `2_architecture.md`、`3_tech_stack.md` 与 `VECTOR_DATABASES.md`
-
-### 🚀 运维
-- 查看 `7_deployment_guide.md` 与 `RELEASE_GUIDE.md`
-
-### 👔 产品经理
-- 推荐 `1_overview.md`、`implementation_summary.md`（若存在）与 `8_faq.md`
-
-## 🆘 获取帮助
-- 🐛 问题反馈: https://github.com/louloulin/lumos.ai/issues
-- 💡 常见问题: `docs/8_faq.md`
-- 📧 企业支持: enterprise@lumosai.com
-
-## 🤝 文档贡献
-欢迎贡献文档改进！请参阅 `docs/6_development_guide.md` 了解贡献指引。
+### 快速链接
+- [🎯 5分钟快速开始](getting-started/quick-start.md)
+- [📖 核心概念](concepts/README.md)
+- [🔧 API 参考](api-reference/README.md)
+- [💡 示例代码](resources/examples/README.md)
 
 ---
 
-**📖 祝阅读愉快，欢迎加入 LumosAI 社区！**
+## 📋 文档导航
+
+### 🚀 Getting Started (快速开始)
+适合新用户，快速上手 LumosAI
+
+- [**安装指南**](getting-started/installation.md) - 详细安装说明
+- [**快速开始**](getting-started/quick-start.md) - 5分钟体验 LumosAI
+- [**第一个 Agent**](getting-started/first-agent.md) - 创建并运行 AI Agent
+- [**故障排除**](getting-started/troubleshooting.md) - 常见问题解决方案
+
+### 💡 Concepts (核心概念)
+理解 LumosAI 的核心架构和设计理念
+
+- [**架构概览**](concepts/architecture.md) - 系统整体架构
+- [**Agent 系统**](concepts/agents.md) - AI Agent 详解
+- [**RAG 引擎**](concepts/rag.md) - 检索增强生成
+- [**内存系统**](concepts/memory.md) - 对话与内存管理
+- [**工作流**](concepts/workflows.md) - 多Agent协作流程
+
+### 📚 Tutorials (教程)
+循序渐进的实践教程，从基础到高级
+
+#### 基础教程
+- [**Agent 基础**](tutorials/basics/agent-basics.md) - 创建和配置 Agent
+- [**RAG 基础**](tutorials/basics/rag-basics.md) - 构建知识问答系统
+- [**工具集成**](tutorials/basics/tool-integration.md) - 扩展 Agent 能力
+
+#### 进阶教程
+- [**多 Agent 协作**](tutorials/intermediate/multi-agent.md) - Agent 团队协作
+- [**自定义工具**](tutorials/intermediate/custom-tools.md) - 开发自定义工具
+- [**性能优化**](tutorials/intermediate/performance.md) - 提升系统性能
+
+#### 高级教程
+- [**企业部署**](tutorials/advanced/enterprise.md) - 生产环境部署
+- [**监控日志**](tutorials/advanced/monitoring.md) - 系统监控与日志
+- [**扩展开发**](tutorials/advanced/extensions.md) - 框架扩展开发
+
+### 🔧 API Reference (API参考)
+完整的 API 文档和接口说明
+
+- [**API 概览**](api-reference/README.md) - API 使用指南
+- [**Agent API**](api-reference/agents.md) - Agent 相关接口
+- [**RAG API**](api-reference/rag.md) - RAG 相关接口
+- [**Memory API**](api-reference/memory.md) - 内存管理接口
+- [**Tools API**](api-reference/tools.md) - 工具系统接口
+- [**Workflow API**](api-reference/workflows.md) - 工作流接口
+
+### 📋 Guides (专题指南)
+特定主题的深度指南
+
+- [**部署指南**](guides/deployment/) - 多环境部署方案
+- [**安全指南**](guides/security/) - 安全最佳实践
+- [**集成指南**](guides/integration/) - 第三方系统集成
+- [**迁移指南**](guides/migration/) - 从其他框架迁移
+
+### 📦 Resources (资源)
+实用工具和参考资料
+
+- [**示例代码**](resources/examples/) - 丰富的示例集合
+- [**项目模板**](resources/templates/) - 快速启动模板
+- [**术语表**](resources/glossary.md) - 专业术语解释
+- [**常见问题**](resources/faq.md) - FAQ 解答
+
+### 🤝 Contributing (贡献)
+参与 LumosAI 开发和文档贡献
+
+- [**开发环境**](contributing/development.md) - 搭建开发环境
+- [**文档贡献**](contributing/documentation.md) - 文档贡献指南
+- [**发布流程**](contributing/release-process.md) - 版本发布流程
+
+---
+
+## 🎯 按使用场景导航
+
+### 我想要...
+- **快速体验** → [快速开始](getting-started/quick-start.md)
+- **构建 AI Agent** → [Agent 基础教程](tutorials/basics/agent-basics.md)
+- **添加知识库** → [RAG 基础教程](tutorials/basics/rag-basics.md)
+- **部署到生产** → [企业部署指南](tutorials/advanced/enterprise.md)
+- **查找 API** → [API 参考](api-reference/README.md)
+- **解决问题** → [故障排除](getting-started/troubleshooting.md)
+
+### 我是...
+- **🆕 新手** → [安装指南](getting-started/installation.md) → [快速开始](getting-started/quick-start.md)
+- **👨‍💻 开发者** → [核心概念](concepts/README.md) → [API 参考](api-reference/README.md)
+- **🏗️ 架构师** → [架构概览](concepts/architecture.md) → [部署指南](guides/deployment/)
+- **🔧 运维** → [监控指南](tutorials/advanced/monitoring.md) → [故障排除](getting-started/troubleshooting.md)
+
+---
+
+## 📊 项目信息
+
+### 版本信息
+- **当前版本**: v0.2.0
+- **Rust 版本**: 1.70+
+- **支持平台**: Linux, macOS, Windows
+
+### 核心特性
+- 🤖 **智能 Agent 系统** - 支持多种 LLM 提供商
+- 🧠 **高级 RAG 引擎** - 检索增强生成
+- 🔄 **工作流编排** - 多Agent协作
+- 💾 **向量存储** - 多种向量数据库支持
+- 🛡️ **企业级安全** - 认证、授权、审计
+- ⚡ **高性能** - 基于 Rust 的零成本抽象
+
+### 快速命令
+```bash
+# 安装 LumosAI
+cargo add lumosai
+
+# 创建简单 Agent
+use lumosai::prelude::*;
+
+let agent = lumosai::agent::simple("gpt-4", "You are helpful").await?;
+
+# 开始对话
+let response = agent.chat("Hello!").await?;
+```
+
+---
+
+## 🔗 外部链接
+
+- **GitHub 仓库**: https://github.com/louloulin/lumos.ai
+- **Crates.io**: https://crates.io/crates/lumosai
+- **API 文档**: https://docs.rs/lumosai
+- **更新日志**: [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## 🆘 获取帮助
+
+遇到问题？这里有多种方式获取帮助：
+
+- **📖 查看文档**: 浏览本文档中心
+- **🔍 搜索**: 使用页面搜索功能
+- **❓ FAQ**: 查看[常见问题](resources/faq.md)
+- **🐛 报告问题**: 在 GitHub 提交 Issue
+- **💬 社区讨论**: 参与社区交流
+
+---
+
+<div align="center">
+
+**🌟 如果 LumosAI 对你有帮助，请给我们一个 Star！**
+
+[GitHub](https://github.com/louloulin/lumos.ai) | [Crates.io](https://crates.io/crates/lumosai) | [API Docs](https://docs.rs/lumosai)
+
+</div>

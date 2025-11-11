@@ -1,5 +1,6 @@
 //! E2E 测试：Auth 认证流程
 
+#[path = "framework.rs"]
 mod framework;
 use framework::E2ETestContext;
 

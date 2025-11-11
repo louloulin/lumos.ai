@@ -1,8 +1,8 @@
 //! E2E 测试：Agent 相关场景
 
 use lumosai_core::agent::{Agent, AgentBuilder};
-use lumosai_core::base::Base;
 
+#[path = "framework.rs"]
 mod framework;
 use framework::E2ETestContext;
 

@@ -61,6 +61,7 @@
 
 - `docs/guides/README.md` 深度指南导航（架构、开发、部署、安全、监控、集成）
 - `docs/tutorials/README.md` 教程导航
+- `docs/tutorials/09-architecture-deep-dive.md` 架构深度解析与完整用法指南（简化↔核心映射）
 - `docs/quick-start/README.md` Quick Start 文档页
 
 ## 更新、发布与历史
@@ -69,11 +70,11 @@
 - `docs/releases/CHANGELOG.md` 版本变更记录
 - `docs/RELEASE_GUIDE.md` 发布与版本管理指南
 - `docs/releases/RELEASE_NOTES_v0.2.0.md` v0.2.0 发行说明
-- `docs/history/INDEX.md` 历史文档索引（本页将创建）
+- `docs/history/INDEX.md` 历史文档索引
 
 ## 概览索引
 
-- `docs/overview/INDEX.md` 概览与路线图索引（本页将创建）
+- `docs/overview/INDEX.md` 概览与路线图索引
 
 ## 常见问题与贡献
 

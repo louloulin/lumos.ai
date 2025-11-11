@@ -34,6 +34,14 @@ pub mod trait_def;
 pub mod types;
 pub mod websocket;
 
+// 高级协作模式（2025 研究成果）
+pub mod group_chat;
+pub mod handoff;
+pub mod reflection;
+pub mod magentic;
+pub mod debate;
+pub mod maker_checker;
+
 // 暂时移除模块化Agent组件（有编译错误）
 // pub mod modular;
 
@@ -143,6 +151,16 @@ pub use collaboration::{
 };
 pub use communication::{
     AgentCommunicationManager, AgentMessage, AgentMessageType, CommunicationConfig,
+};
+
+// Re-export advanced collaboration patterns (2025 research)
+pub use group_chat::{ChatMessage, ChatThread, GroupChatExecutor};
+pub use handoff::{HandoffCondition, HandoffExecutor, HandoffRecord, HandoffRule};
+pub use reflection::{ReflectionExecutor, ReflectionIteration, ReflectionStats};
+pub use magentic::{MagenticExecutor, MagenticTask, TaskLedger, TaskState};
+pub use debate::{DebateExecutor, DebatePosition, DebateResult, DebateRound};
+pub use maker_checker::{
+    CheckResult, CheckStatus, MakerCheckerExecutor, MakerCheckerIteration, MakerCheckerStats,
 };
 
 // 暂时移除模块化代理组件的重新导出

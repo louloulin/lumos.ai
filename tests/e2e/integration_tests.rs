@@ -3,10 +3,12 @@
 #[path = "framework.rs"]
 mod framework;
 use framework::E2ETestContext;
-use lumosai_core::agent::Agent;
+use lumosai_core::agent::{Agent, AgentPipeline, AgentParallel};
+use lumosai_core::agent::types::RuntimeContext;
 use std::sync::Arc;
+use serde_json::json;
 
-/// 测试 10: Agent + Agent 协作
+/// 测试 10: Agent + Agent 协作（顺序执行）
 #[tokio::test]
 async fn test_multi_agent_collaboration() {
     let ctx = E2ETestContext::setup().await.unwrap();
@@ -33,6 +35,81 @@ async fn test_multi_agent_collaboration() {
     assert!(!writing_result.is_empty());
 
     println!("✅ Multi-agent collaboration test passed");
+
+    ctx.teardown().await.unwrap();
+}
+
+/// 测试 11: Agent Pipeline（管道式协作）
+#[tokio::test]
+async fn test_agent_pipeline() {
+    let ctx = E2ETestContext::setup().await.unwrap();
+
+    // 创建 Agent
+    let agent1 = Arc::new(ctx.create_test_agent(
+        "analyzer",
+        "You are an analyzer. Analyze the input."
+    ).unwrap());
+
+    let agent2 = Arc::new(ctx.create_test_agent(
+        "summarizer",
+        "You are a summarizer. Summarize the input."
+    ).unwrap());
+
+    // 创建管道
+    let pipeline = AgentPipeline::new(agent1).pipe(agent2);
+
+    // 执行管道
+    let result = pipeline.execute("Analyze and summarize: Rust is a systems programming language").await;
+
+    assert!(result.is_ok(), "Pipeline execution should succeed");
+    let output = result.unwrap();
+    assert!(!output.is_empty(), "Pipeline output should not be empty");
+
+    println!("✅ Agent pipeline test passed");
+
+    ctx.teardown().await.unwrap();
+}
+
+/// 测试 14: Agent Parallel（并行执行）
+#[tokio::test]
+async fn test_agent_parallel_execution() {
+    let ctx = E2ETestContext::setup().await.unwrap();
+
+    // 创建多个 Agent
+    let agent1 = Arc::new(ctx.create_test_agent(
+        "technical",
+        "You are a technical expert."
+    ).unwrap());
+
+    let agent2 = Arc::new(ctx.create_test_agent(
+        "business",
+        "You are a business expert."
+    ).unwrap());
+
+    let agent3 = Arc::new(ctx.create_test_agent(
+        "user",
+        "You are a user experience expert."
+    ).unwrap());
+
+    // 创建并行执行器
+    let parallel = AgentParallel::new(agent1)
+        .parallel(agent2)
+        .parallel(agent3);
+
+    // 并行执行
+    let start = std::time::Instant::now();
+    let results = parallel.execute("Evaluate Rust programming language").await;
+    let duration = start.elapsed();
+
+    assert!(results.is_ok(), "Parallel execution should succeed");
+    let outputs = results.unwrap();
+    assert_eq!(outputs.len(), 3, "Should get 3 responses");
+
+    for output in &outputs {
+        assert!(!output.is_empty(), "Each output should not be empty");
+    }
+
+    println!("✅ Agent parallel test passed: 3 agents executed in {:?}", duration);
 
     ctx.teardown().await.unwrap();
 }
@@ -67,6 +144,49 @@ async fn test_concurrent_requests() {
 
     println!("✅ Concurrent test: {}/5 requests succeeded", success_count);
     assert!(success_count > 0, "At least one request should succeed");
+
+    ctx.teardown().await.unwrap();
+}
+
+/// 测试 15: Agent DAG 编排
+#[tokio::test]
+async fn test_agent_dag_orchestration() {
+    let ctx = E2ETestContext::setup().await.unwrap();
+
+    // 创建 DAG 编排器
+    let orchestrator = lumosai_core::agent::AgentDagOrchestrator::new();
+
+    // 创建 Agent
+    let agent_a = Arc::new(ctx.create_test_agent(
+        "agent_a",
+        "You are agent A. Process the input."
+    ).unwrap());
+
+    let agent_b = Arc::new(ctx.create_test_agent(
+        "agent_b",
+        "You are agent B. Refine the input."
+    ).unwrap());
+
+    let agent_c = Arc::new(ctx.create_test_agent(
+        "agent_c",
+        "You are agent C. Finalize the input."
+    ).unwrap());
+
+    // 构建 DAG: A -> B -> C
+    orchestrator.add_agent("agent_a".to_string(), agent_a, vec![]).await.unwrap();
+    orchestrator.add_agent("agent_b".to_string(), agent_b, vec!["agent_a".to_string()]).await.unwrap();
+    orchestrator.add_agent("agent_c".to_string(), agent_c, vec!["agent_b".to_string()]).await.unwrap();
+
+    // 执行 DAG
+    let runtime_context = RuntimeContext::default();
+    let input = json!({"message": "Process this through the DAG"});
+    let results = orchestrator.execute(input, &runtime_context).await;
+
+    assert!(results.is_ok(), "DAG execution should succeed");
+    let outputs = results.unwrap();
+    assert_eq!(outputs.len(), 3, "Should have 3 agent outputs");
+
+    println!("✅ Agent DAG orchestration test passed");
 
     ctx.teardown().await.unwrap();
 }

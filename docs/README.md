@@ -20,8 +20,6 @@
 
 ### 🛡️ RAG 与向量
 - `docs/VECTOR_DATABASES.md` 向量数据库与适配
-- `docs/FASTEMBED_IMPLEMENTATION.md` FastEmbed 嵌入实现
-- `docs/LANCEDB_IMPLEMENTATION.md` LanceDB 集成
 - `docs/vector_api_reference.md` 向量 API 参考
 - `docs/vector_database_optimization.md` 向量数据库优化
 

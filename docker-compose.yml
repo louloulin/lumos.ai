@@ -26,6 +26,9 @@ services:
       # 向量数据库配置
       - QDRANT_URL=http://qdrant:6333
       - WEAVIATE_URL=http://weaviate:8081
+      # 注意：在同一 Docker 网络中应使用容器内部端口 8080
+      # 修复：将 WEAVIATE_URL 指向容器内部端口，避免端口映射混淆
+      - WEAVIATE_URL=http://weaviate:8080
       
       # JWT 配置
       - JWT_SECRET=change-this-secret-in-production-at-least-32-bytes

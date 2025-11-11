@@ -18,7 +18,7 @@
 >
 > 📖 See [Implementation Summary](docs/overview/IMPLEMENTATION_SUMMARY.md) for detailed information
 
-[📖 Documentation](docs/index.md) | [📚 Docs Index](docs/index.md) | [🌏 中文文档](docs/README.md) | [🚀 Quick Start](docs/quick-start/README.md) | [💡 Examples](#examples) | [🤝 Contributing](#contributing)
+[📖 Documentation](docs/index.md) | [📚 Docs Index](docs/index.md) | [🌏 中文文档](docs/README_CN.md) | [🚀 Quick Start](docs/quick-start/README.md) | [💡 Examples](#examples) | [🤝 Contributing](#contributing)
 
 </div>
 
@@ -249,7 +249,7 @@ LumosAI follows a modular, layered architecture designed for scalability and mai
 ### 💡 Tutorials & Examples
 - [🧪 Testing Guide](docs/testing/README.md) - Testing strategies and best practices
 - [❓ FAQ](docs/8_faq.md) - Frequently asked questions
-- [🚀 Quick Start](docs/QUICK_START.md) - Quick start guide
+- [🚀 Quick Start](docs/quick-start/README.md) - Quick start guide
 
 ---
 
@@ -362,7 +362,7 @@ Contact us at [enterprise@lumosai.com](mailto:enterprise@lumosai.com) for more i
 
 ---
 
-## 🎉 Recent Updates (v0.1.4)
+## 🎉 Recent Updates (v0.2.0)
 
 ### 第五-六周：集成和优化 (2025-01-16)
 
@@ -382,8 +382,8 @@ Contact us at [enterprise@lumosai.com](mailto:enterprise@lumosai.com) for more i
 - **结构化输出**: 提供清晰的错误格式，包含表情符号和技术细节
 
 #### 📚 文档完善
-- **示例更新**: 新增 3 个演示示例（工具宏、统一内存、友好错误）
-- **版本更新**: 更新到 v0.1.4，反映最新功能
+- **示例更新**: 新增与完善演示示例（工具宏、统一内存、友好错误）
+- **版本更新**: 更新到 v0.2.0，反映最新功能
 - **文档同步**: 确保所有文档与代码实现保持同步
 
 #### 🧪 集成测试

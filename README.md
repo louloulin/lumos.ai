@@ -16,7 +16,7 @@
 > - ✅ Enterprise-grade features fully preserved
 > - ✅ Production-ready status achieved
 >
-> 📖 See [Project Completion Report](docs/PROJECT_COMPLETION_REPORT.md) for detailed information
+> 📖 See [Implementation Summary](docs/overview/IMPLEMENTATION_SUMMARY.md) for detailed information
 
 [📖 Documentation](docs/README.md) | [📚 Docs Index](docs/index.md) | [🌏 中文文档](docs/README_CN.md) | [🚀 Quick Start](docs/QUICK_START.md) | [💡 Examples](#examples) | [🤝 Contributing](#contributing)
 
@@ -365,6 +365,8 @@ Contact us at [enterprise@lumosai.com](mailto:enterprise@lumosai.com) for more i
 ### 第五-六周：集成和优化 (2025-01-16)
 
 我们完成了 LumosAI v2.0 重构计划的第五-六周任务，专注于系统集成和优化：
+
+👉 详细更新请参见：[WEEK_5_6_INTEGRATION_OPTIMIZATION.md](docs/WEEK_5_6_INTEGRATION_OPTIMIZATION.md)
 
 #### ⚡ 性能优化
 - **编译时间优化**: 核心包编译时间从 45+ 秒优化到 38.03 秒

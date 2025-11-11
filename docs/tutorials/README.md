@@ -25,6 +25,7 @@
 | [06. 工作流自动化](./06-workflow-automation.md) | 45分钟 | 高级 | 创建复杂的自动化工作流 |
 | [07. 性能优化](./07-performance-optimization.md) | 30分钟 | 高级 | 优化 Agent 性能和资源使用 |
 | [08. 企业级部署](./08-enterprise-deployment.md) | 60分钟 | 高级 | 企业环境中的部署和监控 |
+| [09. 架构深度解析与完整用法指南](./09-architecture-deep-dive.md) | 60分钟 | 高级 | 简化↔核心映射与端到端组合 |
 
 ### 🛠️ 专题教程
 
@@ -43,6 +44,8 @@
 2. [01. 创建您的第一个 Agent](./01-first-agent.md) → 
 3. [02. 工具集成详解](./02-tool-integration.md) → 
 4. [03. 内存系统深入](./03-memory-systems.md)
+5. [向量数据库集成](./vector-databases.md)（选修） → 
+6. [09. 架构深度解析与完整用法指南](./09-architecture-deep-dive.md)（建议阅读）
 
 ### 开发者路径（1 周）
 1. 完成新手路径 → 
@@ -50,6 +53,7 @@
 3. [向量数据库集成](./vector-databases.md) → 
 4. [自定义工具开发](./custom-tools.md) → 
 5. [错误处理最佳实践](./error-handling.md)
+6. [09. 架构深度解析与完整用法指南](./09-architecture-deep-dive.md)
 
 ### 架构师路径（2 周）
 1. 完成开发者路径 → 

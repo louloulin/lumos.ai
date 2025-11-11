@@ -2,6 +2,9 @@
 
 欢迎来到 LumosAI 教程系列！这些 30 分钟的教程将带您深入了解 LumosAI 的各项功能。
 
+> 推荐先阅读综合指南以获得全局视角：
+> [00. 综合教程：从 Agent 到编排的系统指南](./00-comprehensive-guide.md)
+
 ## 📚 教程目录
 
 ### 🎯 基础教程
@@ -12,6 +15,7 @@
 | [02. 工具集成详解](./02-tool-integration.md) | 30分钟 | 初级 | 为 Agent 添加工具能力 |
 | [03. 内存系统深入](./03-memory-systems.md) | 30分钟 | 中级 | 理解和使用不同类型的内存系统 |
 | [04. RAG 系统构建](./04-rag-systems.md) | 45分钟 | 中级 | 构建检索增强生成系统 |
+| [向量数据库集成](./vector-databases.md) | 30分钟 | 中级 | 选择与配置向量数据库，示例连接 |
 
 ### 🚀 高级教程
 
@@ -35,6 +39,7 @@
 
 ### 新手路径（2-3 天）
 1. [快速开始](../quick-start/README.md) → 
+2. [00. 综合教程](./00-comprehensive-guide.md) → 
 2. [01. 创建您的第一个 Agent](./01-first-agent.md) → 
 3. [02. 工具集成详解](./02-tool-integration.md) → 
 4. [03. 内存系统深入](./03-memory-systems.md)
@@ -42,7 +47,7 @@
 ### 开发者路径（1 周）
 1. 完成新手路径 → 
 2. [04. RAG 系统构建](./04-rag-systems.md) → 
-3. [向量数据库选择](./vector-databases.md) → 
+3. [向量数据库集成](./vector-databases.md) → 
 4. [自定义工具开发](./custom-tools.md) → 
 5. [错误处理最佳实践](./error-handling.md)
 

@@ -28,8 +28,8 @@ members = [
     "lumosai_derive", "lumosai_multimodal",
 
     # 暂时排除的包
-    # "lumosai_ui",
-    # "lumosai_ui/web-server",
+    "lumosai_ui",
+    "lumosai_ui/web-server",
     # "lumosai_ai_extensions"
 ]
 # 排除有问题的包
@@ -37,8 +37,8 @@ exclude = [
     "lumosai_vector/postgres",
     "lumosai_marketplace",
     # 暂时排除 UI 相关包（有 LabelRole 错误）
-    "lumosai_ui",
-    "lumosai_ui/web-server",
+    # "lumosai_ui",
+    # "lumosai_ui/web-server",
     # 暂时排除其他复杂包
     "lumosai_bindings"
 ]

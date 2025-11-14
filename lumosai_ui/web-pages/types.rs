@@ -8,6 +8,17 @@ for UI-only components.
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
+// UI 标签样式角色枚举，用于统一控制标签的视觉风格
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum LabelRole {
+    Neutral,
+    Highlight,
+    Success,
+    Info,
+    Warning,
+    Danger,
+}
+
 // Visibility enum
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Visibility {

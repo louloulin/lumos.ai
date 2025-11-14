@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use crate::types::ModelType;
+use crate::types::{ModelType, LabelRole};
 use daisy_rsx::*;
 use dioxus::prelude::*;
 
@@ -7,56 +7,28 @@ use dioxus::prelude::*;
 pub fn Model(model_type: ModelType) -> Element {
     match model_type {
         ModelType::LLM => rsx!(
-            Label {
-                class: "truncate",
-                label_role: LabelRole::Info,
-                "Large Language Model"
-            }
+            span { class: "truncate {crate::role_class(LabelRole::Info)}", "Large Language Model" }
         ),
         ModelType::Embeddings => rsx!(
-            Label {
-                class: "truncate",
-                label_role: LabelRole::Highlight,
-                "Embeddings Model"
-            }
+            span { class: "truncate {crate::role_class(LabelRole::Highlight)}", "Embeddings Model" }
         ),
         ModelType::TextToSpeech => rsx!(
-            Label {
-                class: "truncate",
-                label_role: LabelRole::Warning,
-                "Text To Speech"
-            }
+            span { class: "truncate {crate::role_class(LabelRole::Warning)}", "Text To Speech" }
         ),
         ModelType::Image => rsx!(
-            Label {
-                class: "truncate",
-                label_role: LabelRole::Neutral,
-                "Image Generation"
-            }
+            span { class: "truncate {crate::role_class(LabelRole::Neutral)}", "Image Generation" }
         ),
         ModelType::OpenAI => rsx!(
-            Label {
-                label_role: LabelRole::Success,
-                "OpenAI"
-            }
+            span { class: crate::role_class(LabelRole::Success), "OpenAI" }
         ),
         ModelType::Anthropic => rsx!(
-            Label {
-                label_role: LabelRole::Info,
-                "Anthropic"
-            }
+            span { class: crate::role_class(LabelRole::Info), "Anthropic" }
         ),
         ModelType::Local => rsx!(
-            Label {
-                label_role: LabelRole::Neutral,
-                "Local"
-            }
+            span { class: crate::role_class(LabelRole::Neutral), "Local" }
         ),
         ModelType::Custom => rsx!(
-            Label {
-                label_role: LabelRole::Warning,
-                "Custom"
-            }
+            span { class: crate::role_class(LabelRole::Warning), "Custom" }
         ),
     }
 }

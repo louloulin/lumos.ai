@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use crate::types::Role as DBRole;
+use crate::types::{Role as DBRole, LabelRole};
 use daisy_rsx::*;
 use dioxus::prelude::*;
 
@@ -7,46 +7,22 @@ use dioxus::prelude::*;
 pub fn Role(role: DBRole) -> Element {
     match role {
         DBRole::SystemAdministrator => rsx!(
-            Label {
-                class: "mr-2",
-                label_role: LabelRole::Highlight,
-                "System Administrator"
-            }
+            span { class: "mr-2 {crate::role_class(LabelRole::Highlight)}", "System Administrator" }
         ),
         DBRole::TeamManager => rsx!(
-            Label {
-                class: "mr-2",
-                label_role: LabelRole::Neutral,
-                "Team Manager"
-            }
+            span { class: "mr-2 {crate::role_class(LabelRole::Neutral)}", "Team Manager" }
         ),
         DBRole::Collaborator => rsx!(
-            Label {
-                class: "mr-2",
-                label_role: LabelRole::Neutral,
-                "Collaborator"
-            }
+            span { class: "mr-2 {crate::role_class(LabelRole::Neutral)}", "Collaborator" }
         ),
         DBRole::Admin => rsx!(
-            Label {
-                class: "mr-2",
-                label_role: LabelRole::Highlight,
-                "Admin"
-            }
+            span { class: "mr-2 {crate::role_class(LabelRole::Highlight)}", "Admin" }
         ),
         DBRole::Member => rsx!(
-            Label {
-                class: "mr-2",
-                label_role: LabelRole::Neutral,
-                "Member"
-            }
+            span { class: "mr-2 {crate::role_class(LabelRole::Neutral)}", "Member" }
         ),
         DBRole::Viewer => rsx!(
-            Label {
-                class: "mr-2",
-                label_role: LabelRole::Neutral,
-                "Viewer"
-            }
+            span { class: "mr-2 {crate::role_class(LabelRole::Neutral)}", "Viewer" }
         ),
     }
 }

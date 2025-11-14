@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use crate::types::{ApiKey, Prompt, PromptType as DBPromptType, Rbac};
+use crate::types::LabelRole;
 use crate::{
     app_layout::{Layout, SideBar},
     charts::{ApiRequestChartCard, TokenUsageChartCard},
@@ -102,32 +103,16 @@ pub fn page(
 pub fn PromptType(prompt_type: DBPromptType) -> Element {
     match prompt_type {
         DBPromptType::Model => rsx!(
-            Label {
-                class: "mr-2 truncate",
-                label_role: LabelRole::Info,
-                "Model"
-            }
+            span { class: "mr-2 truncate {crate::role_class(LabelRole::Info)}", "Model" }
         ),
         DBPromptType::Assistant => rsx!(
-            Label {
-                class: "mr-2 truncate",
-                label_role: LabelRole::Highlight,
-                "Assistant"
-            }
+            span { class: "mr-2 truncate {crate::role_class(LabelRole::Highlight)}", "Assistant" }
         ),
         DBPromptType::Chat => rsx!(
-            Label {
-                class: "mr-2 truncate",
-                label_role: LabelRole::Info,
-                "Chat"
-            }
+            span { class: "mr-2 truncate {crate::role_class(LabelRole::Info)}", "Chat" }
         ),
         DBPromptType::Completion => rsx!(
-            Label {
-                class: "mr-2 truncate",
-                label_role: LabelRole::Info,
-                "Completion"
-            }
+            span { class: "mr-2 truncate {crate::role_class(LabelRole::Info)}", "Completion" }
         ),
     }
 }

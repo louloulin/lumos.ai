@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
 use crate::types::{Invitation, Member, Rbac, Team, User};
+use crate::types::LabelRole;
 use crate::ConfirmModal;
 use daisy_rsx::*;
 use dioxus::prelude::*;
@@ -116,10 +117,7 @@ pub fn page(
                                             }
                                         }
                                         td {
-                                            Label {
-                                                label_role: LabelRole::Success,
-                                                "Active"
-                                            }
+                                            span { class: crate::role_class(LabelRole::Success), "Active" }
                                         }
                                         td {
                                             class: "max-sm:hidden",
@@ -160,17 +158,10 @@ pub fn page(
     {invite.first_name.as_deref().unwrap_or("Guest")} " " {invite.last_name.as_deref().unwrap_or("")}
                                                 }
                                         }
-                                        td {
-                                            Label {
-                                                label_role: LabelRole::Highlight,
-                                                "Invite Pending"
-                                            }
-                                        }
+                                        td { span { class: crate::role_class(LabelRole::Highlight), "Invite Pending" } }
                                         td {
                                             for role in invite.roles.clone() {
-                                                super::team_role::Role {
-                                                    role
-                                                }
+                                                super::team_role::Role { role }
                                             }
                                         }
 

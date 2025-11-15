@@ -8,6 +8,7 @@ pub mod builtin;
 mod context;
 pub mod enhanced;
 pub mod function;
+pub mod function_calling;
 
 pub mod registry;
 mod schema;

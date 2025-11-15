@@ -25,6 +25,7 @@ pub mod orchestration;
 pub mod performance;
 pub mod runtime_context;
 pub mod session;
+pub mod state_management; // 新增：Agent状态管理
 pub mod simplified_api;
 pub mod sop_environment;
 pub mod sop_simple;

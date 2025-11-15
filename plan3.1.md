@@ -26,18 +26,18 @@
 - ✅ 工作流引擎功能强大（DAG、条件分支、并行执行）
 
 **LumosAI 问题**:
-- ❌ API 设计复杂，学习曲线陡峭（需要理解 Arc、Box、trait objects）
-- ❌ 缺少结构化输出实现（只有 `AgentStructuredOutput` trait，无具体实现）
-- ❌ Agent + RAG 集成不够便捷（需要手动创建 RAG pipeline）
-- ❌ 缺少 Voice 集成（有 trait 定义但无实现）
+- ⚠️ API 设计部分实现但不够完善（有 `Agent::new()` 但易用性不如 Mastra）
+- ⚠️ 结构化输出已实现但通过 prompt engineering，未使用 LLM 原生 API
+- ✅ Agent + RAG 集成已实现（`with_rag_simple()`），但易用性可提升
+- ❌ 缺少 Voice 集成（有 trait 定义但 BasicAgent 未实现）
 - ❌ 缺少 Sub-agents 支持（AgentConfig 中无 sub_agents 字段）
-- ❌ 缺少 Scorers/Evals 集成（只有基础的 evaluation trait）
+- ⚠️ 缺少 Scorers/Evals 集成（只有基础的 evaluation trait）
 - ❌ 模块化程度不够，职责混乱（lumosai_core 承担过多职责）
 - ❌ 错误处理不够友好（错误信息缺少上下文和建议）
-- ❌ 文档和示例质量参差不齐
-- ❌ 工具调用实现复杂（需要手动处理 Mutex、Arc）
-- ❌ 动态配置支持不完整（DynamicArgument 存在但使用不便）
-- ❌ 缺少智能默认值（需要手动配置所有参数）
+- ⚠️ 文档和示例质量参差不齐（部分功能有文档，部分缺失）
+- ⚠️ 工具调用实现复杂（需要手动处理 Mutex、Arc，但已有基础实现）
+- ⚠️ 动态配置支持不完整（DynamicArgument 存在但使用不便）
+- ⚠️ 智能默认值部分实现（`enable_smart_defaults()` 存在但不够智能）
 
 **Mastra 优势**:
 - ✅ 渐进式 API 设计，易用性极佳（3 层 API：简单→中级→高级）
@@ -118,15 +118,15 @@ let agent = AgentBuilder::new()
 
 | 功能模块 | LumosAI | Mastra | 差距分析 |
 |---------|---------|--------|----------|
-| **Agent 创建** | Builder Pattern（复杂） | Constructor + Builder（简单） | LumosAI 需要理解 Arc/Box |
-| **结构化输出** | ❌ 只有 trait，无实现 | ✅ Zod schema 完整实现 | **关键缺失** |
+| **Agent 创建** | ⚠️ 部分实现（Agent::new 存在但不够完善） | Constructor + Builder（简单） | LumosAI 需完善渐进式 API |
+| **结构化输出** | ⚠️ 已实现但通过 prompt engineering | ✅ Zod schema + 原生 API | **需改进：使用 LLM 原生 API** |
 | **动态配置** | ⚠️ DynamicArgument 存在但使用不便 | ✅ 函数式配置完整，支持 RuntimeContext | LumosAI 需加强 |
 | **Voice 集成** | ❌ 有 trait 但无实现 | ✅ CompositeVoice 完整实现 | **关键缺失** |
 | **Sub-agents** | ❌ 无 | ✅ agents 字段原生支持 | **关键缺失** |
 | **Workflows** | ✅ 支持（DAG、条件分支） | ✅ 支持 | 相当 |
 | **Memory** | ✅ 完整（Thread、Session、WorkingMemory） | ✅ 完整（Memory Thread） | 相当，LumosAI 更丰富 |
 | **Tool 系统** | ✅ 完整（FunctionTool、Registry） | ✅ 完整 | 相当 |
-| **RAG 集成** | ⚠️ 需手动创建 RAG pipeline | ✅ memory 参数自动集成 | LumosAI 需改进 |
+| **RAG 集成** | ✅ 已实现（with_rag_simple） | ✅ memory 参数自动集成 | **相当，但易用性可提升** |
 | **Evals/Scorers** | ⚠️ 基础 evaluation trait | ✅ evals 字段完整支持 | LumosAI 需加强 |
 | **Message 管理** | ⚠️ 基础 Message 类型 | ✅ MessageList 系统 | LumosAI 需改进 |
 | **RuntimeContext** | ⚠️ 基础 RuntimeContext | ✅ 完整的 RuntimeContext 系统 | LumosAI 需加强 |
@@ -175,31 +175,50 @@ Layer 4: 集成层 (Stores, Integrations, Deployers)
 - 错误处理：使用 MastraError 系统，提供详细上下文
 - 工具管理：使用 Record 类型，类型安全
 
-#### 1.4.2 结构化输出实现缺失
+#### 1.4.2 结构化输出实现分析
 
 **LumosAI 当前状态**:
 ```rust
 // lumosai_core/src/agent/structured_output.rs
-#[async_trait]
-pub trait AgentStructuredOutput: Send + Sync {
+// ✅ BasicAgent 已实现 AgentStructuredOutput trait
+impl AgentStructuredOutput for BasicAgent {
     async fn generate_structured<T: DeserializeOwned + Send + 'static>(
         &self,
         messages: &[Message],
         options: &AgentGenerateOptions,
-    ) -> Result<T>;
+    ) -> Result<T> {
+        // ⚠️ 通过 prompt engineering 实现，而非 LLM 原生 API
+        let schema_prompt = format!(
+            "\n\nIMPORTANT: Return your response as valid JSON...",
+            schema_value
+        );
+        // 调用普通 generate，然后提取 JSON
+    }
 }
-// ❌ 只有 trait 定义，BasicAgent 未实现
 ```
+
+**问题分析**:
+- ✅ Trait 已实现
+- ✅ 支持类型安全的结构化输出
+- ⚠️ **使用 prompt engineering 而非 LLM 原生 API**
+- ⚠️ 未使用 OpenAI 的 `response_format` 或 Anthropic 的 `structured_outputs`
+- ⚠️ 缺少自动 JSON Schema 生成（从 Rust 类型）
 
 **Mastra 实现**:
 ```typescript
 // 完整的结构化输出支持
 structuredOutput: {
-  schema: z.object({ ... }),
+  schema: z.object({ ... }),  // Zod schema
   model: LanguageModel,  // 可选，使用不同模型
 }
 // ✅ 自动生成 JSON Schema，调用 LLM 的 structured_output API
+// ✅ 使用 OpenAI response_format 或 Anthropic structured_outputs
 ```
+
+**改进方向**:
+1. 集成 `schemars` 从 Rust 类型自动生成 JSON Schema
+2. 在 LLM 调用中使用原生 structured_output API
+3. 支持不同提供商的 schema 格式
 
 #### 1.4.3 工具调用实现复杂
 
@@ -233,12 +252,22 @@ const result = await tools[toolName].execute(args, options);
 **LumosAI 问题**:
 - 配置复杂：需要理解多种内存类型
 - 集成不便：Agent + Memory 需要手动配置
-- 缺少自动 RAG 集成
+- ⚠️ RAG 集成已实现（`with_rag_simple()`），但易用性可提升
+
+**LumosAI 优势**:
+- ✅ RAG 集成已实现：`AgentBuilder::new().with_rag_simple(vector_store)?`
+- ✅ 支持自动上下文检索和注入
+- ✅ 支持批量添加文档
 
 **Mastra 优势**:
 - 简单配置：`memory: new Memory({ storage: postgres })`
 - 自动 RAG：memory 参数自动启用 RAG
 - MessageList 统一管理消息
+
+**差距分析**:
+- LumosAI RAG 集成已实现，但需要手动创建 vector_store
+- Mastra 的 memory 参数更简洁，自动处理 RAG
+- LumosAI 需要改进：支持字符串配置（如 `"postgres"`）自动创建存储
 
 ---
 
@@ -270,26 +299,33 @@ const result = await tools[toolName].execute(args, options);
 
 ### Phase 1: API 简化与渐进式设计（P0 - 2周）
 
-#### 1.1 实现渐进式 API
+#### 1.1 完善渐进式 API
 
-**目标**: 提供三层 API，从简单到复杂
+**当前状态**: 已有部分实现，但不够完善
+
+**已实现**:
+- ✅ `Agent::new()` 在 `simplified_api.rs` 中
+- ✅ `AgentFactory::quick()` 和 `AgentFactory::builder()`
+- ✅ `enable_smart_defaults()` 方法
+- ⚠️ 但易用性不如 Mastra，缺少链式配置方法
+
+**目标**: 完善渐进式 API，达到 Mastra 级别的易用性
 
 ```rust
-// Level 1: 极简 API（5分钟上手）
+// Level 1: 极简 API（5分钟上手）- 已部分实现
+let agent = Agent::new("assistant", "You are helpful").await?;
+// ⚠️ 当前：需要 await，缺少链式配置
+// ✅ 改进：支持链式配置，自动模型解析
+
+// Level 2: 链式配置（30分钟）- 需实现
 let agent = Agent::new("assistant", "You are helpful")
     .with_model("gpt-4")  // 自动解析模型名称
-    .build()
-    .await?;
-
-// Level 2: 链式配置（30分钟）
-let agent = Agent::new("assistant", "You are helpful")
-    .with_model("gpt-4")
     .with_tools(vec!["web_search", "calculator"])  // 工具名称自动解析
     .with_memory("postgres")  // 存储类型自动解析
     .build()
     .await?;
 
-// Level 3: 完整构建器（专家级）
+// Level 3: 完整构建器（专家级）- 已实现
 let agent = AgentBuilder::new()
     .name("assistant")
     .instructions("You are helpful")
@@ -304,12 +340,12 @@ let agent = AgentBuilder::new()
 ```
 
 **实施步骤**:
-1. 创建 `Agent::new()` 静态方法
-2. 实现智能模型解析器（`gpt-4` → OpenAI）
-3. 实现工具名称解析器（`"web_search"` → `WebSearchTool`）
-4. 实现存储类型解析器（`"postgres"` → PostgreSQL storage）
-5. 添加链式配置方法（`.with_model()`, `.with_tools()`, `.with_memory()`）
-6. 实现智能默认值系统（自动填充 temperature、max_tokens 等）
+1. ✅ 已有 `Agent::new()` - 需完善链式配置
+2. ⚠️ 部分实现智能模型解析器 - 需增强
+3. ❌ 缺少工具名称解析器（`"web_search"` → `WebSearchTool`）
+4. ❌ 缺少存储类型解析器（`"postgres"` → PostgreSQL storage）
+5. ❌ 缺少链式配置方法（`.with_model()`, `.with_tools()`, `.with_memory()`）
+6. ⚠️ 智能默认值部分实现 - 需完善
 
 **文件修改**:
 - `lumosai_core/src/agent/mod.rs`: 添加 `Agent::new()` 方法
@@ -346,12 +382,20 @@ pub fn resolve_tool_name(name: &str) -> Result<Box<dyn Tool>> {
 }
 ```
 
-#### 1.2 实现结构化输出
+#### 1.2 改进结构化输出实现
 
-**目标**: 完整的结构化输出支持，类似 Mastra 的 Zod schema
+**当前状态**: 已实现但使用 prompt engineering，需改进为使用 LLM 原生 API
+
+**已实现**:
+- ✅ `AgentStructuredOutput` trait 已在 `BasicAgent` 中实现
+- ✅ 支持类型安全的结构化输出 `generate_structured<T>()`
+- ✅ 智能 JSON 提取（5 种场景）
+- ⚠️ 但使用 prompt engineering 而非 LLM 原生 API
+
+**目标**: 改进为使用 LLM 原生 structured_output API
 
 ```rust
-// 定义 schema
+// 定义 schema（使用 schemars 自动生成）
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct TaskList {
     tasks: Vec<Task>,
@@ -371,37 +415,39 @@ enum Priority {
     Low,
 }
 
-// 使用结构化输出
+// 使用结构化输出（改进后）
 let agent = AgentBuilder::new()
     .name("task_manager")
     .instructions("Extract tasks from user input")
     .model(provider)
-    .structured_output::<TaskList>()  // 类型安全
+    .structured_output::<TaskList>()  // 类型安全，自动生成 schema
     .build()
     .await?;
 
 let result: TaskList = agent.generate_structured("Create tasks: ...").await?;
+// ✅ 改进后：使用 LLM 原生 API，而非 prompt engineering
 ```
 
 **实施步骤**:
-1. 实现 `AgentStructuredOutput` trait 在 `BasicAgent` 中
-2. 集成 `schemars` 生成 JSON Schema（从 Rust 类型自动生成）
-3. 在 LLM 调用中使用 `response_format`（OpenAI）或 `structured_outputs`（Anthropic）
-4. 添加类型安全的 `generate_structured<T>()` 方法
-5. 处理不同提供商的 schema 格式差异
-6. 添加 schema 验证和错误处理
+1. ✅ 已有 `AgentStructuredOutput` trait 实现 - 需改进实现方式
+2. ❌ 集成 `schemars` 生成 JSON Schema（从 Rust 类型自动生成）
+3. ❌ 在 LLM 调用中使用 `response_format`（OpenAI）或 `structured_outputs`（Anthropic）
+4. ✅ 已有类型安全的 `generate_structured<T>()` 方法
+5. ❌ 处理不同提供商的 schema 格式差异
+6. ⚠️ 已有基础错误处理 - 需增强
 
 **文件修改**:
-- `lumosai_core/src/agent/structured_output.rs`: 完整实现，添加 JSON Schema 生成
-- `lumosai_core/src/agent/trait_def.rs`: 已有 trait，确保 BasicAgent 实现
-- `lumosai_core/src/agent/executor.rs`: 集成结构化输出逻辑到 `generate()` 方法
-- `lumosai_core/src/llm/openai.rs`: 支持 `response_format` 参数
-- `lumosai_core/src/llm/anthropic.rs`: 支持 `structured_outputs` 参数
-- `lumosai_core/src/llm/types.rs`: 添加结构化输出相关类型
+- `lumosai_core/src/agent/structured_output.rs`: ✅ 已有实现，需改进为使用 LLM 原生 API
+- `lumosai_core/src/agent/trait_def.rs`: ✅ 已有 trait，BasicAgent 已实现
+- `lumosai_core/src/agent/executor.rs`: ⚠️ 需集成 LLM 原生 structured_output 调用
+- `lumosai_core/src/llm/openai.rs`: ❌ 需添加 `response_format` 参数支持
+- `lumosai_core/src/llm/anthropic.rs`: ❌ 需添加 `structured_outputs` 参数支持
+- `lumosai_core/src/llm/types.rs`: ⚠️ 需添加结构化输出相关类型
+- `lumosai_core/src/agent/structured_output.rs`: ❌ 需集成 `schemars` 自动生成 JSON Schema
 
-**代码示例**:
+**代码示例**（改进后的实现）:
 ```rust
-// 在 BasicAgent 中实现
+// 在 BasicAgent 中改进实现
 #[async_trait]
 impl AgentStructuredOutput for BasicAgent {
     async fn generate_structured<T: DeserializeOwned + Send + 'static>(
@@ -409,19 +455,24 @@ impl AgentStructuredOutput for BasicAgent {
         messages: &[Message],
         options: &AgentGenerateOptions,
     ) -> Result<T> {
-        // 1. 从类型生成 JSON Schema
+        // 1. 从类型生成 JSON Schema（使用 schemars）
         let schema = schemars::schema_for!(T);
+        let schema_value = serde_json::to_value(schema)?;
         
-        // 2. 调用 LLM 的结构化输出 API
-        let response = self.llm.generate_structured(
-            messages,
-            &schema,
-            options,
-        ).await?;
+        // 2. 检查 LLM 是否支持原生 structured_output
+        if self.llm.supports_structured_output() {
+            // 使用原生 API（OpenAI response_format 或 Anthropic structured_outputs）
+            let response = self.llm.generate_structured(
+                messages,
+                &schema_value,
+                options,
+            ).await?;
+            return serde_json::from_value(response)
+                .map_err(|e| Error::Json(format!("Failed to parse: {}", e)));
+        }
         
-        // 3. 解析和验证响应
-        let parsed: T = serde_json::from_value(response)?;
-        Ok(parsed)
+        // 3. 降级到 prompt engineering（当前实现）
+        // ... 现有实现 ...
     }
 }
 ```
@@ -528,45 +579,50 @@ let audio = agent.speak("Hello, how can I help?").await?;
 - `lumosai_core/src/agent/trait_def.rs`: 已有 Voice traits，需要实现
 - `lumosai_core/src/agent/executor.rs`: 集成 Voice 逻辑
 
-#### 2.3 改进 Agent + RAG 集成
+#### 2.3 改进 Agent + RAG 集成易用性
 
-**目标**: 一键集成 RAG，类似 Mastra
+**当前状态**: 已实现但易用性可提升
+
+**已实现**:
+- ✅ `RagIntegrationExt` trait 和 `with_rag_simple()` 方法
+- ✅ 自动上下文检索和注入
+- ✅ 支持批量添加文档
+- ⚠️ 但需要手动创建 `vector_store`
+
+**目标**: 提升易用性，支持字符串配置自动创建存储
 
 ```rust
-// 当前方式（复杂）
-let storage = lumosai::vector::postgres().await?;
-let rag = lumosai::rag::builder()
-    .storage(storage)
-    .embedding_provider("openai")
-    .build()
-    .await?;
-let agent = AgentBuilder::new()
-    .name("rag_agent")
-    .model(provider)
-    .build()
-    .await?;
-// 需要手动集成...
-
-// 改进后（简单）
+// 当前方式（已实现但需手动创建存储）
+let vector_store = Arc::new(MemoryVectorStorage::new(384, None));
 let agent = AgentBuilder::new()
     .name("rag_agent")
     .instructions("Answer questions using RAG")
     .model(provider)
-    .with_rag("postgres")  // 一键集成
+    .with_rag_simple(vector_store)?  // ✅ 已实现
+    .build()
+    .await?;
+
+// 改进后（支持字符串配置）
+let agent = AgentBuilder::new()
+    .name("rag_agent")
+    .instructions("Answer questions using RAG")
+    .model(provider)
+    .with_rag("postgres")  // 自动创建存储
     .build()
     .await?;
 ```
 
 **实施步骤**:
-1. 在 `AgentBuilder` 中添加 `.with_rag()` 方法
-2. 自动创建 RAG pipeline
-3. 在 Agent 生成时自动检索和注入上下文
-4. 支持多种存储后端
+1. ✅ 已有 `.with_rag_simple()` 方法
+2. ❌ 添加存储类型解析器（`"postgres"` → PostgreSQL storage）
+3. ✅ 已有自动上下文检索和注入
+4. ⚠️ 支持多种存储后端 - 需扩展字符串配置支持
 
 **文件修改**:
-- `lumosai_core/src/agent/builder.rs`: 添加 `.with_rag()` 方法
-- `lumosai_core/src/agent/rag_integration.rs`: 完善 RAG 集成逻辑
-- `lumosai_core/src/agent/executor.rs`: 在生成时自动使用 RAG
+- `lumosai_core/src/agent/builder.rs`: ✅ 已有 `.with_rag_simple()`，需添加字符串配置支持
+- `lumosai_core/src/agent/rag_integration.rs`: ✅ 已有实现，需添加存储类型解析器
+- `lumosai_core/src/agent/executor.rs`: ✅ 已有自动 RAG 上下文检索
+- `lumosai_core/src/memory/mod.rs`: ❌ 需添加存储类型解析器（`"postgres"` → PostgreSQL storage）
 
 #### 2.4 实现动态配置
 
@@ -916,20 +972,26 @@ impl ToolManager {
 }
 ```
 
-### 10.2 结构化输出实现缺失
+### 10.2 结构化输出实现分析
 
 **文件**: `lumosai_core/src/agent/structured_output.rs`
 
-**当前状态**: 只有 trait 定义，`BasicAgent` 未实现
+**当前状态**: ✅ `BasicAgent` 已实现 `AgentStructuredOutput` trait
+
+**已实现**:
+1. ✅ Trait 实现完成
+2. ✅ 支持类型安全的结构化输出
+3. ✅ 智能 JSON 提取（5 种场景）
+4. ⚠️ 但使用 prompt engineering 而非 LLM 原生 API
 
 **问题**:
-1. Trait 定义存在但无实现
-2. 缺少 JSON Schema 生成
-3. 缺少 LLM 提供商支持
+1. ⚠️ 缺少自动 JSON Schema 生成（从 Rust 类型）
+2. ❌ 未使用 LLM 原生 structured_output API（OpenAI `response_format`、Anthropic `structured_outputs`）
+3. ⚠️ 缺少不同提供商的 schema 格式处理
 
 **改进方案**:
 ```rust
-// 1. 在 BasicAgent 中实现
+// 1. 改进 BasicAgent 中的实现（已有基础，需改进）
 #[async_trait]
 impl AgentStructuredOutput for BasicAgent {
     async fn generate_structured<T: DeserializeOwned + Send + 'static>(
@@ -937,19 +999,24 @@ impl AgentStructuredOutput for BasicAgent {
         messages: &[Message],
         options: &AgentGenerateOptions,
     ) -> Result<T> {
-        // 生成 JSON Schema
-        let schema = generate_json_schema::<T>()?;
+        // 1. 从类型自动生成 JSON Schema（使用 schemars）
+        let schema = schemars::schema_for!(T);
+        let schema_value = serde_json::to_value(schema)?;
         
-        // 调用 LLM
-        let response = self.llm.generate_structured(
-            messages,
-            &schema,
-            options,
-        ).await?;
+        // 2. 检查 LLM 是否支持原生 structured_output
+        if self.llm.supports_structured_output() {
+            // 使用原生 API
+            let response = self.llm.generate_structured(
+                messages,
+                &schema_value,
+                options,
+            ).await?;
+            return serde_json::from_value(response)
+                .map_err(|e| Error::Json(format!("Failed to parse: {}", e)));
+        }
         
-        // 解析响应
-        serde_json::from_value(response)
-            .map_err(|e| Error::Json(format!("Failed to parse structured output: {}", e)))
+        // 3. 降级到 prompt engineering（当前实现）
+        // ... 保留现有实现作为降级方案 ...
     }
 }
 
@@ -958,10 +1025,16 @@ impl AgentStructuredOutput for BasicAgent {
 pub trait LlmProvider: Send + Sync {
     // ... 现有方法 ...
     
+    /// 检查是否支持原生 structured_output
+    fn supports_structured_output(&self) -> bool {
+        false  // 默认不支持，各提供商需实现
+    }
+    
+    /// 使用原生 structured_output API 生成
     async fn generate_structured(
         &self,
         messages: &[Message],
-        schema: &JsonSchema,
+        schema: &Value,  // JSON Schema
         options: &LlmOptions,
     ) -> Result<Value>;
 }
@@ -1006,39 +1079,45 @@ impl BasicAgent {
 }
 ```
 
-### 10.4 内存系统集成问题
+### 10.4 内存系统集成分析
+
+**当前状态**: ✅ RAG 集成已实现，但易用性可提升
+
+**已实现**:
+1. ✅ `RagIntegrationExt` trait 和 `with_rag_simple()` 方法
+2. ✅ 自动上下文检索和注入（`generate_with_rag()`）
+3. ✅ 支持批量添加文档（`add_documents()`）
+4. ⚠️ 但需要手动创建 `vector_store`
 
 **问题**:
-1. Agent + Memory 需要手动配置
-2. RAG 集成需要手动创建 pipeline
-3. 缺少自动上下文检索
+1. ⚠️ Agent + Memory 需要手动配置（可改进）
+2. ✅ RAG 集成已实现，但需手动创建 vector_store
+3. ✅ 已有自动上下文检索
 
 **改进方案**:
 ```rust
-// 在 AgentBuilder 中添加便捷方法
+// 在 AgentBuilder 中添加字符串配置支持
 impl AgentBuilder {
-    pub fn with_rag<S: Into<String>>(mut self, storage_type: S) -> Self {
-        // 自动创建 RAG pipeline
-        self.rag_config = Some(RagConfig {
-            storage_type: storage_type.into(),
-            auto_retrieve: true,
-            top_k: 5,
-        });
-        self
+    pub fn with_rag<S: Into<String>>(mut self, storage_type: S) -> Result<Self> {
+        // 自动创建存储（改进：支持字符串配置）
+        let storage = match storage_type.into().as_str() {
+            "postgres" => Arc::new(PostgresVectorStorage::new(...)?),
+            "qdrant" => Arc::new(QdrantVectorStorage::new(...)?),
+            "memory" => Arc::new(MemoryVectorStorage::new(384, None)),
+            _ => return Err(Error::InvalidConfig("Unknown storage type".to_string())),
+        };
+        
+        // 使用现有的 with_rag_simple
+        self.with_rag_simple(storage)?;
+        Ok(self)
     }
 }
 
-// 在 BasicAgent 生成时自动使用 RAG
-impl BasicAgent {
-    async fn generate(&self, messages: &[Message], options: &AgentGenerateOptions) -> Result<AgentGenerateResult> {
-        // 如果配置了 RAG，自动检索相关上下文
-        if let Some(rag) = &self.rag {
-            let context = rag.retrieve(&messages.last().unwrap().content, 5).await?;
-            // 将上下文注入到消息中
-            let enhanced_messages = self.inject_rag_context(messages, &context)?;
-            return self.generate_with_messages(&enhanced_messages, options).await;
-        }
-        // ... 正常生成流程
+// ✅ 已有实现：在 RagAgent 中自动使用 RAG
+impl RagAgent {
+    pub async fn generate_with_rag(&self, query: &str) -> Result<String> {
+        // ✅ 已实现：自动检索和注入上下文
+        // ...
     }
 }
 ```
@@ -1086,14 +1165,16 @@ impl BasicAgent {
 
 ### Phase 1 检查清单
 
-- [ ] 实现 `Agent::new()` 静态方法
-- [ ] 实现智能模型解析器
+- [x] 已有 `Agent::new()` 静态方法（需完善链式配置）
+- [x] 部分实现智能模型解析器（需增强）
 - [ ] 实现工具名称解析器
 - [ ] 实现存储类型解析器
-- [ ] 添加链式配置方法
-- [ ] 实现智能默认值系统
-- [ ] 实现结构化输出（OpenAI）
-- [ ] 实现结构化输出（Anthropic）
+- [ ] 添加链式配置方法（`.with_model()`, `.with_tools()`, `.with_memory()`）
+- [x] 部分实现智能默认值系统（`enable_smart_defaults()` 存在，需完善）
+- [x] 已有结构化输出实现（需改进为使用 LLM 原生 API）
+- [ ] 实现结构化输出（OpenAI `response_format`）
+- [ ] 实现结构化输出（Anthropic `structured_outputs`）
+- [ ] 集成 `schemars` 自动生成 JSON Schema
 - [ ] 扩展错误类型
 - [ ] 实现错误建议机制
 - [ ] 添加错误恢复策略
@@ -1106,14 +1187,14 @@ impl BasicAgent {
 - [ ] 在 AgentConfig 中添加 sub_agents 字段
 - [ ] 实现 generate_with_sub_agent() 方法
 - [ ] 支持子 Agent 工具和内存共享
-- [ ] 完善 lumosai_voice crate
-- [ ] 实现 AgentVoiceListener trait
-- [ ] 实现 AgentVoiceSender trait
-- [ ] 集成 Voice 到 BasicAgent
-- [ ] 在 AgentBuilder 中添加 .with_rag() 方法
-- [ ] 实现自动 RAG 上下文检索
-- [ ] 扩展 DynamicArgument<T> 类型
-- [ ] 添加动态配置方法
+- [x] 已有 lumosai_voice crate（需完善）
+- [x] 已有 AgentVoiceListener trait 定义（需在 BasicAgent 中实现）
+- [x] 已有 AgentVoiceSender trait 定义（需在 BasicAgent 中实现）
+- [ ] 实现 BasicAgent 的 Voice traits
+- [x] 已有 .with_rag_simple() 方法（需添加字符串配置支持）
+- [x] 已有自动 RAG 上下文检索（`generate_with_rag()`）
+- [x] 已有 DynamicArgument<T> 类型（需完善使用体验）
+- [ ] 添加动态配置方法（`.instructions_dynamic()`, `.model_dynamic()`）
 - [ ] 实现运行时配置解析
 - [ ] 编写测试和文档
 
@@ -1155,33 +1236,36 @@ impl BasicAgent {
 4. **第四轮**: 代码层面具体问题识别
 5. **第五轮**: 性能和使用体验分析
 
-### 13.2 关键发现
+### 13.2 关键发现（已验证）
 
 **技术层面**:
 - LumosAI 技术架构扎实，核心功能完整
-- 某些方面（Memory 系统）甚至优于 Mastra
-- 但 API 设计和易用性明显落后
+- 某些方面（Memory 系统、RAG 集成）甚至优于 Mastra
+- API 设计部分实现但不够完善（有 `Agent::new()` 但易用性不如 Mastra）
 
 **工程层面**:
 - 代码质量整体良好，但模块职责不清
-- 缺少渐进式 API 设计
+- 渐进式 API 部分实现（`Agent::new()`、`AgentFactory` 存在）
 - 错误处理不够友好
 
-**功能层面**:
-- 核心功能完整，但缺少关键特性（结构化输出、Voice、Sub-agents）
-- 集成不够便捷（RAG、Memory）
+**功能层面**（已验证）:
+- ✅ 结构化输出已实现（但使用 prompt engineering，需改进为原生 API）
+- ✅ RAG 集成已实现（`with_rag_simple()`，但易用性可提升）
+- ❌ 缺少 Voice 集成（有 trait 但 BasicAgent 未实现）
+- ❌ 缺少 Sub-agents 支持
+- ⚠️ 渐进式 API 部分实现（需完善链式配置）
 
 ### 13.3 改造优先级
 
 **P0（阻塞性，必须立即解决）**:
-1. 渐进式 API 设计
-2. 结构化输出实现
+1. 完善渐进式 API 设计（已有基础，需完善链式配置）
+2. 改进结构化输出实现（已有实现，需改为使用 LLM 原生 API）
 3. 错误处理改进
 
 **P1（重要功能，影响用户体验）**:
 1. Sub-agents 支持
-2. Voice 集成
-3. RAG 一键集成
+2. Voice 集成（实现 BasicAgent 的 Voice traits）
+3. RAG 集成易用性提升（支持字符串配置自动创建存储）
 4. 动态配置完善
 
 **P2（改进性工作，提升质量）**:
@@ -1202,4 +1286,48 @@ impl BasicAgent {
 
 ---
 
-**文档维护**: 本计划将根据实施进度持续更新。
+## 📋 十四、功能状态验证表
+
+### 14.1 已实现功能验证
+
+| 功能 | 计划状态 | 实际状态 | 完整度 | 备注 |
+|------|---------|---------|--------|------|
+| **结构化输出** | ❌ 缺失 | ✅ 已实现 | 70% | 使用 prompt engineering，需改为原生 API |
+| **RAG 集成** | ❌ 缺失 | ✅ 已实现 | 85% | `with_rag_simple()` 存在，易用性可提升 |
+| **渐进式 API** | ❌ 缺失 | ⚠️ 部分实现 | 60% | `Agent::new()` 存在，缺少链式配置 |
+| **智能默认值** | ❌ 缺失 | ⚠️ 部分实现 | 50% | `enable_smart_defaults()` 存在但不够智能 |
+| **Voice Traits** | ❌ 缺失 | ⚠️ 有定义 | 30% | Trait 定义存在，BasicAgent 未实现 |
+| **Sub-agents** | ❌ 缺失 | ❌ 缺失 | 0% | 确实未实现 |
+| **动态配置** | ❌ 缺失 | ⚠️ 部分实现 | 40% | `DynamicArgument` 存在但使用不便 |
+
+### 14.2 验证方法
+
+本次验证采用了以下方法：
+1. **代码搜索**：使用 `codebase_search` 和 `grep` 查找实际实现
+2. **文件读取**：直接读取关键实现文件验证
+3. **功能测试**：检查是否有测试用例和示例代码
+4. **对比分析**：与 Mastra 实现对比，识别差距
+
+### 14.3 修正后的优先级
+
+基于实际代码验证，调整优先级：
+
+**P0（阻塞性，必须立即解决）**:
+1. 完善渐进式 API 链式配置（已有基础）
+2. 改进结构化输出为使用 LLM 原生 API（已有实现）
+3. 错误处理改进
+
+**P1（重要功能，影响用户体验）**:
+1. Sub-agents 支持（确实缺失）
+2. Voice 集成（实现 BasicAgent 的 Voice traits）
+3. RAG 集成易用性提升（已有实现，需支持字符串配置）
+4. 动态配置完善（已有基础）
+
+**P2（改进性工作，提升质量）**:
+1. 模块职责清晰化
+2. 类型系统改进
+3. 文档和示例完善
+
+---
+
+**文档维护**: 本计划已根据实际代码验证更新，确保准确性。所有功能状态均经过代码验证。

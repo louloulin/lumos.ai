@@ -84,12 +84,19 @@ impl BasicAgent {
             log_level: None,
         };
 
+        // Create base component for logging
+        let base = BaseComponent::new(component_config.clone());
+        
         // Initialize working memory (if configured)
         let working_memory = if let Some(wm_config) = &config.working_memory {
             match create_working_memory(wm_config) {
                 Ok(wm) => Some(wm),
                 Err(e) => {
-                    eprintln!("Failed to initialize working memory: {e}");
+                    // Use structured logging instead of eprintln!
+                    base.logger().warn(&format!(
+                        "Failed to initialize working memory for agent '{}': {}. Continuing without working memory.",
+                        config.name, e
+                    ));
                     None
                 }
             }
@@ -121,7 +128,7 @@ impl BasicAgent {
         };
 
         Self {
-            base: BaseComponent::new(component_config),
+            base,
             name: config.name,
             instructions: config.instructions,
             llm,
@@ -468,9 +475,11 @@ impl Agent for BasicAgent {
         let mut tools = match self.tools.lock() {
             Ok(guard) => guard,
             Err(poison_error) => {
-                eprintln!(
-                    "Tools mutex poisoned during add_tool, attempting recovery: {poison_error}"
-                );
+                // Use structured logging instead of eprintln!
+                self.logger().warn(&format!(
+                    "Tools mutex poisoned during add_tool for agent '{}', attempting recovery: {poison_error}",
+                    self.name
+                ));
                 poison_error.into_inner()
             }
         };
@@ -492,9 +501,11 @@ impl Agent for BasicAgent {
         let mut tools = match self.tools.lock() {
             Ok(guard) => guard,
             Err(poison_error) => {
-                eprintln!(
-                    "Tools mutex poisoned during remove_tool, attempting recovery: {poison_error}"
-                );
+                // Use structured logging instead of eprintln!
+                self.logger().warn(&format!(
+                    "Tools mutex poisoned during remove_tool for agent '{}', attempting recovery: {poison_error}",
+                    self.name
+                ));
                 poison_error.into_inner()
             }
         };
@@ -719,8 +730,11 @@ impl Agent for BasicAgent {
             let tools = match self.tools.lock() {
                 Ok(guard) => guard,
                 Err(poison_error) => {
-                    // Log the error and attempt recovery
-                    eprintln!("Tools mutex poisoned, attempting recovery: {poison_error}");
+                    // Use structured logging instead of eprintln!
+                    self.logger().warn(&format!(
+                        "Tools mutex poisoned during tool execution for agent '{}', attempting recovery: {poison_error}",
+                        self.name
+                    ));
                     poison_error.into_inner()
                 }
             };

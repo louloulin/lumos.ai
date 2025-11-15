@@ -438,6 +438,102 @@ pub trait LlmProvider: Send + Sync {
             finish_reason: "stop".to_string(),
         })
     }
+
+    /// Checks if the provider supports native structured output
+    ///
+    /// Structured output allows the LLM to return responses that conform
+    /// to a specific JSON schema, ensuring type safety and validation.
+    ///
+    /// # Returns
+    ///
+    /// `true` if structured output is supported, `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::llm::LlmProvider;
+    ///
+    /// # fn example(provider: &dyn LlmProvider) {
+    /// if provider.supports_structured_output() {
+    ///     println!("Provider supports structured output");
+    /// }
+    /// # }
+    /// ```
+    fn supports_structured_output(&self) -> bool {
+        false
+    }
+
+    /// Generates text with structured output support
+    ///
+    /// This method uses the LLM's native structured output API (e.g., OpenAI's
+    /// `response_format` or Anthropic's `structured_outputs`) to ensure the
+    /// response conforms to the provided JSON schema.
+    ///
+    /// # Arguments
+    ///
+    /// * `messages` - Conversation history
+    /// * `schema` - JSON Schema that the response must conform to
+    /// * `options` - Generation options
+    ///
+    /// # Returns
+    ///
+    /// A JSON `Value` that conforms to the provided schema.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The provider doesn't support structured output
+    /// - The schema is invalid
+    /// - The API request fails
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::llm::{LlmProvider, LlmOptions, Message, Role};
+    /// use serde_json::json;
+    ///
+    /// # async fn example(provider: &dyn LlmProvider) -> lumosai_core::Result<()> {
+    /// let messages = vec![
+    ///     Message {
+    ///         role: Role::User,
+    ///         content: "Extract tasks from: Buy milk, Call mom".to_string(),
+    ///         metadata: None,
+    ///         name: None,
+    ///     },
+    /// ];
+    ///
+    /// let schema = json!({
+    ///     "type": "object",
+    ///     "properties": {
+    ///         "tasks": {
+    ///             "type": "array",
+    ///             "items": {"type": "string"}
+    ///         }
+    ///     },
+    ///     "required": ["tasks"]
+    /// });
+    ///
+    /// let options = LlmOptions::default();
+    /// let response = provider.generate_structured(&messages, &schema, &options).await?;
+    /// println!("Structured response: {}", response);
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn generate_structured(
+        &self,
+        messages: &[Message],
+        schema: &serde_json::Value,
+        options: &LlmOptions,
+    ) -> Result<serde_json::Value> {
+        // Default implementation: fallback to regular generation
+        // This should be overridden by providers that support structured output
+        let _ = schema;
+        let response = self.generate_with_messages(messages, options).await?;
+        // Try to parse as JSON, but this is not guaranteed to match the schema
+        serde_json::from_str(&response).unwrap_or_else(|_| {
+            serde_json::json!({ "content": response })
+        })
+    }
 }
 
 /// Response from a function calling enabled LLM

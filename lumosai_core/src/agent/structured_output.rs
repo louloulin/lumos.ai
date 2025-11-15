@@ -2,6 +2,11 @@
 //!
 //! This module provides structured output functionality for agents,
 //! allowing them to generate responses that conform to a specific schema.
+//!
+//! The implementation prioritizes using LLM native structured output APIs
+//! (e.g., OpenAI's `response_format` or Anthropic's `structured_outputs`)
+//! when available, falling back to prompt engineering for providers that
+//! don't support native structured output.
 
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
@@ -12,7 +17,7 @@ use super::executor::BasicAgent;
 use super::trait_def::{Agent, AgentStructuredOutput};
 use super::types::{AgentGenerateOptions, RuntimeContext};
 use crate::error::{Error, Result};
-use crate::llm::{Message, Role};
+use crate::llm::{LlmOptions, LlmProvider, Message, Role};
 
 /// Implementation of structured output for BasicAgent
 #[async_trait]
@@ -22,33 +27,62 @@ impl AgentStructuredOutput for BasicAgent {
         messages: &[Message],
         options: &AgentGenerateOptions,
     ) -> Result<T> {
-        // 1. 使用通用的对象schema
-        // Note: 如果agent有配置schema，LLM可能会使用它
-        let schema_value = json!({
-            "type": "object",
-            "properties": {},
-            "additionalProperties": true
-        });
+        // 1. Generate JSON Schema from Rust type using schemars
+        let schema = schemars::schema_for!(T);
+        let schema_value = serde_json::to_value(&schema.schema)
+            .map_err(|e| Error::Agent(format!("Failed to serialize schema: {}", e)))?;
 
-        // 3. 构建增强的 prompt，要求返回符合 schema 的 JSON
+        // 2. Check if LLM supports native structured output
+        if self.llm.supports_structured_output() {
+            // Use native structured output API
+            let llm_options = LlmOptions {
+                temperature: options.temperature,
+                max_tokens: options.max_tokens,
+                stop: options.stop.clone(),
+                model: None,
+            };
+
+            let response_value = self
+                .llm
+                .generate_structured(messages, &schema_value, &llm_options)
+                .await
+                .map_err(|e| {
+                    Error::Agent(format!(
+                        "Failed to generate structured output using native API: {}",
+                        e
+                    ))
+                })?;
+
+            // Parse the JSON response to target type
+            let parsed: T = serde_json::from_value(response_value).map_err(|e| {
+                Error::Agent(format!(
+                    "Failed to parse structured output from native API: {}",
+                    e
+                ))
+            })?;
+
+            return Ok(parsed);
+        }
+
+        // 3. Fallback to prompt engineering (original implementation)
         let schema_prompt = format!(
             "\n\nIMPORTANT: Return your response as valid JSON that follows this schema:\n{}\n\nReturn ONLY the JSON, no additional text.",
             serde_json::to_string_pretty(&schema_value)?
         );
 
-        // 4. 增强最后一条消息
+        // 4. Enhance the last message
         let mut enhanced_messages = messages.to_vec();
         if let Some(last_msg) = enhanced_messages.last_mut() {
             last_msg.content.push_str(&schema_prompt);
         }
 
-        // 5. 调用 LLM 生成
+        // 5. Call LLM generate
         let result = self.generate(&enhanced_messages, options).await?;
 
-        // 6. 提取 JSON 响应
+        // 6. Extract JSON response
         let json_str = Self::extract_json(&result.response)?;
 
-        // 7. 解析为目标类型
+        // 7. Parse to target type
         let parsed: T = serde_json::from_str(&json_str).map_err(|e| {
             Error::Agent(format!(
                 "Failed to parse structured output: {}. Response was: {}",
@@ -178,12 +212,19 @@ impl StructuredOutputExt for crate::agent::AgentBuilder {
 mod tests {
     use super::*;
     use serde::{Deserialize, Serialize};
+    use schemars::JsonSchema;
 
-    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
     struct TaskBreakdown {
         title: String,
         subtasks: Vec<String>,
         priority: String,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
+    struct SimpleStruct {
+        name: String,
+        age: u32,
     }
 
     #[test]
@@ -209,6 +250,28 @@ Hope this helps!"#;
         let response = "Some text before {\"title\": \"Test\"} some text after";
         let extracted = BasicAgent::extract_json(response).unwrap();
         assert_eq!(extracted, r#"{"title": "Test"}"#);
+    }
+
+    #[test]
+    fn test_schema_generation() {
+        // Test that schemars can generate schema from Rust type
+        let schema = schemars::schema_for!(TaskBreakdown);
+        let schema_value = serde_json::to_value(&schema.schema).unwrap();
+        
+        // Verify schema has expected structure
+        assert!(schema_value.get("type").is_some());
+        assert_eq!(schema_value["type"], "object");
+        assert!(schema_value.get("properties").is_some());
+    }
+
+    #[test]
+    fn test_simple_struct_schema() {
+        let schema = schemars::schema_for!(SimpleStruct);
+        let schema_value = serde_json::to_value(&schema.schema).unwrap();
+        
+        assert_eq!(schema_value["type"], "object");
+        assert!(schema_value["properties"].get("name").is_some());
+        assert!(schema_value["properties"].get("age").is_some());
     }
 }
 

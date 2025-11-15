@@ -86,6 +86,8 @@ struct OpenAIRequest {
     tools: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_format: Option<Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -479,6 +481,101 @@ impl LlmProvider for OpenAiProvider {
                 .finish_reason
                 .clone()
                 .unwrap_or_else(|| "stop".to_string()),
+        })
+    }
+
+    fn supports_structured_output(&self) -> bool {
+        // OpenAI supports structured output for GPT-4 and newer models
+        // Check if the model name contains "gpt-4" or "o1"
+        self.model.contains("gpt-4") || self.model.contains("o1")
+    }
+
+    async fn generate_structured(
+        &self,
+        messages: &[Message],
+        schema: &serde_json::Value,
+        options: &LlmOptions,
+    ) -> Result<serde_json::Value> {
+        // Prepare request URL
+        let url = format!("{}/chat/completions", self.base_url);
+
+        // Convert messages to OpenAI format
+        let api_messages: Vec<serde_json::Value> = messages
+            .iter()
+            .map(|msg| {
+                serde_json::json!({
+                    "role": msg.role.as_str(),
+                    "content": msg.content.clone(),
+                    "name": msg.name.clone(),
+                })
+            })
+            .collect();
+
+        // Build request body with response_format
+        let mut body = serde_json::json!({
+            "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
+            "messages": api_messages,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "schema": schema,
+                    "strict": true,
+                }
+            }
+        });
+
+        // Add other options
+        if let Some(temperature) = options.temperature {
+            body["temperature"] = serde_json::json!(temperature);
+        }
+        if let Some(max_tokens) = options.max_tokens {
+            body["max_tokens"] = serde_json::json!(max_tokens);
+        }
+        if let Some(stop) = &options.stop {
+            body["stop"] = serde_json::json!(stop);
+        }
+
+        // Send request
+        let res = self
+            .client
+            .post(&url)
+            .headers(self.create_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| Error::Llm(format!("OpenAI API request failed: {e}")))?;
+
+        let status = res.status();
+        let response_text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read OpenAI response: {e}")))?;
+
+        if !status.is_success() {
+            return Err(Error::Llm(format!(
+                "OpenAI API returned error status {status}: {response_text}"
+            )));
+        }
+
+        // Parse response
+        let response: OpenAIResponse = serde_json::from_str(&response_text)
+            .map_err(|e| Error::Llm(format!("Failed to parse OpenAI response: {e}")))?;
+
+        if response.choices.is_empty() {
+            return Err(Error::Llm("No choices in OpenAI response".to_string()));
+        }
+
+        let content = response.choices[0]
+            .message
+            .content
+            .as_ref()
+            .ok_or_else(|| Error::Llm("No content in OpenAI response".to_string()))?;
+
+        // Parse the JSON response
+        serde_json::from_str(content).map_err(|e| {
+            Error::Llm(format!(
+                "Failed to parse structured output JSON: {e}. Content: {content}"
+            ))
         })
     }
 }

@@ -195,6 +195,7 @@ pub struct AgentBuilder {
     model: Option<Arc<dyn LlmProvider>>,
     model_name: Option<String>, // New field for string model names
     memory_config: Option<MemoryConfig>,
+    memory: Option<Arc<dyn crate::memory::Memory>>, // Direct memory instance
     model_id: Option<String>,
     temperature: Option<f32>,
     max_tokens: Option<u32>,
@@ -245,6 +246,7 @@ impl AgentBuilder {
             model: None,
             model_name: None,
             memory_config: None,
+            memory: None,
             model_id: None,
             temperature: None,
             max_tokens: None,
@@ -1048,6 +1050,11 @@ impl AgentBuilder {
         // Create agent
         let mut agent = BasicAgent::new(config, model);
 
+        // Set memory if provided directly
+        if let Some(memory) = self.memory {
+            agent = agent.with_memory(memory);
+        }
+
         // Add tools
         for tool in self.tools {
             agent.add_tool(tool)?;
@@ -1109,6 +1116,11 @@ impl AgentBuilder {
 
         // Create agent
         let mut agent = BasicAgent::new(config, model);
+
+        // Set memory if provided directly
+        if let Some(memory) = self.memory {
+            agent = agent.with_memory(memory);
+        }
 
         // Add tools
         for tool in self.tools {

@@ -132,33 +132,76 @@ impl AgentInstance {
         Ok(Self::new(new_agent))
     }
 
+    /// Level 2 API - 通过工具名称添加工具（支持字符串名称）
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let agent = Agent::new("assistant", "You are helpful").await?
+    ///     .with_tool_names(&["web_search", "calculator"])?;
+    /// ```
+    pub fn with_tool_names(self, tool_names: &[&str]) -> Result<Self> {
+        use crate::agent::tool_resolver::resolve_tool_names;
+        
+        // 解析工具名称到工具实例
+        let tools = resolve_tool_names(tool_names)?;
+        
+        // 使用现有的 with_tools 方法
+        self.with_tools(tools)
+    }
+
+    /// Level 2 API - 添加单个工具（通过名称）
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let agent = Agent::new("assistant", "You are helpful").await?
+    ///     .with_tool("web_search")?;
+    /// ```
+    pub fn with_tool(self, tool_name: &str) -> Result<Self> {
+        self.with_tool_names(&[tool_name])
+    }
+
     /// Level 2 API - 设置内存（重新构建 Agent）
     pub fn memory(self, memory: Arc<dyn crate::memory::Memory>) -> Result<Self> {
         self.with_memory(memory)
     }
 
     /// Level 2 API - 设置内存（重新构建 Agent）
-    pub fn with_memory(self, _memory: Arc<dyn crate::memory::Memory>) -> Result<Self> {
+    pub fn with_memory(self, memory: Arc<dyn crate::memory::Memory>) -> Result<Self> {
         // 获取当前配置
         let name = self.inner.get_name().to_string();
         let instructions = self.inner.get_instructions().to_string();
         let model = self.inner.get_llm();
 
-        // 重新构建 Agent，暂时不支持自定义内存
-        // Custom memory configuration implementation plan:
-        // 1. Support MemoryConfig parameter in .memory() method
-        // 2. Memory types: short_term(conversation), long_term(knowledge_base), persistent(sqlite)
-        // 3. Memory strategies: window_based(keep_last_n), importance_based, semantic_search
-        // 4. Memory persistence: auto_save, manual_save, on_session_end
-        // 5. Memory sharing: cross_agent_memory, team_memory, project_memory
+        // 重新构建 Agent，直接使用 memory 实例
         let new_agent = AgentBuilder::new()
             .name(&name)
             .instructions(&instructions)
             .model(model)
+            .memory(memory)
             .enable_smart_defaults()
             .build()?;
 
         Ok(Self::new(new_agent))
+    }
+
+    /// Level 2 API - 通过存储类型名称设置内存（支持字符串名称）
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let agent = Agent::new("assistant", "You are helpful").await?
+    ///     .with_memory_type("basic")?;
+    /// ```
+    pub fn with_memory_type(self, storage_type: &str) -> Result<Self> {
+        use crate::agent::memory_resolver::resolve_memory_storage;
+        
+        // 解析存储类型名称到内存实例
+        let memory = resolve_memory_storage(storage_type)?;
+        
+        // 使用现有的 with_memory 方法
+        self.with_memory(memory)
     }
 
     /// 生成响应
@@ -660,5 +703,107 @@ mod tests {
 
         assert_eq!(agent.get_name(), "assistant");
         assert_eq!(agent.get_instructions(), "You are helpful");
+    }
+
+    #[tokio::test]
+    async fn test_with_tool_names() {
+        let llm = create_test_zhipu_provider_arc();
+
+        // Test adding tools by name
+        let agent = Agent::quick("assistant", "You are helpful")
+            .model(llm)
+            .build()
+            .expect("Failed to create agent");
+
+        let agent_instance = AgentInstance::new(agent);
+        let agent_with_tools = agent_instance
+            .with_tool_names(&["calculator", "web_search"])
+            .expect("Failed to add tools by name");
+
+        // Verify tools were added
+        let tools = agent_with_tools.inner.get_tools();
+        assert!(tools.len() >= 2);
+    }
+
+    #[tokio::test]
+    async fn test_with_tool() {
+        let llm = create_test_zhipu_provider_arc();
+
+        // Test adding single tool by name
+        let agent = Agent::quick("assistant", "You are helpful")
+            .model(llm)
+            .build()
+            .expect("Failed to create agent");
+
+        let agent_instance = AgentInstance::new(agent);
+        let agent_with_tool = agent_instance
+            .with_tool("calculator")
+            .expect("Failed to add tool by name");
+
+        // Verify tool was added
+        let tools = agent_with_tool.inner.get_tools();
+        assert!(tools.len() >= 1);
+    }
+
+    #[tokio::test]
+    async fn test_chain_with_tool_names() {
+        let llm = create_test_zhipu_provider_arc();
+
+        // Test chaining with tool names
+        let agent = Agent::new("assistant", "You are helpful")
+            .await
+            .expect("Failed to create agent")
+            .with_tool("calculator")
+            .expect("Failed to add calculator")
+            .with_tool("web_search")
+            .expect("Failed to add web_search");
+
+        let tools = agent.inner.get_tools();
+        assert!(tools.len() >= 2);
+    }
+
+    #[tokio::test]
+    async fn test_with_memory_type() {
+        let llm = create_test_zhipu_provider_arc();
+
+        // Test adding memory by storage type name
+        let agent = Agent::new("assistant", "You are helpful")
+            .await
+            .expect("Failed to create agent")
+            .with_memory_type("basic")
+            .expect("Failed to add basic memory");
+
+        // Verify memory was set (we can't directly check, but the call should succeed)
+        assert_eq!(agent.inner.get_name(), "assistant");
+    }
+
+    #[tokio::test]
+    async fn test_chain_with_memory_type() {
+        let llm = create_test_zhipu_provider_arc();
+
+        // Test chaining memory type with tools
+        let agent = Agent::new("assistant", "You are helpful")
+            .await
+            .expect("Failed to create agent")
+            .with_memory_type("basic")
+            .expect("Failed to add basic memory")
+            .with_tool("calculator")
+            .expect("Failed to add calculator");
+
+        let tools = agent.inner.get_tools();
+        assert!(tools.len() >= 1);
+    }
+
+    #[tokio::test]
+    async fn test_with_memory_type_invalid() {
+        let llm = create_test_zhipu_provider_arc();
+
+        // Test invalid memory type
+        let result = Agent::new("assistant", "You are helpful")
+            .await
+            .expect("Failed to create agent")
+            .with_memory_type("invalid_memory_type");
+
+        assert!(result.is_err());
     }
 }

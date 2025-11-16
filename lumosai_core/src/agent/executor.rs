@@ -148,6 +148,12 @@ impl BasicAgent {
         }
     }
 
+    /// Set memory instance
+    pub fn with_memory(mut self, memory: Arc<dyn Memory>) -> Self {
+        self.memory = Some(memory);
+        self
+    }
+
     /// Set metrics collector
     pub fn with_metrics_collector(mut self, collector: Arc<dyn MetricsCollector>) -> Self {
         self.metrics_collector = Some(collector);

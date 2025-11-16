@@ -32,6 +32,8 @@ pub mod sop_simple;
 pub mod sop_types;
 pub mod streaming;
 pub mod trait_def;
+pub mod tool_resolver;
+pub mod memory_resolver;
 pub mod types;
 pub mod websocket;
 

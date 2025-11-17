@@ -62,7 +62,9 @@ pub mod client;
 pub mod config;
 pub mod discovery;
 pub mod protocol;
+pub mod resilience;
 pub mod server;
+pub mod streaming;
 pub mod task;
 pub mod types;
 
@@ -72,7 +74,9 @@ pub use client::{A2AClient, A2AClientBuilder};
 pub use config::{A2AConfig, A2ASettings};
 pub use discovery::{AgentDiscovery, CapabilityMatcher};
 pub use protocol::A2AProtocol;
-pub use server::{A2AServer, A2AServerBuilder};
+pub use resilience::{CircuitBreaker, RecoveryStrategy, ResilientExecutor, RetryConfig, RetryExecutor};
+pub use server::{A2AServer, A2AServerBuilder, A2AServerStats};
+pub use streaming::{StreamResponse, StreamSender, StreamTaskManager};
 pub use task::{TaskManager, TaskStats};
 pub use types::*;
 

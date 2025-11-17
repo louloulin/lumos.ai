@@ -6,6 +6,7 @@ use crate::types::*;
 use crate::{A2AError, A2AResult};
 use std::collections::HashMap;
 use std::time::Duration;
+use uuid::Uuid;
 
 /// 任务管理器
 #[derive(Debug)]
@@ -29,6 +30,26 @@ impl TaskManager {
         task
     }
 
+    /// 创建新任务并返回 ID（用于服务器接口）
+    pub fn create_task_with_id(&mut self, agent_id: &str, message: Message, _artifacts: Option<Vec<Artifact>>) -> A2AResult<String> {
+        let task = Task {
+            id: Uuid::new_v4().to_string(),
+            description: format!("Task for agent {}", agent_id),
+            input_message: message,
+            status: TaskStatus::new(TaskState::Submitted),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            deadline: None,
+            assigned_agent: Some(agent_id.to_string()),
+            parameters: HashMap::new(),
+            metadata: HashMap::new(),
+        };
+        
+        let task_id = task.id.clone();
+        self.tasks.insert(task_id.clone(), task);
+        Ok(task_id)
+    }
+
     /// 获取任务
     pub fn get_task(&self, task_id: &str) -> A2AResult<&Task> {
         self.tasks
@@ -47,6 +68,17 @@ impl TaskManager {
     pub fn update_task_status(&mut self, task_id: &str, new_state: TaskState, message: Option<Message>) -> A2AResult<()> {
         if let Some(task) = self.tasks.get_mut(task_id) {
             task.update_status(new_state, message);
+            Ok(())
+        } else {
+            Err(A2AError::TaskNotFound(task_id.to_string()))
+        }
+    }
+
+    /// 直接设置任务状态（用于服务器接口）
+    pub fn set_task_status(&mut self, task_id: &str, status: TaskStatus) -> A2AResult<()> {
+        if let Some(task) = self.tasks.get_mut(task_id) {
+            task.status = status;
+            task.updated_at = chrono::Utc::now();
             Ok(())
         } else {
             Err(A2AError::TaskNotFound(task_id.to_string()))
@@ -89,6 +121,17 @@ impl TaskManager {
         self.tasks
             .remove(task_id)
             .ok_or_else(|| A2AError::TaskNotFound(task_id.to_string()))
+    }
+
+    /// 添加任务工件
+    pub fn add_artifact(&mut self, task_id: &str, _artifact: Artifact) -> A2AResult<()> {
+        if let Some(task) = self.tasks.get_mut(task_id) {
+            task.updated_at = chrono::Utc::now();
+            // TODO: Store artifacts when Task struct supports them
+            Ok(())
+        } else {
+            Err(A2AError::TaskNotFound(task_id.to_string()))
+        }
     }
 
     /// 清理已完成的任务

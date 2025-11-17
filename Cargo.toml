@@ -2,6 +2,7 @@
 members = [
     # 核心包
     "lumosai_core",
+    "lumosai_a2a",
     "lumosai_examples",
 
     # 服务层包

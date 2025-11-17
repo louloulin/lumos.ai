@@ -353,6 +353,7 @@ impl SseEventAggregator {
                         message: status_update.message.clone(),
                         timestamp: status_update.timestamp,
                         metadata: status_update.metadata.clone(),
+                        history: vec![(status_update.state.clone(), status_update.message.clone(), status_update.timestamp)],
                     };
                     task.updated_at = status_update.timestamp;
                 }

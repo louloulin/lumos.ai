@@ -42,6 +42,7 @@ impl TaskManager {
             deadline: None,
             assigned_agent: Some(agent_id.to_string()),
             parameters: HashMap::new(),
+            artifacts: _artifacts.unwrap_or_default(),
             metadata: HashMap::new(),
         };
         
@@ -401,8 +402,8 @@ mod tests {
         
         // 检查历史记录
         assert_eq!(retrieved_task.status.history.len(), 2);
-        assert_eq!(retrieved_task.status.history[0].message.role, MessageRole::User);
-        assert_eq!(retrieved_task.status.history[1].message.role, MessageRole::Assistant);
+        assert_eq!(retrieved_task.status.history[0].1.as_ref().unwrap().parts[0].as_text().unwrap().content, "Initial task");
+        assert_eq!(retrieved_task.status.history[1].1.as_ref().unwrap().parts[0].as_text().unwrap().content, "Updated task");
     }
 
     #[test]

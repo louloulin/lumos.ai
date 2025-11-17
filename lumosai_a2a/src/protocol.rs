@@ -628,6 +628,7 @@ mod tests {
             version: "1.0.0".to_string(),
             description: None,
             provider: None,
+            documentation_url: None,
             capabilities: crate::types::Capabilities::default(),
             authentication: None,
             skills: vec![],

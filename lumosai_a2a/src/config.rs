@@ -25,6 +25,8 @@ pub struct A2AConfig {
     pub task_history_limit: usize,
     /// Agent 发现缓存过期时间（秒）
     pub agent_cache_ttl: u64,
+    /// 协议版本
+    pub protocol_version: String,
     /// 自定义配置
     pub custom_settings: HashMap<String, serde_json::Value>,
 }
@@ -40,6 +42,7 @@ impl Default for A2AConfig {
             max_concurrent_tasks: 10,
             task_history_limit: 100,
             agent_cache_ttl: 600, // 10分钟
+            protocol_version: "1.0.0".to_string(),
             custom_settings: HashMap::new(),
         }
     }

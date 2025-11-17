@@ -3,6 +3,8 @@
 //! 提供重试逻辑、错误恢复和熔断机制
 
 use crate::{A2AError, A2AResult};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -439,7 +441,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_resilient_executor_retry() {
-        let attempt_counter = AtomicU32::new(0);
+        let attempt_counter = Arc::new(AtomicU32::new(0));
         
         let strategy = RecoveryStrategy::Retry(
             RetryConfig::new()
@@ -449,9 +451,10 @@ mod tests {
         );
 
         let mut executor = ResilientExecutor::new(strategy);
+        let counter_clone = attempt_counter.clone();
         
         let result = executor.execute(move || async {
-            let attempt = attempt_counter.fetch_add(1, Ordering::SeqCst);
+            let attempt = counter_clone.fetch_add(1, Ordering::SeqCst);
             if attempt < 2 {
                 Err(A2AError::InternalError("temporary error occurred".to_string()))
             } else {

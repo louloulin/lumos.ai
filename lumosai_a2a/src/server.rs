@@ -562,7 +562,7 @@ mod tests {
             "id": "test-123"
         }"#;
         
-        let response = server.handle_jsonrpc_request(jsonrpc_request);
+        let response = server.handle_jsonrpc_request(jsonrpc_request).await;
         assert!(!response.is_empty());
         
         // Test JSON-RPC task get
@@ -575,7 +575,7 @@ mod tests {
             "id": "test-456"
         }"#;
         
-        let response = server.handle_jsonrpc_request(get_request);
+        let response = server.handle_jsonrpc_request(get_request).await;
         assert!(!response.is_empty());
         
         // Test JSON-RPC task list
@@ -586,7 +586,7 @@ mod tests {
             "id": "test-789"
         }"#;
         
-        let response = server.handle_jsonrpc_request(list_request);
+        let response = server.handle_jsonrpc_request(list_request).await;
         assert!(!response.is_empty());
     }
 
@@ -596,7 +596,7 @@ mod tests {
         
         // Test invalid JSON-RPC
         let invalid_json = "invalid json";
-        let response = server.handle_jsonrpc_request(invalid_json);
+        let response = server.handle_jsonrpc_request(invalid_json).await;
         assert!(response.contains("\"code\":"));
         
         // Test non-existent method
@@ -607,7 +607,7 @@ mod tests {
             "id": "test-invalid"
         }"#;
         
-        let response = server.handle_jsonrpc_request(invalid_method);
+        let response = server.handle_jsonrpc_request(invalid_method).await;
         assert!(response.contains("Method not found"));
         
         // Test non-existent task
@@ -620,7 +620,7 @@ mod tests {
             "id": "test-missing"
         }"#;
         
-        let response = server.handle_jsonrpc_request(get_nonexistent);
+        let response = server.handle_jsonrpc_request(get_nonexistent).await;
         assert!(response.contains("Task not found"));
     }
 

@@ -10,7 +10,7 @@ use url::Url;
 use uuid::Uuid;
 
 /// A2A 任务状态枚举
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum TaskState {
     /// 任务已提交，等待处理

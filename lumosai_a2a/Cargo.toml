@@ -36,6 +36,8 @@ rustls = { version = "0.23", optional = true }
 futures = "0.3"
 async-trait = "0.1"
 async-stream = "0.3"
+# Additional utilities for SSE
+pin-project = "1.0"
 
 [dev-dependencies]
 tokio-test = "0.4"

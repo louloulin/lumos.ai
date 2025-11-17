@@ -3,6 +3,7 @@
 //! 提供重试逻辑、错误恢复和熔断机制
 
 use crate::{A2AError, A2AResult};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 use tokio::time::sleep;
 

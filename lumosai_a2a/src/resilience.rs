@@ -436,4 +436,128 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), A2AError::ProtocolError(_)));
     }
+
+    #[tokio::test]
+    async fn test_resilient_executor_retry() {
+        let attempt_counter = AtomicU32::new(0);
+        
+        let strategy = RecoveryStrategy::Retry(
+            RetryConfig::new()
+                .max_retries(2)
+                .initial_delay(Duration::from_millis(10))
+                .retryable_error("temporary error")
+        );
+
+        let mut executor = ResilientExecutor::new(strategy);
+        
+        let result = executor.execute(move || async {
+            let attempt = attempt_counter.fetch_add(1, Ordering::SeqCst);
+            if attempt < 2 {
+                Err(A2AError::InternalError("temporary error occurred".to_string()))
+            } else {
+                Ok("success after retries")
+            }
+        }).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "success after retries");
+        assert_eq!(attempt_counter.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn test_resilient_executor_max_retries_exceeded() {
+        let attempt_counter = AtomicU32::new(0);
+        
+        let strategy = RecoveryStrategy::Retry(
+            RetryConfig::new()
+                .max_retries(2)
+                .initial_delay(Duration::from_millis(10))
+                .retryable_error("persistent error")
+        );
+
+        let mut executor = ResilientExecutor::new(strategy);
+        
+        let result = executor.execute(|| async {
+            attempt_counter.fetch_add(1, Ordering::SeqCst);
+            Err(A2AError::InternalError("persistent error occurred".to_string()))
+        }).await;
+
+        assert!(result.is_err());
+        assert_eq!(attempt_counter.load(Ordering::SeqCst), 3); // initial + 2 retries
+    }
+
+    #[tokio::test]
+    async fn test_retry_config_exponential_backoff() {
+        let config = RetryConfig::new()
+            .max_retries(3)
+            .initial_delay(Duration::from_millis(10))
+            .backoff_multiplier(2.0);
+
+        assert_eq!(config.calculate_delay(0), Duration::from_millis(10));
+        assert_eq!(config.calculate_delay(1), Duration::from_millis(20));
+        assert_eq!(config.calculate_delay(2), Duration::from_millis(40));
+        
+        // Test max delay
+        let config_with_max = config.max_delay(Duration::from_millis(50));
+        assert_eq!(config_with_max.calculate_delay(3), Duration::from_millis(50)); // capped at max
+    }
+
+    #[test]
+    fn test_retry_config_error_classification() {
+        let config = RetryConfig::default();
+        
+        // Test retryable errors
+        assert!(config.is_retryable(&A2AError::InternalError("timeout occurred".to_string())));
+        assert!(config.is_retryable(&A2AError::InternalError("network error".to_string())));
+        assert!(config.is_retryable(&A2AError::InternalError("temporary failure".to_string())));
+        
+        // Test non-retryable errors
+        assert!(!config.is_retryable(&A2AError::InvalidInput("bad input".to_string())));
+        assert!(!config.is_retryable(&A2AError::AgentNotFound("not found".to_string())));
+    }
+
+    #[test]
+    fn test_circuit_breaker_config_default() {
+        let config = CircuitBreakerConfig::default();
+        assert_eq!(config.failure_threshold, 5);
+        assert_eq!(config.success_threshold, 3);
+        assert_eq!(config.timeout, Duration::from_secs(60));
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_half_open_success() {
+        let config = CircuitBreakerConfig {
+            failure_threshold: 1,
+            success_threshold: 2,
+            timeout: Duration::from_millis(50),
+        };
+
+        let mut breaker = CircuitBreaker::new(config);
+        
+        // First failure triggers open state
+        let _: Result<String, _> = breaker.execute(|| async {
+            Err(A2AError::InternalError("First failure".to_string()))
+        }).await;
+
+        assert_eq!(breaker.state(), CircuitBreakerState::Open);
+        
+        // Wait for timeout
+        tokio::time::sleep(Duration::from_millis(60)).await;
+        
+        // Should now be half-open and allow requests
+        let result = breaker.execute(|| async {
+            Ok("success")
+        }).await;
+        
+        assert!(result.is_ok());
+        assert_eq!(breaker.state(), CircuitBreakerState::HalfOpen);
+        
+        // Another success should close the circuit
+        let result = breaker.execute(|| async {
+            Ok("success again")
+        }).await;
+        
+        assert!(result.is_ok());
+        assert_eq!(breaker.state(), CircuitBreakerState::Closed);
+    }
 }

@@ -1883,6 +1883,7 @@ impl Agent for BasicAgent {
         })
     }
 
+    
     /// Get the current status of the agent
     fn get_status(&self) -> AgentStatus {
         self.status.clone()

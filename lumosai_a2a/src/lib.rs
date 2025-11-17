@@ -12,28 +12,27 @@
 //!
 //! ## 快速开始
 //!
-//! ```rust
-//! use lumosai_a2a::{AgentCard, AgentCardBuilder, A2AProtocol};
+//! ```rust,no_run
+//! use lumosai_a2a::{AgentCard, AgentCardBuilder, Skill};
+//! use url::Url;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // 创建 Agent Card
 //! let card = AgentCardBuilder::new(
 //!     "My Agent".to_string(),
-//!     "https://my-agent.com".to_string(),
+//!     Url::parse("https://my-agent.com")?,
 //!     "1.0.0".to_string(),
 //! )
 //! .description("A helpful AI agent".to_string())
 //! .enable_streaming(true)
-//! .skill(Skill::new(
-//!     "text_analysis".to_string(),
-//!     "Text Analysis".to_string(),
-//! ))
+//! .skill(
+//!     Skill::new("text_analysis".to_string(), "Text Analysis".to_string())
+//!         .with_description("Analyze text content".to_string())
+//! )
 //! .build()
 //! .unwrap();
-//!
-//! // 创建 A2A 协议实例
-//! let protocol = A2AProtocol::builder()
-//!     .register_agent(card)
-//!     .build();
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## 特性

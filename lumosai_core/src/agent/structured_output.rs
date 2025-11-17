@@ -22,7 +22,7 @@ use crate::llm::{LlmOptions, LlmProvider, Message, Role};
 /// Implementation of structured output for BasicAgent
 #[async_trait]
 impl AgentStructuredOutput for BasicAgent {
-    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
+    async fn generate_structured<T: DeserializeOwned + Send + 'static + schemars::JsonSchema>(
         &self,
         messages: &[Message],
         options: &AgentGenerateOptions,
@@ -33,17 +33,19 @@ impl AgentStructuredOutput for BasicAgent {
             .map_err(|e| Error::Agent(format!("Failed to serialize schema: {}", e)))?;
 
         // 2. Check if LLM supports native structured output
-        if self.llm.supports_structured_output() {
+        if self.supports_structured_output() {
             // Use native structured output API
             let llm_options = LlmOptions {
-                temperature: options.temperature,
-                max_tokens: options.max_tokens,
-                stop: options.stop.clone(),
+                temperature: options.llm_options.temperature,
+                max_tokens: options.llm_options.max_tokens,
+                stop: options.llm_options.stop.clone(),
                 model: None,
+                stream: false,
+                extra: serde_json::Map::new(),
             };
 
             let response_value = self
-                .llm
+                .llm()
                 .generate_structured(messages, &schema_value, &llm_options)
                 .await
                 .map_err(|e| {

@@ -124,14 +124,47 @@ impl TaskManager {
     }
 
     /// 添加任务工件
-    pub fn add_artifact(&mut self, task_id: &str, _artifact: Artifact) -> A2AResult<()> {
+    pub fn add_artifact(&mut self, task_id: &str, artifact: Artifact) -> A2AResult<()> {
         if let Some(task) = self.tasks.get_mut(task_id) {
+            task.artifacts.push(artifact);
             task.updated_at = chrono::Utc::now();
-            // TODO: Store artifacts when Task struct supports them
             Ok(())
         } else {
             Err(A2AError::TaskNotFound(task_id.to_string()))
         }
+    }
+
+    /// 添加任务工件（别名方法）
+    pub fn add_task_artifact(&mut self, task_id: &str, artifact: Artifact) -> A2AResult<()> {
+        self.add_artifact(task_id, artifact)
+    }
+
+    /// 添加任务消息
+    pub fn add_task_message(&mut self, task_id: &str, message: Message) -> A2AResult<()> {
+        if let Some(task) = self.tasks.get_mut(task_id) {
+            // 可以选择存储消息到任务中或更新状态消息
+            task.status.message = Some(message);
+            task.updated_at = chrono::Utc::now();
+            Ok(())
+        } else {
+            Err(A2AError::TaskNotFound(task_id.to_string()))
+        }
+    }
+
+    /// 按状态列出任务
+    pub fn list_tasks_by_state(&self, state: TaskState) -> Vec<&Task> {
+        self.tasks
+            .values()
+            .filter(|task| task.status.state == state)
+            .collect()
+    }
+
+    /// 按Agent列出任务
+    pub fn list_tasks_by_agent(&self, agent_id: &str) -> Vec<&Task> {
+        self.tasks
+            .values()
+            .filter(|task| task.assigned_agent.as_ref().map_or(false, |id| id == agent_id))
+            .collect()
     }
 
     /// 清理已完成的任务
@@ -266,5 +299,231 @@ mod tests {
         assert_eq!(stats.working_tasks, 1);
         assert_eq!(stats.completion_rate(), 1.0 / 3.0);
         assert_eq!(stats.failure_rate(), 1.0 / 3.0);
+    }
+
+    #[test]
+    fn test_task_manager_error_handling() {
+        let mut manager = TaskManager::new();
+        
+        // 测试获取不存在的任务
+        let result = manager.get_task("nonexistent-id");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), A2AError::TaskNotFound(_)));
+        
+        // 测试更新不存在的任务状态
+        let result = manager.update_task_status("nonexistent-id", TaskState::Working, None);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), A2AError::TaskNotFound(_)));
+        
+        // 测试为不存在的任务分配Agent
+        let result = manager.assign_task_to_agent("nonexistent-id", "test-agent".to_string());
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), A2AError::TaskNotFound(_)));
+        
+        // 测试为不存在的任务添加工件
+        let artifact = Artifact::from_text("Test result".to_string());
+        let result = manager.add_task_artifact("nonexistent-id", artifact);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), A2AError::TaskNotFound(_)));
+    }
+
+    #[test]
+    fn test_task_artifact_management() {
+        let mut manager = TaskManager::new();
+        
+        let task = manager.create_task("Artifact test".to_string(), Message::user_message("Test".to_string()));
+        
+        // 添加工件
+        let artifact1 = Artifact::from_text("Result 1".to_string()).with_name("result1.txt".to_string());
+        let artifact2 = Artifact::from_text("Result 2".to_string()).with_name("result2.json".to_string());
+        
+        manager.add_task_artifact(&task.id, artifact1.clone()).unwrap();
+        manager.add_task_artifact(&task.id, artifact2.clone()).unwrap();
+        
+        let retrieved_task = manager.get_task(&task.id).unwrap();
+        assert_eq!(retrieved_task.artifacts.len(), 2);
+        assert_eq!(retrieved_task.artifacts[0].name, Some("result1.txt".to_string()));
+        assert_eq!(retrieved_task.artifacts[1].name, Some("result2.json".to_string()));
+    }
+
+    #[test]
+    fn test_task_list_filtering() {
+        let mut manager = TaskManager::new();
+        
+        let task1 = manager.create_task("Task 1".to_string(), Message::user_message("Hello".to_string()));
+        let task2 = manager.create_task("Task 2".to_string(), Message::user_message("World".to_string()));
+        let task3 = manager.create_task("Task 3".to_string(), Message::user_message("Test".to_string()));
+
+        // 分配不同的Agent
+        manager.assign_task_to_agent(&task1.id, "agent-alpha".to_string()).unwrap();
+        manager.assign_task_to_agent(&task2.id, "agent-beta".to_string()).unwrap();
+        manager.assign_task_to_agent(&task3.id, "agent-alpha".to_string()).unwrap();
+
+        // 更新不同状态
+        manager.update_task_status(&task1.id, TaskState::Completed, None).unwrap();
+        manager.update_task_status(&task2.id, TaskState::Working, None).unwrap();
+        manager.update_task_status(&task3.id, TaskState::Failed, None).unwrap();
+
+        // 测试按Agent过滤
+        let alpha_tasks = manager.list_tasks_by_agent("agent-alpha");
+        assert_eq!(alpha_tasks.len(), 2);
+
+        let beta_tasks = manager.list_tasks_by_agent("agent-beta");
+        assert_eq!(beta_tasks.len(), 1);
+
+        let gamma_tasks = manager.list_tasks_by_agent("agent-gamma");
+        assert_eq!(gamma_tasks.len(), 0);
+
+        // 测试按状态过滤
+        let completed_tasks = manager.list_tasks_by_state(TaskState::Completed);
+        assert_eq!(completed_tasks.len(), 1);
+
+        let working_tasks = manager.list_tasks_by_state(TaskState::Working);
+        assert_eq!(working_tasks.len(), 1);
+
+        let failed_tasks = manager.list_tasks_by_state(TaskState::Failed);
+        assert_eq!(failed_tasks.len(), 1);
+    }
+
+    #[test]
+    fn test_task_message_addition() {
+        let mut manager = TaskManager::new();
+        
+        let task = manager.create_task("Message test".to_string(), Message::user_message("Initial".to_string()));
+        
+        let user_message = Message::user_message("User response".to_string());
+        let assistant_message = Message::assistant_message("Assistant reply".to_string());
+        
+        manager.add_task_message(&task.id, user_message).unwrap();
+        manager.add_task_message(&task.id, assistant_message).unwrap();
+        
+        let retrieved_task = manager.get_task(&task.id).unwrap();
+        
+        // 检查历史记录
+        assert_eq!(retrieved_task.status.history.len(), 2);
+        assert_eq!(retrieved_task.status.history[0].message.role, MessageRole::User);
+        assert_eq!(retrieved_task.status.history[1].message.role, MessageRole::Assistant);
+    }
+
+    #[test]
+    fn test_task_cancellation() {
+        let mut manager = TaskManager::new();
+        
+        let task = manager.create_task("Cancellation test".to_string(), Message::user_message("Test".to_string()));
+        
+        // 更新为工作中状态
+        manager.update_task_status(&task.id, TaskState::Working, None).unwrap();
+        
+        // 取消任务
+        manager.update_task_status(&task.id, TaskState::Canceled, Some(Message::agent_message("User cancelled".to_string()))).unwrap();
+        
+        let retrieved_task = manager.get_task(&task.id).unwrap();
+        assert_eq!(retrieved_task.status.state, TaskState::Canceled);
+        assert_eq!(retrieved_task.status.message.as_ref().map(|m| &m.parts[0]), Some(&"User cancelled".to_string()));
+    }
+
+    #[test]
+    fn test_task_input_required_state() {
+        let mut manager = TaskManager::new();
+        
+        let task = manager.create_task("Input test".to_string(), Message::user_message("Need input".to_string()));
+        
+        // 设置为需要输入状态
+        manager.update_task_status(&task.id, TaskState::InputRequired, Some(Message::agent_message("Please provide more details".to_string()))).unwrap();
+        
+        let retrieved_task = manager.get_task(&task.id).unwrap();
+        assert_eq!(retrieved_task.status.state, TaskState::InputRequired);
+        assert_eq!(retrieved_task.status.message.as_ref().map(|m| &m.parts[0]), Some(&"Please provide more details".to_string()));
+    }
+
+    #[test]
+    fn test_task_stats_zero_tasks() {
+        let manager = TaskManager::new();
+        let stats = manager.get_task_stats();
+        
+        assert_eq!(stats.total_tasks, 0);
+        assert_eq!(stats.completed_tasks, 0);
+        assert_eq!(stats.failed_tasks, 0);
+        assert_eq!(stats.working_tasks, 0);
+        assert_eq!(stats.completion_rate(), 0.0);
+        assert_eq!(stats.failure_rate(), 0.0);
+    }
+
+    #[test]
+    fn test_task_multiple_status_updates() {
+        let mut manager = TaskManager::new();
+        
+        let task = manager.create_task("Multi-update test".to_string(), Message::user_message("Test".to_string()));
+        
+        // 连续更新状态
+        manager.update_task_status(&task.id, TaskState::Working, Some("Starting".to_string())).unwrap();
+        manager.update_task_status(&task.id, TaskState::InputRequired, Some("Need input".to_string())).unwrap();
+        manager.update_task_status(&task.id, TaskState::Working, Some("Processing".to_string())).unwrap();
+        manager.update_task_status(&task.id, TaskState::Completed, Some("Done".to_string())).unwrap();
+        
+        let retrieved_task = manager.get_task(&task.id).unwrap();
+        assert_eq!(retrieved_task.status.state, TaskState::Completed);
+        assert_eq!(retrieved_task.status.message.as_ref().map(|m| &m.parts[0]), Some(&"Done".to_string()));
+        
+        // 检查历史记录
+        assert!(retrieved_task.status.history.len() >= 4);
+    }
+
+    #[test]
+    fn test_task_agent_reassignment() {
+        let mut manager = TaskManager::new();
+        
+        let task = manager.create_task("Reassignment test".to_string(), Message::user_message("Test".to_string()));
+        
+        // 初始分配
+        manager.assign_task_to_agent(&task.id, "agent1".to_string()).unwrap();
+        let retrieved = manager.get_task(&task.id).unwrap();
+        assert_eq!(retrieved.assigned_agent, Some("agent1".to_string()));
+        
+        // 重新分配
+        manager.assign_task_to_agent(&task.id, "agent2".to_string()).unwrap();
+        let reassigned = manager.get_task(&task.id).unwrap();
+        assert_eq!(reassigned.assigned_agent, Some("agent2".to_string()));
+    }
+
+    #[test]
+    fn test_task_unique_ids() {
+        let mut manager = TaskManager::new();
+        
+        let task1 = manager.create_task("Task 1".to_string(), Message::user_message("Hello".to_string()));
+        let task2 = manager.create_task("Task 2".to_string(), Message::user_message("World".to_string()));
+        let task3 = manager.create_task("Task 3".to_string(), Message::user_message("Test".to_string()));
+        
+        // 验证ID唯一性
+        assert_ne!(task1.id, task2.id);
+        assert_ne!(task2.id, task3.id);
+        assert_ne!(task1.id, task3.id);
+        
+        // 验证ID格式
+        assert!(task1.id.starts_with("task_"));
+        assert!(task2.id.starts_with("task_"));
+        assert!(task3.id.starts_with("task_"));
+    }
+
+    #[test]
+    fn test_task_artifact_types() {
+        let mut manager = TaskManager::new();
+        
+        let task = manager.create_task("Mixed artifacts test".to_string(), Message::user_message("Test".to_string()));
+        
+        // 添加不同类型的工件
+        let text_artifact = Artifact::from_text("Plain text result".to_string());
+        let file_content = FileContent::from_base64("hello.txt".to_string(), "SGVsbG8gV29ybGQ=".to_string(), "text/plain".to_string());
+        let file_artifact = Artifact::from_file("hello.txt".to_string(), file_content);
+        
+        manager.add_task_artifact(&task.id, text_artifact).unwrap();
+        manager.add_task_artifact(&task.id, file_artifact).unwrap();
+        
+        let retrieved_task = manager.get_task(&task.id).unwrap();
+        assert_eq!(retrieved_task.artifacts.len(), 2);
+        
+        // 验证工件类型
+        assert!(matches!(&retrieved_task.artifacts[0].parts[0], Part::Text(_)));
+        assert!(matches!(&retrieved_task.artifacts[1].parts[0], Part::File(_)));
     }
 }

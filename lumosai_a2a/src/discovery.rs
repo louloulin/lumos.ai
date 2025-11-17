@@ -366,4 +366,298 @@ mod tests {
         assert_eq!(matches.len(), 1);
         assert!(matches[0].1 > 0.3);
     }
+
+    #[test]
+    fn test_agent_discovery_with_registered_agents() {
+        let mut manager = AgentCardManager::new();
+        let discovery = AgentDiscovery::new();
+
+        // 创建并注册测试Agent
+        let text_agent = create_test_agent(
+            "Text Agent", 
+            vec![Skill::new("text_analysis".to_string(), "Text Analysis".to_string())]
+        );
+        let code_agent = create_test_agent(
+            "Code Agent",
+            vec![Skill::new("code_generation".to_string(), "Code Generation".to_string())]
+        );
+        let multi_agent = create_test_agent(
+            "Multi Agent",
+            vec![
+                Skill::new("text_analysis".to_string(), "Text Analysis".to_string()),
+                Skill::new("code_generation".to_string(), "Code Generation".to_string()),
+            ]
+        );
+
+        let text_id = manager.register_card(text_agent).unwrap();
+        let code_id = manager.register_card(code_agent).unwrap();
+        let multi_id = manager.register_card(multi_agent).unwrap();
+
+        // 测试按技能发现
+        let text_results = discovery.discover_agents_for_capability(&manager, "text_analysis");
+        assert_eq!(text_results.len(), 2); // text_agent + multi_agent
+
+        let code_results = discovery.discover_agents_for_capability(&manager, "code_generation");
+        assert_eq!(code_results.len(), 2); // code_agent + multi_agent
+
+        let data_results = discovery.discover_agents_for_capability(&manager, "data_processing");
+        assert_eq!(data_results.len(), 0); // 没有Agent有此技能
+    }
+
+    #[test]
+    fn test_skill_match_mode_any() {
+        let mut manager = AgentCardManager::new();
+        let discovery = AgentDiscovery::new();
+
+        // 创建具有多种技能的Agent
+        let multi_agent = create_test_agent(
+            "Multi Skill Agent",
+            vec![
+                Skill::new("text_analysis".to_string(), "Text Analysis".to_string()),
+                Skill::new("code_generation".to_string(), "Code Generation".to_string()),
+                Skill::new("data_visualization".to_string(), "Data Viz".to_string()),
+            ]
+        );
+
+        manager.register_card(multi_agent).unwrap();
+
+        let required_skills = vec!["text_analysis".to_string(), "translation".to_string()];
+        
+        // ANY模式：只需要匹配任一技能
+        let any_matches = discovery.find_agents_by_skills(
+            &manager,
+            &required_skills,
+            SkillMatchMode::AnyRequired,
+        );
+
+        assert_eq!(any_matches.len(), 1); // 匹配text_analysis
+    }
+
+    #[test]
+    fn test_skill_match_mode_all() {
+        let mut manager = AgentCardManager::new();
+        let discovery = AgentDiscovery::new();
+
+        let complete_agent = create_test_agent(
+            "Complete Agent",
+            vec![
+                Skill::new("text_analysis".to_string(), "Text Analysis".to_string()),
+                Skill::new("code_generation".to_string(), "Code Generation".to_string()),
+            ]
+        );
+
+        let partial_agent = create_test_agent(
+            "Partial Agent", 
+            vec![Skill::new("text_analysis".to_string(), "Text Analysis".to_string())]
+        );
+
+        manager.register_card(complete_agent).unwrap();
+        manager.register_card(partial_agent).unwrap();
+
+        let required_skills = vec!["text_analysis".to_string(), "code_generation".to_string()];
+        
+        // ALL模式：需要匹配所有技能
+        let all_matches = discovery.find_agents_by_skills(
+            &manager,
+            &required_skills,
+            SkillMatchMode::AllRequired,
+        );
+
+        assert_eq!(all_matches.len(), 1); // 只有complete_agent匹配
+    }
+
+    #[test]
+    fn test_capability_matcher_scoring() {
+        let matcher = CapabilityMatcher::new(0.5); // 提高阈值
+
+        let agent1 = AgentCardBuilder::new(
+            "High Match Agent".to_string(),
+            Url::parse("https://high-match.com").unwrap(),
+            "1.0.0".to_string(),
+        )
+        .enable_streaming(true)
+        .enable_push_notifications(true)
+        .build()
+        .unwrap();
+
+        let agent2 = AgentCardBuilder::new(
+            "Low Match Agent".to_string(),
+            Url::parse("https://low-match.com").unwrap(),
+            "1.0.0".to_string(),
+        )
+        .enable_streaming(true)
+        .build()
+        .unwrap();
+
+        let agents = vec![&agent1, &agent2];
+        let required = vec!["streaming".to_string()];
+        let optional = vec!["push_notifications".to_string()];
+
+        let matches = matcher.match_capabilities(&agents, &required, &optional);
+        
+        // agent1应该匹配更高，因为它有可选功能
+        assert_eq!(matches.len(), 2);
+        assert!(matches[0].1 > matches[1].1);
+    }
+
+    #[test]
+    fn test_capability_matcher_below_threshold() {
+        let matcher = CapabilityMatcher::new(0.9); // 高阈值
+
+        let basic_agent = AgentCardBuilder::new(
+            "Basic Agent".to_string(),
+            Url::parse("https://basic.com").unwrap(),
+            "1.0.0".to_string(),
+        )
+        .build()
+        .unwrap();
+
+        let agents = vec![&basic_agent];
+        let required = vec!["streaming".to_string(), "push_notifications".to_string()];
+
+        let matches = matcher.match_capabilities(&agents, &required, &[]);
+        
+        // 没有匹配达到阈值
+        assert_eq!(matches.len(), 0);
+    }
+
+    #[test]
+    fn test_discovery_empty_requirements() {
+        let mut manager = AgentCardManager::new();
+        let discovery = AgentDiscovery::new();
+
+        // 空的要求列表应该返回所有Agent
+        let agent = create_test_agent("Test Agent", vec![]);
+        manager.register_card(agent).unwrap();
+
+        let empty_required = vec![];
+        let results = discovery.find_agents_by_skills(
+            &manager,
+            &empty_required,
+            SkillMatchMode::AnyRequired,
+        );
+
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn test_discovery_with_complex_skills() {
+        let mut manager = AgentCardManager::new();
+        let discovery = AgentDiscovery::new();
+
+        let advanced_agent = AgentCardBuilder::new(
+            "Advanced Agent".to_string(),
+            Url::parse("https://advanced.com").unwrap(),
+            "2.0.0".to_string(),
+        )
+        .skill(
+            Skill::new("nlp_processing".to_string(), "NLP Processing".to_string())
+                .with_description("Advanced natural language processing".to_string())
+                .with_tags(vec!["ai".to_string(), "text".to_string()])
+        )
+        .skill(
+            Skill::new("image_analysis".to_string(), "Image Analysis".to_string())
+                .with_examples(vec!["Object detection".to_string(), "Image classification".to_string()])
+        )
+        .build()
+        .unwrap();
+
+        manager.register_card(advanced_agent).unwrap();
+
+        let nlp_results = discovery.discover_agents_for_capability(&manager, "nlp_processing");
+        assert_eq!(nlp_results.len(), 1);
+
+        let image_results = discovery.discover_agents_for_capability(&manager, "image_analysis");
+        assert_eq!(image_results.len(), 1);
+    }
+
+    #[test]
+    fn test_skill_match_edge_cases() {
+        let mut manager = AgentCardManager::new();
+        let discovery = AgentDiscovery::new();
+
+        // 测试空技能Agent
+        let empty_skill_agent = create_test_agent("Empty Agent", vec![]);
+        manager.register_card(empty_skill_agent).unwrap();
+
+        let required_skills = vec!["nonexistent_skill".to_string()];
+        
+        let any_matches = discovery.find_agents_by_skills(
+            &manager,
+            &required_skills,
+            SkillMatchMode::AnyRequired,
+        );
+        let all_matches = discovery.find_agents_by_skills(
+            &manager,
+            &required_skills,
+            SkillMatchMode::AllRequired,
+        );
+
+        assert_eq!(any_matches.len(), 0);
+        assert_eq!(all_matches.len(), 0);
+    }
+
+    #[test]
+    fn test_discovery_performance_with_many_agents() {
+        let mut manager = AgentCardManager::new();
+        let discovery = AgentDiscovery::new();
+
+        // 创建大量Agent进行性能测试
+        for i in 0..100 {
+            let agent = AgentCardBuilder::new(
+                format!("Agent {}", i),
+                Url::parse(&format!("https://agent{}.com", i)).unwrap(),
+                "1.0.0".to_string(),
+            )
+            .skill(Skill::new(
+                format!("skill_{}", i % 10),
+                format!("Skill {}", i % 10)
+            ))
+            .build()
+            .unwrap();
+
+            manager.register_card(agent).unwrap();
+        }
+
+        // 测试查询性能
+        let start = std::time::Instant::now();
+        let results = discovery.discover_agents_for_capability(&manager, "skill_5");
+        let duration = start.elapsed();
+
+        assert_eq!(results.len(), 10); // 应该有10个Agent有这个技能
+        assert!(duration.as_millis() < 100); // 性能应该在100ms内
+    }
+
+    #[test]
+    fn test_capability_matcher_empty_agents() {
+        let matcher = CapabilityMatcher::new(0.1);
+        let agents = vec![];
+        let required = vec!["streaming".to_string()];
+        let optional = vec![];
+
+        let matches = matcher.match_capabilities(&agents, &required, &optional);
+        assert_eq!(matches.len(), 0);
+    }
+
+    #[test]
+    fn test_capability_matcher_duplicate_capabilities() {
+        let matcher = CapabilityMatcher::new(0.1);
+
+        let agent = AgentCardBuilder::new(
+            "Test Agent".to_string(),
+            Url::parse("https://test.com").unwrap(),
+            "1.0.0".to_string(),
+        )
+        .build()
+        .unwrap();
+
+        let agents = vec![&agent];
+        // 重复的要求功能
+        let required = vec!["streaming".to_string(), "streaming".to_string()];
+        let optional = vec![];
+
+        let matches = matcher.match_capabilities(&agents, &required, &optional);
+        // 应该仍然只有一个匹配，不应该重复计算
+        assert_eq!(matches.len(), 1);
+    }
 }

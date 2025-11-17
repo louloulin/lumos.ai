@@ -239,7 +239,7 @@ impl FunctionExecutor for AsyncFunctionExecutor {
     async fn execute(&self, call: &FunctionCall, context: &ToolExecutionContext) -> Result<FunctionResult> {
         let start_time = std::time::Instant::now();
         
-        match (self.executor)(call.arguments.clone(), context.clone()).await {
+        match (self.executor)(call.arguments.clone(), context.clone()) {
             Ok(result) => {
                 let execution_time = start_time.elapsed().as_millis() as u64;
                 Ok(FunctionResult {

@@ -119,7 +119,7 @@ pub struct MessageSendResponse {
 }
 
 /// 任务获取参数
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskGetParams {
     /// 任务ID
     pub id: String,
@@ -129,7 +129,7 @@ pub struct TaskGetParams {
 }
 
 /// 任务列表参数
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskListParams {
     /// 上下文ID
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -466,6 +466,164 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    #[tokio::test]
+    async fn test_server_agent_management() {
+        let server = A2AServerBuilder::new().build().unwrap();
+        
+        // Create test agent card
+        let card = crate::AgentCardBuilder::new(
+            "Test Agent".to_string(),
+            url::Url::parse("https://test-agent.com").unwrap(),
+            "1.0.0".to_string(),
+        )
+        .description("A test agent for unit testing".to_string())
+        .enable_streaming(true)
+        .build()
+        .unwrap();
+        
+        // Register agent
+        let agent_id = server.register_agent(card.clone()).await.unwrap();
+        assert!(!agent_id.is_empty());
+        
+        // Retrieve agent
+        let retrieved_card = server.get_agent(&agent_id).await;
+        assert!(retrieved_card.is_some());
+        assert_eq!(retrieved_card.unwrap().name, "Test Agent");
+        
+        // List agents
+        let agents = server.list_agents().await;
+        assert!(!agents.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_server_task_lifecycle() {
+        let server = A2AServerBuilder::new().build().unwrap();
+        
+        let message = Message::user_message("Process this text".to_string());
+        
+        // Submit task
+        let task_id = server.submit_task("test-agent", message).await;
+        assert!(task_id.is_ok());
+        
+        let task_id = task_id.unwrap();
+        
+        // Get task
+        let task = server.get_task(&task_id).await;
+        assert!(task.is_ok());
+        let task = task.unwrap();
+        assert_eq!(task.status.state, TaskState::Submitted);
+        
+        // Update task status
+        let working_status = TaskStatus::new(TaskState::Working);
+        let result = server.update_task_status(&task_id, working_status).await;
+        assert!(result.is_ok());
+        
+        // Verify status update
+        let updated_task = server.get_task(&task_id).await;
+        assert!(updated_task.is_ok());
+        assert_eq!(updated_task.unwrap().status.state, TaskState::Working);
+        
+        // Complete task with artifact
+        let artifact = crate::Artifact::file(
+            crate::FileContent::from_bytes(
+                "result.txt".to_string(),
+                b"Analysis complete".to_vec(),
+                "text/plain".to_string(),
+            )
+        );
+        let result = server.add_task_artifact(&task_id, artifact).await;
+        assert!(result.is_ok());
+        
+        // Get task result
+        let artifacts = server.get_task_result(&task_id).await;
+        assert!(artifacts.is_ok());
+        assert!(!artifacts.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_server_jsonrpc_message_handling() {
+        let server = A2AServerBuilder::new().build().unwrap();
+        
+        // Test JSON-RPC message send
+        let jsonrpc_request = r#"{
+            "jsonrpc": "2.0",
+            "method": "message/send",
+            "params": {
+                "message": {
+                    "parts": [
+                        {
+                            "text": {
+                                "text": "Hello, agent!"
+                            }
+                        }
+                    ]
+                }
+            },
+            "id": "test-123"
+        }"#;
+        
+        let response = server.handle_jsonrpc_request(jsonrpc_request);
+        assert!(!response.is_empty());
+        
+        // Test JSON-RPC task get
+        let get_request = r#"{
+            "jsonrpc": "2.0",
+            "method": "tasks/get",
+            "params": {
+                "id": "test-task-id"
+            },
+            "id": "test-456"
+        }"#;
+        
+        let response = server.handle_jsonrpc_request(get_request);
+        assert!(!response.is_empty());
+        
+        // Test JSON-RPC task list
+        let list_request = r#"{
+            "jsonrpc": "2.0",
+            "method": "tasks/list",
+            "params": {},
+            "id": "test-789"
+        }"#;
+        
+        let response = server.handle_jsonrpc_request(list_request);
+        assert!(!response.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_server_error_handling() {
+        let server = A2AServerBuilder::new().build().unwrap();
+        
+        // Test invalid JSON-RPC
+        let invalid_json = "invalid json";
+        let response = server.handle_jsonrpc_request(invalid_json);
+        assert!(response.contains("\"code\":"));
+        
+        // Test non-existent method
+        let invalid_method = r#"{
+            "jsonrpc": "2.0",
+            "method": "unknown/method",
+            "params": {},
+            "id": "test-invalid"
+        }"#;
+        
+        let response = server.handle_jsonrpc_request(invalid_method);
+        assert!(response.contains("Method not found"));
+        
+        // Test non-existent task
+        let get_nonexistent = r#"{
+            "jsonrpc": "2.0",
+            "method": "tasks/get",
+            "params": {
+                "id": "non-existent-task"
+            },
+            "id": "test-missing"
+        }"#;
+        
+        let response = server.handle_jsonrpc_request(get_nonexistent);
+        assert!(response.contains("Task not found"));
+    }
+
     #[test]
     fn test_message_send_request_serialization() {
         let request = MessageSendRequest {
@@ -476,5 +634,57 @@ mod tests {
 
         let json_str = serde_json::to_string(&request);
         assert!(json_str.is_ok());
+        
+        let parsed: Result<MessageSendRequest, _> = serde_json::from_str(&json_str.unwrap());
+        assert!(parsed.is_ok());
+        assert_eq!(parsed.unwrap().message.parts.len(), 1);
+    }
+
+    #[test]
+    fn test_server_stats() {
+        let server = A2AServerBuilder::new().build().unwrap();
+        
+        // Test default stats
+        let stats = futures::executor::block_on(server.get_stats());
+        assert_eq!(stats.registered_agents, 0);
+        assert_eq!(stats.active_tasks, 0);
+        assert_eq!(stats.active_streams, 0);
+        assert!(stats.server_info.contains("A2A Server on"));
+    }
+
+    #[test]
+    fn test_task_list_params_serialization() {
+        let params = TaskListParams {
+            context_id: Some("test-context".to_string()),
+            page_size: Some(10),
+            history_length: Some(5),
+        };
+        
+        let json_str = serde_json::to_string(&params);
+        assert!(json_str.is_ok());
+        
+        let parsed: Result<TaskListParams, _> = serde_json::from_str(&json_str.unwrap());
+        assert!(parsed.is_ok());
+        let parsed_ok = parsed.unwrap();
+        assert_eq!(parsed_ok.context_id, Some("test-context".to_string()));
+        assert_eq!(parsed_ok.page_size, Some(10));
+        assert_eq!(parsed_ok.history_length, Some(5));
+    }
+
+    #[test]
+    fn test_task_get_params_serialization() {
+        let params = TaskGetParams {
+            id: "test-task-id".to_string(),
+            history_length: Some(3),
+        };
+        
+        let json_str = serde_json::to_string(&params);
+        assert!(json_str.is_ok());
+        
+        let parsed: Result<TaskGetParams, _> = serde_json::from_str(&json_str.unwrap());
+        assert!(parsed.is_ok());
+        let parsed_ok = parsed.unwrap();
+        assert_eq!(parsed_ok.id, "test-task-id");
+        assert_eq!(parsed_ok.history_length, Some(3));
     }
 }

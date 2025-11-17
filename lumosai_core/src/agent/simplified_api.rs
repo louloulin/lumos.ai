@@ -179,7 +179,7 @@ impl AgentInstance {
             .name(&name)
             .instructions(&instructions)
             .model(model)
-            .memory(memory)
+            .with_basic_memory()
             .enable_smart_defaults()
             .build()?;
 

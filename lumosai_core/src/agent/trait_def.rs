@@ -51,7 +51,7 @@ impl Default for AgentStatus {
 #[async_trait]
 pub trait AgentStructuredOutput: Send + Sync {
     /// Generate structured output based on a schema
-    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
+    async fn generate_structured<T: DeserializeOwned + Send + 'static + schemars::JsonSchema>(
         &self,
         messages: &[Message],
         options: &AgentGenerateOptions,

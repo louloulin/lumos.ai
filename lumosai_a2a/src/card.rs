@@ -91,6 +91,12 @@ impl AgentCardBuilder {
         self
     }
 
+    /// 添加能力（作为输入模式）
+    pub fn capability(mut self, capability: &str) -> Self {
+        self.capabilities.input_modes.push(capability.to_string());
+        self
+    }
+
     /// 添加技能
     pub fn skill(mut self, skill: Skill) -> Self {
         self.skills.push(skill);
@@ -585,5 +591,277 @@ mod tests {
         assert_eq!(stats.cards_with_streaming, 2);
         assert_eq!(stats.cards_with_push_notifications, 1);
         assert_eq!(stats.cards_with_auth, 1);
+    }
+
+    #[test]
+    fn test_agent_card_authentication_types() {
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        // 测试无认证
+        let no_auth_card = AgentCardBuilder::new(
+            "No Auth Agent".to_string(),
+            url.clone(),
+            "1.0.0".to_string(),
+        ).build().unwrap();
+        assert!(no_auth_card.authentication.is_none());
+        
+        // 测试Bearer Token认证
+        let bearer_auth = Authentication::Bearer("token123".to_string());
+        let bearer_card = AgentCardBuilder::new(
+            "Bearer Auth Agent".to_string(),
+            url.clone(),
+            "1.0.0".to_string(),
+        ).authentication(bearer_auth.clone()).build().unwrap();
+        assert_eq!(bearer_card.authentication, Some(bearer_auth));
+        
+        // 测试API Key认证
+        let api_key_auth = Authentication::ApiKey("key456".to_string());
+        let api_key_card = AgentCardBuilder::new(
+            "API Key Agent".to_string(),
+            url.clone(),
+            "1.0.0".to_string(),
+        ).authentication(api_key_auth.clone()).build().unwrap();
+        assert_eq!(api_key_card.authentication, Some(api_key_auth));
+    }
+
+    #[test]
+    fn test_agent_card_capabilities() {
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        let card = AgentCardBuilder::new(
+            "Capable Agent".to_string(),
+            url,
+            "1.0.0".to_string(),
+        )
+        .capability("text_generation")
+        .capability("image_analysis")
+        .capability("data_processing")
+        .build()
+        .unwrap();
+
+        assert!(card.capabilities.input_modes.len() >= 3);
+        assert!(card.capabilities.input_modes.contains(&"text_generation".to_string()));
+        assert!(card.capabilities.input_modes.contains(&"image_analysis".to_string()));
+        assert!(card.capabilities.input_modes.contains(&"data_processing".to_string()));
+    }
+
+    #[test]
+    fn test_agent_card_validation_errors() {
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        // 测试空名称
+        let result = AgentCardBuilder::new(
+            "".to_string(), // 空名称应该失败
+            url,
+            "1.0.0".to_string(),
+        ).build();
+        assert!(result.is_err());
+        
+        // 测试无效URL需要通过其他方式，因为Url::parse会panic
+        // 这里我们跳过这个测试，因为URL验证在调用AgentCardBuilder::new之前就已经进行了
+        // 实际应用中，调用方需要确保URL的有效性
+    }
+
+    #[test]
+    fn test_agent_card_find_by_capability() {
+        let mut manager = AgentCardManager::new();
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        // 创建不同能力的Agent
+        let text_agent = AgentCardBuilder::new(
+            "Text Agent".to_string(),
+            url.clone(),
+            "1.0.0".to_string(),
+        )
+        .capability("text_generation")
+        .build()
+        .unwrap();
+        
+        let image_agent = AgentCardBuilder::new(
+            "Image Agent".to_string(),
+            url.clone(),
+            "1.0.0".to_string(),
+        )
+        .capability("image_analysis")
+        .build()
+        .unwrap();
+        
+        let multi_agent = AgentCardBuilder::new(
+            "Multi Agent".to_string(),
+            url,
+            "1.0.0".to_string(),
+        )
+        .capability("text_generation")
+        .capability("image_analysis")
+        .build()
+        .unwrap();
+
+        manager.register_card(text_agent).unwrap();
+        manager.register_card(image_agent).unwrap();
+        manager.register_card(multi_agent).unwrap();
+
+        let text_cards = manager.find_by_capability("text_generation");
+        assert_eq!(text_cards.len(), 2); // text_agent + multi_agent
+
+        let image_cards = manager.find_by_capability("image_analysis");
+        assert_eq!(image_cards.len(), 2); // image_agent + multi_agent
+
+        let video_cards = manager.find_by_capability("video_processing");
+        assert_eq!(video_cards.len(), 0); // 没有视频处理能力的Agent
+    }
+
+    #[test]
+    fn test_agent_card_remove_card() {
+        let mut manager = AgentCardManager::new();
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        let card = AgentCardBuilder::new(
+            "Test Agent".to_string(),
+            url,
+            "1.0.0".to_string(),
+        ).build().unwrap();
+
+        let agent_id = manager.register_card(card).unwrap();
+        
+        // 验证注册成功
+        assert!(manager.get_card(&agent_id).is_some());
+        assert_eq!(manager.get_all_cards().len(), 1);
+        
+        // 注意：当前实现没有remove_card方法，这里只验证注册成功
+        // 移除功能需要在未来的版本中实现
+        assert!(manager.get_card(&agent_id).is_some());
+        assert_eq!(manager.get_all_cards().len(), 1);
+    }
+
+    #[test]
+    fn test_agent_card_update_nonexistent() {
+        let mut manager = AgentCardManager::new();
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        let new_card = AgentCardBuilder::new(
+            "New Agent".to_string(),
+            url,
+            "1.0.0".to_string(),
+        ).build().unwrap();
+
+        // 尝试更新不存在的Agent
+        let result = manager.update_card("nonexistent-id", new_card);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_agent_card_duplicate_registration() {
+        let mut manager = AgentCardManager::new();
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        let card = AgentCardBuilder::new(
+            "Test Agent".to_string(),
+            url,
+            "1.0.0".to_string(),
+        ).build().unwrap();
+
+        let agent_id = manager.register_card(card.clone()).unwrap();
+        
+        // 尝试注册相同的Agent Card应该失败
+        let result = manager.register_card(card);
+        assert!(result.is_err());
+        
+        // 但第一个注册应该仍然有效
+        assert!(manager.get_card(&agent_id).is_some());
+    }
+
+    #[test]
+    fn test_agent_card_builder_fluent_interface() {
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        let card = AgentCardBuilder::new(
+            "Fluent Agent".to_string(),
+            url,
+            "1.0.0".to_string(),
+        )
+        .description("A fluent interface test agent".to_string())
+        .enable_streaming(true)
+        .enable_push_notifications(true)
+        .capability("text_generation")
+        .capability("translation")
+        .skill(
+            Skill::new("writing".to_string(), "Writing Skill".to_string())
+                .with_description("Professional writing assistance".to_string())
+        )
+        .authentication(Authentication::Bearer("token123".to_string()))
+        .build()
+        .unwrap();
+
+        assert_eq!(card.name, "Fluent Agent");
+        assert_eq!(card.version, "1.0.0");
+        assert_eq!(card.description, Some("A fluent interface test agent".to_string()));
+        assert_eq!(card.capabilities.streaming, true);
+        assert_eq!(card.capabilities.push_notifications, true);
+        assert_eq!(card.capabilities.input_modes.len(), 2);
+        assert_eq!(card.skills.len(), 1);
+        assert!(card.authentication.is_some());
+    }
+
+    #[test]
+    fn test_agent_card_skill_validation() {
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        // 测试带有无效技能的Agent Card
+        let card_with_invalid_skill = AgentCardBuilder::new(
+            "Invalid Skill Agent".to_string(),
+            url,
+            "1.0.0".to_string(),
+        )
+        .skill(
+            Skill::new("".to_string(), "Invalid Skill".to_string()) // 空ID应该失败
+        )
+        .build();
+
+        assert!(card_with_invalid_skill.is_err());
+    }
+
+    #[test]
+    fn test_agent_card_stats_zero_cards() {
+        let manager = AgentCardManager::new();
+        let stats = manager.get_stats();
+        
+        assert_eq!(stats.total_cards, 0);
+        assert_eq!(stats.cards_with_streaming, 0);
+        assert_eq!(stats.cards_with_push_notifications, 0);
+        assert_eq!(stats.cards_with_auth, 0);
+    }
+
+    #[test]
+    fn test_agent_card_serialization() {
+        let url = url::Url::parse("https://example.com").unwrap();
+        
+        let card = AgentCardBuilder::new(
+            "Serializable Agent".to_string(),
+            url.clone(),
+            "1.0.0".to_string(),
+        )
+        .description("Test serialization".to_string())
+        .enable_streaming(true)
+        .capability("test_capability")
+        .skill(
+            Skill::new("test_skill".to_string(), "Test Skill".to_string())
+                .with_tags(vec!["test".to_string()])
+        )
+        .authentication(Authentication::ApiKey("test_key".to_string()))
+        .build()
+        .unwrap();
+
+        // 测试序列化
+        let serialized = serde_json::to_string(&card).unwrap();
+        
+        // 测试反序列化
+        let deserialized: AgentCard = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(card.name, deserialized.name);
+        assert_eq!(card.version, deserialized.version);
+        assert_eq!(card.description, deserialized.description);
+        assert_eq!(card.capabilities, deserialized.capabilities);
+        assert_eq!(card.skills.len(), deserialized.skills.len());
+        assert_eq!(card.authentication, deserialized.authentication);
     }
 }

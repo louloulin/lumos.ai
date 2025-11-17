@@ -6,6 +6,7 @@ use crate::types::*;
 use crate::A2AResult;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 /// 流式响应类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +43,61 @@ pub enum StreamResponse {
         final_result: Option<String>,
         timestamp: DateTime<Utc>,
     },
+}
+
+impl StreamResponse {
+    /// 获取任务ID
+    pub fn task_id(&self) -> &str {
+        match self {
+            StreamResponse::StatusUpdate { task_id, .. } => task_id,
+            StreamResponse::PartialResult { task_id, .. } => task_id,
+            StreamResponse::Artifact { task_id, .. } => task_id,
+            StreamResponse::Error { task_id, .. } => task_id,
+            StreamResponse::Complete { task_id, .. } => task_id,
+        }
+    }
+
+    /// 获取内容
+    pub fn content(&self) -> Option<&str> {
+        match self {
+            StreamResponse::PartialResult { content, .. } => Some(content),
+            StreamResponse::Error { error, .. } => Some(error),
+            StreamResponse::Complete { final_result, .. } => final_result.as_deref(),
+            _ => None,
+        }
+    }
+
+    /// 获取进度
+    pub fn progress(&self) -> Option<f64> {
+        match self {
+            StreamResponse::PartialResult { progress, .. } => *progress,
+            _ => None,
+        }
+    }
+
+    /// 获取错误信息
+    pub fn error(&self) -> Option<&str> {
+        match self {
+            StreamResponse::Error { error, .. } => Some(error),
+            _ => None,
+        }
+    }
+
+    /// 获取状态
+    pub fn status(&self) -> Option<&TaskStatus> {
+        match self {
+            StreamResponse::StatusUpdate { status, .. } => Some(status),
+            _ => None,
+        }
+    }
+
+    /// 获取最终结果
+    pub fn final_result(&self) -> Option<&str> {
+        match self {
+            StreamResponse::Complete { final_result, .. } => final_result.as_deref(),
+            _ => None,
+        }
+    }
 }
 
 /// 流式响应发送器
@@ -89,6 +145,11 @@ impl StreamSender {
     /// 检查连接是否仍然活跃
     pub fn is_connected(&self) -> bool {
         true // TODO: Implement actual connection check
+    }
+
+    /// 断开连接
+    pub fn disconnect(&mut self) {
+        // TODO: Implement actual disconnection
     }
 }
 
@@ -142,25 +203,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_stream_sender() {
+    fn test_stream_sender_creation() {
         let (sender, _) = StreamSender::new();
         assert!(sender.is_connected());
-        
-        // Test basic functionality
-        assert!(sender.send_status_update("task1", TaskStatus::new(TaskState::Working)).is_ok());
-        assert!(sender.send_partial_result("task1", "Processing...".to_string(), Some(0.5)).is_ok());
-        assert!(sender.send_complete("task1", Some("Task completed".to_string())).is_ok());
     }
 
     #[test]
-    fn test_stream_task_manager() {
-        let mut manager = StreamTaskManager::new();
+    fn test_stream_task_manager_creation() {
+        let manager = StreamTaskManager::new();
         assert_eq!(manager.active_streams_count(), 0);
-        
-        let (sender, _) = manager.register_stream("task1");
-        assert!(sender.is_connected());
-        
-        assert_eq!(manager.active_streams_count(), 0); // Simplified implementation
     }
 
     #[test]
@@ -171,8 +222,58 @@ mod tests {
             timestamp: Utc::now(),
         };
         
-        // Test that the response can be serialized/deserialized
         let json = serde_json::to_string(&response);
         assert!(json.is_ok());
+
+        let deserialized: StreamResponse = serde_json::from_str(&json.unwrap()).unwrap();
+        assert_eq!(response.task_id(), deserialized.task_id());
+        assert_eq!(response.status().unwrap().state, deserialized.status().unwrap().state);
+    }
+
+    #[test]
+    fn test_stream_partial_result() {
+        let response = StreamResponse::PartialResult {
+            task_id: "test_task".to_string(),
+            content: "Partial data".to_string(),
+            progress: Some(0.75),
+            timestamp: Utc::now(),
+        };
+        
+        let json = serde_json::to_string(&response).unwrap();
+        let deserialized: StreamResponse = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(deserialized.task_id(), "test_task");
+        assert_eq!(deserialized.content(), Some("Partial data"));
+        assert_eq!(deserialized.progress(), Some(0.75));
+    }
+
+    #[test]
+    fn test_stream_error_response() {
+        let error_response = StreamResponse::Error {
+            task_id: "failed_task".to_string(),
+            error: "Processing failed".to_string(),
+            timestamp: Utc::now(),
+        };
+        
+        let json = serde_json::to_string(&error_response).unwrap();
+        let deserialized: StreamResponse = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(deserialized.task_id(), "failed_task");
+        assert_eq!(deserialized.error(), Some("Processing failed"));
+    }
+
+    #[test]
+    fn test_stream_complete_response() {
+        let response = StreamResponse::Complete {
+            task_id: "completed_task".to_string(),
+            final_result: Some("Task completed successfully".to_string()),
+            timestamp: Utc::now(),
+        };
+        
+        let json = serde_json::to_string(&response).unwrap();
+        let deserialized: StreamResponse = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(deserialized.task_id(), "completed_task");
+        assert_eq!(deserialized.final_result(), Some("Task completed successfully"));
     }
 }

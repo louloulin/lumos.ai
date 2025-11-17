@@ -50,12 +50,38 @@ impl std::fmt::Display for TaskState {
 }
 
 /// Agent 认证信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Authentication {
     /// 支持的认证方案列表
     pub schemes: Vec<AuthScheme>,
     /// 认证凭据（token等）
     pub credentials: Option<String>,
+}
+
+impl Authentication {
+    /// 创建Bearer Token认证
+    pub fn Bearer(token: String) -> Self {
+        Self {
+            schemes: vec![AuthScheme::Bearer],
+            credentials: Some(token),
+        }
+    }
+
+    /// 创建API Key认证
+    pub fn ApiKey(key: String) -> Self {
+        Self {
+            schemes: vec![AuthScheme::ApiKey],
+            credentials: Some(key),
+        }
+    }
+
+    /// 创建Basic认证
+    pub fn Basic(credentials: String) -> Self {
+        Self {
+            schemes: vec![AuthScheme::Basic],
+            credentials: Some(credentials),
+        }
+    }
 }
 
 impl Default for Authentication {
@@ -84,7 +110,7 @@ pub enum AuthScheme {
 }
 
 /// Agent 能力声明
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Capabilities {
     /// 是否支持流式响应
     pub streaming: bool,
@@ -388,6 +414,26 @@ impl FileContent {
 
         Ok(())
     }
+
+    /// 从Base64字符串创建FileContent
+    pub fn from_base64(name: String, base64_data: String, mime_type: String) -> Self {
+        Self {
+            name: Some(name),
+            mime_type: Some(mime_type),
+            bytes: Some(base64_data),
+            uri: None,
+        }
+    }
+
+    /// 创建URI类型的FileContent
+    pub fn uri(uri: String) -> Self {
+        Self {
+            name: None,
+            mime_type: None,
+            bytes: None,
+            uri: Some(uri),
+        }
+    }
 }
 
 /// 消息部分 - 数据内容
@@ -443,6 +489,22 @@ impl Part {
     pub fn data(data: serde_json::Value) -> Self {
         Self::Data(DataPart::new(data))
     }
+
+    /// 尝试作为文本获取
+    pub fn as_text(&self) -> Option<&str> {
+        match self {
+            Part::Text(text_part) => Some(&text_part.text),
+            _ => None,
+        }
+    }
+
+    /// 尝试作为文件获取
+    pub fn as_file(&self) -> Option<&FileContent> {
+        match self {
+            Part::File(file_part) => Some(&file_part.file),
+            _ => None,
+        }
+    }
 }
 
 /// A2A 消息
@@ -462,6 +524,7 @@ pub struct Message {
 pub enum MessageRole {
     User,
     Agent,
+    Assistant,
 }
 
 impl Message {
@@ -481,6 +544,10 @@ impl Message {
         Self::new(MessageRole::Agent, vec![Part::text(text)])
     }
 
+    pub fn assistant_message(text: String) -> Self {
+        Self::new(MessageRole::Assistant, vec![Part::text(text)])
+    }
+
     pub fn with_metadata(mut self, metadata: HashMap<String, serde_json::Value>) -> Self {
         self.metadata = Some(metadata);
         self
@@ -498,15 +565,19 @@ pub struct TaskStatus {
     pub timestamp: DateTime<Utc>,
     /// 元数据
     pub metadata: Option<HashMap<String, serde_json::Value>>,
+    /// 状态历史
+    pub history: Vec<(TaskState, Option<Message>, DateTime<Utc>)>,
 }
 
 impl TaskStatus {
     pub fn new(state: TaskState) -> Self {
+        let now = Utc::now();
         Self {
             state,
             message: None,
-            timestamp: Utc::now(),
+            timestamp: now,
             metadata: None,
+            history: Vec::new(), // Start with empty history
         }
     }
 
@@ -542,6 +613,8 @@ pub struct Task {
     pub assigned_agent: Option<String>,
     /// 任务参数
     pub parameters: HashMap<String, serde_json::Value>,
+    /// 工件列表
+    pub artifacts: Vec<Artifact>,
     /// 元数据
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -560,15 +633,32 @@ impl Task {
             deadline: None,
             assigned_agent: None,
             parameters: HashMap::new(),
+            artifacts: Vec::new(),
             metadata: HashMap::new(),
         }
     }
 
     /// 更新任务状态
     pub fn update_status(&mut self, new_status: TaskState, message: Option<Message>) {
-        self.status = TaskStatus::new(new_status)
-            .with_message(message.unwrap_or(Message::agent_message("".to_string())));
-        self.updated_at = Utc::now();
+        let new_timestamp = Utc::now();
+        // Add current state to history before updating
+        self.status.history.push((self.status.state, self.status.message.clone(), self.status.timestamp));
+        // Keep only last 10 history entries
+        if self.status.history.len() > 10 {
+            self.status.history.remove(0);
+        }
+        
+        // Update current status
+        self.status.state = new_status;
+        self.status.message = message;
+        self.status.timestamp = new_timestamp;
+        self.updated_at = new_timestamp;
+    }
+
+    /// 更新任务状态（接受字符串消息）
+    pub fn update_status_with_message(&mut self, new_status: TaskState, message: Option<String>) {
+        let msg = message.map(|m| Message::agent_message(m));
+        self.update_status(new_status, msg);
     }
 
     /// 分配给Agent
@@ -593,6 +683,12 @@ impl Task {
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self
+    }
+
+    /// 添加消息到任务
+    pub fn add_message(&mut self, message: Message) {
+        self.status.message = Some(message);
+        self.updated_at = Utc::now();
     }
 }
 
@@ -659,6 +755,11 @@ impl Artifact {
         Self::new(vec![Part::file(content)]).with_name(name)
     }
 
+    /// 创建文件类型的工件
+    pub fn file(content: FileContent) -> Self {
+        Self::new(vec![Part::file(content)])
+    }
+
     /// 验证工件
     pub fn validate(&self) -> Result<(), String> {
         if self.parts.is_empty() {
@@ -686,6 +787,7 @@ pub use base64;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::AgentCardBuilder;
 
     #[test]
     fn test_task_state_display() {
@@ -725,5 +827,308 @@ mod tests {
 
         let invalid_artifact = Artifact::new(vec![]);
         assert!(invalid_artifact.validate().is_err());
+    }
+
+    #[test]
+    fn test_task_state_default() {
+        assert_eq!(TaskState::default(), TaskState::Submitted);
+    }
+
+    #[test]
+    fn test_task_state_copy() {
+        let state = TaskState::Working;
+        let copied_state = state;
+        assert_eq!(state, copied_state);
+        // 验证Copy trait是否正确实现
+    }
+
+    #[test]
+    fn test_task_state_serialization() {
+        let states = vec![
+            TaskState::Submitted,
+            TaskState::Working,
+            TaskState::InputRequired,
+            TaskState::Completed,
+            TaskState::Canceled,
+            TaskState::Failed,
+            TaskState::Unknown,
+        ];
+        
+        for state in states {
+            let serialized = serde_json::to_string(&state).unwrap();
+            let deserialized: TaskState = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(state, deserialized);
+        }
+    }
+
+    #[test]
+    fn test_message_creation() {
+        let user_message = Message::user_message("Hello from user".to_string());
+        assert_eq!(user_message.role, MessageRole::User);
+        assert_eq!(user_message.parts.len(), 1);
+        assert!(matches!(&user_message.parts[0], Part::Text(text) if text.content == "Hello from user"));
+        
+        let assistant_message = Message::assistant_message("Hello from assistant".to_string());
+        assert_eq!(assistant_message.role, MessageRole::Assistant);
+        assert_eq!(assistant_message.parts.len(), 1);
+        assert!(matches!(&assistant_message.parts[0], Part::Text(text) if text.content == "Hello from assistant"));
+    }
+
+    #[test]
+    fn test_part_text_creation() {
+        let text_part = Part::text("Test content".to_string());
+        assert!(matches!(text_part, Part::Text(_)));
+        
+        if let Part::Text(text) = text_part {
+            assert_eq!(text.content, "Test content");
+        }
+    }
+
+    #[test]
+    fn test_message_with_multiple_parts() {
+        let message = Message::new(
+            MessageRole::User,
+            vec![
+                Part::text("First part".to_string()),
+                Part::text("Second part".to_string()),
+            ],
+        );
+        
+        assert_eq!(message.parts.len(), 2);
+        assert_eq!(message.parts[0].as_text().unwrap().content, "First part");
+        assert_eq!(message.parts[1].as_text().unwrap().content, "Second part");
+    }
+
+    #[test]
+    fn test_agent_card_builder() {
+        let url = Url::parse("https://example.com").unwrap();
+        let card = AgentCardBuilder::new(
+            "Test Agent".to_string(),
+            url.clone(),
+            "1.0.0".to_string(),
+        )
+        .description("A test agent".to_string())
+        .version("2.0.0".to_string()) // 覆盖初始版本
+        .enable_streaming(true)
+        .skill(
+            Skill::new("test_skill".to_string(), "Test Skill".to_string())
+                .with_description("A test skill".to_string())
+        )
+        .build()
+        .unwrap();
+
+        assert_eq!(card.name, "Test Agent");
+        assert_eq!(card.url, url);
+        assert_eq!(card.version, "2.0.0");
+        assert_eq!(card.description, Some("A test agent".to_string()));
+        assert_eq!(card.streaming_enabled, Some(true));
+        assert_eq!(card.skills.len(), 1);
+        assert_eq!(card.skills[0].id, "test_skill");
+    }
+
+    #[test]
+    fn test_skill_builder() {
+        let skill = Skill::new("analysis".to_string(), "Data Analysis".to_string())
+            .with_description("Analyzes data".to_string())
+            .with_tags(vec!["data".to_string(), "analysis".to_string()])
+            .with_examples(vec!["Example 1".to_string(), "Example 2".to_string()]);
+
+        assert_eq!(skill.id, "analysis");
+        assert_eq!(skill.name, "Data Analysis");
+        assert_eq!(skill.description, Some("Analyzes data".to_string()));
+        assert_eq!(skill.tags, Some(vec!["data".to_string(), "analysis".to_string()]));
+        assert_eq!(skill.examples, Some(vec!["Example 1".to_string(), "Example 2".to_string()]));
+    }
+
+    #[test]
+    fn test_file_content_validation() {
+        // 测试有效的Base64内容
+        let valid_base64 = "SGVsbG8gV29ybGQ="; // "Hello World"
+        let valid_file = FileContent::from_base64("test.txt".to_string(), valid_base64.to_string(), "text/plain".to_string());
+        assert!(valid_file.validate().is_ok());
+
+        // 测试无效的Base64内容
+        let invalid_file = FileContent::from_base64("test.txt".to_string(), "Invalid Base64!".to_string(), "text/plain".to_string());
+        assert!(invalid_file.validate().is_err());
+    }
+
+    #[test]
+    fn test_file_content_uri_creation() {
+        let uri_file = FileContent::from_uri("https://example.com/file.txt".to_string());
+        assert!(matches!(uri_file, FileContent::Uri(_)));
+        
+        if let FileContent::Uri(uri) = uri_file {
+            assert_eq!(uri, "https://example.com/file.txt");
+        }
+    }
+
+    #[test]
+    fn test_artifact_with_file() {
+        let file_content = FileContent::from_base64("test.txt".to_string(), "SGVsbG8=".to_string(), "text/plain".to_string());
+        let artifact = Artifact::from_file("hello.txt".to_string(), file_content);
+
+        assert_eq!(artifact.name, Some("hello.txt".to_string()));
+        assert_eq!(artifact.parts.len(), 1);
+        assert!(matches!(&artifact.parts[0], Part::File(_)));
+        
+        // 验证整个工件
+        assert!(artifact.validate().is_ok());
+    }
+
+    #[test]
+    fn test_task_with_artifacts() {
+        let mut task = Task::new(
+            "Test task with artifacts".to_string(),
+            Message::user_message("Process this data".to_string()),
+        );
+
+        let artifact1 = Artifact::from_text("Result 1".to_string()).with_name("result1.txt".to_string());
+        let artifact2 = Artifact::from_text("Result 2".to_string()).with_name("result2.txt".to_string());
+
+        task.artifacts.push(artifact1);
+        task.artifacts.push(artifact2);
+
+        assert_eq!(task.artifacts.len(), 2);
+        assert_eq!(task.artifacts[0].name, Some("result1.txt".to_string()));
+        assert_eq!(task.artifacts[1].name, Some("result2.txt".to_string()));
+    }
+
+    #[test]
+    fn test_task_status_update() {
+        let mut task = Task::new(
+            "Update test".to_string(),
+            Message::user_message("Test message".to_string()),
+        );
+
+        // 初始状态
+        assert_eq!(task.status.state, TaskState::Submitted);
+        let initial_timestamp = task.status.timestamp;
+
+        // 更新状态
+        task.update_status_with_message(TaskState::Working, Some("Working on it".to_string()));
+        
+        assert_eq!(task.status.state, TaskState::Working);
+        assert_eq!(task.status.message.as_ref().map(|m| &m.parts[0]), Some(&"Working on it".to_string()));
+        assert!(task.status.timestamp > initial_timestamp);
+    }
+
+    #[test]
+    fn test_task_id_uniqueness() {
+        let task1 = Task::new("Task 1".to_string(), Message::user_message("Message 1".to_string()));
+        let task2 = Task::new("Task 2".to_string(), Message::user_message("Message 2".to_string()));
+        
+        assert_ne!(task1.id, task2.id);
+        assert!(task1.id.starts_with("task_"));
+        assert!(task2.id.starts_with("task_"));
+    }
+
+    #[test]
+    fn test_message_role_serialization() {
+        let roles = vec![
+            MessageRole::User,
+            MessageRole::Assistant,
+        ];
+        
+        for role in roles {
+            let serialized = serde_json::to_string(&role).unwrap();
+            let deserialized: MessageRole = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(role, deserialized);
+        }
+    }
+
+    #[test]
+    fn test_artifact_from_multiple_parts() {
+        let artifact = Artifact::new(vec![
+            Part::text("First part".to_string()),
+            Part::text("Second part".to_string()),
+            Part::text("Third part".to_string()),
+        ]);
+
+        assert_eq!(artifact.parts.len(), 3);
+        assert!(artifact.validate().is_ok());
+        
+        // 测试构建器方法
+        let named_artifact = artifact.with_name("multi-part.txt".to_string());
+        assert_eq!(named_artifact.name, Some("multi-part.txt".to_string()));
+        assert_eq!(named_artifact.parts.len(), 3);
+    }
+
+    #[test]
+    fn test_task_history_limit() {
+        let mut task = Task::new(
+            "History test".to_string(),
+            Message::user_message("Initial".to_string()),
+        );
+
+        // 添加多个历史记录通过状态更新
+        for i in 1..=15 {
+            task.update_status_with_message(TaskState::Working, Some(format!("Message {}", i)));
+        }
+
+        // 验证历史记录限制（应该是10条最新记录）
+        assert!(task.status.history.len() <= 10);
+        
+        // 验证最新的消息在历史中
+        let latest_history = &task.status.history.last().unwrap();
+        if let Some(ref msg) = latest_history.1 {
+            assert_eq!(msg.parts[0].as_text().unwrap().content, "Message 15");
+        }
+    }
+
+    #[test]
+    fn test_part_conversions() {
+        let text_part = Part::text("Test text".to_string());
+        let text_content = text_part.as_text().unwrap();
+        assert_eq!(text_content.content, "Test text");
+        
+        // 测试非文本部分
+        let file_content = FileContent::from_base64("test.txt".to_string(), "SGVsbG8=".to_string(), "text/plain".to_string());
+        let file_part = Part::File(FilePart {
+            file: file_content,
+            name: Some("test.txt".to_string()),
+        });
+        
+        assert!(file_part.as_text().is_none());
+        assert!(file_part.as_file().is_some());
+    }
+
+    #[test]
+    fn test_task_duration_calculation() {
+        let mut task = Task::new(
+            "Duration test".to_string(),
+            Message::user_message("Start".to_string()),
+        );
+
+        let created_time = task.created_at;
+
+        // 模拟一些时间过去
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        
+        task.update_status_with_message(TaskState::Completed, Some("Done".to_string()));
+        let completed_time = task.status.timestamp;
+
+        assert!(completed_time > created_time);
+    }
+
+    #[test]
+    fn test_agent_card_validation() {
+        let url = Url::parse("https://example.com").unwrap();
+        let valid_card = AgentCardBuilder::new(
+            "Valid Agent".to_string(),
+            url,
+            "1.0.0".to_string(),
+        ).build();
+
+        assert!(valid_card.is_ok());
+
+        // 测试构建器验证
+        let url2 = Url::parse("https://example.com").unwrap();
+        let result = AgentCardBuilder::new(
+            "".to_string(), // 空名称应该失败
+            url2,
+            "1.0.0".to_string(),
+        ).build();
+
+        assert!(result.is_err());
     }
 }

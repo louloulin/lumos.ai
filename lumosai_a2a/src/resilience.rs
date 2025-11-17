@@ -394,12 +394,7 @@ mod tests {
         let result = executor.execute(|| async {
             let attempt = attempt_counter.fetch_add(1, Ordering::SeqCst);
             if attempt < 2 {
-                Err(A2AError::NetworkError(
-                    reqwest::Error::from(std::io::Error::new(
-                        std::io::ErrorKind::ConnectionRefused,
-                        "Connection refused"
-                    ))
-                ))
+                Err(A2AError::InternalError("Connection refused".to_string()))
             } else {
                 Ok("success")
             }
@@ -421,11 +416,11 @@ mod tests {
         let mut breaker = CircuitBreaker::new(config);
         
         // 前两次失败
-        let _ = breaker.execute(|| async {
+        let _: Result<String, _> = breaker.execute(|| async {
             Err(A2AError::InternalError("Test failure".to_string()))
         }).await;
 
-        let _ = breaker.execute(|| async {
+        let _: Result<String, _> = breaker.execute(|| async {
             Err(A2AError::InternalError("Test failure".to_string()))
         }).await;
 

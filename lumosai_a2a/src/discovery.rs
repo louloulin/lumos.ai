@@ -4,7 +4,6 @@
 
 use crate::card::AgentCardManager;
 use crate::types::*;
-use crate::{A2AError, A2AResult};
 use std::collections::HashMap;
 
 /// Agent 发现器
@@ -33,21 +32,21 @@ impl AgentDiscovery {
     }
 
     /// 发现能处理特定能力的 Agents
-    pub fn discover_agents_for_capability(
+    pub fn discover_agents_for_capability<'a>(
         &self,
-        agent_manager: &AgentCardManager,
+        agent_manager: &'a AgentCardManager,
         capability: &str,
-    ) -> Vec<&AgentCard> {
+    ) -> Vec<&'a AgentCard> {
         agent_manager.find_by_capability(capability)
     }
 
     /// 根据需求匹配最佳 Agent
-    pub fn find_best_agent_for_requirement(
+    pub fn find_best_agent_for_requirement<'a>(
         &self,
-        agent_manager: &AgentCardManager,
+        agent_manager: &'a AgentCardManager,
         requirement: &str,
         preferred_capabilities: &[String],
-    ) -> Option<(&AgentCard, f64)> {
+    ) -> Option<(&'a AgentCard, f64)> {
         let candidates = agent_manager.search_by_description(requirement);
         
         if candidates.is_empty() {
@@ -69,12 +68,12 @@ impl AgentDiscovery {
     }
 
     /// 根据技能匹配 Agents
-    pub fn find_agents_by_skills(
+    pub fn find_agents_by_skills<'a>(
         &self,
-        agent_manager: &AgentCardManager,
+        agent_manager: &'a AgentCardManager,
         required_skills: &[String],
         skill_match_mode: SkillMatchMode,
-    ) -> Vec<(&AgentCard, f64)> {
+    ) -> Vec<(&'a AgentCard, f64)> {
         let mut matches = Vec::new();
 
         for card in agent_manager.get_all_cards() {
@@ -147,10 +146,11 @@ impl AgentDiscovery {
         }
 
         // 根据匹配模式调整分数
+        let total_required = required_skills.len().max(1) as f64;
         match match_mode {
             SkillMatchMode::AllRequired => {
                 if matched_skills == required_skills.len() {
-                    score / required_skills.len() as f64
+                    score / total_required
                 } else {
                     0.0
                 }
@@ -163,7 +163,7 @@ impl AgentDiscovery {
                 }
             }
             SkillMatchMode::PreferMost => {
-                score / (required_skills.len().max(1) as f64)
+                score / total_required
             }
         }
     }
@@ -193,7 +193,7 @@ impl AgentDiscovery {
 }
 
 /// 技能匹配模式
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SkillMatchMode {
     /// 必须匹配所有技能
     AllRequired,
@@ -218,12 +218,12 @@ impl CapabilityMatcher {
     }
 
     /// 匹配能力
-    pub fn match_capabilities(
+    pub fn match_capabilities<'a>(
         &self,
-        available_agents: &[&AgentCard],
+        available_agents: &[&'a AgentCard],
         required_capabilities: &[String],
         optional_capabilities: &[String],
-    ) -> Vec<(&AgentCard, f64)> {
+    ) -> Vec<(&'a AgentCard, f64)> {
         let mut matches = Vec::new();
 
         for agent in available_agents {
@@ -234,7 +234,7 @@ impl CapabilityMatcher {
             );
 
             if score >= self.min_score_threshold {
-                matches.push((agent, score));
+                matches.push((*agent, score));
             }
         }
 
@@ -244,7 +244,7 @@ impl CapabilityMatcher {
     }
 
     /// 计算能力分数
-    fn calculate_capability_score(
+    pub fn calculate_capability_score(
         &self,
         agent: &AgentCard,
         required_capabilities: &[String],
@@ -273,7 +273,11 @@ impl CapabilityMatcher {
         }
 
         // 技能数量加分
-        let skill_bonus = (agent.skills.len() as f64).log10() * 0.1;
+        let skill_bonus = if agent.skills.is_empty() {
+            0.0
+        } else {
+            (agent.skills.len() as f64).log10() * 0.1
+        };
         score += skill_bonus;
 
         score.clamp(0.0, 1.0)
@@ -295,6 +299,7 @@ impl Default for CapabilityMatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::card::AgentCardBuilder;
     use url::Url;
 
     fn create_test_agent(name: &str, skills: Vec<Skill>) -> AgentCard {
@@ -314,7 +319,7 @@ mod tests {
         let discovery = AgentDiscovery::new();
 
         let text_skill = Skill::new("text_analysis".to_string(), "Text Analysis".to_string());
-        let agent = create_test_agent("Text Analyzer", vec![text_skill]);
+        let _agent = create_test_agent("Text Analyzer", vec![text_skill]);
 
         let results = discovery.discover_agents_for_capability(&manager, "text_analysis");
         assert_eq!(results.len(), 0); // No agents registered
@@ -326,11 +331,12 @@ mod tests {
 
         let text_skill = Skill::new("text_analysis".to_string(), "Text Analysis".to_string());
         let code_skill = Skill::new("code_analysis".to_string(), "Code Analysis".to_string());
-        let agent = create_test_agent("Multi Agent", vec![text_skill, code_skill]);
+        let _agent = create_test_agent("Multi Agent", vec![text_skill, code_skill]);
 
         let required_skills = vec!["text_analysis".to_string(), "code_analysis".to_string()];
+        let manager = AgentCardManager::new();
         let matches = discovery.find_agents_by_skills(
-            &AgentCardManager::new(),
+            &manager,
             &required_skills,
             SkillMatchMode::AllRequired,
         );
@@ -356,6 +362,7 @@ mod tests {
         let optional = vec!["push_notifications".to_string()];
 
         let matches = matcher.match_capabilities(&agents, &required, &optional);
+        
         assert_eq!(matches.len(), 1);
         assert!(matches[0].1 > 0.3);
     }

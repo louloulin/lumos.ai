@@ -2,6 +2,7 @@
 //!
 //! 定义 A2A 协议的核心数据结构，与 Google 官方规范完全兼容
 
+use base64::Engine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -361,7 +362,7 @@ impl FileContent {
         Self {
             name: Some(name),
             mime_type: Some(mime_type),
-            bytes: Some(base64::encode(&bytes)),
+            bytes: Some(base64::prelude::BASE64_STANDARD.encode(&bytes)),
             uri: None,
         }
     }

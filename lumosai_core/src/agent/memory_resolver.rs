@@ -4,9 +4,8 @@
 //! to memory instances, enabling a more user-friendly API where users can specify
 //! memory storage by name instead of manually creating memory instances.
 
-use crate::error::{Error, Result};
-use crate::memory::{BasicMemory, Memory as MemoryTrait};
-use crate::memory::unified::Memory as UnifiedMemory;
+use crate::{Error, Result};
+use crate::memory::{BasicMemory, Memory};
 use std::sync::Arc;
 
 /// Resolve a memory storage type name to a memory instance

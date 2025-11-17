@@ -175,7 +175,6 @@ impl Default for TaskManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use url::Url;
 
     #[test]
     fn test_task_manager() {

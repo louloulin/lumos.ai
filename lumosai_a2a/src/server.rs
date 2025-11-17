@@ -1,10 +1,16 @@
 //! A2A Server Implementation
 //!
-//! 实现 A2A 协议的服务器端功能
+//! 实现 A2A 协议的服务器端功能，提供完整的 HTTP API 支持
 
+use crate::card::AgentCardManager;
+use crate::task::TaskManager;
 use crate::types::*;
 use crate::{A2AError, A2AResult};
+use serde_json;
 use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use uuid::Uuid;
 
 /// A2A 服务器构建器
 pub struct A2AServerBuilder {
@@ -38,8 +44,8 @@ impl A2AServerBuilder {
         Ok(A2AServer {
             port: self.port,
             host: self.host,
-            agent_cards: HashMap::new(),
-            tasks: HashMap::new(),
+            agent_manager: Arc::new(RwLock::new(AgentCardManager::new())),
+            task_manager: Arc::new(RwLock::new(TaskManager::new())),
         })
     }
 }
@@ -55,8 +61,8 @@ impl Default for A2AServerBuilder {
 pub struct A2AServer {
     port: u16,
     host: String,
-    agent_cards: HashMap<String, AgentCard>,
-    tasks: HashMap<String, Task>,
+    agent_manager: Arc<RwLock<AgentCardManager>>,
+    task_manager: Arc<RwLock<TaskManager>>,
 }
 
 impl A2AServer {

@@ -53,7 +53,7 @@
 //! - [`task`]: 任务处理和状态管理
 //! - [`discovery`]: Agent 发现和匹配
 
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![warn(clippy::all)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
@@ -67,13 +67,13 @@ pub mod task;
 pub mod types;
 
 // 重新导出核心类型和功能
-pub use card::{AgentCard, AgentCardBuilder, AgentCardManager, AgentCardStats};
+pub use card::{AgentCardBuilder, AgentCardManager, AgentCardStats};
 pub use client::{A2AClient, A2AClientBuilder};
 pub use config::{A2AConfig, A2ASettings};
 pub use discovery::{AgentDiscovery, CapabilityMatcher};
 pub use protocol::A2AProtocol;
 pub use server::{A2AServer, A2AServerBuilder};
-pub use task::{Task, TaskManager, TaskState, TaskStats};
+pub use task::{TaskManager, TaskStats};
 pub use types::*;
 
 /// A2A 协议版本

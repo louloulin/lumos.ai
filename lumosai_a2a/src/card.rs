@@ -283,11 +283,14 @@ impl AgentCardManager {
         }
 
         // 获取旧卡片用于清理索引
-        let old_card = self.cards.get(agent_id).unwrap();
+        let old_card = self.cards.get(agent_id).cloned().unwrap();
+        
+        // 移除旧卡片
+        self.cards.remove(agent_id);
 
         // 清理旧索引
-        self.cleanup_capability_index(agent_id, old_card);
-        self.cleanup_skill_index(agent_id, old_card);
+        self.cleanup_capability_index(agent_id, &old_card);
+        self.cleanup_skill_index(agent_id, &old_card);
 
         // 更新卡片
         self.cards.insert(agent_id.to_string(), new_card.clone());
@@ -362,7 +365,7 @@ impl AgentCardManager {
     }
 
     /// 清理能力索引
-    fn cleanup_capability_index(&mut self, agent_id: &str, card: &AgentCard) {
+    fn cleanup_capability_index(&mut self, agent_id: &str, _card: &AgentCard) {
         for capability_list in self.indexed_by_capability.values_mut() {
             capability_list.retain(|id| id != agent_id);
         }

@@ -17,14 +17,14 @@ pub struct A2AClient {
 
 impl A2AClient {
     /// 创建新的 A2A 客户端
-    pub fn new(base_url: String) -> Self {
+    pub fn new(base_url: String) -> A2AResult<Self> {
         let client = Client::builder()
             .timeout(Duration::from_secs(30))
             .user_agent("LumosAI-A2A-Client/1.0")
             .build()
-            .expect("Failed to create HTTP client");
+            .map_err(|e| A2AError::InternalError(format!("Failed to create HTTP client: {}", e)))?;
 
-        Self { client, base_url }
+        Ok(Self { client, base_url })
     }
 
     /// 获取 Agent Card
@@ -132,7 +132,13 @@ impl A2AClientBuilder {
             .user_agent(self.user_agent);
 
         if let Some(api_key) = &self.api_key {
-            client_builder = client_builder.bearer_auth(api_key);
+            // Add Authorization header manually
+            let mut headers = reqwest::header::HeaderMap::new();
+            headers.insert(
+                reqwest::header::AUTHORIZATION,
+                reqwest::header::HeaderValue::from_str(&format!("Bearer {}", api_key)).unwrap(),
+            );
+            client_builder = client_builder.default_headers(headers);
         }
 
         let client = client_builder
@@ -148,7 +154,13 @@ impl A2AClientBuilder {
 
 impl Default for A2AClient {
     fn default() -> Self {
-        Self::new("http://localhost:8080".to_string())
+        Self::new("http://localhost:8080".to_string()).unwrap_or_else(|_| {
+            // Fallback to a minimal client if default fails
+            A2AClient {
+                client: Client::new(),
+                base_url: "http://localhost:8080".to_string(),
+            }
+        })
     }
 }
 

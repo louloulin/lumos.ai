@@ -9,7 +9,6 @@ use crate::discovery::AgentDiscovery;
 use crate::task::TaskManager;
 use crate::types::*;
 use crate::{A2AError, A2AResult};
-use std::collections::HashMap;
 
 /// A2A 协议核心实现
 #[derive(Debug)]
@@ -154,6 +153,7 @@ impl Default for A2AProtocol {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::card::AgentCardBuilder;
     use url::Url;
 
     #[test]

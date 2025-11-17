@@ -356,7 +356,7 @@ impl SseEventAggregator {
                     };
                     task.updated_at = status_update.timestamp;
                 }
-                SseEvent::ArtifactUpdate { artifact, .. } => {
+                SseEvent::ArtifactUpdate { .. } => {
                     // TODO: 添加工件到任务（当Task结构支持时）
                 }
                 _ => {}

@@ -3,7 +3,7 @@
 //! 实现流式响应和实时通信功能
 
 use crate::types::*;
-use crate::{A2AError, A2AResult};
+use crate::A2AResult;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

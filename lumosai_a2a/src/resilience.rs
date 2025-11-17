@@ -3,7 +3,6 @@
 //! 提供重试逻辑、错误恢复和熔断机制
 
 use crate::{A2AError, A2AResult};
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -388,7 +387,8 @@ mod tests {
         
         let config = RetryConfig::new()
             .max_retries(2)
-            .initial_delay(Duration::from_millis(10));
+            .initial_delay(Duration::from_millis(10))
+            .retryable_error("connection refused");
 
         let executor = RetryExecutor::new(config);
         

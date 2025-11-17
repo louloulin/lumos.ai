@@ -3,11 +3,12 @@
 //! 实现A2A协议的服务器端功能，完全符合Google A2A规范
 
 use crate::card::AgentCardManager;
-use crate::jsonrpc::{JsonRpcHandler, JsonRpcRequest, JsonRpcResponse, JsonRpcId, methods};
-use crate::sse::{JsonRpcSseHandler, SseEventSender};
+use crate::jsonrpc::{JsonRpcRequest, JsonRpcResponse, JsonRpcHandler, methods};
+use crate::sse::JsonRpcSseHandler;
 use crate::task::TaskManager;
 use crate::types::*;
 use crate::{A2AError, A2AResult};
+use serde_json::Value;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -62,7 +63,6 @@ impl Default for A2AServerBuilder {
 }
 
 /// A2A 服务器
-#[derive(Debug)]
 pub struct A2AServer {
     port: u16,
     host: String,

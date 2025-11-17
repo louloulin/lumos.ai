@@ -7,8 +7,6 @@ use crate::{A2AError, A2AResult};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::pin::Pin;
-use std::future::Future;
 
 /// JSON-RPC 2.0 请求对象
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -387,7 +385,7 @@ mod tests {
             Some(JsonRpcId::String("test-123".to_string())),
         );
         
-        let response = handler.handle_request(request);
+        let response = handler.handle_request(&request);
         assert!(response.is_success());
     }
 }

@@ -98,25 +98,25 @@ chrono = { version = "0.4", features = ["serde"] }
 regex = "1.11"
 url = "2.5"
 
-# Arrow ecosystem - use stable versions
-arrow = "54.0.0"
-arrow-array = "54.0.0"
-arrow-schema = "54.0.0"
-arrow-buffer = "54.0.0"
-arrow-data = "54.0.0"
-arrow-arith = "54.0.0"
-arrow-cast = "54.0.0"
-arrow-csv = "54.0.0"
-arrow-ipc = "54.0.0"
-arrow-json = "54.0.0"
-arrow-ord = "54.0.0"
-arrow-row = "54.0.0"
-arrow-select = "54.0.0"
-arrow-string = "54.0.0"
+# Arrow ecosystem - 升级到56.2.0与agentmem一致
+arrow = "56.2.0"
+arrow-array = "56.2.0"
+arrow-schema = "56.2.0"
+arrow-buffer = "56.2.0"
+arrow-data = "56.2.0"
+arrow-arith = "56.2.0"
+arrow-cast = "56.2.0"
+arrow-csv = "56.2.0"
+arrow-ipc = "56.2.0"
+arrow-json = "56.2.0"
+arrow-ord = "56.2.0"
+arrow-row = "56.2.0"
+arrow-select = "56.2.0"
+arrow-string = "56.2.0"
 
-# LanceDB ecosystem - compatible versions
-lancedb = "0.18.0"
-lance = "0.27.0"
+# LanceDB ecosystem - 升级到与agentmem一致
+lancedb = "0.22.2"
+# lance不需要直接依赖，由lancedb引入
 
 # Compression libraries - fix zstd version conflicts
 zstd = "0.13"

@@ -67,6 +67,20 @@ impl A2AProtocol {
 
     /// 验证协议兼容性
     pub fn validate_compatibility(&self, card: &AgentCard) -> A2AResult<()> {
+        // 检查Agent Card基本信息
+        if card.name.is_empty() {
+            return Err(A2AError::ProtocolError(
+                "Agent name cannot be empty".to_string()
+            ));
+        }
+
+        // 检查URL有效性
+        if card.url.as_str().is_empty() {
+            return Err(A2AError::ProtocolError(
+                "Agent URL cannot be empty".to_string()
+            ));
+        }
+
         // 检查协议版本兼容性
         if !self.validate_version_compatibility(&card.version) {
             return Err(A2AError::ProtocolError(
@@ -86,9 +100,15 @@ impl A2AProtocol {
 
     /// 验证版本兼容性
     fn validate_version_compatibility(&self, version: &str) -> bool {
-        // 简单的版本兼容性检查
-        // 实际实现中可能需要更复杂的语义版本比较
-        version.starts_with("1.")
+        // 获取协议的主版本号
+        if let Some(protocol_major) = self.config.protocol_version.split('.').next() {
+            if let Some(agent_major) = version.split('.').next() {
+                // 主版本号必须匹配
+                return protocol_major == agent_major;
+            }
+        }
+        // 如果无法解析版本号，默认不兼容
+        false
     }
 
     /// 验证消息
@@ -130,12 +150,23 @@ impl A2AProtocol {
             .collect()
     }
 
-    /// 按技能查找Agent
+    /// 按技能查找Agent（支持技能名称和标签）
     pub fn find_agents_by_skill(&self, skill: &str) -> Vec<AgentCard> {
         self.agent_manager
             .get_all_cards()
             .into_iter()
-            .filter(|card| card.supports_skill(skill))
+            .filter(|card| {
+                // 检查技能名称
+                card.supports_skill(skill) ||
+                // 检查技能标签
+                card.skills.iter().any(|s| {
+                    if let Some(ref tags) = s.tags {
+                        tags.contains(&skill.to_string())
+                    } else {
+                        false
+                    }
+                })
+            })
             .cloned()
             .collect()
     }

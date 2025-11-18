@@ -37,21 +37,17 @@ pub enum JsonRpcId {
 pub struct JsonRpcResponse {
     /// JSON-RPC版本，必须为"2.0"
     pub jsonrpc: String,
-    /// 结果或错误
-    #[serde(flatten)]
-    pub payload: JsonRpcPayload,
+    /// 结果（成功时）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<Value>,
+    /// 错误（失败时）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<JsonRpcError>,
     /// 请求ID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<JsonRpcId>,
 }
 
-/// JSON-RPC 2.0 响应载荷
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum JsonRpcPayload {
-    Result(Value),
-    Error(JsonRpcError),
-}
 
 /// JSON-RPC 2.0 错误对象
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,7 +157,8 @@ impl JsonRpcResponse {
     pub fn success(result: Value, id: Option<JsonRpcId>) -> Self {
         Self {
             jsonrpc: "2.0".to_string(),
-            payload: JsonRpcPayload::Result(result),
+            result: Some(result),
+            error: None,
             id,
         }
     }
@@ -170,7 +167,8 @@ impl JsonRpcResponse {
     pub fn error(code: i64, message: String, data: Option<Value>, id: Option<JsonRpcId>) -> Self {
         Self {
             jsonrpc: "2.0".to_string(),
-            payload: JsonRpcPayload::Error(JsonRpcError {
+            result: None,
+            error: Some(JsonRpcError {
                 code,
                 message,
                 data,
@@ -212,23 +210,17 @@ impl JsonRpcResponse {
 
     /// 获取结果
     pub fn get_result(&self) -> Option<&Value> {
-        match &self.payload {
-            JsonRpcPayload::Result(result) => Some(result),
-            _ => None,
-        }
+        self.result.as_ref()
     }
 
     /// 获取错误
     pub fn get_error(&self) -> Option<&JsonRpcError> {
-        match &self.payload {
-            JsonRpcPayload::Error(error) => Some(error),
-            _ => None,
-        }
+        self.error.as_ref()
     }
 
     /// 检查是否为成功响应
     pub fn is_success(&self) -> bool {
-        matches!(&self.payload, JsonRpcPayload::Result(_))
+        self.result.is_some() && self.error.is_none()
     }
 }
 
@@ -620,8 +612,8 @@ mod tests {
     fn test_jsonrpc_handle_json_request_parse_error() {
         let handler = JsonRpcHandler::new();
         
-        // 无效的JSON字符串
-        let invalid_json = "{ invalid json }";
+        // 真正无效的JSON字符串（缺少闭合括号）
+        let invalid_json = "{ invalid json";
         let response_json = handler.handle_json_request(invalid_json);
         
         // 验证响应是有效的JSON

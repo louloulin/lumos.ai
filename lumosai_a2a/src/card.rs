@@ -209,6 +209,18 @@ impl AgentCardManager {
             }
         }
 
+        // 检查输入模式匹配（支持直接搜索capability名称）
+        let input_mode_key = format!("input_mode:{}", capability);
+        if let Some(agent_ids) = self.indexed_by_capability.get(&input_mode_key) {
+            for agent_id in agent_ids {
+                if let Some(card) = self.cards.get(agent_id) {
+                    if added_ids.insert(agent_id.clone()) {
+                        results.push(card);
+                    }
+                }
+            }
+        }
+
         // 检查技能匹配
         if let Some(agent_ids) = self.indexed_by_skill.get(capability) {
             for agent_id in agent_ids {
@@ -797,7 +809,7 @@ mod tests {
         assert_eq!(card.description, Some("A fluent interface test agent".to_string()));
         assert_eq!(card.capabilities.streaming, true);
         assert_eq!(card.capabilities.push_notifications, true);
-        assert_eq!(card.capabilities.input_modes.len(), 2);
+        assert_eq!(card.capabilities.input_modes.len(), 3); // 默认"text" + "text_generation" + "translation"
         assert_eq!(card.skills.len(), 1);
         assert!(card.authentication.is_some());
     }

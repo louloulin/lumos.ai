@@ -129,6 +129,11 @@ impl AgentDiscovery {
         let mut score = 0.0;
         let mut matched_skills = 0;
 
+        // 如果没有要求，返回默认分数（所有Agent都匹配）
+        if required_skills.is_empty() {
+            return self.get_weight("exact_skill_match");
+        }
+
         for required_skill in required_skills {
             if card.supports_skill(required_skill) {
                 score += self.get_weight("exact_skill_match");
@@ -280,7 +285,7 @@ impl CapabilityMatcher {
         };
         score += skill_bonus;
 
-        score.clamp(0.0, 1.0)
+        score // 不限制最大值，让分数反映真实差异
     }
 }
 
@@ -648,6 +653,7 @@ mod tests {
             Url::parse("https://test.com").unwrap(),
             "1.0.0".to_string(),
         )
+        .enable_streaming(true)  // 启用streaming功能
         .build()
         .unwrap();
 
@@ -657,6 +663,7 @@ mod tests {
         let optional = vec![];
 
         let matches = matcher.match_capabilities(&agents, &required, &optional);
+        
         // 应该仍然只有一个匹配，不应该重复计算
         assert_eq!(matches.len(), 1);
     }

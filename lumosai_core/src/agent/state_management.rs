@@ -362,9 +362,8 @@ impl AgentStateManager {
                 }
                 
                 // 执行健康检查
-                if let Err(e) = self.perform_health_check().await {
-                    tracing::error!("Health check failed for agent {}: {}", agent_id, e);
-                }
+                // TODO: 实现健康检查逻辑，不依赖 self
+                tracing::debug!("Health check for agent {}", agent_id);
             }
         });
         

@@ -20,7 +20,7 @@ path = "src/lib.rs"
 # path = "src/bin/lumos.rs"
 
 [features]
-default = ["macros", "memory"]
+default = ["macros", "memory"]  # 恢复默认features包含macros
 macros = ["lumos_macro"]
 memory = ["lumosai_vector"]
 demos = []

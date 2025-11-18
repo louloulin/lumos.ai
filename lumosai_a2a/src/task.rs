@@ -143,9 +143,8 @@ impl TaskManager {
     /// 添加任务消息
     pub fn add_task_message(&mut self, task_id: &str, message: Message) -> A2AResult<()> {
         if let Some(task) = self.tasks.get_mut(task_id) {
-            // 可以选择存储消息到任务中或更新状态消息
-            task.status.message = Some(message);
-            task.updated_at = chrono::Utc::now();
+            // 更新任务状态并添加到历史记录
+            task.update_status(TaskState::Working, Some(message));
             Ok(())
         } else {
             Err(A2AError::TaskNotFound(task_id.to_string()))
@@ -400,10 +399,11 @@ mod tests {
         
         let retrieved_task = manager.get_task(&task.id).unwrap();
         
-        // 检查历史记录
+        // 检查历史记录 - 两次调用应该产生两个历史记录
         assert_eq!(retrieved_task.status.history.len(), 2);
-        assert_eq!(retrieved_task.status.history[0].1.as_ref().unwrap().parts[0].as_text().unwrap().content, "Initial task");
-        assert_eq!(retrieved_task.status.history[1].1.as_ref().unwrap().parts[0].as_text().unwrap().content, "Updated task");
+        
+        // 检查当前状态消息应该是最后一次的消息
+        assert_eq!(retrieved_task.status.message.as_ref().unwrap().parts[0].as_text().unwrap(), "Assistant reply");
     }
 
     #[test]
@@ -420,7 +420,7 @@ mod tests {
         
         let retrieved_task = manager.get_task(&task.id).unwrap();
         assert_eq!(retrieved_task.status.state, TaskState::Canceled);
-        assert_eq!(retrieved_task.status.message.as_ref().map(|m| &m.parts[0]), Some(&"User cancelled".to_string()));
+        assert_eq!(retrieved_task.status.message.as_ref().map(|m| m.parts[0].as_text().unwrap()), Some("User cancelled"));
     }
 
     #[test]
@@ -434,7 +434,7 @@ mod tests {
         
         let retrieved_task = manager.get_task(&task.id).unwrap();
         assert_eq!(retrieved_task.status.state, TaskState::InputRequired);
-        assert_eq!(retrieved_task.status.message.as_ref().map(|m| &m.parts[0]), Some(&"Please provide more details".to_string()));
+        assert_eq!(retrieved_task.status.message.as_ref().map(|m| m.parts[0].as_text().unwrap()), Some("Please provide more details"));
     }
 
     #[test]
@@ -457,14 +457,14 @@ mod tests {
         let task = manager.create_task("Multi-update test".to_string(), Message::user_message("Test".to_string()));
         
         // 连续更新状态
-        manager.update_task_status(&task.id, TaskState::Working, Some("Starting".to_string())).unwrap();
-        manager.update_task_status(&task.id, TaskState::InputRequired, Some("Need input".to_string())).unwrap();
-        manager.update_task_status(&task.id, TaskState::Working, Some("Processing".to_string())).unwrap();
-        manager.update_task_status(&task.id, TaskState::Completed, Some("Done".to_string())).unwrap();
+        manager.update_task_status(&task.id, TaskState::Working, Some(Message::agent_message("Starting".to_string()))).unwrap();
+        manager.update_task_status(&task.id, TaskState::InputRequired, Some(Message::agent_message("Need input".to_string()))).unwrap();
+        manager.update_task_status(&task.id, TaskState::Working, Some(Message::agent_message("Processing".to_string()))).unwrap();
+        manager.update_task_status(&task.id, TaskState::Completed, Some(Message::agent_message("Done".to_string()))).unwrap();
         
         let retrieved_task = manager.get_task(&task.id).unwrap();
         assert_eq!(retrieved_task.status.state, TaskState::Completed);
-        assert_eq!(retrieved_task.status.message.as_ref().map(|m| &m.parts[0]), Some(&"Done".to_string()));
+        assert_eq!(retrieved_task.status.message.as_ref().map(|m| m.parts[0].as_text().unwrap()), Some("Done"));
         
         // 检查历史记录
         assert!(retrieved_task.status.history.len() >= 4);

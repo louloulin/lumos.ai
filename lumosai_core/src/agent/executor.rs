@@ -177,6 +177,16 @@ impl BasicAgent {
         self
     }
 
+    /// Get LLM provider
+    pub fn llm(&self) -> &Arc<dyn LlmProvider> {
+        &self.llm
+    }
+
+    /// Check if LLM supports structured output
+    pub fn supports_structured_output(&self) -> bool {
+        self.llm.supports_structured_output()
+    }
+
     /// Build tool descriptions for the system message
     #[allow(unused_variables)]
     fn build_tool_descriptions(&self, _options: &AgentGenerateOptions) -> String {

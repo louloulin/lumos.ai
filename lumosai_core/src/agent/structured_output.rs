@@ -158,7 +158,7 @@ impl BasicAgent {
     /// 便捷方法：生成简单的结构化输出
     ///
     /// 使用单个消息生成结构化输出
-    pub async fn generate_structured_simple<T: DeserializeOwned + Send + 'static>(
+    pub async fn generate_structured_simple<T: DeserializeOwned + Send + 'static + schemars::JsonSchema>(
         &self,
         prompt: &str,
     ) -> Result<T> {
@@ -174,7 +174,7 @@ impl BasicAgent {
     }
 
     /// 便捷方法：使用自定义 schema 生成结构化输出
-    pub async fn generate_with_schema<T: DeserializeOwned + Send + 'static>(
+    pub async fn generate_with_schema<T: DeserializeOwned + Send + 'static + schemars::JsonSchema>(
         &self,
         prompt: &str,
         schema: Value,

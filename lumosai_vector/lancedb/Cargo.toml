@@ -19,11 +19,10 @@ async-trait = { workspace = true }
 tokio = { workspace = true }
 
 # LanceDB dependencies
-lancedb = { workspace = true }
-lance = { workspace = true }
-arrow = { workspace = true }
-arrow-array = { workspace = true }
-arrow-schema = { workspace = true }
+lancedb = "0.22.2"
+arrow = "56.2.0"
+arrow-array = "56.2.0"
+arrow-schema = "56.2.0"
 
 # Serialization
 serde = { workspace = true }

@@ -877,7 +877,31 @@ impl Agent for BasicAgent {
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
         let mut steps = Vec::new();
-        let mut all_messages = self.format_messages(messages, options);
+        
+        // ✅ 1. 如果有 memory，先检索历史消息
+        let mut input_messages = messages.to_vec();
+        if let Some(memory) = &self.memory {
+            // 尝试检索最近的消息
+            let memory_config = crate::memory::MemoryConfig {
+                store_id: None,
+                namespace: options.thread_id.clone(),
+                enabled: true,
+                working_memory: None,
+                semantic_recall: None,
+                last_messages: Some(10),  // 检索最近10条
+                query: None,
+            };
+            
+            if let Ok(historical) = memory.retrieve(&memory_config).await {
+                if !historical.is_empty() {
+                    self.logger().info(&format!("✅ Retrieved {} historical messages from memory", historical.len()));
+                    // 将历史消息添加到输入前面
+                    input_messages = historical.into_iter().chain(input_messages).collect();
+                }
+            }
+        }
+        
+        let mut all_messages = self.format_messages(&input_messages, options);
         let run_id = options
             .run_id
             .clone()
@@ -1733,10 +1757,35 @@ impl Agent for BasicAgent {
         };
         steps.push(final_step);
 
-        let _ = self.logger().info(&format!(
-            "Agent '{}' completed execution in {}ms with {} steps, {} tool calls, {} errors",
+        self.logger().info(&format!(
+            "Agent '{}' finished generation in {}ms ({} steps, {} tool calls, {} errors)",
             self.name, total_execution_time, current_step, total_tool_calls, total_errors
         ));
+
+        // 保存用户消息和助手响应到 memory
+        if let Some(memory) = &self.memory {
+            // 保存用户消息
+            for msg in messages {
+                if let Err(e) = memory.store(msg).await {
+                    self.logger().warn(&format!("Failed to store user message: {}", e));
+                } else {
+                    self.logger().debug("✅ Stored user message to memory");
+                }
+            }
+            
+            // 保存助手响应
+            let assistant_message = Message {
+                role: crate::llm::Role::Assistant,
+                content: final_response.clone(),
+                metadata: None,
+                name: None,
+            };
+            if let Err(e) = memory.store(&assistant_message).await {
+                self.logger().warn(&format!("Failed to store assistant response: {}", e));
+            } else {
+                self.logger().info("✅ Stored assistant response to memory");
+            }
+        }
 
         Ok(AgentGenerateResult {
             response: final_response,

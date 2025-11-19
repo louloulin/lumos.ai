@@ -92,6 +92,33 @@ struct HuaweiMaasUsage {
     total_tokens: u32,
 }
 
+/// 华为 MaaS 流式响应结构
+#[derive(Debug, Deserialize)]
+struct HuaweiMaasStreamResponse {
+    choices: Vec<HuaweiMaasStreamChoice>,
+    #[serde(default)]
+    id: Option<String>,
+    #[serde(default)]
+    created: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HuaweiMaasStreamChoice {
+    delta: HuaweiMaasStreamDelta,
+    #[serde(default)]
+    finish_reason: Option<String>,
+    #[serde(default)]
+    index: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HuaweiMaasStreamDelta {
+    #[serde(default)]
+    content: Option<String>,
+    #[serde(default)]
+    role: Option<String>,
+}
+
 /// 华为 ModelArts MaaS LLM 提供商
 ///
 /// 支持通过华为云 ModelArts 平台访问各种 LLM 模型，包括 DeepSeek V3.2 等。
@@ -254,7 +281,7 @@ impl LlmProvider for HuaweiMaasProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::llm(format!("华为 MaaS API 请求失败: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("华为 MaaS API 请求失败: {}", e)))?;
 
         // 检查响应状态
         if !response.status().is_success() {
@@ -263,7 +290,7 @@ impl LlmProvider for HuaweiMaasProvider {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(Error::llm(format!(
+            return Err(Error::Llm(format!(
                 "华为 MaaS API 错误 ({}): {}",
                 status, error_text
             )));
@@ -273,14 +300,14 @@ impl LlmProvider for HuaweiMaasProvider {
         let maas_response: HuaweiMaasResponse = response
             .json()
             .await
-            .map_err(|e| Error::llm(format!("解析华为 MaaS 响应失败: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("解析华为 MaaS 响应失败: {}", e)))?;
 
         // 提取生成的文本
         maas_response
             .choices
             .first()
             .and_then(|choice| choice.message.content.clone())
-            .ok_or_else(|| Error::llm("华为 MaaS 响应中没有内容".to_string()))
+            .ok_or_else(|| Error::Llm("华为 MaaS 响应中没有内容".to_string()))
     }
 
     async fn generate_with_messages(
@@ -312,7 +339,7 @@ impl LlmProvider for HuaweiMaasProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::llm(format!("华为 MaaS API 请求失败: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("华为 MaaS API 请求失败: {}", e)))?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -320,7 +347,7 @@ impl LlmProvider for HuaweiMaasProvider {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(Error::llm(format!(
+            return Err(Error::Llm(format!(
                 "华为 MaaS API 错误 ({}): {}",
                 status, error_text
             )));
@@ -329,13 +356,13 @@ impl LlmProvider for HuaweiMaasProvider {
         let maas_response: HuaweiMaasResponse = response
             .json()
             .await
-            .map_err(|e| Error::llm(format!("解析华为 MaaS 响应失败: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("解析华为 MaaS 响应失败: {}", e)))?;
 
         maas_response
             .choices
             .first()
             .and_then(|choice| choice.message.content.clone())
-            .ok_or_else(|| Error::llm("华为 MaaS 响应中没有内容".to_string()))
+            .ok_or_else(|| Error::Llm("华为 MaaS 响应中没有内容".to_string()))
     }
 
     async fn generate_stream(
@@ -343,9 +370,55 @@ impl LlmProvider for HuaweiMaasProvider {
         prompt: &str,
         options: &LlmOptions,
     ) -> Result<BoxStream<'static, Result<String>>> {
-        // 华为 MaaS 暂不支持流式响应，返回单次响应的流
-        let result = self.generate(prompt, options).await?;
-        Ok(Box::pin(stream::once(async move { Ok(result) })))
+        let messages = vec![self.convert_message(&Message {
+            role: Role::User,
+            content: prompt.to_string(),
+            metadata: None,
+            name: None,
+        })];
+
+        let url = format!("{}/v2/chat/completions", self.base_url);
+
+        let mut body = serde_json::json!({
+            "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
+            "messages": messages,
+            "stream": true, // 启用流式响应
+        });
+
+        if let Some(temperature) = options.temperature {
+            body["temperature"] = serde_json::json!(temperature);
+        }
+
+        if let Some(max_tokens) = options.max_tokens {
+            body["max_tokens"] = serde_json::json!(max_tokens);
+        }
+
+        // 发送请求
+        let response = self
+            .client
+            .post(&url)
+            .headers(self.create_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| Error::Llm(format!("华为 MaaS API 流式请求失败: {}", e)))?;
+
+        // 检查响应状态
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(Error::Llm(format!(
+                "华为 MaaS API 流式错误 ({}): {}",
+                status, error_text
+            )));
+        }
+
+        // 创建 SSE 流
+        let stream = self.create_sse_stream(response).await?;
+        Ok(Box::pin(stream))
     }
 
     async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
@@ -435,11 +508,11 @@ impl LlmProvider for HuaweiMaasProvider {
         let choice = maas_response
             .choices
             .first()
-            .ok_or_else(|| Error::llm("华为 MaaS 响应中没有选择".to_string()))?;
+            .ok_or_else(|| Error::Llm("华为 MaaS 响应中没有选择".to_string()))?;
 
         // 检查是否有函数调用
-        if !choice.message.tool_calls.is_empty() {
-            let function_calls: Vec<FunctionCall> = choice
+        let function_calls: Vec<FunctionCall> = if !choice.message.tool_calls.is_empty() {
+            choice
                 .message
                 .tool_calls
                 .iter()
@@ -448,20 +521,16 @@ impl LlmProvider for HuaweiMaasProvider {
                     name: tool_call.function.name.clone(),
                     arguments: tool_call.function.arguments.clone(),
                 })
-                .collect();
-
-            Ok(FunctionCallingResponse {
-                content: choice.message.content.clone(),
-                function_calls: Some(function_calls),
-                finish_reason: choice.finish_reason.clone(),
-            })
+                .collect()
         } else {
-            Ok(FunctionCallingResponse {
-                content: choice.message.content.clone(),
-                function_calls: None,
-                finish_reason: choice.finish_reason.clone(),
-            })
-        }
+            Vec::new()
+        };
+
+        Ok(FunctionCallingResponse {
+            content: choice.message.content.clone(),
+            function_calls,
+            finish_reason: choice.finish_reason.clone().unwrap_or_else(|| "stop".to_string()),
+        })
     }
 }
 

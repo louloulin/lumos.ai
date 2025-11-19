@@ -204,6 +204,11 @@ pub fn auto_provider() -> Result<Box<dyn LlmProvider>> {
         return Ok(Box::new(provider));
     }
 
+    // 华为 MaaS 支持
+    if let Ok(provider) = huawei_maas_from_env() {
+        return Ok(Box::new(provider));
+    }
+
     if let Ok(provider) = baidu_from_env() {
         return Ok(Box::new(provider));
     }

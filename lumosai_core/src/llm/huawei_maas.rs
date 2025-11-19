@@ -29,7 +29,8 @@
 //! ```
 
 use async_trait::async_trait;
-use futures::stream::{self, BoxStream};
+use futures::stream::BoxStream;
+use futures::TryStreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
 use serde_json::Value;
@@ -240,6 +241,70 @@ impl HuaweiMaasProvider {
             })
             .collect()
     }
+
+    /// 创建 SSE 流从 HTTP 响应
+    async fn create_sse_stream(
+        &self,
+        response: reqwest::Response,
+    ) -> Result<impl futures::Stream<Item = Result<String>>> {
+        use futures::StreamExt;
+
+        let byte_stream = response.bytes_stream();
+
+        Ok(byte_stream
+            .map_err(|e| Error::Llm(format!("HTTP 流错误: {}", e)))
+            .map(|chunk_result| {
+                chunk_result.and_then(|chunk| {
+                    // 转换字节为字符串
+                    let text = String::from_utf8(chunk.to_vec())
+                        .map_err(|e| Error::Llm(format!("UTF-8 解码错误: {}", e)))?;
+
+                    // 按行分割并处理每一行
+                    let mut results = Vec::new();
+                    for line in text.lines() {
+                        // 跳过空行和注释
+                        if line.trim().is_empty() || line.starts_with(':') {
+                            continue;
+                        }
+
+                        // 解析 SSE 格式: "data: {...}"
+                        if let Some(data) = line.strip_prefix("data: ") {
+                            // 处理流结束标记
+                            if data.trim() == "[DONE]" {
+                                break;
+                            }
+
+                            // 解析 JSON 响应
+                            match serde_json::from_str::<HuaweiMaasStreamResponse>(data) {
+                                Ok(stream_response) => {
+                                    if let Some(choice) = stream_response.choices.first() {
+                                        if let Some(content) = &choice.delta.content {
+                                            if !content.is_empty() {
+                                                results.push(content.clone());
+                                            }
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    // 记录错误但继续处理
+                                    eprintln!("解析华为 MaaS 流式响应失败: {}, 数据: {}", e, data);
+                                }
+                            }
+                        }
+                    }
+
+                    // 合并此块中的所有内容
+                    Ok(results.join(""))
+                })
+            })
+            .filter_map(|result| async move {
+                match result {
+                    Ok(content) if !content.is_empty() => Some(Ok(content)),
+                    Ok(_) => None, // 跳过空内容
+                    Err(e) => Some(Err(e)),
+                }
+            }))
+    }
 }
 
 #[async_trait]
@@ -365,16 +430,14 @@ impl LlmProvider for HuaweiMaasProvider {
             .ok_or_else(|| Error::Llm("华为 MaaS 响应中没有内容".to_string()))
     }
 
-    async fn generate_stream(
-        &self,
-        prompt: &str,
-        options: &LlmOptions,
-    ) -> Result<BoxStream<'static, Result<String>>> {
-        let messages = vec![self.convert_message(&Message {
-            role: Role::User,
-            content: prompt.to_string(),
-            metadata: None,
-            name: None,
+    async fn generate_stream<'a>(
+        &'a self,
+        prompt: &'a str,
+        options: &'a LlmOptions,
+    ) -> Result<BoxStream<'a, Result<String>>> {
+        let messages = vec![serde_json::json!({
+            "role": "user",
+            "content": prompt
         })];
 
         let url = format!("{}/v2/chat/completions", self.base_url);
@@ -486,7 +549,7 @@ impl LlmProvider for HuaweiMaasProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::llm(format!("华为 MaaS API 请求失败: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("华为 MaaS API 请求失败: {}", e)))?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -494,7 +557,7 @@ impl LlmProvider for HuaweiMaasProvider {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(Error::llm(format!(
+            return Err(Error::Llm(format!(
                 "华为 MaaS API 错误 ({}): {}",
                 status, error_text
             )));
@@ -503,7 +566,7 @@ impl LlmProvider for HuaweiMaasProvider {
         let maas_response: HuaweiMaasResponse = response
             .json()
             .await
-            .map_err(|e| Error::llm(format!("解析华为 MaaS 响应失败: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("解析华为 MaaS 响应失败: {}", e)))?;
 
         let choice = maas_response
             .choices

@@ -184,6 +184,7 @@ pub mod cohere;
 mod deepseek;
 pub mod function_calling;
 pub mod gemini;
+pub mod huawei_maas;
 pub mod mock;
 pub mod ollama;
 pub mod openai;

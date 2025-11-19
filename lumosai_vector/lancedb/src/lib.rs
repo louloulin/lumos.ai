@@ -112,7 +112,7 @@ impl LanceDbClient {
     /// Drop a table
     pub async fn drop_table(&self, name: &str) -> LanceDbResult<()> {
         self.db
-            .drop_table(name)
+            .drop_table(name, &[])
             .await
             .map_err(|e| LanceDbError::Database(e.to_string()))?;
         Ok(())

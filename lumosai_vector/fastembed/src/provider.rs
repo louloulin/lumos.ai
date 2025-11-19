@@ -152,8 +152,8 @@ impl FastEmbedProvider {
     async fn process_in_batches(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
         self.ensure_model_loaded().await?;
 
-        let model_guard = self.model.lock().await;
-        let model = model_guard.as_ref().ok_or_else(|| {
+        let mut model_guard = self.model.lock().await;
+        let model = model_guard.as_mut().ok_or_else(|| {
             FastEmbedError::ModelNotInitialized("FastEmbed model not initialized".to_string())
         })?;
 

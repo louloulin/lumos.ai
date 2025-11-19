@@ -214,6 +214,7 @@ pub use function_calling::{
     utils, FunctionCall, FunctionCallResult, FunctionDefinition, ToolChoice,
 };
 pub use gemini::GeminiProvider;
+pub use huawei_maas::HuaweiMaasProvider;
 pub use mock::MockLlmProvider;
 pub use ollama::OllamaProvider;
 pub use openai::OpenAiProvider;

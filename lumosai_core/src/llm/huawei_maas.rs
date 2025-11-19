@@ -153,7 +153,7 @@ impl HuaweiMaasProvider {
         let api_key = std::env::var("MAAS_API_KEY")
             .or_else(|_| std::env::var("HUAWEI_MAAS_API_KEY"))
             .map_err(|_| {
-                Error::config(
+                Error::Configuration(
                     "MAAS_API_KEY or HUAWEI_MAAS_API_KEY environment variable not set"
                         .to_string(),
                 )
@@ -205,6 +205,8 @@ impl HuaweiMaasProvider {
                         Role::User => "user",
                         Role::Assistant => "assistant",
                         Role::Tool => "tool",
+                        Role::Function => "function",
+                        Role::Custom(_) => "user", // 自定义角色映射为 user
                     },
                     "content": msg.content.clone(),
                 })
@@ -242,10 +244,6 @@ impl LlmProvider for HuaweiMaasProvider {
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
-        }
-
-        if let Some(top_p) = options.top_p {
-            body["top_p"] = serde_json::json!(top_p);
         }
 
         // 发送请求
@@ -307,10 +305,6 @@ impl LlmProvider for HuaweiMaasProvider {
             body["max_tokens"] = serde_json::json!(max_tokens);
         }
 
-        if let Some(top_p) = options.top_p {
-            body["top_p"] = serde_json::json!(top_p);
-        }
-
         let response = self
             .client
             .post(&url)
@@ -354,9 +348,10 @@ impl LlmProvider for HuaweiMaasProvider {
         Ok(Box::pin(stream::once(async move { Ok(result) })))
     }
 
-    async fn generate_embeddings(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
+    async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
         // 华为 MaaS 暂不支持 embedding API
-        Err(Error::llm(
+        let _ = text;
+        Err(Error::Llm(
             "华为 MaaS 暂不支持 embedding 功能，请使用 OpenAI 或其他提供商".to_string(),
         ))
     }
@@ -365,7 +360,7 @@ impl LlmProvider for HuaweiMaasProvider {
         &self,
         messages: &[Message],
         functions: &[FunctionDefinition],
-        tool_choice: Option<ToolChoice>,
+        tool_choice: &ToolChoice,
         options: &LlmOptions,
     ) -> Result<FunctionCallingResponse> {
         let api_messages = self.convert_messages(messages);
@@ -392,17 +387,16 @@ impl LlmProvider for HuaweiMaasProvider {
             "tools": tools,
         });
 
-        if let Some(choice) = tool_choice {
-            body["tool_choice"] = match choice {
-                ToolChoice::Auto => serde_json::json!("auto"),
-                ToolChoice::None => serde_json::json!("none"),
-                ToolChoice::Required => serde_json::json!("required"),
-                ToolChoice::Function(name) => serde_json::json!({
-                    "type": "function",
-                    "function": { "name": name }
-                }),
-            };
-        }
+        // 添加 tool_choice
+        body["tool_choice"] = match tool_choice {
+            ToolChoice::Auto => serde_json::json!("auto"),
+            ToolChoice::None => serde_json::json!("none"),
+            ToolChoice::Required => serde_json::json!("required"),
+            ToolChoice::Function { name } => serde_json::json!({
+                "type": "function",
+                "function": { "name": name }
+            }),
+        };
 
         if let Some(temperature) = options.temperature {
             body["temperature"] = serde_json::json!(temperature);

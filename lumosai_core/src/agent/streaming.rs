@@ -442,8 +442,9 @@ impl<T: Agent> StreamingAgent<T> {
                     };
                     
                     for (idx, msg) in historical.iter().enumerate() {
-                        let preview = if msg.content.len() > 80 {
-                            format!("{}...", &msg.content[..80])
+                        // ⭐ 安全截断：按字符数避免UTF-8边界错误
+                        let preview = if msg.content.chars().count() > 80 {
+                            format!("{}...", msg.content.chars().take(80).collect::<String>())
                         } else {
                             msg.content.clone()
                         };

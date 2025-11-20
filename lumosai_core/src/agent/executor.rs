@@ -892,7 +892,7 @@ impl Agent for BasicAgent {
                 enabled: true,
                 working_memory: None,
                 semantic_recall: None,
-                last_messages: Some(3),  // ⭐ 优化：减少到3条，降低prompt tokens
+                last_messages: Some(0),  // ⭐⭐⭐ 优化：禁用历史消息，只使用当前消息（最快性能）
                 query: None,
             };
             

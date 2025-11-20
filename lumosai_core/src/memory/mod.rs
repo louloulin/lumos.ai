@@ -225,7 +225,7 @@ impl Default for MemoryConfig {
     /// - `namespace`: None
     /// - `working_memory`: None
     /// - `semantic_recall`: None
-    /// - `last_messages`: None
+    /// - `last_messages`: Some(0)  // ⭐ 优化默认值：禁用历史消息提高性能
     /// - `query`: None
     fn default() -> Self {
         Self {
@@ -234,7 +234,7 @@ impl Default for MemoryConfig {
             enabled: true,
             working_memory: None,
             semantic_recall: None,
-            last_messages: None,
+            last_messages: Some(0),  // ⭐ 优化：默认禁用历史消息提高性能
             query: None,
         }
     }

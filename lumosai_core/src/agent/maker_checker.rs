@@ -62,11 +62,7 @@ pub struct MakerCheckerExecutor {
 
 impl MakerCheckerExecutor {
     /// 创建新的 MakerChecker 执行器
-    pub fn new(
-        maker: Arc<dyn Agent>,
-        checker: Arc<dyn Agent>,
-        max_iterations: usize,
-    ) -> Self {
+    pub fn new(maker: Arc<dyn Agent>, checker: Arc<dyn Agent>, max_iterations: usize) -> Self {
         Self {
             maker,
             checker,
@@ -83,7 +79,11 @@ impl MakerCheckerExecutor {
         let mut approved_content = String::new();
 
         for iteration in 0..self.max_iterations {
-            tracing::debug!("MakerChecker iteration {}/{}", iteration + 1, self.max_iterations);
+            tracing::debug!(
+                "MakerChecker iteration {}/{}",
+                iteration + 1,
+                self.max_iterations
+            );
 
             // 1. Maker 创建内容
             let created_content = self.maker.generate_simple(&current_request).await?;
@@ -334,4 +334,3 @@ mod tests {
         assert!(stats.final_approved);
     }
 }
-

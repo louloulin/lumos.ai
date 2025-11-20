@@ -2,10 +2,10 @@
 //!
 //! 测试 AgentStructuredOutput trait 的实现
 
+use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{AgentBuilder, AgentStructuredOutput};
 use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use lumosai_core::llm::{Message, Role};
-use lumosai_core::agent::types::AgentGenerateOptions;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -24,7 +24,7 @@ struct TaskList {
 #[test]
 fn test_extract_json_pure() {
     use lumosai_core::agent::BasicAgent;
-    
+
     let response = r#"{"message": "Test", "status": "ok"}"#;
     let extracted = BasicAgent::extract_json(response).unwrap();
     assert_eq!(extracted, response);
@@ -34,7 +34,7 @@ fn test_extract_json_pure() {
 #[test]
 fn test_extract_json_markdown() {
     use lumosai_core::agent::BasicAgent;
-    
+
     let response = r#"Here's the response:
 ```json
 {"message": "Test", "status": "ok"}
@@ -49,7 +49,7 @@ Hope this helps!"#;
 #[test]
 fn test_extract_json_embedded() {
     use lumosai_core::agent::BasicAgent;
-    
+
     let response = "Some text before {\"message\": \"Test\", \"status\": \"ok\"} some text after";
     let extracted = BasicAgent::extract_json(response).unwrap();
     assert!(extracted.contains("\"message\""));
@@ -59,7 +59,7 @@ fn test_extract_json_embedded() {
 #[test]
 fn test_extract_json_array() {
     use lumosai_core::agent::BasicAgent;
-    
+
     let response = r#"[{"task": "Task 1"}, {"task": "Task 2"}]"#;
     let extracted = BasicAgent::extract_json(response).unwrap();
     assert!(extracted.starts_with('['));
@@ -70,7 +70,7 @@ fn test_extract_json_array() {
 #[tokio::test]
 async fn test_basic_structured_output() {
     let llm = create_test_zhipu_provider_arc();
-    
+
     let agent = AgentBuilder::new()
         .name("test_agent")
         .instructions("Return responses as JSON")
@@ -96,7 +96,10 @@ async fn test_basic_structured_output() {
             assert!(!response.message.is_empty());
         }
         Err(e) => {
-            println!("⚠️  Structured output may not be fully supported by test LLM: {:?}", e);
+            println!(
+                "⚠️  Structured output may not be fully supported by test LLM: {:?}",
+                e
+            );
             // 对于测试 LLM，结构化输出可能不完全支持，这是可以接受的
         }
     }
@@ -106,7 +109,7 @@ async fn test_basic_structured_output() {
 #[tokio::test]
 async fn test_generate_structured_simple() {
     let llm = create_test_zhipu_provider_arc();
-    
+
     let agent = AgentBuilder::new()
         .name("simple_agent")
         .instructions("Generate structured responses")
@@ -133,7 +136,7 @@ async fn test_generate_structured_simple() {
 #[tokio::test]
 async fn test_generate_with_schema() {
     let llm = create_test_zhipu_provider_arc();
-    
+
     let agent = AgentBuilder::new()
         .name("schema_agent")
         .instructions("Follow the provided schema")
@@ -168,11 +171,11 @@ async fn test_generate_with_schema() {
 #[test]
 fn test_extract_json_error_handling() {
     use lumosai_core::agent::BasicAgent;
-    
+
     // 完全不包含 JSON 的响应
     let response = "This is just plain text without any JSON";
     let extracted = BasicAgent::extract_json(response);
-    
+
     // 应该返回原文本（尝试解析会失败，但extract不应该panic）
     assert!(extracted.is_ok());
 }
@@ -193,7 +196,7 @@ struct DataSection {
 #[tokio::test]
 async fn test_nested_structure_output() {
     let llm = create_test_zhipu_provider_arc();
-    
+
     let agent = AgentBuilder::new()
         .name("nested_agent")
         .instructions("Generate structured responses with nested data")
@@ -215,4 +218,3 @@ async fn test_nested_structure_output() {
         }
     }
 }
-

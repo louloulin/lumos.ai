@@ -1096,7 +1096,10 @@ impl Crew {
         // 执行群聊
         let result = executor.execute("Begin group discussion").await?;
 
-        println!("🔵 [Group Chat] Execution completed, result length: {}", result.len());
+        println!(
+            "🔵 [Group Chat] Execution completed, result length: {}",
+            result.len()
+        );
 
         // 创建任务结果
         let mut task = AgentTask::new(format!("Group Chat Result: {}", result));
@@ -1118,10 +1121,8 @@ impl Crew {
         use super::handoff::HandoffExecutor;
 
         // 创建 Handoff 执行器
-        let executor = HandoffExecutor::new(
-            Arc::clone(&self.agents),
-            Arc::clone(&self.communication),
-        );
+        let executor =
+            HandoffExecutor::new(Arc::clone(&self.agents), Arc::clone(&self.communication));
 
         println!("🔵 [Handoff] Executor created, starting execution...");
 
@@ -1219,7 +1220,10 @@ impl Crew {
         let total_tasks = ledger.total_tasks().await;
 
         // 创建任务结果
-        let mut task = AgentTask::new(format!("Magentic Result: {} (Tasks: {})", result, total_tasks));
+        let mut task = AgentTask::new(format!(
+            "Magentic Result: {} (Tasks: {})",
+            result, total_tasks
+        ));
         task.status = TaskStatus::Completed;
         task.agent_id = Some(manager_id.clone());
         task.result = Some(result);

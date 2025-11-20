@@ -3,8 +3,8 @@
 //! This module provides simplified RAG integration for agents,
 //! making it easy to create agents with knowledge base capabilities.
 
-use std::sync::Arc;
 use serde_json::Value;
+use std::sync::Arc;
 
 use super::builder::AgentBuilder;
 use super::executor::BasicAgent;
@@ -85,7 +85,13 @@ impl RagAgent {
         let search_results = self
             .rag_config
             .vector_store
-            .query("default", query_embedding, self.rag_config.top_k, None, false)
+            .query(
+                "default",
+                query_embedding,
+                self.rag_config.top_k,
+                None,
+                false,
+            )
             .await
             .unwrap_or_default();
 
@@ -219,4 +225,3 @@ mod tests {
     // 测试已移至单独的测试文件 lumosai_core/tests/rag_integration_tests.rs
     // 以避免在库编译时的依赖问题
 }
-

@@ -530,9 +530,8 @@ pub trait LlmProvider: Send + Sync {
         let _ = schema;
         let response = self.generate_with_messages(messages, options).await?;
         // Try to parse as JSON, but this is not guaranteed to match the schema
-        Ok(serde_json::from_str(&response).unwrap_or_else(|_| {
-            serde_json::json!({ "content": response })
-        }))
+        Ok(serde_json::from_str(&response)
+            .unwrap_or_else(|_| serde_json::json!({ "content": response })))
     }
 }
 

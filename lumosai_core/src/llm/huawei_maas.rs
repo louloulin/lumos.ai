@@ -182,8 +182,7 @@ impl HuaweiMaasProvider {
             .or_else(|_| std::env::var("HUAWEI_MAAS_API_KEY"))
             .map_err(|_| {
                 Error::Configuration(
-                    "MAAS_API_KEY or HUAWEI_MAAS_API_KEY environment variable not set"
-                        .to_string(),
+                    "MAAS_API_KEY or HUAWEI_MAAS_API_KEY environment variable not set".to_string(),
                 )
             })?;
 
@@ -592,7 +591,10 @@ impl LlmProvider for HuaweiMaasProvider {
         Ok(FunctionCallingResponse {
             content: choice.message.content.clone(),
             function_calls,
-            finish_reason: choice.finish_reason.clone().unwrap_or_else(|| "stop".to_string()),
+            finish_reason: choice
+                .finish_reason
+                .clone()
+                .unwrap_or_else(|| "stop".to_string()),
         })
     }
 }

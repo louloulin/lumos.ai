@@ -2,7 +2,7 @@
 //!
 //! 测试 Agent + RAG 集成功能
 
-use lumosai_core::agent::{AgentBuilder, RagIntegrationExt, Agent};
+use lumosai_core::agent::{Agent, AgentBuilder, RagIntegrationExt};
 use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use lumosai_core::vector::MemoryVectorStorage;
 use std::sync::Arc;
@@ -87,7 +87,7 @@ async fn test_generate_with_rag() {
 #[tokio::test]
 async fn test_rag_config() {
     use lumosai_core::agent::RagConfig;
-    
+
     let vector_store = Arc::new(MemoryVectorStorage::new(384, None));
 
     // 测试默认配置
@@ -107,4 +107,3 @@ async fn test_rag_config() {
 
     println!("✅ RAG Config tests passed");
 }
-

@@ -20,7 +20,7 @@ pub struct ConfigValidator {
 pub trait ValidationRule: Send + Sync {
     /// Validate the given value and return validation result
     fn validate(&self, value: &serde_json::Value) -> ValidationResult;
-    
+
     /// Get rule description
     fn description(&self) -> &'static str;
 }
@@ -30,7 +30,7 @@ pub trait ValidationRule: Send + Sync {
 pub struct ValidationResult {
     /// Whether validation passed
     pub is_valid: bool,
-    
+
     /// Validation messages (errors, warnings, info)
     pub messages: Vec<ValidationMessage>,
 }
@@ -40,10 +40,10 @@ pub struct ValidationResult {
 pub struct ValidationMessage {
     /// Message severity
     pub severity: ValidationSeverity,
-    
+
     /// Message content
     pub message: String,
-    
+
     /// Field path (e.g., "agents.defaults.temperature")
     pub field_path: Option<String>,
 }
@@ -61,10 +61,10 @@ pub enum ValidationSeverity {
 pub struct ValidationSettings {
     /// Enable strict validation for this environment
     pub strict: bool,
-    
+
     /// Required fields for this environment
     pub required_fields: Vec<String>,
-    
+
     /// Disabled validations for this environment
     pub disabled_rules: Vec<String>,
 }
@@ -206,7 +206,8 @@ impl ConfigValidator {
         if config.vector.dimension == 0 {
             messages.push(ValidationMessage {
                 severity: ValidationSeverity::Warning,
-                message: "Vector dimension is 0 - this may cause issues with embeddings".to_string(),
+                message: "Vector dimension is 0 - this may cause issues with embeddings"
+                    .to_string(),
                 field_path: Some("storage.vector.dimension".to_string()),
             });
         }
@@ -238,17 +239,21 @@ impl ConfigValidator {
                         if config.auth.jwt.secret.is_none() {
                             messages.push(ValidationMessage {
                                 severity: ValidationSeverity::Error,
-                                message: "JWT authentication enabled but no secret configured".to_string(),
+                                message: "JWT authentication enabled but no secret configured"
+                                    .to_string(),
                                 field_path: Some("security.auth.jwt.secret".to_string()),
                             });
                         }
                     }
                     "oauth2" => {
-                        if config.auth.oauth2.client_id.is_none() || config.auth.oauth2.client_secret.is_none()
+                        if config.auth.oauth2.client_id.is_none()
+                            || config.auth.oauth2.client_secret.is_none()
                         {
                             messages.push(ValidationMessage {
                                 severity: ValidationSeverity::Error,
-                                message: "OAuth2 authentication enabled but client credentials missing".to_string(),
+                                message:
+                                    "OAuth2 authentication enabled but client credentials missing"
+                                        .to_string(),
                                 field_path: Some("security.auth.oauth2".to_string()),
                             });
                         }
@@ -308,7 +313,8 @@ impl ConfigValidator {
                 if config.metrics.backend.is_none() && config.metrics.endpoint.is_none() {
                     messages.push(ValidationMessage {
                         severity: ValidationSeverity::Warning,
-                        message: "Metrics enabled but no backend or endpoint configured".to_string(),
+                        message: "Metrics enabled but no backend or endpoint configured"
+                            .to_string(),
                         field_path: Some("monitoring.metrics".to_string()),
                     });
                 }
@@ -319,7 +325,8 @@ impl ConfigValidator {
                 if config.tracing.backend.is_none() {
                     messages.push(ValidationMessage {
                         severity: ValidationSeverity::Info,
-                        message: "Tracing enabled but no backend configured - using default".to_string(),
+                        message: "Tracing enabled but no backend configured - using default"
+                            .to_string(),
                         field_path: Some("monitoring.tracing.backend".to_string()),
                     });
                 }
@@ -328,7 +335,8 @@ impl ConfigValidator {
                     if sampling_rate < 0.0 || sampling_rate > 1.0 {
                         messages.push(ValidationMessage {
                             severity: ValidationSeverity::Error,
-                            message: "Tracing sampling rate must be between 0.0 and 1.0".to_string(),
+                            message: "Tracing sampling rate must be between 0.0 and 1.0"
+                                .to_string(),
                             field_path: Some("monitoring.tracing.sampling_rate".to_string()),
                         });
                     }
@@ -356,7 +364,8 @@ impl ConfigValidator {
                 if config.health_check.timeout >= config.health_check.interval {
                     messages.push(ValidationMessage {
                         severity: ValidationSeverity::Warning,
-                        message: "Health check timeout is >= interval - may cause false failures".to_string(),
+                        message: "Health check timeout is >= interval - may cause false failures"
+                            .to_string(),
                         field_path: Some("monitoring.health_check".to_string()),
                     });
                 }
@@ -365,8 +374,6 @@ impl ConfigValidator {
 
         Ok(messages)
     }
-
-
 
     /// Get default environment-specific settings
     fn default_env_settings() -> HashMap<String, ValidationSettings> {
@@ -402,10 +409,7 @@ impl ConfigValidator {
             ValidationSettings {
                 strict: false,
                 required_fields: vec![],
-                disabled_rules: vec![
-                    "api_key_presence".to_string(),
-                    "url_validation".to_string(),
-                ],
+                disabled_rules: vec!["api_key_presence".to_string(), "url_validation".to_string()],
             },
         );
 
@@ -576,13 +580,14 @@ mod tests {
     #[test]
     fn test_llm_config_validation() {
         let validator = ConfigValidator::new();
-        
+
         // Empty LLM config should produce warnings
         let config = crate::config::LlmConfig::default();
         let messages = validator.validate_llm_config(&config).unwrap();
-        
+
         assert!(!messages.is_empty());
-        let warnings: Vec<_> = messages.iter()
+        let warnings: Vec<_> = messages
+            .iter()
             .filter(|m| matches!(m.severity, ValidationSeverity::Warning))
             .collect();
         assert!(!warnings.is_empty());
@@ -591,15 +596,16 @@ mod tests {
     #[test]
     fn test_security_config_validation() {
         let validator = ConfigValidator::new();
-        
+
         // Auth enabled without configuration should produce errors
         let mut config = crate::config::SecurityConfig::default();
         config.auth.enabled = true;
-        
+
         let messages = validator.validate_security_config(&config).unwrap();
         assert!(!messages.is_empty());
-        
-        let errors: Vec<_> = messages.iter()
+
+        let errors: Vec<_> = messages
+            .iter()
             .filter(|m| matches!(m.severity, ValidationSeverity::Error))
             .collect();
         assert!(!errors.is_empty());
@@ -608,7 +614,7 @@ mod tests {
     #[test]
     fn test_monitoring_config_validation() {
         let validator = ConfigValidator::new();
-        
+
         let config = crate::config::MonitoringConfig::default();
         let messages = validator.validate_monitoring_config(&config).unwrap();
         assert!(messages.is_empty()); // Default config should be valid

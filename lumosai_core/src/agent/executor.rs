@@ -32,10 +32,10 @@ use crate::llm::{
 };
 use crate::logger::Logger;
 use crate::memory::Memory;
-use tracing::info;
 use crate::memory::{create_working_memory, WorkingMemory};
 use crate::telemetry::TelemetrySink;
 use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
+use tracing::info;
 
 /// Basic agent implementation
 #[allow(dead_code, clippy::borrowed_box)]
@@ -87,7 +87,7 @@ impl BasicAgent {
 
         // Create base component for logging
         let base = BaseComponent::new(component_config.clone());
-        
+
         // Initialize working memory (if configured)
         let working_memory = if let Some(wm_config) = &config.working_memory {
             match create_working_memory(wm_config) {
@@ -878,11 +878,17 @@ impl Agent for BasicAgent {
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
         let exec_start = std::time::Instant::now();
-        info!("⏱️  [EXECUTOR] generate() entry, messages={}", messages.len());
+        info!(
+            "⏱️  [EXECUTOR] generate() entry, messages={}",
+            messages.len()
+        );
         let mut steps = Vec::new();
-        
+
         // ✅ 1. 如果有 memory，先检索历史消息
-        info!("⏱️  [EXECUTOR] [+{}ms] Starting memory retrieve", exec_start.elapsed().as_millis());
+        info!(
+            "⏱️  [EXECUTOR] [+{}ms] Starting memory retrieve",
+            exec_start.elapsed().as_millis()
+        );
         let mut input_messages = messages.to_vec();
         if let Some(memory) = &self.memory {
             // 尝试检索最近的消息
@@ -892,25 +898,37 @@ impl Agent for BasicAgent {
                 enabled: true,
                 working_memory: None,
                 semantic_recall: None,
-                last_messages: Some(0),  // ⭐⭐⭐ 优化：禁用历史消息，只使用当前消息（最快性能）
+                last_messages: Some(0), // ⭐⭐⭐ 优化：禁用历史消息，只使用当前消息（最快性能）
                 query: None,
             };
-            
+
             if let Ok(historical) = memory.retrieve(&memory_config).await {
                 if !historical.is_empty() {
-                    info!("⏱️  [EXECUTOR] [+{}ms] Memory retrieved: {} messages", 
-                          exec_start.elapsed().as_millis(), historical.len());
-                    self.logger().info(&format!("✅ Retrieved {} historical messages from memory", historical.len()));
+                    info!(
+                        "⏱️  [EXECUTOR] [+{}ms] Memory retrieved: {} messages",
+                        exec_start.elapsed().as_millis(),
+                        historical.len()
+                    );
+                    self.logger().info(&format!(
+                        "✅ Retrieved {} historical messages from memory",
+                        historical.len()
+                    ));
                     // 将历史消息添加到输入前面
                     input_messages = historical.into_iter().chain(input_messages).collect();
                 }
             } else {
-                info!("⏱️  [EXECUTOR] [+{}ms] Memory retrieve completed (no history)", exec_start.elapsed().as_millis());
+                info!(
+                    "⏱️  [EXECUTOR] [+{}ms] Memory retrieve completed (no history)",
+                    exec_start.elapsed().as_millis()
+                );
             }
         }
-        
-        info!("⏱️  [EXECUTOR] [+{}ms] Formatting messages, total={}", 
-              exec_start.elapsed().as_millis(), input_messages.len());
+
+        info!(
+            "⏱️  [EXECUTOR] [+{}ms] Formatting messages, total={}",
+            exec_start.elapsed().as_millis(),
+            input_messages.len()
+        );
         let mut all_messages = self.format_messages(&input_messages, options);
         let run_id = options
             .run_id
@@ -1040,7 +1058,10 @@ impl Agent for BasicAgent {
             let _ = trace_collector.add_trace_step(trace_id, mode_step).await;
         }
         // Main generation loop
-        info!("⏱️  [EXECUTOR] [+{}ms] Starting LLM generation loop", exec_start.elapsed().as_millis());
+        info!(
+            "⏱️  [EXECUTOR] [+{}ms] Starting LLM generation loop",
+            exec_start.elapsed().as_millis()
+        );
         while current_step < max_steps {
             current_step += 1;
             let step_start_time = std::time::Instant::now();
@@ -1778,12 +1799,13 @@ impl Agent for BasicAgent {
             // 保存用户消息
             for msg in messages {
                 if let Err(e) = memory.store(msg).await {
-                    self.logger().warn(&format!("Failed to store user message: {}", e));
+                    self.logger()
+                        .warn(&format!("Failed to store user message: {}", e));
                 } else {
                     self.logger().debug("✅ Stored user message to memory");
                 }
             }
-            
+
             // 保存助手响应
             let assistant_message = Message {
                 role: crate::llm::Role::Assistant,
@@ -1792,7 +1814,8 @@ impl Agent for BasicAgent {
                 name: None,
             };
             if let Err(e) = memory.store(&assistant_message).await {
-                self.logger().warn(&format!("Failed to store assistant response: {}", e));
+                self.logger()
+                    .warn(&format!("Failed to store assistant response: {}", e));
             } else {
                 self.logger().info("✅ Stored assistant response to memory");
             }
@@ -1953,7 +1976,6 @@ impl Agent for BasicAgent {
         })
     }
 
-    
     /// Get the current status of the agent
     fn get_status(&self) -> AgentStatus {
         self.status.clone()

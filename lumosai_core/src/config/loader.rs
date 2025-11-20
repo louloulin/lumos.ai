@@ -13,26 +13,26 @@ use std::path::Path;
 pub enum ConfigSource {
     /// Load from file (auto-detect format)
     File(String),
-    
+
     /// Load from environment variables with prefix
     Environment(String),
-    
+
     /// Load from specific environment variables
     EnvironmentVars(Vec<String>),
-    
+
     /// Load from remote URL
     Remote {
         url: String,
         auth_token: Option<String>,
         headers: HashMap<String, String>,
     },
-    
+
     /// Load from multiple sources with merge strategy
     Merged {
         sources: Vec<ConfigSource>,
         strategy: MergeStrategy,
     },
-    
+
     /// Auto-detect configuration source
     AutoDetect,
 }
@@ -65,10 +65,10 @@ pub struct ConfigLoader {
 pub trait ConfigSourceHandler: Send + Sync {
     /// Load configuration from custom source
     fn load(&self, source: &str) -> Result<Value>;
-    
+
     /// Get handler name
     fn name(&self) -> &str;
-    
+
     /// Check if handler can handle the given source
     fn can_handle(&self, source: &str) -> bool;
 }
@@ -98,8 +98,13 @@ impl ConfigLoader {
             ConfigSource::File(path) => self.load_from_file(path).await,
             ConfigSource::Environment(prefix) => self.load_from_env(prefix).await,
             ConfigSource::EnvironmentVars(vars) => self.load_from_env_vars(vars).await,
-            ConfigSource::Remote { url, auth_token, headers } => {
-                self.load_from_remote(url, auth_token.as_deref(), headers).await
+            ConfigSource::Remote {
+                url,
+                auth_token,
+                headers,
+            } => {
+                self.load_from_remote(url, auth_token.as_deref(), headers)
+                    .await
             }
             ConfigSource::Merged { sources, strategy } => {
                 self.load_and_merge(sources, strategy).await
@@ -111,7 +116,7 @@ impl ConfigLoader {
     /// Load configuration from file (auto-detect format)
     async fn load_from_file(&self, path: &str) -> Result<Value> {
         let path = Path::new(path);
-        
+
         if !path.exists() {
             return Err(Error::Configuration(format!(
                 "Configuration file not found: {}",
@@ -121,9 +126,7 @@ impl ConfigLoader {
 
         let content = tokio::fs::read_to_string(path)
             .await
-            .map_err(|e| {
-                Error::Configuration(format!("Failed to read config file: {}", e))
-            })?;
+            .map_err(|e| Error::Configuration(format!("Failed to read config file: {}", e)))?;
 
         // Auto-detect format based on file extension
         let extension = path
@@ -132,18 +135,14 @@ impl ConfigLoader {
             .map(|ext| ext.to_lowercase());
 
         match extension.as_deref() {
-            Some("yaml") | Some("yml") => {
-                serde_yaml::from_str(&content)
-                    .map_err(|e| Error::Configuration(format!("Failed to parse YAML: {}", e)))
-            }
-            Some("json") => {
-                serde_json::from_str(&content)
-                    .map_err(|e| Error::Configuration(format!("Failed to parse JSON: {}", e)))
-            }
+            Some("yaml") | Some("yml") => serde_yaml::from_str(&content)
+                .map_err(|e| Error::Configuration(format!("Failed to parse YAML: {}", e))),
+            Some("json") => serde_json::from_str(&content)
+                .map_err(|e| Error::Configuration(format!("Failed to parse JSON: {}", e))),
             Some("toml") => {
                 let toml_value: toml::Value = toml::from_str(&content)
                     .map_err(|e| Error::Configuration(format!("Failed to parse TOML: {}", e)))?;
-                
+
                 // Convert TOML to JSON value
                 self.toml_to_json(toml_value)
             }
@@ -153,19 +152,19 @@ impl ConfigLoader {
                 if let Ok(value) = serde_yaml::from_str::<Value>(&content) {
                     return Ok(value);
                 }
-                
+
                 // Try JSON
                 if let Ok(value) = serde_json::from_str::<Value>(&content) {
                     return Ok(value);
                 }
-                
+
                 // Try TOML
                 if let Ok(toml_value) = toml::from_str::<toml::Value>(&content) {
                     return self.toml_to_json(toml_value);
                 }
-                
+
                 Err(Error::Configuration(
-                    "Failed to auto-detect configuration format".to_string()
+                    "Failed to auto-detect configuration format".to_string(),
                 ))
             }
         }
@@ -184,22 +183,24 @@ impl ConfigLoader {
         for (key, value) in std::env::vars() {
             if key.starts_with(&prefix_with_underscore) {
                 let config_key = key[prefix_with_underscore.len()..].to_lowercase();
-                
+
                 // Convert underscore to dot for nested keys
                 let config_key = config_key.replace('_', ".");
-                
+
                 // Try to parse as JSON, fallback to string
                 let parsed_value = match serde_json::from_str::<Value>(&value) {
                     Ok(v) => v,
                     Err(_) => Value::String(value),
                 };
-                
+
                 // Insert into nested structure
                 self.insert_nested(&mut config, &config_key, parsed_value);
             }
         }
 
-        Ok(Value::Object(config.into_iter().map(|(k, v)| (k, v)).collect()))
+        Ok(Value::Object(
+            config.into_iter().map(|(k, v)| (k, v)).collect(),
+        ))
     }
 
     /// Load configuration from specific environment variables
@@ -209,21 +210,28 @@ impl ConfigLoader {
         for var in vars {
             if let Ok(value) = std::env::var(var) {
                 let config_key = var.to_lowercase().replace('_', ".");
-                
+
                 let parsed_value = match serde_json::from_str::<Value>(&value) {
                     Ok(v) => v,
                     Err(_) => Value::String(value),
                 };
-                
+
                 self.insert_nested(&mut config, &config_key, parsed_value);
             }
         }
 
-        Ok(Value::Object(config.into_iter().map(|(k, v)| (k, v)).collect()))
+        Ok(Value::Object(
+            config.into_iter().map(|(k, v)| (k, v)).collect(),
+        ))
     }
 
     /// Load configuration from remote URL
-    async fn load_from_remote(&self, url: &str, auth_token: Option<&str>, headers: &HashMap<String, String>) -> Result<Value> {
+    async fn load_from_remote(
+        &self,
+        url: &str,
+        auth_token: Option<&str>,
+        headers: &HashMap<String, String>,
+    ) -> Result<Value> {
         let client = reqwest::Client::builder()
             .user_agent(&self.user_agent)
             .timeout(std::time::Duration::from_secs(self.timeout))
@@ -271,7 +279,7 @@ impl ConfigLoader {
                             self.max_retries, e
                         )));
                     }
-                    
+
                     // Wait before retrying with exponential backoff
                     let delay = std::time::Duration::from_millis(1000 * 2_u64.pow(attempts - 1));
                     tokio::time::sleep(delay).await;
@@ -310,7 +318,7 @@ impl ConfigLoader {
         // Try configuration files
         let config_files = [
             "lumosai.yaml",
-            "lumosai.yml", 
+            "lumosai.yml",
             "lumosai.json",
             "lumosai.toml",
             ".lumosai.yaml",
@@ -346,9 +354,7 @@ impl ConfigLoader {
                     base
                 }
             }
-            MergeStrategy::DeepMerge => {
-                self.deep_merge(base, update)
-            }
+            MergeStrategy::DeepMerge => self.deep_merge(base, update),
         }
     }
 
@@ -397,7 +403,7 @@ impl ConfigLoader {
     fn toml_to_json(&self, toml_value: toml::Value) -> Result<Value> {
         let toml_string = toml::to_string_pretty(&toml_value)
             .map_err(|e| Error::Configuration(format!("Failed to serialize TOML: {}", e)))?;
-        
+
         serde_yaml::from_str(&toml_string)
             .map_err(|e| Error::Configuration(format!("Failed to convert TOML to JSON: {}", e)))
     }
@@ -413,8 +419,8 @@ impl Default for ConfigLoader {
 mod tests {
     use super::*;
     use std::env;
-    use tempfile::NamedTempFile;
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[tokio::test]
     async fn test_load_from_json_file() {
@@ -428,10 +434,13 @@ mod tests {
 
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(config_content.as_bytes()).unwrap();
-        
+
         let loader = ConfigLoader::new();
-        let result = loader.load_from_file(temp_file.path().to_str().unwrap()).await.unwrap();
-        
+        let result = loader
+            .load_from_file(temp_file.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         assert_eq!(result["test"]["value"], "hello");
     }
 
@@ -444,10 +453,13 @@ mod tests {
 
         let mut temp_file = NamedTempFile::with_suffix(".yaml").unwrap();
         temp_file.write_all(config_content.as_bytes()).unwrap();
-        
+
         let loader = ConfigLoader::new();
-        let result = loader.load_from_file(temp_file.path().to_str().unwrap()).await.unwrap();
-        
+        let result = loader
+            .load_from_file(temp_file.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         assert_eq!(result["test"]["value"], "hello");
     }
 
@@ -460,10 +472,13 @@ mod tests {
 
         let mut temp_file = NamedTempFile::with_suffix(".toml").unwrap();
         temp_file.write_all(config_content.as_bytes()).unwrap();
-        
+
         let loader = ConfigLoader::new();
-        let result = loader.load_from_file(temp_file.path().to_str().unwrap()).await.unwrap();
-        
+        let result = loader
+            .load_from_file(temp_file.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         assert_eq!(result["test"]["value"], "hello");
     }
 
@@ -474,7 +489,7 @@ mod tests {
 
         let loader = ConfigLoader::new();
         let result = loader.load_from_env("lumosai").await.unwrap();
-        
+
         assert_eq!(result["test"]["value"], "hello");
         assert_eq!(result["nested"]["deep"]["value"], "world");
 
@@ -495,8 +510,9 @@ mod tests {
         });
 
         let loader = ConfigLoader::new();
-        let merged = loader.merge_values(source1.clone(), source2.clone(), &MergeStrategy::LastWins);
-        
+        let merged =
+            loader.merge_values(source1.clone(), source2.clone(), &MergeStrategy::LastWins);
+
         assert_eq!(merged["shared"], "value2");
         assert_eq!(merged["unique1"], "unique");
         assert_eq!(merged["unique2"], "unique");
@@ -525,11 +541,11 @@ mod tests {
 
         let loader = ConfigLoader::new();
         let merged = loader.deep_merge(base, update);
-        
+
         assert_eq!(merged["nested"]["shared"], "update_value");
         assert_eq!(merged["nested"]["base_only"], "base");
         assert_eq!(merged["nested"]["update_only"], "update");
-        
+
         // Arrays are concatenated
         let array = merged["array"].as_array().unwrap();
         assert_eq!(array.len(), 4);

@@ -304,17 +304,24 @@ impl LlmProvider for ZhipuProvider {
 
         // Convert messages to 智谱AI format
         let api_messages = self.convert_messages(messages);
-        
+
         // 🔍 打印完整的prompt内容（所有消息合并）
         use tracing::info;
         info!("📋 === 完整Prompt内容（所有消息） ===");
-        let total_chars: usize = api_messages.iter()
-            .map(|m| m.get("content").and_then(|v| v.as_str()).unwrap_or("").len())
+        let total_chars: usize = api_messages
+            .iter()
+            .map(|m| {
+                m.get("content")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .len()
+            })
             .sum();
         info!("   总字符数: {}", total_chars);
-        
+
         // 合并所有消息内容
-        let full_prompt: String = api_messages.iter()
+        let full_prompt: String = api_messages
+            .iter()
             .map(|m| {
                 let role = m.get("role").and_then(|v| v.as_str()).unwrap_or("unknown");
                 let content = m.get("content").and_then(|v| v.as_str()).unwrap_or("");

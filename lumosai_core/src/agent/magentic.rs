@@ -194,7 +194,11 @@ impl MagenticExecutor {
         let mut final_result = String::new();
 
         while iteration < self.max_iterations {
-            tracing::debug!("Magentic iteration {}/{}", iteration + 1, self.max_iterations);
+            tracing::debug!(
+                "Magentic iteration {}/{}",
+                iteration + 1,
+                self.max_iterations
+            );
 
             // 1. Manager 规划任务
             let planning_prompt = self.build_planning_prompt(initial_goal).await;
@@ -339,4 +343,3 @@ mod tests {
         assert_eq!(tasks[2].description, "Third task");
     }
 }
-

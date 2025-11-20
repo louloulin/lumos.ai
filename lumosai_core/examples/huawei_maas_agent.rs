@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
     println!("\n--- 示例 1: 简单对话 ---");
     let question1 = "什么是 Rust 编程语言？请简要介绍。";
     println!("用户: {}", question1);
-    
+
     match agent.generate(question1, &LlmOptions::default()).await {
         Ok(response) => {
             println!("助手: {}\n", response);
@@ -125,7 +125,7 @@ async fn main() -> Result<()> {
     match providers::auto_provider() {
         Ok(auto_llm) => {
             println!("✅ 自动选择的 provider: {}", auto_llm.name());
-            
+
             let auto_agent = AgentBuilder::new()
                 .name("auto_assistant")
                 .instructions("你是一个智能助手")
@@ -133,7 +133,10 @@ async fn main() -> Result<()> {
                 .build()?;
 
             let test_question = "你好，请介绍一下自己";
-            match auto_agent.generate(test_question, &LlmOptions::default()).await {
+            match auto_agent
+                .generate(test_question, &LlmOptions::default())
+                .await
+            {
                 Ok(response) => {
                     println!("响应: {}\n", response);
                 }

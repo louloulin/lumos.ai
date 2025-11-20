@@ -149,7 +149,8 @@ impl ToolRegistry {
             }
         }
 
-        let _ = self.base
+        let _ = self
+            .base
             .logger()
             .info(&format!("Tool '{tool_name}' registered successfully"));
         Ok(())
@@ -213,7 +214,8 @@ impl ToolRegistry {
             }
         }
 
-        let _ = self.base
+        let _ = self
+            .base
             .logger()
             .info(&format!("Tool '{tool_name}' unregistered successfully"));
         Ok(())

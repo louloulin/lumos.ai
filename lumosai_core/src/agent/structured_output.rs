@@ -158,7 +158,9 @@ impl BasicAgent {
     /// 便捷方法：生成简单的结构化输出
     ///
     /// 使用单个消息生成结构化输出
-    pub async fn generate_structured_simple<T: DeserializeOwned + Send + 'static + schemars::JsonSchema>(
+    pub async fn generate_structured_simple<
+        T: DeserializeOwned + Send + 'static + schemars::JsonSchema,
+    >(
         &self,
         prompt: &str,
     ) -> Result<T> {
@@ -174,7 +176,9 @@ impl BasicAgent {
     }
 
     /// 便捷方法：使用自定义 schema 生成结构化输出
-    pub async fn generate_with_schema<T: DeserializeOwned + Send + 'static + schemars::JsonSchema>(
+    pub async fn generate_with_schema<
+        T: DeserializeOwned + Send + 'static + schemars::JsonSchema,
+    >(
         &self,
         prompt: &str,
         schema: Value,
@@ -213,8 +217,8 @@ impl StructuredOutputExt for crate::agent::AgentBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::{Deserialize, Serialize};
     use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
     struct TaskBreakdown {
@@ -259,7 +263,7 @@ Hope this helps!"#;
         // Test that schemars can generate schema from Rust type
         let schema = schemars::schema_for!(TaskBreakdown);
         let schema_value = serde_json::to_value(&schema.schema).unwrap();
-        
+
         // Verify schema has expected structure
         assert!(schema_value.get("type").is_some());
         assert_eq!(schema_value["type"], "object");
@@ -270,10 +274,9 @@ Hope this helps!"#;
     fn test_simple_struct_schema() {
         let schema = schemars::schema_for!(SimpleStruct);
         let schema_value = serde_json::to_value(&schema.schema).unwrap();
-        
+
         assert_eq!(schema_value["type"], "object");
         assert!(schema_value["properties"].get("name").is_some());
         assert!(schema_value["properties"].get("age").is_some());
     }
 }
-

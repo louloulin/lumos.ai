@@ -2,8 +2,6 @@
 
 pub mod api_consistency;
 pub mod builder;
-pub mod structured_output;
-pub mod rag_integration;
 pub mod chain;
 pub mod collaboration;
 pub mod communication;
@@ -18,32 +16,34 @@ pub mod events;
 pub mod executor;
 pub mod feature_completion;
 pub mod mastra_compat;
+pub mod memory_resolver;
 pub mod message_utils;
 pub mod model_resolver;
 pub mod operators; // 新增：Agent 操作符支持
 pub mod orchestration;
 pub mod performance;
+pub mod rag_integration;
 pub mod runtime_context;
 pub mod session;
-pub mod state_management; // 新增：Agent状态管理
 pub mod simplified_api;
 pub mod sop_environment;
 pub mod sop_simple;
 pub mod sop_types;
+pub mod state_management; // 新增：Agent状态管理
 pub mod streaming;
-pub mod trait_def;
+pub mod structured_output;
 pub mod tool_resolver;
-pub mod memory_resolver;
+pub mod trait_def;
 pub mod types;
 pub mod websocket;
 
 // 高级协作模式（2025 研究成果）
+pub mod debate;
 pub mod group_chat;
 pub mod handoff;
-pub mod reflection;
 pub mod magentic;
-pub mod debate;
 pub mod maker_checker;
+pub mod reflection;
 
 // 暂时移除模块化Agent组件（有编译错误）
 // pub mod modular;
@@ -85,8 +85,8 @@ pub use trait_def::{Agent, AgentStructuredOutput};
 
 // Re-export builder
 pub use builder::AgentBuilder;
-pub use structured_output::StructuredOutputExt;
 pub use rag_integration::{RagAgent, RagConfig, RagIntegrationExt};
+pub use structured_output::StructuredOutputExt;
 
 // Re-export streaming types
 pub use streaming::{AgentEvent, IntoStreaming, MemoryOperation, StreamingAgent, StreamingConfig};
@@ -157,14 +157,14 @@ pub use communication::{
 };
 
 // Re-export advanced collaboration patterns (2025 research)
+pub use debate::{DebateExecutor, DebatePosition, DebateResult, DebateRound};
 pub use group_chat::{ChatMessage, ChatThread, GroupChatExecutor};
 pub use handoff::{HandoffCondition, HandoffExecutor, HandoffRecord, HandoffRule};
-pub use reflection::{ReflectionExecutor, ReflectionIteration, ReflectionStats};
 pub use magentic::{MagenticExecutor, MagenticTask, TaskLedger, TaskState};
-pub use debate::{DebateExecutor, DebatePosition, DebateResult, DebateRound};
 pub use maker_checker::{
     CheckResult, CheckStatus, MakerCheckerExecutor, MakerCheckerIteration, MakerCheckerStats,
 };
+pub use reflection::{ReflectionExecutor, ReflectionIteration, ReflectionStats};
 
 // 暂时移除模块化代理组件的重新导出
 // pub use modular::{

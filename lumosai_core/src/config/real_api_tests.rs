@@ -4,10 +4,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{
-        AgentConfig, ConfigLoader, ProjectConfig, WorkflowConfig,
-        YamlConfig,
-    };
+    use crate::config::{AgentConfig, ConfigLoader, ProjectConfig, WorkflowConfig, YamlConfig};
     use crate::yaml_config::{MemoryConfig, WorkflowStepConfig};
     use std::collections::HashMap;
     use std::fs;

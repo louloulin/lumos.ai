@@ -20,4 +20,4 @@ pub use types::*;
 pub use validator::{ConfigValidator, ValidationMessage, ValidationSeverity};
 
 // Re-export only specific items from yaml_config to avoid conflicts
-pub use yaml_config::{YamlConfig, WorkflowConfig, AgentConfig};
+pub use yaml_config::{AgentConfig, WorkflowConfig, YamlConfig};

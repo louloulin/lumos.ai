@@ -288,37 +288,22 @@ impl<T: Agent> StreamingAgent<T> {
             .unwrap_or_default();
 
         Ok(Box::pin(async_stream::stream! {
-            // Stream initial LLM generation directly here instead of calling self.stream_llm_generation
+            // ✅ 真实流式：直接转发LLM流，不缓冲不延迟
             match llm.generate_stream(&prompt, &llm_options).await {
                 Ok(mut llm_stream) => {
                     let mut accumulated_response = String::new();
-                    let mut text_buffer = String::new();
 
                     while let Some(chunk_result) = llm_stream.next().await {
                         match chunk_result {
                             Ok(chunk) => {
-                                accumulated_response.push_str(&chunk);
-                                text_buffer.push_str(&chunk);
-
-                                // Emit text deltas based on buffer size configuration
-                                while text_buffer.len() >= text_buffer_size {
-                                    let delta = text_buffer.chars()
-                                        .take(text_buffer_size)
-                                        .collect::<String>();
-
-                                    text_buffer = text_buffer.chars()
-                                        .skip(text_buffer_size)
-                                        .collect();
-
+                                if !chunk.is_empty() {
+                                    accumulated_response.push_str(&chunk);
+                                    
+                                    // 立即发送每个chunk，真实流式
                                     yield Ok(AgentEvent::TextDelta {
-                                        delta,
+                                        delta: chunk,
                                         step_id: Some(step_id.clone()),
                                     });
-
-                                    // Optional delay for demonstration
-                                    if let Some(delay_ms) = text_delta_delay_ms {
-                                        tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                    }
                                 }
                             },
                             Err(e) => {
@@ -326,14 +311,6 @@ impl<T: Agent> StreamingAgent<T> {
                                 return;
                             }
                         }
-                    }
-
-                    // Emit any remaining text in buffer
-                    if !text_buffer.is_empty() {
-                        yield Ok(AgentEvent::TextDelta {
-                            delta: text_buffer,
-                            step_id: Some(step_id.clone()),
-                        });
                     }
 
                     // Parse and execute function calls from accumulated_response
@@ -431,37 +408,22 @@ impl<T: Agent> StreamingAgent<T> {
             .unwrap_or_default();
 
         Ok(Box::pin(async_stream::stream! {
-            // Stream LLM generation directly here instead of calling self.stream_llm_generation
+            // ✅ 真实流式：直接转发LLM流，不缓冲不延迟
             match llm.generate_stream(&prompt, &llm_options).await {
                 Ok(mut llm_stream) => {
                     let mut accumulated_response = String::new();
-                    let mut text_buffer = String::new();
 
                     while let Some(chunk_result) = llm_stream.next().await {
                         match chunk_result {
                             Ok(chunk) => {
-                                accumulated_response.push_str(&chunk);
-                                text_buffer.push_str(&chunk);
-
-                                // Emit text deltas based on buffer size configuration
-                                while text_buffer.len() >= text_buffer_size {
-                                    let delta = text_buffer.chars()
-                                        .take(text_buffer_size)
-                                        .collect::<String>();
-
-                                    text_buffer = text_buffer.chars()
-                                        .skip(text_buffer_size)
-                                        .collect();
-
+                                if !chunk.is_empty() {
+                                    accumulated_response.push_str(&chunk);
+                                    
+                                    // 立即发送每个chunk，真实流式
                                     yield Ok(AgentEvent::TextDelta {
-                                        delta,
+                                        delta: chunk,
                                         step_id: Some(step_id.clone()),
                                     });
-
-                                    // Optional delay for demonstration
-                                    if let Some(delay_ms) = text_delta_delay_ms {
-                                        tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                    }
                                 }
                             },
                             Err(e) => {
@@ -469,14 +431,6 @@ impl<T: Agent> StreamingAgent<T> {
                                 return;
                             }
                         }
-                    }
-
-                    // Emit any remaining text in buffer
-                    if !text_buffer.is_empty() {
-                        yield Ok(AgentEvent::TextDelta {
-                            delta: text_buffer,
-                            step_id: Some(step_id.clone()),
-                        });
                     }
 
                     yield Ok(AgentEvent::GenerationComplete {

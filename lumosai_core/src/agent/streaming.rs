@@ -393,19 +393,80 @@ impl<T: Agent> StreamingAgent<T> {
         >,
         Box<dyn std::error::Error + Send + Sync>,
     > {
+        use tracing::info;
+        use crate::llm::Role;
+        
         let step_id = Uuid::new_v4().to_string();
-        let messages = messages.to_vec();
-        let options = options.clone();
+        let mut messages_vec = messages.to_vec();
+        let options_clone = options.clone();
+
+        // ⭐⭐⭐ 核心修复：在streaming之前检索memory
+        info!("🧠 [STREAMING] Checking memory before LLM call");
+        if let Some(memory) = self.base_agent.get_memory() {
+            // 提取用户最后一条消息作为query
+            let user_query = messages_vec
+                .iter()
+                .rev()
+                .find(|m| matches!(m.role, Role::User))
+                .map(|m| m.content.clone());
+
+            if let Some(ref query) = user_query {
+                info!("   🔍 Semantic search query: '{}'", query);
+            } else {
+                info!("   ℹ️  No user query found, using history mode");
+            }
+
+            let memory_config = crate::memory::MemoryConfig {
+                store_id: None,
+                namespace: options_clone.thread_id.clone(),
+                enabled: true,
+                working_memory: None,
+                semantic_recall: None,
+                last_messages: Some(5),
+                query: user_query.clone(), // ⭐ 传递query进行语义搜索
+            };
+
+            match memory.retrieve(&memory_config).await {
+                Ok(historical) if !historical.is_empty() => {
+                    info!("   ✅ Retrieved {} memories from memory backend", historical.len());
+                    for (idx, msg) in historical.iter().enumerate() {
+                        let preview = if msg.content.len() > 60 {
+                            format!("{}...", &msg.content[..60])
+                        } else {
+                            msg.content.clone()
+                        };
+                        info!("      {}. [{:?}] {}", idx + 1, msg.role, preview);
+                    }
+                    // 将历史消息插入到当前消息之前
+                    messages_vec = historical.into_iter().chain(messages_vec).collect();
+                    info!("   📝 Total messages after memory: {}", messages_vec.len());
+                }
+                Ok(_) => {
+                    info!("   ℹ️  No historical memories found");
+                }
+                Err(e) => {
+                    info!("   ⚠️  Memory retrieve failed: {}", e);
+                }
+            }
+        } else {
+            info!("   ℹ️  No memory backend configured");
+        }
 
         // Clone all necessary data to make the stream 'static
         let llm = self.base_agent.get_llm();
         let text_buffer_size = self.config.text_buffer_size;
         let text_delta_delay_ms = self.config.text_delta_delay_ms;
-        let llm_options = options.llm_options.clone();
-        let prompt = messages
-            .last()
-            .map(|msg| msg.content.clone())
-            .unwrap_or_default();
+        let llm_options = options_clone.llm_options.clone();
+        
+        // ⭐ 修复：使用完整messages构建prompt，而不是只用最后一条
+        let formatted_messages = self.base_agent.format_messages(&messages_vec, &options_clone);
+        info!("   📤 Calling LLM with {} formatted messages", formatted_messages.len());
+        
+        let prompt = formatted_messages
+            .iter()
+            .map(|msg| format!("{:?}: {}", msg.role, msg.content))
+            .collect::<Vec<_>>()
+            .join("\n\n");
 
         Ok(Box::pin(async_stream::stream! {
             // ✅ 真实流式：直接转发LLM流，不缓冲不延迟

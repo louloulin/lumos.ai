@@ -891,6 +891,21 @@ impl Agent for BasicAgent {
         );
         let mut input_messages = messages.to_vec();
         if let Some(memory) = &self.memory {
+            // ⭐ 核心修复：提取用户的最后一条消息作为语义搜索query
+            let user_query = messages
+                .iter()
+                .rev()
+                .find(|m| matches!(m.role, Role::User))
+                .map(|m| m.content.clone());
+
+            if let Some(ref q) = user_query {
+                info!(
+                    "⏱️  [EXECUTOR] [+{}ms] Semantic search query: '{}'",
+                    exec_start.elapsed().as_millis(),
+                    q
+                );
+            }
+
             // 尝试检索最近的消息
             let memory_config = crate::memory::MemoryConfig {
                 store_id: None,
@@ -898,8 +913,8 @@ impl Agent for BasicAgent {
                 enabled: true,
                 working_memory: None,
                 semantic_recall: None,
-                last_messages: Some(0), // ⭐⭐⭐ 优化：禁用历史消息，只使用当前消息（最快性能）
-                query: None,
+                last_messages: Some(5), // ⭐ 增加检索数量到5条
+                query: user_query, // ⭐⭐⭐ 传递用户问题作为语义搜索query
             };
 
             if let Ok(historical) = memory.retrieve(&memory_config).await {

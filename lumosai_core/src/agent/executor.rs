@@ -32,6 +32,7 @@ use crate::llm::{
 };
 use crate::logger::Logger;
 use crate::memory::Memory;
+use tracing::info;
 use crate::memory::{create_working_memory, WorkingMemory};
 use crate::telemetry::TelemetrySink;
 use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
@@ -876,9 +877,12 @@ impl Agent for BasicAgent {
         messages: &[Message],
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
+        let exec_start = std::time::Instant::now();
+        info!("⏱️  [EXECUTOR] generate() entry, messages={}", messages.len());
         let mut steps = Vec::new();
         
         // ✅ 1. 如果有 memory，先检索历史消息
+        info!("⏱️  [EXECUTOR] [+{}ms] Starting memory retrieve", exec_start.elapsed().as_millis());
         let mut input_messages = messages.to_vec();
         if let Some(memory) = &self.memory {
             // 尝试检索最近的消息
@@ -888,19 +892,25 @@ impl Agent for BasicAgent {
                 enabled: true,
                 working_memory: None,
                 semantic_recall: None,
-                last_messages: Some(10),  // 检索最近10条
+                last_messages: Some(3),  // ⭐ 优化：减少到3条，降低prompt tokens
                 query: None,
             };
             
             if let Ok(historical) = memory.retrieve(&memory_config).await {
                 if !historical.is_empty() {
+                    info!("⏱️  [EXECUTOR] [+{}ms] Memory retrieved: {} messages", 
+                          exec_start.elapsed().as_millis(), historical.len());
                     self.logger().info(&format!("✅ Retrieved {} historical messages from memory", historical.len()));
                     // 将历史消息添加到输入前面
                     input_messages = historical.into_iter().chain(input_messages).collect();
                 }
+            } else {
+                info!("⏱️  [EXECUTOR] [+{}ms] Memory retrieve completed (no history)", exec_start.elapsed().as_millis());
             }
         }
         
+        info!("⏱️  [EXECUTOR] [+{}ms] Formatting messages, total={}", 
+              exec_start.elapsed().as_millis(), input_messages.len());
         let mut all_messages = self.format_messages(&input_messages, options);
         let run_id = options
             .run_id
@@ -1029,7 +1039,8 @@ impl Agent for BasicAgent {
 
             let _ = trace_collector.add_trace_step(trace_id, mode_step).await;
         }
-
+        // Main generation loop
+        info!("⏱️  [EXECUTOR] [+{}ms] Starting LLM generation loop", exec_start.elapsed().as_millis());
         while current_step < max_steps {
             current_step += 1;
             let step_start_time = std::time::Instant::now();

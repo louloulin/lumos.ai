@@ -411,7 +411,7 @@ impl<T: Agent> StreamingAgent<T> {
                 .map(|m| m.content.clone());
 
             if let Some(ref query) = user_query {
-                info!("   🔍 Semantic search query: '{}'", query);
+                info!("   🔍 Semantic search query: '{}' (length: {} chars)", query, query.len());
             } else {
                 info!("   ℹ️  No user query found, using history mode");
             }
@@ -429,23 +429,41 @@ impl<T: Agent> StreamingAgent<T> {
             match memory.retrieve(&memory_config).await {
                 Ok(historical) if !historical.is_empty() => {
                     info!("   ✅ Retrieved {} memories from memory backend", historical.len());
+                    
+                    // 创建一个memory context提示，让LLM知道这些是相关记忆
+                    let memory_context = Message {
+                        role: Role::System,
+                        content: format!(
+                            "[MEMORY CONTEXT]\nThe following {} message(s) are semantically relevant memories from past conversations. Use them to provide contextual and personalized responses:\n",
+                            historical.len()
+                        ),
+                        metadata: None,
+                        name: None,
+                    };
+                    
                     for (idx, msg) in historical.iter().enumerate() {
-                        let preview = if msg.content.len() > 60 {
-                            format!("{}...", &msg.content[..60])
+                        let preview = if msg.content.len() > 80 {
+                            format!("{}...", &msg.content[..80])
                         } else {
                             msg.content.clone()
                         };
                         info!("      {}. [{:?}] {}", idx + 1, msg.role, preview);
                     }
-                    // 将历史消息插入到当前消息之前
-                    messages_vec = historical.into_iter().chain(messages_vec).collect();
-                    info!("   📝 Total messages after memory: {}", messages_vec.len());
+                    
+                    // 插入记忆：System提示 -> 历史记忆 -> 当前消息
+                    let mut final_messages = vec![memory_context];
+                    final_messages.extend(historical);
+                    final_messages.extend(messages_vec);
+                    messages_vec = final_messages;
+                    
+                    info!("   📝 Total messages after memory injection: {}", messages_vec.len());
+                    info!("   🎯 Memory context injected to guide LLM");
                 }
                 Ok(_) => {
-                    info!("   ℹ️  No historical memories found");
+                    info!("   ℹ️  No historical memories found - responding without context");
                 }
                 Err(e) => {
-                    info!("   ⚠️  Memory retrieve failed: {}", e);
+                    info!("   ⚠️  Memory retrieve failed: {} - continuing without memory", e);
                 }
             }
         } else {

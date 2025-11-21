@@ -149,6 +149,12 @@ pub use error_handling::{
     RecoveryAction, RetryExecutor, RetryStrategy,
 };
 
+// Re-export API consistency
+pub use api_consistency::{
+    ApiConsistencyChecker, ApiSpecChecker, ApiStandardizer, ConsistencyCheckResult,
+    ConsistencyIssue,
+};
+
 // Re-export DAG orchestration
 pub use dag_orchestration::{AgentChain, AgentDagOrchestrator, AgentDagOrchestratorBuilder};
 

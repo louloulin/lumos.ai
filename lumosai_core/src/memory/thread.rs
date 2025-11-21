@@ -7,10 +7,14 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fmt;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 use crate::error::Error;
 use crate::llm::Message;
+use crate::memory::processor::{MemoryProcessor, MemoryProcessorOptions};
 use crate::Result;
 
 /// Memory thread for managing conversation history and context
@@ -30,6 +34,23 @@ pub struct MemoryThread {
     pub created_at: DateTime<Utc>,
     /// When the thread was last updated
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+struct StoredMessage {
+    id: String,
+    message: Message,
+    timestamp: DateTime<Utc>,
+}
+
+impl StoredMessage {
+    fn new(message: &Message) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            message: message.clone(),
+            timestamp: Utc::now(),
+        }
+    }
 }
 
 /// Parameters for retrieving messages from a thread
@@ -211,6 +232,82 @@ impl MemoryThread {
     }
 }
 
+/// In-memory implementation of `MemoryThreadStorage`
+#[derive(Debug, Clone, Default)]
+pub struct InMemoryThreadStorage {
+    threads: Arc<RwLock<HashMap<String, MemoryThread>>>,
+    messages: Arc<RwLock<HashMap<String, Vec<StoredMessage>>>>,
+}
+
+impl InMemoryThreadStorage {
+    /// Create a new in-memory storage
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    async fn ensure_thread_exists(&self, thread_id: &str) -> Result<()> {
+        let threads = self.threads.read().await;
+        if threads.contains_key(thread_id) {
+            Ok(())
+        } else {
+            Err(Error::NotFound(format!(
+                "Thread {thread_id} does not exist"
+            )))
+        }
+    }
+
+    fn matches_filter(stored: &StoredMessage, filter: &MessageFilter) -> bool {
+        if let Some(role) = &filter.role {
+            if stored.message.role.to_string().to_lowercase() != role.to_lowercase() {
+                return false;
+            }
+        }
+
+        if let Some(date_range) = &filter.date_range {
+            if stored.timestamp < date_range.start || stored.timestamp > date_range.end {
+                return false;
+            }
+        }
+
+        if let Some(keywords) = &filter.keywords {
+            let content_lower = stored.message.content.to_lowercase();
+            let contains_keyword = keywords.iter().any(|keyword| {
+                let keyword_lower = keyword.to_lowercase();
+                content_lower.contains(&keyword_lower)
+            });
+            if !contains_keyword {
+                return false;
+            }
+        }
+
+        if let Some(metadata_filter) = &filter.metadata {
+            let message_metadata = stored.message.metadata.as_ref();
+            for (key, value) in metadata_filter {
+                match message_metadata {
+                    Some(metadata) if metadata.get(key) == Some(value) => {}
+                    _ => return false,
+                }
+            }
+        }
+
+        true
+    }
+
+    fn apply_cursor(messages: Vec<StoredMessage>, cursor: &Option<String>) -> Vec<StoredMessage> {
+        if let Some(cursor_id) = cursor {
+            if cursor_id.is_empty() {
+                return messages;
+            }
+
+            let position = messages.iter().position(|msg| &msg.id == cursor_id);
+            if let Some(pos) = position {
+                return messages.into_iter().skip(pos + 1).collect();
+            }
+        }
+        messages
+    }
+}
+
 /// Trait for memory thread storage
 #[async_trait::async_trait]
 pub trait MemoryThreadStorage: Send + Sync {
@@ -260,6 +357,233 @@ pub trait MemoryThreadStorage: Send + Sync {
     async fn get_thread_stats(&self, thread_id: &str) -> Result<ThreadStats>;
 }
 
+#[async_trait::async_trait]
+impl MemoryThreadStorage for InMemoryThreadStorage {
+    async fn create_thread(&self, thread: &MemoryThread) -> Result<MemoryThread> {
+        let mut threads = self.threads.write().await;
+        let stored = thread.clone();
+        threads.insert(stored.id.clone(), stored.clone());
+        Ok(stored)
+    }
+
+    async fn get_thread(&self, thread_id: &str) -> Result<Option<MemoryThread>> {
+        let threads = self.threads.read().await;
+        Ok(threads.get(thread_id).cloned())
+    }
+
+    async fn update_thread(&self, thread: &MemoryThread) -> Result<MemoryThread> {
+        let mut threads = self.threads.write().await;
+        if !threads.contains_key(&thread.id) {
+            return Err(Error::NotFound(format!(
+                "Thread {} not found",
+                thread.id
+            )));
+        }
+        let mut updated = thread.clone();
+        updated.updated_at = Utc::now();
+        threads.insert(updated.id.clone(), updated.clone());
+        Ok(updated)
+    }
+
+    async fn delete_thread(&self, thread_id: &str) -> Result<()> {
+        let mut threads = self.threads.write().await;
+        if threads.remove(thread_id).is_none() {
+            return Err(Error::NotFound(format!("Thread {thread_id} not found")));
+        }
+
+        let mut messages = self.messages.write().await;
+        messages.remove(thread_id);
+        Ok(())
+    }
+
+    async fn list_threads_by_resource(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
+        let threads = self.threads.read().await;
+        Ok(threads
+            .values()
+            .filter(|thread| {
+                thread
+                    .resource_id
+                    .as_ref()
+                    .is_some_and(|rid| rid == resource_id)
+            })
+            .cloned()
+            .collect())
+    }
+
+    async fn list_threads_by_agent(&self, agent_id: &str) -> Result<Vec<MemoryThread>> {
+        let threads = self.threads.read().await;
+        Ok(threads
+            .values()
+            .filter(|thread| {
+                thread
+                    .agent_id
+                    .as_ref()
+                    .is_some_and(|aid| aid == agent_id)
+            })
+            .cloned()
+            .collect())
+    }
+
+    async fn add_message(&self, thread_id: &str, message: &Message) -> Result<()> {
+        self.ensure_thread_exists(thread_id).await?;
+
+        let mut messages = self.messages.write().await;
+        let entry = messages
+            .entry(thread_id.to_string())
+            .or_insert_with(Vec::new);
+        entry.push(StoredMessage::new(message));
+        Ok(())
+    }
+
+    async fn get_messages(
+        &self,
+        thread_id: &str,
+        params: &GetMessagesParams,
+    ) -> Result<Vec<Message>> {
+        self.ensure_thread_exists(thread_id).await?;
+
+        let messages_map = self.messages.read().await;
+        let stored_messages = messages_map
+            .get(thread_id)
+            .cloned()
+            .unwrap_or_else(Vec::new);
+        drop(messages_map);
+
+        let mut filtered: Vec<StoredMessage> = if let Some(filter) = &params.filter {
+            stored_messages
+                .into_iter()
+                .filter(|msg| Self::matches_filter(msg, filter))
+                .collect()
+        } else {
+            stored_messages
+        };
+
+        if params.reverse_order {
+            filtered.reverse();
+        }
+
+        filtered = Self::apply_cursor(filtered, &params.cursor);
+
+        if let Some(limit) = params.limit {
+            if filtered.len() > limit {
+                filtered.truncate(limit);
+            }
+        }
+
+        let mut results = Vec::with_capacity(filtered.len());
+        for stored in filtered {
+            let mut message = stored.message.clone();
+            if !params.include_content {
+                message.content.clear();
+            }
+            results.push(message);
+        }
+
+        Ok(results)
+    }
+
+    async fn delete_messages(
+        &self,
+        thread_id: &str,
+        message_ids: &[String],
+    ) -> Result<MessageOperationResult> {
+        self.ensure_thread_exists(thread_id).await?;
+        let mut messages = self.messages.write().await;
+        let entry = messages.entry(thread_id.to_string()).or_default();
+        let before = entry.len();
+        entry.retain(|message| !message_ids.contains(&message.id));
+        let removed = before - entry.len();
+
+        Ok(MessageOperationResult {
+            affected_count: removed,
+            success: removed > 0,
+            error_message: if removed == 0 {
+                Some("No messages were deleted".to_string())
+            } else {
+                None
+            },
+        })
+    }
+
+    async fn search_messages(
+        &self,
+        query: &str,
+        filter: Option<&MessageFilter>,
+    ) -> Result<Vec<Message>> {
+        let messages = self.messages.read().await;
+        let query_lower = query.to_lowercase();
+        let mut results = Vec::new();
+
+        for stored_messages in messages.values() {
+            for stored in stored_messages {
+                if !query_lower.is_empty()
+                    && !stored
+                        .message
+                        .content
+                        .to_lowercase()
+                        .contains(&query_lower)
+                {
+                    continue;
+                }
+
+                if let Some(filter) = filter {
+                    if !Self::matches_filter(stored, filter) {
+                        continue;
+                    }
+                }
+
+                results.push(stored.message.clone());
+            }
+        }
+
+        Ok(results)
+    }
+
+    async fn get_thread_stats(&self, thread_id: &str) -> Result<ThreadStats> {
+        let threads = self.threads.read().await;
+        let thread = threads
+            .get(thread_id)
+            .cloned()
+            .ok_or_else(|| Error::NotFound(format!("Thread {thread_id} not found")))?;
+        drop(threads);
+
+        let messages_map = self.messages.read().await;
+        let stored_messages = messages_map
+            .get(thread_id)
+            .cloned()
+            .unwrap_or_else(Vec::new);
+
+        let mut message_count = 0;
+        let mut user_count = 0;
+        let mut assistant_count = 0;
+        let mut size_bytes = 0;
+        let mut last_message_at = None;
+
+        for stored in stored_messages {
+            message_count += 1;
+            size_bytes += stored.message.content.len();
+            last_message_at = Some(last_message_at.map_or(stored.timestamp, |current: DateTime<Utc>| {
+                current.max(stored.timestamp)
+            }));
+
+            match stored.message.role {
+                crate::llm::Role::User => user_count += 1,
+                crate::llm::Role::Assistant => assistant_count += 1,
+                _ => {}
+            }
+        }
+
+        Ok(ThreadStats {
+            message_count,
+            user_message_count: user_count,
+            assistant_message_count: assistant_count,
+            created_at: thread.created_at,
+            last_message_at,
+            size_bytes,
+        })
+    }
+}
+
 /// Thread statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThreadStats {
@@ -278,15 +602,59 @@ pub struct ThreadStats {
 }
 
 /// Memory thread manager for high-level operations
-#[derive(Debug)]
 pub struct MemoryThreadManager<S: MemoryThreadStorage> {
     storage: S,
+    processors: Arc<RwLock<Vec<Arc<dyn MemoryProcessor>>>>,
+}
+
+impl<S: MemoryThreadStorage> fmt::Debug for MemoryThreadManager<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MemoryThreadManager").finish()
+    }
 }
 
 impl<S: MemoryThreadStorage> MemoryThreadManager<S> {
     /// Create a new memory thread manager
     pub fn new(storage: S) -> Self {
-        Self { storage }
+        Self {
+            storage,
+            processors: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+
+    /// Add a memory processor to the pipeline
+    pub async fn add_processor(&self, processor: Arc<dyn MemoryProcessor>) {
+        let mut processors = self.processors.write().await;
+        processors.push(processor);
+    }
+
+    /// Replace all processors with the provided list
+    pub async fn set_processors(&self, new_processors: Vec<Arc<dyn MemoryProcessor>>) {
+        let mut processors = self.processors.write().await;
+        *processors = new_processors;
+    }
+
+    /// Apply registered processors to the provided messages
+    async fn apply_processors(
+        &self,
+        messages: Vec<Message>,
+        options: &MemoryProcessorOptions,
+    ) -> Result<Vec<Message>> {
+        let processors = self.processors.read().await.clone();
+        let mut processed = messages;
+        for processor in processors {
+            processed = processor.process(processed, options).await?;
+        }
+        Ok(processed)
+    }
+
+    /// Public helper to process arbitrary message lists
+    pub async fn process_messages(
+        &self,
+        messages: Vec<Message>,
+        options: MemoryProcessorOptions,
+    ) -> Result<Vec<Message>> {
+        self.apply_processors(messages, &options).await
     }
 
     /// Create a new thread
@@ -366,7 +734,12 @@ impl<S: MemoryThreadStorage> MemoryThreadManager<S> {
         if resource_id.is_some() {
             self.get_thread(thread_id, resource_id).await?;
         }
-        self.storage.get_messages(thread_id, params).await
+        let messages = self.storage.get_messages(thread_id, params).await?;
+        let options = MemoryProcessorOptions {
+            new_messages: Vec::new(),
+            ..Default::default()
+        };
+        self.apply_processors(messages, &options).await
     }
 
     /// List threads for a resource
@@ -391,6 +764,10 @@ impl<S: MemoryThreadStorage> MemoryThreadManager<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::llm::{Message, Role};
+    use crate::logger::NoopLogger;
+    use crate::memory::processor::{MessageLimitProcessor, RoleFilterProcessor};
+    use serde_json::json;
 
     #[test]
     fn test_memory_thread_creation() {
@@ -449,5 +826,227 @@ mod tests {
         let removed = thread.remove_metadata("key1");
         assert_eq!(removed, Some(Value::String("value1".to_string())));
         assert_eq!(thread.get_metadata("key1"), None);
+    }
+
+    #[tokio::test]
+    async fn test_in_memory_thread_storage_crud() -> Result<()> {
+        let storage = InMemoryThreadStorage::new();
+        let params = CreateThreadParams {
+            id: None,
+            title: "Thread One".to_string(),
+            agent_id: Some("agent-a".to_string()),
+            resource_id: Some("resource-1".to_string()),
+            metadata: None,
+        };
+
+        let thread = MemoryThread::new(params);
+        let created = storage.create_thread(&thread).await?;
+        assert!(!created.id.is_empty());
+
+        let fetched = storage.get_thread(&created.id).await?;
+        assert!(fetched.is_some());
+
+        let by_resource = storage
+            .list_threads_by_resource("resource-1")
+            .await?;
+        assert_eq!(by_resource.len(), 1);
+
+        let updated = MemoryThread {
+            title: "Updated Thread".to_string(),
+            ..created.clone()
+        };
+        let updated_thread = storage.update_thread(&updated).await?;
+        assert_eq!(updated_thread.title, "Updated Thread");
+
+        storage.delete_thread(&created.id).await?;
+        let missing = storage.get_thread(&created.id).await?;
+        assert!(missing.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_in_memory_thread_storage_messages() -> Result<()> {
+        let storage = InMemoryThreadStorage::new();
+        let thread = MemoryThread::new(CreateThreadParams {
+            id: None,
+            title: "Message Thread".to_string(),
+            agent_id: None,
+            resource_id: Some("resource-2".to_string()),
+            metadata: None,
+        });
+        storage.create_thread(&thread).await?;
+
+        let user_message = Message {
+            role: Role::User,
+            content: "Hello assistant".to_string(),
+            metadata: Some(HashMap::from([(
+                "topic".to_string(),
+                json!("greeting"),
+            )])),
+            name: None,
+        };
+        storage.add_message(&thread.id, &user_message).await?;
+
+        let assistant_message = Message {
+            role: Role::Assistant,
+            content: "Hello user".to_string(),
+            metadata: None,
+            name: None,
+        };
+        storage.add_message(&thread.id, &assistant_message).await?;
+
+        let messages = storage
+            .get_messages(&thread.id, &GetMessagesParams::default())
+            .await?;
+        assert_eq!(messages.len(), 2);
+
+        let user_only = storage
+            .get_messages(
+                &thread.id,
+                &GetMessagesParams {
+                    filter: Some(MessageFilter {
+                        role: Some("user".to_string()),
+                        date_range: None,
+                        keywords: None,
+                        metadata: None,
+                    }),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        assert_eq!(user_only.len(), 1);
+        assert_eq!(user_only[0].role, Role::User);
+
+        let stats = storage.get_thread_stats(&thread.id).await?;
+        assert_eq!(stats.message_count, 2);
+        assert_eq!(stats.user_message_count, 1);
+        assert_eq!(stats.assistant_message_count, 1);
+        assert!(stats.last_message_at.is_some());
+
+        let keyword_search = storage
+            .search_messages(
+                "hello",
+                Some(&MessageFilter {
+                    role: Some("assistant".to_string()),
+                    date_range: None,
+                    keywords: None,
+                    metadata: None,
+                }),
+            )
+            .await?;
+        assert_eq!(keyword_search.len(), 1);
+        assert_eq!(keyword_search[0].role, Role::Assistant);
+
+        let message_ids = {
+            let messages_map = storage.messages.read().await;
+            messages_map
+                .get(&thread.id)
+                .unwrap()
+                .iter()
+                .map(|msg| msg.id.clone())
+                .collect::<Vec<_>>()
+        };
+
+        let result = storage
+            .delete_messages(&thread.id, &[message_ids[0].clone()])
+            .await?;
+        assert_eq!(result.affected_count, 1);
+        assert!(result.success);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_memory_thread_manager_with_storage() -> Result<()> {
+        let storage = InMemoryThreadStorage::new();
+        let manager = MemoryThreadManager::new(storage.clone());
+
+        let thread = manager
+            .create_thread(CreateThreadParams {
+                id: None,
+                title: "Manager Thread".to_string(),
+                agent_id: Some("agent-manager".to_string()),
+                resource_id: Some("resource-manager".to_string()),
+                metadata: None,
+            })
+            .await?;
+
+        let retrieved = manager
+            .get_thread(&thread.id, Some("resource-manager"))
+            .await?;
+        assert!(retrieved.is_some());
+
+        // Ownership validation
+        let err = manager
+            .get_thread(&thread.id, Some("other-resource"))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, Error::AccessDenied(_)));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_memory_thread_manager_processors() -> Result<()> {
+        let storage = InMemoryThreadStorage::new();
+        let manager = MemoryThreadManager::new(storage.clone());
+        let logger = Arc::new(NoopLogger::default());
+
+        manager
+            .add_processor(Arc::new(MessageLimitProcessor::new(1, logger.clone())))
+            .await;
+        manager
+            .add_processor(Arc::new(RoleFilterProcessor::new(
+                vec![Role::User],
+                logger.clone(),
+            )))
+            .await;
+
+        let thread = manager
+            .create_thread(CreateThreadParams {
+                id: None,
+                title: "Processor Thread".to_string(),
+                agent_id: None,
+                resource_id: Some("resource-processor".to_string()),
+                metadata: None,
+            })
+            .await?;
+
+        let user_message = Message {
+            role: Role::User,
+            content: "First message".to_string(),
+            metadata: None,
+            name: None,
+        };
+        let assistant_message = Message {
+            role: Role::Assistant,
+            content: "Second message".to_string(),
+            metadata: None,
+            name: None,
+        };
+
+        storage.add_message(&thread.id, &user_message).await?;
+        storage.add_message(&thread.id, &assistant_message).await?;
+
+        let messages = manager
+            .get_messages(&thread.id, &GetMessagesParams::default(), None)
+            .await?;
+
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].role, Role::User);
+        assert_eq!(messages[0].content, "First message");
+
+        // Also test process_messages helper
+        let processed = manager
+            .process_messages(
+                vec![assistant_message.clone(), user_message.clone()],
+                MemoryProcessorOptions::default(),
+            )
+            .await?;
+        assert_eq!(processed.len(), 1);
+        assert_eq!(processed[0].role, Role::User);
+
+        Ok(())
     }
 }

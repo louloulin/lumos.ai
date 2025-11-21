@@ -82,7 +82,11 @@ mod real_api_tests;
 
 pub use config::{AgentConfig, AgentGenerateOptions};
 pub use executor::BasicAgent;
-pub use message_utils::{assistant_message, system_message, tool_message, user_message};
+pub use message_utils::{
+    assistant_message, count_messages_by_role, extract_text_content, filter_messages_by_role,
+    format_messages, format_role, message_with_metadata, message_with_name, system_message,
+    tool_message, user_message,
+};
 pub use runtime_context::{create_context_manager, ContextManager, RuntimeContext, ToolCallRecord};
 pub use trait_def::{Agent, AgentStructuredOutput};
 pub use traits::{CoreAgent, FullAgent, MemoryAgent, StreamingAgentTrait, ToolAgent};

@@ -360,3 +360,201 @@ impl EvaluationMetric for CompositeMetric {
         "Composite metric that combines multiple evaluation metrics"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::logger::NoopLogger;
+
+    fn create_test_logger() -> Arc<dyn Logger> {
+        Arc::new(NoopLogger::default())
+    }
+
+    fn create_test_context() -> RuntimeContext {
+        RuntimeContext::default()
+    }
+
+    #[tokio::test]
+    async fn test_relevance_metric_high_relevance() {
+        let logger = create_test_logger();
+        let metric = RelevanceMetric::new(logger, 0.5);
+        let context = create_test_context();
+
+        let result = metric
+            .evaluate("What is Rust?", "Rust is a programming language", &context)
+            .await
+            .unwrap();
+
+        assert_eq!(result.metric_name, "relevance");
+        assert!(result.score > 0.0);
+        assert!(result.explanation.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_relevance_metric_low_relevance() {
+        let logger = create_test_logger();
+        let metric = RelevanceMetric::new(logger, 0.5);
+        let context = create_test_context();
+
+        let result = metric
+            .evaluate("What is Rust?", "The weather is nice today", &context)
+            .await
+            .unwrap();
+
+        assert_eq!(result.metric_name, "relevance");
+        assert!(result.score < 0.5);
+    }
+
+    #[tokio::test]
+    async fn test_relevance_metric_empty_input() {
+        let logger = create_test_logger();
+        let metric = RelevanceMetric::new(logger, 0.5);
+        let context = create_test_context();
+
+        let result = metric.evaluate("", "Some output", &context).await.unwrap();
+
+        assert_eq!(result.metric_name, "relevance");
+        assert_eq!(result.score, 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_length_metric_appropriate_length() {
+        let logger = create_test_logger();
+        let metric = LengthMetric::new(logger, 10, 100);
+        let context = create_test_context();
+
+        let result = metric
+            .evaluate("Input", "This is a medium length output", &context)
+            .await
+            .unwrap();
+
+        assert_eq!(result.metric_name, "length");
+        assert_eq!(result.score, 1.0);
+        assert!(result.explanation.is_some());
+        assert!(result.metadata.contains_key("length"));
+    }
+
+    #[tokio::test]
+    async fn test_length_metric_too_short() {
+        let logger = create_test_logger();
+        let metric = LengthMetric::new(logger, 10, 100);
+        let context = create_test_context();
+
+        let result = metric.evaluate("Input", "Short", &context).await.unwrap();
+
+        assert_eq!(result.metric_name, "length");
+        assert!(result.score < 1.0);
+    }
+
+    #[tokio::test]
+    async fn test_length_metric_too_long() {
+        let logger = create_test_logger();
+        let metric = LengthMetric::new(logger, 10, 50);
+        let context = create_test_context();
+
+        let long_output = "a".repeat(100);
+        let result = metric.evaluate("Input", &long_output, &context).await.unwrap();
+
+        assert_eq!(result.metric_name, "length");
+        assert!(result.score < 1.0);
+    }
+
+    #[tokio::test]
+    async fn test_composite_metric() {
+        let logger = create_test_logger();
+        let mut composite = CompositeMetric::new("test_composite".to_string(), logger.clone());
+        
+        let relevance = Box::new(RelevanceMetric::new(logger.clone(), 0.5));
+        let length = Box::new(LengthMetric::new(logger, 10, 100));
+        
+        composite.add_metric(relevance, 0.6);
+        composite.add_metric(length, 0.4);
+
+        let context = create_test_context();
+        let result = composite
+            .evaluate("What is Rust?", "Rust is a programming language", &context)
+            .await
+            .unwrap();
+
+        assert_eq!(result.metric_name, "test_composite");
+        assert!(result.score >= 0.0 && result.score <= 1.0);
+        assert!(result.metadata.contains_key("relevance_score"));
+        assert!(result.metadata.contains_key("length_score"));
+    }
+
+    #[tokio::test]
+    async fn test_composite_metric_empty() {
+        let logger = create_test_logger();
+        let composite = CompositeMetric::new("empty_composite".to_string(), logger);
+        let context = create_test_context();
+
+        let result = composite
+            .evaluate("Input", "Output", &context)
+            .await
+            .unwrap();
+
+        assert_eq!(result.metric_name, "empty_composite");
+        assert_eq!(result.score, 0.0);
+    }
+
+    #[test]
+    fn test_evaluation_result_serialization() {
+        let result = EvaluationResult {
+            metric_name: "test_metric".to_string(),
+            score: 0.85,
+            explanation: Some("Test explanation".to_string()),
+            metadata: {
+                let mut m = HashMap::new();
+                m.insert("key".to_string(), serde_json::json!("value"));
+                m
+            },
+            timestamp: std::time::SystemTime::now(),
+        };
+
+        // Test serialization
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(json.contains("test_metric"));
+        assert!(json.contains("0.85"));
+
+        // Test deserialization
+        let deserialized: EvaluationResult = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.metric_name, "test_metric");
+        assert_eq!(deserialized.score, 0.85);
+    }
+
+    #[test]
+    fn test_metric_names() {
+        let logger = create_test_logger();
+        let relevance = RelevanceMetric::new(logger.clone(), 0.5);
+        let length = LengthMetric::new(logger.clone(), 10, 100);
+        let composite = CompositeMetric::new("test".to_string(), logger);
+
+        assert_eq!(relevance.metric_name(), "relevance");
+        assert_eq!(length.metric_name(), "length");
+        assert_eq!(composite.metric_name(), "test");
+    }
+
+    #[test]
+    fn test_metric_descriptions() {
+        let logger = create_test_logger();
+        let relevance = RelevanceMetric::new(logger.clone(), 0.5);
+        let length = LengthMetric::new(logger.clone(), 10, 100);
+        let composite = CompositeMetric::new("test".to_string(), logger);
+
+        assert!(!relevance.description().is_empty());
+        assert!(!length.description().is_empty());
+        assert!(!composite.description().is_empty());
+    }
+
+    #[test]
+    fn test_score_ranges() {
+        let logger = create_test_logger();
+        let relevance = RelevanceMetric::new(logger.clone(), 0.5);
+        let length = LengthMetric::new(logger.clone(), 10, 100);
+        let composite = CompositeMetric::new("test".to_string(), logger);
+
+        assert_eq!(relevance.score_range(), (0.0, 1.0));
+        assert_eq!(length.score_range(), (0.0, 1.0));
+        assert_eq!(composite.score_range(), (0.0, 1.0));
+    }
+}

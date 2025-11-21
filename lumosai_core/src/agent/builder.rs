@@ -1224,6 +1224,43 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_agent_builder_dynamic_config() {
+        use crate::agent::dynamic_config::{dynamic_arg, EnhancedRuntimeContext, ComplexityLevel};
+
+        let llm = create_test_zhipu_provider_arc();
+
+        // 创建运行时上下文
+        let context = EnhancedRuntimeContext::new("test_session".to_string())
+            .with_user_role("developer".to_string())
+            .with_domain("rust".to_string())
+            .with_complexity(ComplexityLevel::Complex);
+
+        // 测试动态指令 - 使用 DynamicArgument::Dynamic 直接创建
+        use crate::agent::dynamic_config::DynamicArgument;
+        let dynamic_instructions = DynamicArgument::Dynamic(Box::new(move |ctx: &EnhancedRuntimeContext| {
+            let role = ctx.user_role.clone().unwrap_or_else(|| "user".to_string());
+            let domain = ctx.domain.clone().unwrap_or_else(|| "general".to_string());
+            Box::pin(async move {
+                Ok(format!("You are a {} assistant specialized in {}.", role, domain))
+            })
+        }));
+
+        let agent = AgentBuilder::new()
+            .name("test_agent")
+            .dynamic_instructions(dynamic_instructions)
+            .with_runtime_context(context.clone())
+            .model(llm.clone())
+            .build_async()
+            .await
+            .expect("Failed to build agent with dynamic config");
+
+        // 验证动态指令已应用
+        let instructions = agent.get_instructions();
+        assert!(instructions.contains("developer"));
+        assert!(instructions.contains("rust"));
+    }
+
+    #[tokio::test]
     async fn test_agent_builder_with_tools() {
         let llm = create_test_zhipu_provider_arc();
 

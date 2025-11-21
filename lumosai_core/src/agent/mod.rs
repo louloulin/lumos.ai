@@ -12,6 +12,7 @@ pub mod dag_orchestration;
 pub mod dynamic_config;
 pub mod enhanced_integration_test;
 pub mod error_handling; // 新增：统一错误处理系统
+pub mod concurrent_tool_executor; // 新增：并发工具执行器
 pub mod evaluation;
 pub mod events;
 pub mod executor;
@@ -153,6 +154,11 @@ pub use error_handling::{
 pub use api_consistency::{
     ApiConsistencyChecker, ApiSpecChecker, ApiStandardizer, ConsistencyCheckResult,
     ConsistencyIssue,
+};
+
+// Re-export concurrent tool executor
+pub use concurrent_tool_executor::{
+    ConcurrentToolExecutor, ConcurrentToolExecutorConfig,
 };
 
 // Re-export DAG orchestration

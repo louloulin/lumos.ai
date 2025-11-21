@@ -17,9 +17,11 @@ use crate::error::Result;
 use crate::llm::{LlmProvider, Message};
 use crate::memory::{
     create_semantic_memory, create_working_memory,
+    processor::MemoryProcessor,
     semantic_memory::{SemanticMemoryTrait, SemanticSearchOptions},
-    BasicMemory, Memory as MemoryTrait, MemoryConfig, MemoryProcessor, SemanticRecallConfig,
-    WorkingMemory, WorkingMemoryConfig,
+    thread::{CreateThreadParams, GetMessagesParams, MemoryThreadStorage},
+    BasicMemory, Memory as MemoryTrait, MemoryConfig, SemanticRecallConfig, WorkingMemory,
+    WorkingMemoryConfig,
 };
 
 /// 内存类型枚举

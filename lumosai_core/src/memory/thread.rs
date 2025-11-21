@@ -994,13 +994,13 @@ mod tests {
         let logger = Arc::new(NoopLogger::default());
 
         manager
-            .add_processor(Arc::new(MessageLimitProcessor::new(1, logger.clone())))
-            .await;
-        manager
             .add_processor(Arc::new(RoleFilterProcessor::new(
                 vec![Role::User],
                 logger.clone(),
             )))
+            .await;
+        manager
+            .add_processor(Arc::new(MessageLimitProcessor::new(1, logger.clone())))
             .await;
 
         let thread = manager

@@ -177,6 +177,12 @@ pub use communication::{
     AgentCommunicationManager, AgentMessage, AgentMessageType, CommunicationConfig,
 };
 
+// Re-export performance monitoring
+pub use performance::{
+    PerformanceAnalyzer, PerformanceMetrics, PerformanceMonitor, PerformanceRecommendation,
+    RequestTimer,
+};
+
 // Re-export advanced collaboration patterns (2025 research)
 pub use debate::{DebateExecutor, DebatePosition, DebateResult, DebateRound};
 pub use group_chat::{ChatMessage, ChatThread, GroupChatExecutor};

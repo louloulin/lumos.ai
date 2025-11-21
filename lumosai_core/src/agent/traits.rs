@@ -314,6 +314,26 @@ mod tests {
         fn name(&self) -> Option<&str> {
             Some(&self.name)
         }
+
+        fn component(&self) -> crate::compat::Component {
+            crate::compat::Component::Agent
+        }
+
+        fn logger(&self) -> Arc<dyn crate::logger::Logger> {
+            crate::logger::default_logger()
+        }
+
+        fn set_logger(&mut self, _logger: Arc<dyn crate::logger::Logger>) {
+            // Mock implementation
+        }
+
+        fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
+            None
+        }
+
+        fn set_telemetry(&mut self, _telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
+            // Mock implementation
+        }
     }
 
     #[tokio::test]
@@ -363,12 +383,28 @@ mod tests {
         }
 
         impl Base for MockMemoryAgent {
-            fn id(&self) -> &str {
-                self.core.id()
-            }
-
             fn name(&self) -> Option<&str> {
                 self.core.name()
+            }
+
+            fn component(&self) -> crate::compat::Component {
+                self.core.component()
+            }
+
+            fn logger(&self) -> Arc<dyn crate::logger::Logger> {
+                self.core.logger()
+            }
+
+            fn set_logger(&mut self, _logger: Arc<dyn crate::logger::Logger>) {
+                // Cannot mutate through shared reference, but this is just for testing
+            }
+
+            fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
+                self.core.telemetry()
+            }
+
+            fn set_telemetry(&mut self, _telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
+                // Cannot mutate through shared reference, but this is just for testing
             }
         }
 
@@ -428,12 +464,28 @@ mod tests {
         }
 
         impl Base for MockToolAgent {
-            fn id(&self) -> &str {
-                self.core.id()
-            }
-
             fn name(&self) -> Option<&str> {
                 self.core.name()
+            }
+
+            fn component(&self) -> crate::compat::Component {
+                self.core.component()
+            }
+
+            fn logger(&self) -> Arc<dyn crate::logger::Logger> {
+                self.core.logger()
+            }
+
+            fn set_logger(&mut self, _logger: Arc<dyn crate::logger::Logger>) {
+                // Cannot mutate through shared reference, but this is just for testing
+            }
+
+            fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
+                self.core.telemetry()
+            }
+
+            fn set_telemetry(&mut self, _telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
+                // Cannot mutate through shared reference, but this is just for testing
             }
         }
 

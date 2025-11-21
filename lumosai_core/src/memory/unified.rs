@@ -79,9 +79,30 @@ pub struct Memory {
     inner: MemoryImpl,
     /// 内存类型
     memory_type: MemoryType,
+    /// 线程存储
+    thread_storage: Option<Arc<dyn MemoryThreadStorage>>,
+    /// Processor 列表
+    processors: Vec<Arc<dyn MemoryProcessor>>,
 }
 
 impl Memory {
+    /// 为内存设置线程存储
+    pub fn with_thread_storage(mut self, storage: Arc<dyn MemoryThreadStorage>) -> Self {
+        self.thread_storage = Some(storage.clone());
+        match &mut self.inner {
+            MemoryImpl::Basic(basic) => basic.set_thread_storage(Some(storage)),
+            MemoryImpl::Hybrid { basic, .. } => basic.set_thread_storage(Some(storage)),
+            _ => {}
+        }
+        self
+    }
+
+    /// 添加 Processor
+    pub fn add_processor(mut self, processor: Arc<dyn MemoryProcessor>) -> Self {
+        self.processors.push(processor.clone());
+        self
+    }
+
     /// 创建基础内存
     ///
     /// 基础内存提供简单的消息存储和检索功能，适合大多数应用场景
@@ -97,6 +118,8 @@ impl Memory {
         Self {
             inner: MemoryImpl::Basic(basic_memory),
             memory_type: MemoryType::Basic,
+            thread_storage: None,
+            processors: Vec::new(),
         }
     }
 
@@ -139,6 +162,8 @@ impl Memory {
         Self {
             inner: MemoryImpl::Basic(basic_memory),
             memory_type: MemoryType::Semantic,
+            thread_storage: None,
+            processors: Vec::new(),
         }
     }
 
@@ -174,6 +199,8 @@ impl Memory {
         Self {
             inner: MemoryImpl::Working(working_memory),
             memory_type: MemoryType::Working { size },
+            thread_storage: None,
+            processors: Vec::new(),
         }
     }
 
@@ -219,6 +246,8 @@ impl Memory {
                 working_size,
                 enable_semantic,
             },
+            thread_storage: None,
+            processors: Vec::new(),
         }
     }
 
@@ -242,7 +271,7 @@ impl Memory {
     /// ```
     pub fn with_llm(mut self, llm: Arc<dyn LlmProvider>) -> Result<Self> {
         match &mut self.inner {
-            MemoryImpl::Basic(_) if matches!(self.memory_type, MemoryType::Semantic) => {
+            MemoryImpl::Basic(basic) if matches!(self.memory_type, MemoryType::Semantic) => {
                 // 为语义内存创建实际的语义内存实现
                 let config = MemoryConfig {
                     namespace: Some("semantic".to_string()),
@@ -260,7 +289,8 @@ impl Memory {
                     ..Default::default()
                 };
 
-                let semantic_memory = create_semantic_memory(&config, llm)?;
+                let semantic_memory = create_semantic_memory(&config, llm.clone())?;
+                basic.set_thread_storage(self.thread_storage.clone());
                 self.inner = MemoryImpl::Semantic(semantic_memory);
             }
             MemoryImpl::Hybrid { semantic, .. }
@@ -753,6 +783,8 @@ impl CompositeMemoryBuilder {
                 semantic: semantic_memory,
             },
             memory_type,
+            thread_storage: None,
+            processors: self.processors.clone(),
         })
     }
 }

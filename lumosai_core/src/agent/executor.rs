@@ -188,6 +188,33 @@ impl BasicAgent {
         self.llm.supports_structured_output()
     }
 
+    fn enrich_message_with_memory_metadata(
+        &self,
+        message: &Message,
+        options: &AgentGenerateOptions,
+    ) -> Message {
+        if options.thread_id.is_none() && options.resource_id.is_none() {
+            return message.clone();
+        }
+
+        let mut enriched = message.clone();
+        let metadata = enriched.metadata.get_or_insert_with(HashMap::new);
+
+        if let Some(thread_id) = &options.thread_id {
+            metadata.insert(
+                "thread_id".to_string(),
+                Value::String(thread_id.clone()),
+            );
+        }
+        if let Some(resource_id) = &options.resource_id {
+            metadata.insert(
+                "resource_id".to_string(),
+                Value::String(resource_id.clone()),
+            );
+        }
+        enriched
+    }
+
     /// Build tool descriptions for the system message
     #[allow(unused_variables)]
     fn build_tool_descriptions(&self, _options: &AgentGenerateOptions) -> String {
@@ -1813,7 +1840,8 @@ impl Agent for BasicAgent {
         if let Some(memory) = &self.memory {
             // 保存用户消息
             for msg in messages {
-                if let Err(e) = memory.store(msg).await {
+                let enriched = self.enrich_message_with_memory_metadata(msg, options);
+                if let Err(e) = memory.store(&enriched).await {
                     self.logger()
                         .warn(&format!("Failed to store user message: {}", e));
                 } else {
@@ -1828,6 +1856,8 @@ impl Agent for BasicAgent {
                 metadata: None,
                 name: None,
             };
+            let assistant_message =
+                self.enrich_message_with_memory_metadata(&assistant_message, options);
             if let Err(e) = memory.store(&assistant_message).await {
                 self.logger()
                     .warn(&format!("Failed to store assistant response: {}", e));

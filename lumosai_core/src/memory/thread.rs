@@ -358,6 +358,68 @@ pub trait MemoryThreadStorage: Send + Sync {
 }
 
 #[async_trait::async_trait]
+impl<T> MemoryThreadStorage for Arc<T>
+where
+    T: MemoryThreadStorage + ?Sized,
+{
+    async fn create_thread(&self, thread: &MemoryThread) -> Result<MemoryThread> {
+        (**self).create_thread(thread).await
+    }
+
+    async fn get_thread(&self, thread_id: &str) -> Result<Option<MemoryThread>> {
+        (**self).get_thread(thread_id).await
+    }
+
+    async fn update_thread(&self, thread: &MemoryThread) -> Result<MemoryThread> {
+        (**self).update_thread(thread).await
+    }
+
+    async fn delete_thread(&self, thread_id: &str) -> Result<()> {
+        (**self).delete_thread(thread_id).await
+    }
+
+    async fn list_threads_by_resource(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
+        (**self).list_threads_by_resource(resource_id).await
+    }
+
+    async fn list_threads_by_agent(&self, agent_id: &str) -> Result<Vec<MemoryThread>> {
+        (**self).list_threads_by_agent(agent_id).await
+    }
+
+    async fn add_message(&self, thread_id: &str, message: &Message) -> Result<()> {
+        (**self).add_message(thread_id, message).await
+    }
+
+    async fn get_messages(
+        &self,
+        thread_id: &str,
+        params: &GetMessagesParams,
+    ) -> Result<Vec<Message>> {
+        (**self).get_messages(thread_id, params).await
+    }
+
+    async fn delete_messages(
+        &self,
+        thread_id: &str,
+        message_ids: &[String],
+    ) -> Result<MessageOperationResult> {
+        (**self).delete_messages(thread_id, message_ids).await
+    }
+
+    async fn search_messages(
+        &self,
+        query: &str,
+        filter: Option<&MessageFilter>,
+    ) -> Result<Vec<Message>> {
+        (**self).search_messages(query, filter).await
+    }
+
+    async fn get_thread_stats(&self, thread_id: &str) -> Result<ThreadStats> {
+        (**self).get_thread_stats(thread_id).await
+    }
+}
+
+#[async_trait::async_trait]
 impl MemoryThreadStorage for InMemoryThreadStorage {
     async fn create_thread(&self, thread: &MemoryThread) -> Result<MemoryThread> {
         let mut threads = self.threads.write().await;

@@ -196,6 +196,7 @@ pub mod test_helpers;
 mod tests;
 pub mod together;
 pub mod types;
+pub mod router;
 pub mod zhipu;
 
 #[cfg(test)]
@@ -223,4 +224,5 @@ pub use qwen::{QwenApiType, QwenProvider};
 pub use together::TogetherProvider;
 pub use types::{LlmOptions, Message, Role};
 pub use zhipu::ZhipuProvider;
+pub use router::{LlmRouter, ProviderStats, RoutingStrategy};
 pub mod function_calling_utils;

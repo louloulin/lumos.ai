@@ -11,6 +11,7 @@ pub mod convenience;
 pub mod dag_orchestration;
 pub mod dynamic_config;
 pub mod enhanced_integration_test;
+pub mod error_handling; // 新增：统一错误处理系统
 pub mod evaluation;
 pub mod events;
 pub mod executor;
@@ -140,6 +141,12 @@ pub use session::{
 pub use orchestration::{
     AgentExecutionState, AgentOrchestrator, AgentRole, BasicOrchestrator, CollaborationSession,
     CollaborationTask, OrchestrationPattern, RetryConfig, VotingStrategy,
+};
+
+// Re-export error handling
+pub use error_handling::{
+    AgentErrorType, BackoffStrategy, DefaultErrorRecovery, ErrorContext, ErrorRecovery,
+    RecoveryAction, RetryExecutor, RetryStrategy,
 };
 
 // Re-export DAG orchestration

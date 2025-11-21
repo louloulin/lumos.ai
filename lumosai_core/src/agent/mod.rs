@@ -152,6 +152,9 @@ pub use error_handling::{
     RecoveryAction, RetryExecutor, RetryStrategy,
 };
 
+// Re-export config validator
+pub use config_validator::{ConfigValidator, ValidationReport};
+
 // Re-export API consistency
 pub use api_consistency::{
     ApiConsistencyChecker, ApiSpecChecker, ApiStandardizer, ConsistencyCheckResult,

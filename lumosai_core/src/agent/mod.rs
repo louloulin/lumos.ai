@@ -36,6 +36,7 @@ pub mod streaming;
 pub mod structured_output;
 pub mod tool_resolver;
 pub mod trait_def;
+pub mod traits;
 pub mod types;
 pub mod websocket;
 
@@ -84,6 +85,7 @@ pub use executor::BasicAgent;
 pub use message_utils::{assistant_message, system_message, tool_message, user_message};
 pub use runtime_context::{create_context_manager, ContextManager, RuntimeContext, ToolCallRecord};
 pub use trait_def::{Agent, AgentStructuredOutput};
+pub use traits::{CoreAgent, FullAgent, MemoryAgent, StreamingAgentTrait, ToolAgent};
 
 // Re-export builder
 pub use builder::AgentBuilder;

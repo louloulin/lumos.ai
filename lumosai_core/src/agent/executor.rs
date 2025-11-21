@@ -32,7 +32,7 @@ use crate::llm::{
 };
 use crate::logger::Logger;
 use crate::memory::Memory;
-use crate::memory::{create_working_memory, WorkingMemory};
+use crate::memory::{create_working_memory, MemoryConfig, WorkingMemory};
 use crate::telemetry::TelemetrySink;
 use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
 use tracing::info;
@@ -213,6 +213,16 @@ impl BasicAgent {
             );
         }
         enriched
+    }
+
+    fn extract_metadata_value(messages: &[Message], key: &str) -> Option<String> {
+        messages.iter().rev().find_map(|msg| {
+            msg.metadata
+                .as_ref()
+                .and_then(|meta| meta.get(key))
+                .and_then(|value| value.as_str())
+                .map(|s| s.to_string())
+        })
     }
 
     /// Build tool descriptions for the system message
@@ -890,13 +900,51 @@ impl Agent for BasicAgent {
         thread_id: Option<String>,
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
-        // For now, delegate to regular generate method
-        // Note: Memory thread integration would require connecting with MemoryThreadManager
-        // This fallback delegates to the regular generate method without thread context
+        let mut merged_options = options.clone();
+
+        // Prefer explicit thread_id argument, then existing option, then metadata hint
+        if let Some(id) = thread_id {
+            merged_options.thread_id = Some(id);
+        } else if merged_options.thread_id.is_none() {
+            merged_options.thread_id = Self::extract_metadata_value(messages, "thread_id");
+        }
+
+        // Populate resource id if absent (from metadata fallback)
+        if merged_options.resource_id.is_none() {
+            merged_options.resource_id = Self::extract_metadata_value(messages, "resource_id");
+        }
+
+        // Ensure memory config aligns with thread/resource context
+        if let Some(memory_config) = merged_options.memory_options.as_mut() {
+            if memory_config.namespace.is_none() {
+                memory_config.namespace = merged_options.thread_id.clone();
+            }
+            if memory_config.store_id.is_none() {
+                memory_config.store_id = merged_options.resource_id.clone();
+            }
+            if memory_config.last_messages.is_none() {
+                memory_config.last_messages = Some(merged_options.context_window.unwrap_or(10));
+            }
+        } else {
+            let mut memory_config = MemoryConfig::default();
+            memory_config.namespace = merged_options.thread_id.clone();
+            memory_config.store_id = merged_options.resource_id.clone();
+            memory_config.last_messages = Some(merged_options.context_window.unwrap_or(10));
+            merged_options.memory_options = Some(memory_config);
+        }
+
+        // Enrich outbound messages so downstream memory store/retrieve paths have metadata
+        let enriched_messages: Vec<Message> = messages
+            .iter()
+            .map(|msg| self.enrich_message_with_memory_metadata(msg, &merged_options))
+            .collect();
+
         self.logger().debug(&format!(
-            "generate_with_memory called with thread_id: {thread_id:?}"
+            "generate_with_memory using thread_id={:?} resource_id={:?}",
+            merged_options.thread_id, merged_options.resource_id
         ));
-        self.generate(messages, options).await
+
+        self.generate(&enriched_messages, &merged_options).await
     }
 
     async fn generate(

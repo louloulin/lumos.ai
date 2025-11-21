@@ -6,13 +6,11 @@ mod tests {
     use lumosai_core::agent::types::AgentGenerateOptions;
     use lumosai_core::agent::{AgentConfig, BasicAgent};
     use lumosai_core::base::Base;
-    use lumosai_core::llm::test_helpers::{
-        create_test_zhipu_provider, create_test_zhipu_provider_arc,
-    };
+    use lumosai_core::compat::Component;
+    use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
     use lumosai_core::llm::{LlmOptions, Message, Role};
-    use lumosai_core::logger::Component;
     use lumosai_core::memory::thread::{
-        CreateThreadParams, GetMessagesParams, MemoryThread, MemoryThreadStorage,
+        CreateThreadParams, GetMessagesParams, MemoryThread, MemoryThreadManager, MemoryThreadStorage,
     };
     use lumosai_core::memory::{Memory, MemoryConfig as CoreMemoryConfig};
     use lumosai_core::Result;
@@ -185,6 +183,7 @@ mod tests {
     // Mock memory implementation that supports thread storage
     struct MockMemoryWithThreads {
         thread_storage: Arc<dyn MemoryThreadStorage>,
+        raw_storage: Arc<MockMemoryThreadStorage>,
     }
 
     impl std::fmt::Debug for MockMemoryWithThreads {
@@ -197,15 +196,52 @@ mod tests {
 
     impl MockMemoryWithThreads {
         fn new() -> Self {
+            let raw = Arc::new(MockMemoryThreadStorage::new());
             Self {
-                thread_storage: Arc::new(MockMemoryThreadStorage::new()),
+                thread_storage: raw.clone(),
+                raw_storage: raw,
             }
+        }
+
+        fn raw_storage(&self) -> Arc<MockMemoryThreadStorage> {
+            self.raw_storage.clone()
         }
     }
 
     #[async_trait]
     impl Memory for MockMemoryWithThreads {
-        async fn store(&self, _message: &Message) -> Result<()> {
+        async fn store(&self, message: &Message) -> Result<()> {
+            let metadata = message.metadata.as_ref();
+            let thread_id = metadata
+                .and_then(|meta| meta.get("thread_id"))
+                .and_then(|value| value.as_str());
+            if let Some(thread_id) = thread_id {
+                let resource_id = metadata
+                    .and_then(|meta| meta.get("resource_id"))
+                    .and_then(|value| value.as_str())
+                    .map(|value| value.to_string());
+
+                let manager = MemoryThreadManager::new(self.raw_storage.clone());
+                if manager
+                    .get_thread(thread_id, resource_id.as_deref())
+                    .await?
+                    .is_none()
+                {
+                    manager
+                        .create_thread(CreateThreadParams {
+                            id: Some(thread_id.to_string()),
+                            title: format!("Thread {thread_id}"),
+                            agent_id: Some("test-agent".to_string()),
+                            resource_id: resource_id.clone(),
+                            metadata: None,
+                        })
+                        .await?;
+                }
+
+                manager
+                    .add_message(thread_id, message, resource_id.as_deref())
+                    .await?;
+            }
             Ok(())
         }
 
@@ -442,7 +478,7 @@ mod tests {
 
         // Test Base trait methods
         assert_eq!(agent.name(), Some("test_agent"));
-        assert_eq!(agent.component(), Component::Agent);
+        assert!(matches!(agent.component(), Component::Agent));
 
         // Test that logger and telemetry setters work
         // (We can't test much more without actual implementations)
@@ -526,6 +562,47 @@ mod tests {
         assert_eq!(messages[0].content, "Hello, AI!");
         assert_eq!(messages[1].content, "Hello! How can I help you?");
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn generate_with_memory_persists_thread_metadata() -> Result<()> {
+        let llm = create_test_zhipu_provider_arc();
+        let config = AgentConfig {
+            name: "memory_agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+
+        let memory = Arc::new(MockMemoryWithThreads::new());
+        let agent =
+            BasicAgent::new(config, llm).with_memory(memory.clone() as Arc<dyn Memory>);
+
+        let user_message = Message::new(Role::User, "Remember this note.".to_string(), None, None);
+        let options = AgentGenerateOptions {
+            thread_id: Some("thread-memory-test".to_string()),
+            resource_id: Some("user-999".to_string()),
+            ..Default::default()
+        };
+
+        agent
+            .generate_with_memory(&[user_message], None, &options)
+            .await?;
+
+        let storage = memory.raw_storage();
+        let threads = storage.threads.lock().unwrap();
+        assert!(threads.contains_key("thread-memory-test"));
+        drop(threads);
+
+        let messages = storage.messages.lock().unwrap();
+        let thread_messages = messages
+            .get("thread-memory-test")
+            .cloned()
+            .unwrap_or_default();
+        assert!(
+            thread_messages.len() >= 2,
+            "expected user + assistant messages stored"
+        );
         Ok(())
     }
 }

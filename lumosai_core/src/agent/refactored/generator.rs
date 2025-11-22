@@ -3,7 +3,8 @@
 //! 这个模块定义了 AgentGenerator，负责协调 AgentCore 和 AgentExecutor 来生成响应。
 //! 这是 BasicAgent 重构的第三步，将生成逻辑从 BasicAgent 中分离出来。
 
-use crate::agent::refactored::{AgentCore, AgentExecutor};
+use crate::agent::api_consistency::ApiStandardizer;
+use crate::agent::refactored::AgentExecutor;
 use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStep, AgentStreamOptions, RuntimeContext, StepType, TokenUsage};
 use crate::error::Result;
 use crate::llm::{Message, Role};
@@ -171,8 +172,11 @@ impl AgentGenerator {
             .map(|msg| msg.content.clone())
             .unwrap_or_default();
 
+        // 标准化响应格式
+        let standardized_response = ApiStandardizer::standardize_response(&final_response);
+
         let result = AgentGenerateResult {
-            response: final_response,
+            response: standardized_response,
             steps: all_steps,
             usage: total_usage,
             metadata: HashMap::new(),
@@ -258,7 +262,14 @@ impl AgentGenerator {
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
         let core = self.executor.core();
-        let llm = core.llm();
+        
+        // 如果有 LLM router，使用 router 选择 provider，否则使用固定的 provider
+        let llm = if let Some(router) = self.executor.llm_router() {
+            let llm_options = &options.llm_options;
+            router.select_provider(llm_options).await?
+        } else {
+            core.llm().clone()
+        };
 
         // 构建系统消息
         let instructions = options
@@ -350,8 +361,12 @@ impl AgentGenerator {
             })
             .collect();
 
+        // 标准化响应格式
+        let response_content = response.content.unwrap_or_default();
+        let standardized_response = ApiStandardizer::standardize_response(&response_content);
+
         Ok(AgentGenerateResult {
-            response: response.content.unwrap_or_default(),
+            response: standardized_response,
             steps: vec![AgentStep {
                 id: Uuid::new_v4().to_string(),
                 step_type: if tool_calls.is_empty() {
@@ -382,7 +397,14 @@ impl AgentGenerator {
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
         let core = self.executor.core();
-        let llm = core.llm();
+        
+        // 如果有 LLM router，使用 router 选择 provider，否则使用固定的 provider
+        let llm = if let Some(router) = self.executor.llm_router() {
+            let llm_options = &options.llm_options;
+            router.select_provider(llm_options).await?
+        } else {
+            core.llm().clone()
+        };
 
         // 构建系统消息
         let instructions = options
@@ -429,10 +451,13 @@ impl AgentGenerator {
                 .map_err(|e| crate::error::Error::Llm(format!("LLM generation failed: {}", e)))?
         };
 
+        // 标准化响应格式
+        let standardized_response = ApiStandardizer::standardize_response(&response_content);
+
         // 构建结果
         let output_message = Message {
             role: Role::Assistant,
-            content: response_content.clone(),
+            content: standardized_response.clone(),
             metadata: None,
             name: None,
         };
@@ -442,10 +467,10 @@ impl AgentGenerator {
             .iter()
             .map(|m| m.content.len() / 4) // 粗略估算：4 个字符约等于 1 个 token
             .sum::<usize>();
-        let estimated_completion_tokens = response_content.len() / 4;
+        let estimated_completion_tokens = standardized_response.len() / 4;
 
         Ok(AgentGenerateResult {
-            response: response_content,
+            response: standardized_response,
             steps: vec![AgentStep {
                 id: Uuid::new_v4().to_string(),
                 step_type: StepType::Final,
@@ -669,8 +694,8 @@ impl AgentGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::AgentConfig;
-    use crate::llm::MockLlmProvider;
+    use crate::agent::{AgentConfig, refactored::AgentCore};
+    use crate::llm::{Message, Role, MockLlmProvider};
 
     #[tokio::test]
     async fn test_agent_generator_creation() {
@@ -790,6 +815,92 @@ mod tests {
         let full_response: String = chunks.join("");
         assert!(!full_response.is_empty());
         assert!(full_response.contains("Hello") || full_response.contains("help"));
+    }
+
+    #[tokio::test]
+    async fn test_agent_generator_api_standardization() {
+        use crate::agent::api_consistency::ApiStandardizer;
+        
+        let config = crate::agent::AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        // 测试空响应标准化
+        let llm = Arc::new(crate::llm::MockLlmProvider::new(vec!["".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+        let generator = AgentGenerator::new(executor);
+        
+        let messages = vec![Message {
+            role: Role::User,
+            content: "Hello!".to_string(),
+            metadata: None,
+            name: None,
+        }];
+        
+        let options = AgentGenerateOptions::default();
+        let result = generator.generate(&messages, &options).await.unwrap();
+        
+        // 验证响应已被标准化（空响应应该被替换为默认消息）
+        assert!(!result.response.is_empty());
+        assert!(result.response.contains("apologize") || result.response.contains("couldn't"));
+        
+        // 测试响应以标点符号结尾
+        let llm2 = Arc::new(crate::llm::MockLlmProvider::new(vec!["Hello".to_string()]));
+        let core2 = AgentCore::new(
+            crate::agent::AgentConfig {
+                name: "test-agent-2".to_string(),
+                instructions: "You are a helpful assistant.".to_string(),
+                ..Default::default()
+            },
+            llm2,
+        ).unwrap();
+        let executor2 = AgentExecutor::new(core2).unwrap();
+        let generator2 = AgentGenerator::new(executor2);
+        
+        let result2 = generator2.generate(&messages, &options).await.unwrap();
+        // 验证响应以标点符号结尾（标准化后应该添加句号）
+        assert!(result2.response.ends_with('.') || result2.response.ends_with('!') || result2.response.ends_with('?'));
+    }
+
+    #[tokio::test]
+    async fn test_agent_generator_with_llm_router() {
+        use crate::llm::{LlmRouter, RoutingStrategy};
+        
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        // 创建多个 providers
+        let provider1: Arc<dyn crate::llm::LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Response from provider 1".to_string()]));
+        let provider2: Arc<dyn crate::llm::LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Response from provider 2".to_string()]));
+        
+        // 创建 router
+        let providers = vec![provider1.clone(), provider2.clone()];
+        let router = Arc::new(LlmRouter::new(providers).with_strategy(RoutingStrategy::RoundRobin));
+        
+        // 使用第一个 provider 创建 core（作为 fallback）
+        let core = AgentCore::new(config, provider1.clone()).unwrap();
+        let executor = AgentExecutor::new(core).unwrap()
+            .with_llm_router(router);
+        let generator = AgentGenerator::new(executor);
+        
+        let messages = vec![Message {
+            role: Role::User,
+            content: "Hello!".to_string(),
+            metadata: None,
+            name: None,
+        }];
+        
+        let options = AgentGenerateOptions::default();
+        let result = generator.generate(&messages, &options).await.unwrap();
+        
+        // 验证响应已生成（router 应该选择了某个 provider）
+        assert!(!result.response.is_empty());
+        assert_eq!(result.steps.len(), 1);
     }
 }
 

@@ -7,6 +7,7 @@ use crate::agent::refactored::core::AgentCore;
 use crate::agent::concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
 use crate::agent::error_handling::RetryExecutor;
 use crate::error::Result;
+use crate::llm::LlmRouter;
 use crate::memory::{create_working_memory, Memory, WorkingMemory};
 use crate::tool::Tool;
 use std::collections::HashMap;
@@ -48,6 +49,8 @@ pub struct AgentExecutor {
     retry_executor: Option<Arc<RetryExecutor>>,
     /// 并发工具执行器（可选）
     concurrent_tool_executor: Option<Arc<ConcurrentToolExecutor>>,
+    /// LLM 路由器（可选）
+    llm_router: Option<Arc<LlmRouter>>,
 }
 
 impl AgentExecutor {
@@ -100,6 +103,7 @@ impl AgentExecutor {
             working_memory,
             retry_executor: None,
             concurrent_tool_executor: None,
+            llm_router: None,
         })
     }
 
@@ -158,6 +162,25 @@ impl AgentExecutor {
     /// 获取并发工具执行器
     pub fn concurrent_tool_executor(&self) -> Option<Arc<ConcurrentToolExecutor>> {
         self.concurrent_tool_executor.clone()
+    }
+
+    /// 设置 LLM 路由器
+    ///
+    /// # 参数
+    ///
+    /// * `router` - LLM 路由器
+    ///
+    /// # 返回
+    ///
+    /// 返回新的 `AgentExecutor` 实例，包含路由器。
+    pub fn with_llm_router(mut self, router: Arc<LlmRouter>) -> Self {
+        self.llm_router = Some(router);
+        self
+    }
+
+    /// 获取 LLM 路由器
+    pub fn llm_router(&self) -> Option<Arc<LlmRouter>> {
+        self.llm_router.clone()
     }
 }
 
@@ -258,6 +281,31 @@ mod tests {
         let executor = executor.with_concurrent_tool_executor(concurrent_executor.clone());
         assert!(executor.concurrent_tool_executor().is_some());
         assert!(Arc::ptr_eq(&executor.concurrent_tool_executor().unwrap(), &concurrent_executor));
+    }
+
+    #[test]
+    fn test_agent_executor_with_llm_router() {
+        use crate::llm::{LlmRouter, RoutingStrategy};
+        
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+        
+        // 创建 LlmRouter
+        let provider1: Arc<dyn crate::llm::LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Response 1".to_string()]));
+        let provider2: Arc<dyn crate::llm::LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Response 2".to_string()]));
+        let providers = vec![provider1, provider2];
+        let router = Arc::new(LlmRouter::new(providers).with_strategy(RoutingStrategy::RoundRobin));
+        
+        let executor = executor.with_llm_router(router.clone());
+        assert!(executor.llm_router().is_some());
+        assert!(Arc::ptr_eq(&executor.llm_router().unwrap(), &router));
     }
 }
 

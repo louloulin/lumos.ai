@@ -53,3 +53,120 @@ pub use core::AgentCore;
 pub use executor::AgentExecutor;
 pub use generator::AgentGenerator;
 
+/// 创建重构后的 Agent（便捷函数）
+///
+/// 这是 `RefactoredAgent::new` 的便捷包装，提供与 `create_basic_agent` 类似的 API。
+///
+/// # 参数
+///
+/// * `name` - Agent 名称
+/// * `instructions` - Agent 指令
+/// * `llm` - LLM 提供者
+///
+/// # 返回
+///
+/// 返回 `Result<RefactoredAgent>`。
+///
+/// # 示例
+///
+/// ```rust
+/// use lumosai_core::agent::refactored::create_refactored_agent;
+/// use lumosai_core::llm::MockLlmProvider;
+/// use std::sync::Arc;
+///
+/// # async fn example() -> lumosai_core::Result<()> {
+/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+/// let agent = create_refactored_agent("assistant", "You are helpful", llm)?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn create_refactored_agent(
+    name: impl Into<String>,
+    instructions: impl Into<String>,
+    llm: std::sync::Arc<dyn crate::llm::LlmProvider>,
+) -> crate::error::Result<RefactoredAgent> {
+    use crate::agent::AgentConfig;
+    
+    let config = AgentConfig {
+        name: name.into(),
+        instructions: instructions.into(),
+        ..Default::default()
+    };
+    
+    RefactoredAgent::new(config, llm)
+}
+
+/// 创建带内存的重构后的 Agent（便捷函数）
+///
+/// # 参数
+///
+/// * `name` - Agent 名称
+/// * `instructions` - Agent 指令
+/// * `llm` - LLM 提供者
+/// * `memory` - 内存实例
+///
+/// # 返回
+///
+/// 返回 `Result<RefactoredAgent>`。
+///
+/// # 示例
+///
+/// ```rust
+/// use lumosai_core::agent::refactored::create_refactored_agent_with_memory;
+/// use lumosai_core::llm::MockLlmProvider;
+/// use lumosai_core::memory::BasicMemory;
+/// use std::sync::Arc;
+///
+/// # async fn example() -> lumosai_core::Result<()> {
+/// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+/// let memory = Arc::new(BasicMemory::new(None, None));
+/// let agent = create_refactored_agent_with_memory("assistant", "You are helpful", llm, memory)?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn create_refactored_agent_with_memory(
+    name: impl Into<String>,
+    instructions: impl Into<String>,
+    llm: std::sync::Arc<dyn crate::llm::LlmProvider>,
+    memory: std::sync::Arc<dyn crate::memory::Memory>,
+) -> crate::error::Result<RefactoredAgent> {
+    use crate::agent::AgentConfig;
+    
+    let config = AgentConfig {
+        name: name.into(),
+        instructions: instructions.into(),
+        ..Default::default()
+    };
+    
+    RefactoredAgent::with_memory(config, llm, memory)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::llm::MockLlmProvider;
+    use crate::memory::BasicMemory;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_create_refactored_agent() {
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let agent = create_refactored_agent("test-agent", "You are helpful", llm).unwrap();
+        
+        assert_eq!(agent.name(), "test-agent");
+        assert_eq!(agent.instructions(), "You are helpful");
+        assert!(!agent.has_memory());
+    }
+
+    #[test]
+    fn test_create_refactored_agent_with_memory() {
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        let memory = Arc::new(BasicMemory::new(None, None));
+        let agent = create_refactored_agent_with_memory("test-agent", "You are helpful", llm, memory).unwrap();
+        
+        assert_eq!(agent.name(), "test-agent");
+        assert_eq!(agent.instructions(), "You are helpful");
+        assert!(agent.has_memory());
+    }
+}
+

@@ -234,22 +234,27 @@ impl AgentGenerator {
         _options: &AgentGenerateOptions,
     ) -> Result<Vec<crate::llm::FunctionDefinition>> {
         let tools = self.executor.tools();
-        let tools_guard = tools.lock().map_err(|_| {
-            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
-        })?;
+        // 在同步块中完成所有操作，确保 MutexGuard 在 await 之前被释放
+        let function_definitions = {
+            let tools_guard = tools.lock().map_err(|_| {
+                crate::error::Error::Internal("Failed to lock tools mutex".to_string())
+            })?;
 
-        let mut function_definitions = Vec::new();
-        for tool in tools_guard.values() {
-            let schema = tool.schema();
-            // 将 ToolSchema 转换为 JSON Value
-            let schema_value = serde_json::to_value(&schema)
-                .unwrap_or_else(|_| serde_json::json!({}));
-            function_definitions.push(crate::llm::FunctionDefinition {
-                name: tool.id().to_string(),
-                description: Some(tool.description().to_string()),
-                parameters: schema_value,
-            });
-        }
+            let mut function_definitions = Vec::new();
+            for tool in tools_guard.values() {
+                let schema = tool.schema();
+                // 将 ToolSchema 转换为 JSON Value
+                let schema_value = serde_json::to_value(&schema)
+                    .unwrap_or_else(|_| serde_json::json!({}));
+                function_definitions.push(crate::llm::FunctionDefinition {
+                    name: tool.id().to_string(),
+                    description: Some(tool.description().to_string()),
+                    parameters: schema_value,
+                });
+            }
+            // tools_guard 在这里被释放
+            function_definitions
+        };
 
         Ok(function_definitions)
     }
@@ -534,18 +539,21 @@ impl AgentGenerator {
         &self,
         tool_call: &crate::agent::types::ToolCall,
     ) -> Result<Value> {
-        let tools = self.executor.tools();
-        let tools_guard = tools.lock().map_err(|_| {
-            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
-        })?;
+        // 在同步块中获取工具并克隆，确保 MutexGuard 在 await 之前被释放
+        let tool_clone = {
+            let tools = self.executor.tools();
+            let tools_guard = tools.lock().map_err(|_| {
+                crate::error::Error::Internal("Failed to lock tools mutex".to_string())
+            })?;
 
-        let tool = tools_guard.get(&tool_call.name).ok_or_else(|| {
-            crate::error::Error::NotFound(format!("Tool '{}' not found", tool_call.name))
-        })?;
+            let tool = tools_guard.get(&tool_call.name).ok_or_else(|| {
+                crate::error::Error::NotFound(format!("Tool '{}' not found", tool_call.name))
+            })?;
 
-        // 克隆工具以避免持有锁
-        let tool_clone = tool.clone();
-        drop(tools_guard);
+            // 克隆工具以避免持有锁
+            tool.clone()
+            // tools_guard 在这里被释放
+        };
 
         // 转换参数（tool_call.arguments 已经是 HashMap，可以直接转换为 Value）
         let args_value = serde_json::to_value(&tool_call.arguments)
@@ -558,18 +566,26 @@ impl AgentGenerator {
 
         // 使用 RetryExecutor 包装工具调用（如果可用）
         if let Some(retry_executor) = self.executor.retry_executor() {
-            let context_rt = RuntimeContext::default();
+            // 确保所有捕获的值都是 Send + Sync
             let tool_clone2 = tool_clone.clone();
             let args_value_clone = args_value.clone();
             let context_clone = context.clone();
             let options_clone = options.clone();
             
+            // 在同步块中准备所有数据，确保没有非 Send 的类型被捕获
+            let (tool_final, args_final, ctx_final, opts_final) = {
+                (tool_clone2, args_value_clone, context_clone, options_clone)
+            };
+            
+            // 创建 context_rt 在闭包外部，确保它是 Send
+            let context_rt = RuntimeContext::default();
+            
             retry_executor.execute(
-                || {
-                    let tool = tool_clone2.clone();
-                    let args = args_value_clone.clone();
-                    let ctx = context_clone.clone();
-                    let opts = options_clone.clone();
+                move || {
+                    let tool = tool_final.clone();
+                    let args = args_final.clone();
+                    let ctx = ctx_final.clone();
+                    let opts = opts_final.clone();
                     async move {
                         tool.execute(args, ctx, &opts)
                             .await

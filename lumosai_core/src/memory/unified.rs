@@ -534,13 +534,38 @@ impl Memory {
         config: &SemanticRecallConfig,
         namespace: Option<String>,
     ) -> Result<Vec<Message>> {
-        let memory_config = MemoryConfig {
-            query: Some(query.to_string()),
-            namespace,
-            semantic_recall: Some(config.clone()),
-            ..Default::default()
-        };
-        self.retrieve(&memory_config).await
+        // 直接调用语义内存的 search 方法，不通过 retrieve 避免获取线程历史消息
+        match &self.inner {
+            MemoryImpl::Semantic(semantic) => {
+                let mut options = SemanticSearchOptions::default();
+                options.limit = config.top_k;
+                options.threshold = config.relevance_threshold;
+                options.namespace = namespace;
+                if let Some(range) = &config.message_range {
+                    options.use_window = true;
+                    options.window_size = Some((range.before, range.after));
+                }
+                let results = semantic.search(query, &options).await?;
+                Ok(results.into_iter().map(|r| r.message).collect())
+            }
+            MemoryImpl::Hybrid { semantic, .. } => {
+                if let Some(semantic) = semantic {
+                    let mut options = SemanticSearchOptions::default();
+                    options.limit = config.top_k;
+                    options.threshold = config.relevance_threshold;
+                    options.namespace = namespace;
+                    if let Some(range) = &config.message_range {
+                        options.use_window = true;
+                        options.window_size = Some((range.before, range.after));
+                    }
+                    let results = semantic.search(query, &options).await?;
+                    Ok(results.into_iter().map(|r| r.message).collect())
+                } else {
+                    Ok(vec![])
+                }
+            }
+            _ => Ok(vec![]), // 其他类型不支持语义召回
+        }
     }
 
     /// 检查内存是否为空

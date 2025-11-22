@@ -445,6 +445,150 @@ impl MemoryTrait for Memory {
             }
         }
     }
+
+    fn as_thread_storage(&self) -> Option<Arc<dyn MemoryThreadStorage>> {
+        self.thread_storage.clone()
+    }
+
+    async fn create_thread(
+        &self,
+        params: CreateThreadParams,
+    ) -> Result<MemoryThread> {
+        let storage = self
+            .thread_storage
+            .as_ref()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?;
+        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        manager.create_thread(params).await
+    }
+
+    async fn get_thread(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<Option<MemoryThread>> {
+        let storage = self
+            .thread_storage
+            .as_ref()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?;
+        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        manager.get_thread(thread_id, resource_id).await
+    }
+
+    async fn update_thread(
+        &self,
+        thread_id: &str,
+        params: UpdateThreadParams,
+        resource_id: Option<&str>,
+    ) -> Result<MemoryThread> {
+        let storage = self
+            .thread_storage
+            .as_ref()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?;
+        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        manager.update_thread(thread_id, params, resource_id).await
+    }
+
+    async fn delete_thread(&self, thread_id: &str, resource_id: Option<&str>) -> Result<()> {
+        let storage = self
+            .thread_storage
+            .as_ref()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?;
+        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        manager.delete_thread(thread_id, resource_id).await
+    }
+
+    async fn list_threads(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
+        let storage = self
+            .thread_storage
+            .as_ref()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?;
+        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        manager.list_threads(resource_id).await
+    }
+
+    async fn get_thread_stats(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<ThreadStats> {
+        let storage = self
+            .thread_storage
+            .as_ref()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?;
+        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        manager.get_thread_stats(thread_id, resource_id).await
+    }
+
+    async fn semantic_recall(
+        &self,
+        query: &str,
+        config: &SemanticRecallConfig,
+        namespace: Option<String>,
+    ) -> Result<Vec<Message>> {
+        // 直接调用语义内存的 search 方法，不通过 retrieve 避免获取线程历史消息
+        match &self.inner {
+            MemoryImpl::Semantic(semantic) => {
+                let mut options = SemanticSearchOptions::default();
+                options.limit = config.top_k;
+                options.threshold = config.relevance_threshold;
+                options.namespace = namespace;
+                if let Some(range) = &config.message_range {
+                    options.use_window = true;
+                    options.window_size = Some((range.before, range.after));
+                } else {
+                    options.use_window = false;
+                    options.window_size = None;
+                }
+                let results = semantic.search(query, &options).await?;
+                Ok(results.into_iter().map(|r| r.message).collect())
+            }
+            MemoryImpl::Hybrid { semantic, .. } => {
+                if let Some(semantic) = semantic {
+                    let mut options = SemanticSearchOptions::default();
+                    options.limit = config.top_k;
+                    options.threshold = config.relevance_threshold;
+                    options.namespace = namespace;
+                    if let Some(range) = &config.message_range {
+                        options.use_window = true;
+                        options.window_size = Some((range.before, range.after));
+                    } else {
+                        options.use_window = false;
+                        options.window_size = None;
+                    }
+                    let results = semantic.search(query, &options).await?;
+                    Ok(results.into_iter().map(|r| r.message).collect())
+                } else {
+                    Ok(vec![])
+                }
+            }
+            _ => Ok(vec![]), // 其他类型不支持语义召回
+        }
+    }
 }
 
 impl Memory {
@@ -511,7 +655,7 @@ impl Memory {
         self.retrieve(&config).await
     }
 
-    /// 语义召回方法
+    /// 语义召回方法（便捷方法，委托给 trait 实现）
     ///
     /// 执行语义搜索并返回相关消息，支持命名空间过滤
     ///
@@ -524,14 +668,17 @@ impl Memory {
     /// # 示例
     ///
     /// ```rust
-    /// use lumosai_core::memory::{SemanticRecallConfig, MessageRange};
+    /// use lumosai_core::memory::{Memory, SemanticRecallConfig, MessageRange};
     ///
+    /// # async fn example(memory: Memory) -> lumosai_core::Result<()> {
     /// let recall_config = SemanticRecallConfig {
     ///     top_k: 5,
     ///     message_range: Some(MessageRange { before: 1, after: 1 }),
     ///     ..Default::default()
     /// };
     /// let results = memory.semantic_recall("AI", &recall_config, Some("namespace".to_string())).await?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub async fn semantic_recall(
         &self,
@@ -539,38 +686,8 @@ impl Memory {
         config: &SemanticRecallConfig,
         namespace: Option<String>,
     ) -> Result<Vec<Message>> {
-        // 直接调用语义内存的 search 方法，不通过 retrieve 避免获取线程历史消息
-        match &self.inner {
-            MemoryImpl::Semantic(semantic) => {
-                let mut options = SemanticSearchOptions::default();
-                options.limit = config.top_k;
-                options.threshold = config.relevance_threshold;
-                options.namespace = namespace;
-                if let Some(range) = &config.message_range {
-                    options.use_window = true;
-                    options.window_size = Some((range.before, range.after));
-                }
-                let results = semantic.search(query, &options).await?;
-                Ok(results.into_iter().map(|r| r.message).collect())
-            }
-            MemoryImpl::Hybrid { semantic, .. } => {
-                if let Some(semantic) = semantic {
-                    let mut options = SemanticSearchOptions::default();
-                    options.limit = config.top_k;
-                    options.threshold = config.relevance_threshold;
-                    options.namespace = namespace;
-                    if let Some(range) = &config.message_range {
-                        options.use_window = true;
-                        options.window_size = Some((range.before, range.after));
-                    }
-                    let results = semantic.search(query, &options).await?;
-                    Ok(results.into_iter().map(|r| r.message).collect())
-                } else {
-                    Ok(vec![])
-                }
-            }
-            _ => Ok(vec![]), // 其他类型不支持语义召回
-        }
+        // 委托给 trait 实现
+        MemoryTrait::semantic_recall(self, query, config, namespace).await
     }
 
     /// 创建新线程
@@ -1389,6 +1506,110 @@ mod tests {
             })
             .await;
         assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn unified_memory_thread_management_through_trait() -> Result<()> {
+        use crate::memory::Memory as MemoryTrait;
+
+        let storage = Arc::new(InMemoryThreadStorage::new()) as Arc<dyn MemoryThreadStorage>;
+        let memory: Arc<dyn MemoryTrait> = Arc::new(Memory::basic().with_thread_storage(storage));
+
+        // 通过 Memory trait 创建线程
+        let thread = memory
+            .create_thread(CreateThreadParams {
+                id: Some("trait-thread".to_string()),
+                title: "Trait Test Thread".to_string(),
+                agent_id: None,
+                resource_id: Some("user-789".to_string()),
+                metadata: None,
+            })
+            .await?;
+        assert_eq!(thread.id, "trait-thread");
+
+        // 通过 Memory trait 获取线程
+        let retrieved = memory.get_thread("trait-thread", Some("user-789")).await?;
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().title, "Trait Test Thread");
+
+        // 通过 Memory trait 更新线程
+        let updated = memory
+            .update_thread(
+                "trait-thread",
+                UpdateThreadParams {
+                    title: Some("Updated Trait Title".to_string()),
+                    metadata: None,
+                },
+                Some("user-789"),
+            )
+            .await?;
+        assert_eq!(updated.title, "Updated Trait Title");
+
+        // 通过 Memory trait 列出线程
+        let threads = memory.list_threads("user-789").await?;
+        assert_eq!(threads.len(), 1);
+
+        // 通过 Memory trait 获取统计信息
+        let stats = memory.get_thread_stats("trait-thread", Some("user-789")).await?;
+        assert_eq!(stats.message_count, 0);
+
+        // 通过 Memory trait 删除线程
+        memory.delete_thread("trait-thread", Some("user-789")).await?;
+        let deleted = memory.get_thread("trait-thread", Some("user-789")).await?;
+        assert!(deleted.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn unified_memory_semantic_recall_through_trait() -> Result<()> {
+        use crate::memory::Memory as MemoryTrait;
+
+        // 创建带语义内存的 Hybrid Memory
+        let semantic = Arc::new(MockSemanticMemory::default());
+        let storage = Arc::new(InMemoryThreadStorage::new()) as Arc<dyn MemoryThreadStorage>;
+        
+        let memory: Arc<dyn MemoryTrait> = Arc::new(
+            Memory {
+                inner: MemoryImpl::Hybrid {
+                    basic: BasicMemory::with_thread_storage(None, Some(semantic.clone()), Some(storage.clone())),
+                    working: None,
+                    semantic: Some(semantic.clone()),
+                },
+                memory_type: MemoryType::Hybrid {
+                    working_size: None,
+                    enable_semantic: true,
+                },
+                thread_storage: Some(storage),
+                processors: Vec::new(),
+                processors_registered: AtomicBool::new(true),
+            }
+        );
+
+        // 添加一些消息到语义内存
+        let msg1 = Message::new(Role::User, "vector embeddings".into(), None, None);
+        let msg2 = Message::new(Role::User, "semantic search".into(), None, None);
+        semantic.add(&msg1).await?;
+        semantic.add(&msg2).await?;
+
+        // 通过 Memory trait 调用 semantic_recall
+        let config = SemanticRecallConfig {
+            top_k: 2,
+            message_range: None,
+            generate_summaries: false,
+            use_embeddings: true,
+            max_capacity: None,
+            max_results: None,
+            relevance_threshold: None,
+            template: None,
+        };
+        let results = memory.semantic_recall("vector", &config, None).await?;
+        
+        // 应该返回包含 "vector" 的消息
+        assert!(!results.is_empty());
+        assert!(results.iter().any(|m| m.content.contains("vector")));
 
         Ok(())
     }

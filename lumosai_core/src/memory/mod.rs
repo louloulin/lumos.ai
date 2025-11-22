@@ -535,6 +535,43 @@ pub trait Memory: Send + Sync {
             "Thread management is not supported by this memory implementation".to_string(),
         ))
     }
+
+    /// 语义召回（可选功能）
+    ///
+    /// 执行语义搜索并返回相关消息，支持命名空间过滤。
+    /// 默认实现返回错误，表示不支持语义召回。
+    /// 支持语义召回的 Memory 实现应该覆盖此方法。
+    ///
+    /// # 参数
+    ///
+    /// * `query` - 搜索查询字符串
+    /// * `config` - 语义召回配置
+    /// * `namespace` - 可选的命名空间过滤
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::{Memory, SemanticRecallConfig};
+    ///
+    /// # async fn example(memory: &dyn Memory) -> lumosai_core::Result<()> {
+    /// let config = SemanticRecallConfig {
+    ///     top_k: 5,
+    ///     ..Default::default()
+    /// };
+    /// let results = memory.semantic_recall("AI", &config, Some("namespace".to_string())).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn semantic_recall(
+        &self,
+        _query: &str,
+        _config: &SemanticRecallConfig,
+        _namespace: Option<String>,
+    ) -> Result<Vec<Message>> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Semantic recall is not supported by this memory implementation".to_string(),
+        ))
+    }
 }
 
 // 模块声明

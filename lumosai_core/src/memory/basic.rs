@@ -415,6 +415,33 @@ impl Memory for BasicMemory {
             .get_thread_stats(thread_id, resource_id)
             .await
     }
+
+    async fn semantic_recall(
+        &self,
+        query: &str,
+        config: &crate::memory::SemanticRecallConfig,
+        namespace: Option<String>,
+    ) -> Result<Vec<Message>> {
+        if let Some(ref semantic_memory) = self.semantic_memory {
+            let mut options = SemanticSearchOptions::default();
+            options.limit = config.top_k;
+            options.threshold = config.relevance_threshold;
+            options.namespace = namespace;
+            if let Some(range) = &config.message_range {
+                options.use_window = true;
+                options.window_size = Some((range.before, range.after));
+            } else {
+                options.use_window = false;
+                options.window_size = None;
+            }
+            let results = semantic_memory.search(query, &options).await?;
+            Ok(results.into_iter().map(|r| r.message).collect())
+        } else {
+            Err(Error::UnsupportedOperation(
+                "Semantic memory not enabled for this BasicMemory instance".to_string(),
+            ))
+        }
+    }
 }
 
 impl BasicMemory {

@@ -12,7 +12,7 @@ use crate::memory::Memory;
 use crate::tool::Tool;
 use futures::stream::{BoxStream, StreamExt};
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 /// 重构后的 Agent 实现
 ///
@@ -141,13 +141,12 @@ impl RefactoredAgent {
     /// # 返回
     ///
     /// 返回 `Result<()>`。
-    pub fn add_tool(&mut self, tool: Box<dyn Tool>) -> Result<()> {
-        // 注意：这需要修改 AgentGenerator 以支持可变访问
-        // 当前实现中，我们需要通过 executor 来添加工具
-        // 这是一个设计限制，未来可以改进
-        Err(crate::error::Error::UnsupportedOperation(
-            "add_tool is not yet supported in RefactoredAgent. Use AgentExecutor directly.".to_string(),
-        ))
+    ///
+    /// # 注意
+    ///
+    /// 这个方法不需要 `&mut self`，因为工具存储在 `Arc<Mutex<...>>` 中，可以安全地并发访问。
+    pub fn add_tool(&self, tool: Box<dyn Tool>) -> Result<()> {
+        self.generator.executor().add_tool(tool)
     }
 
     /// 获取 Agent 名称
@@ -173,6 +172,15 @@ impl RefactoredAgent {
     /// 检查是否有内存
     pub fn has_memory(&self) -> bool {
         self.generator.executor().memory().is_some()
+    }
+
+    /// 获取工具列表
+    ///
+    /// # 返回
+    ///
+    /// 返回工具映射的 `Arc<Mutex<...>>`，可以用于查询或修改工具。
+    pub fn tools(&self) -> Arc<Mutex<HashMap<String, Box<dyn Tool>>>> {
+        self.generator.executor().tools()
     }
 }
 
@@ -248,6 +256,42 @@ mod tests {
         assert!(!chunks.is_empty());
         let full_response: String = chunks.join("");
         assert!(!full_response.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_refactored_agent_add_tool() {
+        use crate::tool::create_tool;
+
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let agent = RefactoredAgent::new(config, llm).unwrap();
+
+        // 添加工具
+        let echo_tool = create_tool(
+            "echo",
+            "Echo a message",
+            vec![("message", "string", "Message to echo", true)],
+            |params| {
+                let message = params
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("No message");
+                Ok(serde_json::json!({"echo": message}))
+            },
+        ).unwrap();
+
+        // 测试 add_tool（现在不需要 &mut）
+        agent.add_tool(Box::new(echo_tool)).unwrap();
+
+        // 验证工具已添加
+        let tools = agent.tools();
+        let tools_guard = tools.lock().unwrap();
+        assert!(tools_guard.contains_key("echo"));
     }
 }
 

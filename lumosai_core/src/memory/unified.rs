@@ -454,15 +454,7 @@ impl MemoryTrait for Memory {
         &self,
         params: CreateThreadParams,
     ) -> Result<MemoryThread> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.create_thread(params).await
     }
 
@@ -471,15 +463,7 @@ impl MemoryTrait for Memory {
         thread_id: &str,
         resource_id: Option<&str>,
     ) -> Result<Option<MemoryThread>> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.get_thread(thread_id, resource_id).await
     }
 
@@ -489,41 +473,17 @@ impl MemoryTrait for Memory {
         params: UpdateThreadParams,
         resource_id: Option<&str>,
     ) -> Result<MemoryThread> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.update_thread(thread_id, params, resource_id).await
     }
 
     async fn delete_thread(&self, thread_id: &str, resource_id: Option<&str>) -> Result<()> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.delete_thread(thread_id, resource_id).await
     }
 
     async fn list_threads(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.list_threads(resource_id).await
     }
 
@@ -537,15 +497,7 @@ impl MemoryTrait for Memory {
         thread_id: &str,
         resource_id: Option<&str>,
     ) -> Result<ThreadStats> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.get_thread_stats(thread_id, resource_id).await
     }
 
@@ -743,15 +695,7 @@ impl Memory {
         &self,
         params: CreateThreadParams,
     ) -> Result<MemoryThread> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.create_thread(params).await
     }
 
@@ -777,15 +721,7 @@ impl Memory {
         thread_id: &str,
         resource_id: Option<&str>,
     ) -> Result<Option<MemoryThread>> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.get_thread(thread_id, resource_id).await
     }
 
@@ -820,15 +756,7 @@ impl Memory {
         params: UpdateThreadParams,
         resource_id: Option<&str>,
     ) -> Result<MemoryThread> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.update_thread(thread_id, params, resource_id).await
     }
 
@@ -852,15 +780,7 @@ impl Memory {
         thread_id: &str,
         resource_id: Option<&str>,
     ) -> Result<()> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.delete_thread(thread_id, resource_id).await
     }
 
@@ -880,15 +800,7 @@ impl Memory {
     /// # }
     /// ```
     pub async fn list_threads(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.list_threads(resource_id).await
     }
 
@@ -919,15 +831,7 @@ impl Memory {
         thread_id: &str,
         resource_id: Option<&str>,
     ) -> Result<ThreadStats> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        let manager = MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>);
+        let manager = self.get_thread_manager()?;
         manager.get_thread_stats(thread_id, resource_id).await
     }
 
@@ -1043,6 +947,19 @@ pub struct SemanticMemoryConfig {
 }
 
 impl Memory {
+    /// 获取线程管理器（辅助方法，减少重复代码）
+    fn get_thread_manager(&self) -> Result<MemoryThreadManager<Arc<dyn MemoryThreadStorage>>> {
+        let storage = self
+            .thread_storage
+            .as_ref()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?;
+        Ok(MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>))
+    }
+
     async fn ensure_processors_registered(&self) -> Result<()> {
         if self.processors.is_empty()
             || self.processors_registered.load(Ordering::SeqCst)

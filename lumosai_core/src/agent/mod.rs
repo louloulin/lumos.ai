@@ -51,6 +51,9 @@ pub mod reflection;
 // 暂时移除模块化Agent组件（有编译错误）
 // pub mod modular;
 
+// BasicAgent 重构模块
+pub mod refactored;
+
 #[cfg(feature = "demos")]
 pub mod enhanced_streaming_demo;
 #[cfg(feature = "demos")]

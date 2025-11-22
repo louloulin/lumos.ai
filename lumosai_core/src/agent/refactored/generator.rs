@@ -70,6 +70,7 @@ impl AgentGenerator {
     /// 生成响应
     ///
     /// 这是 AgentGenerator 的核心方法，协调各个组件来生成响应。
+    /// 支持多步骤生成，可以循环调用 LLM 和工具直到完成或达到最大步数。
     ///
     /// # 参数
     ///
@@ -84,37 +85,102 @@ impl AgentGenerator {
     ///
     /// 1. 准备消息（从内存检索历史消息）
     /// 2. 准备工具（从执行器获取可用工具）
-    /// 3. 调用 LLM（使用核心的 LLM 提供者）
-    /// 4. 处理工具调用（如果需要）
-    /// 5. 更新内存（将消息存储到内存）
+    /// 3. 多步骤循环：
+    ///    - 调用 LLM（使用核心的 LLM 提供者）
+    ///    - 处理工具调用（如果需要）
+    ///    - 如果还有工具调用，继续下一轮；否则返回最终响应
+    /// 4. 更新内存（将消息存储到内存）
     pub async fn generate(
         &self,
         messages: &[Message],
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
         // 1. 准备消息：从内存检索历史消息
-        let prepared_messages = self.prepare_messages(messages, options).await?;
+        let mut all_messages = self.prepare_messages(messages, options).await?;
 
         // 2. 准备工具：从执行器获取可用工具
         let tools = self.prepare_tools(options).await?;
 
-        // 3. 调用 LLM（如果支持函数调用且工具有效，使用函数调用模式）
-        let use_function_calling = !tools.is_empty() 
-            && self.executor.core().llm().supports_function_calling();
-        
-        let response = if use_function_calling {
-            self.call_llm_with_functions(&prepared_messages, &tools, options).await?
-        } else {
-            self.call_llm(&prepared_messages, &tools, options).await?
+        // 3. 多步骤生成循环
+        let max_steps = options.max_steps.unwrap_or(5);
+        let mut current_step = 0;
+        let mut all_steps = Vec::new();
+        let mut total_usage = TokenUsage {
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
         };
 
-        // 4. 处理工具调用（如果响应包含工具调用）
-        let final_response = self.handle_tool_calls(response, options).await?;
+        // 检查是否使用函数调用模式
+        let use_function_calling = !tools.is_empty() 
+            && self.executor.core().llm().supports_function_calling();
 
-        // 5. 更新内存
-        self.update_memory(messages, &final_response).await?;
+        while current_step < max_steps {
+            current_step += 1;
 
-        Ok(final_response)
+            // 调用 LLM
+            let response = if use_function_calling {
+                self.call_llm_with_functions(&all_messages, &tools, options).await?
+            } else {
+                self.call_llm(&all_messages, &tools, options).await?
+            };
+
+            // 累计 token 使用量
+            total_usage.prompt_tokens += response.usage.prompt_tokens;
+            total_usage.completion_tokens += response.usage.completion_tokens;
+            total_usage.total_tokens += response.usage.total_tokens;
+
+            // 检查是否有工具调用
+            let has_tool_calls = response.steps.iter().any(|step| !step.tool_calls.is_empty());
+
+            if has_tool_calls {
+                // 处理工具调用
+                let tool_step = response.steps.first().unwrap();
+                let tool_results = self.execute_tool_calls(&tool_step.tool_calls).await?;
+
+                // 将工具结果添加到消息中，以便下一轮 LLM 调用
+                for (tool_call, tool_result) in tool_step.tool_calls.iter().zip(tool_results.iter()) {
+                    let tool_result_json = serde_json::to_string(&tool_result.result)
+                        .unwrap_or_else(|_| "{}".to_string());
+                    let tool_message = crate::agent::types::tool_message(format!(
+                        "Tool {} (id: {}) result: {}",
+                        tool_call.name, tool_call.id, tool_result_json
+                    ));
+                    all_messages.push(tool_message);
+                }
+
+                // 添加工具调用步骤
+                let mut tool_step_clone = tool_step.clone();
+                tool_step_clone.tool_results = tool_results;
+                all_steps.push(tool_step_clone);
+
+                // 继续下一轮
+                continue;
+            } else {
+                // 没有工具调用，这是最终响应
+                all_steps.extend(response.steps);
+                break;
+            }
+        }
+
+        // 构建最终结果
+        let final_response = all_steps
+            .last()
+            .and_then(|step| step.output.as_ref())
+            .map(|msg| msg.content.clone())
+            .unwrap_or_default();
+
+        let result = AgentGenerateResult {
+            response: final_response,
+            steps: all_steps,
+            usage: total_usage,
+            metadata: HashMap::new(),
+        };
+
+        // 4. 更新内存
+        self.update_memory(messages, &result).await?;
+
+        Ok(result)
     }
 
     /// 准备消息：从内存检索历史消息
@@ -351,85 +417,35 @@ impl AgentGenerator {
         })
     }
 
-    /// 处理工具调用
-    async fn handle_tool_calls(
+    /// 执行多个工具调用
+    async fn execute_tool_calls(
         &self,
-        mut result: AgentGenerateResult,
-        _options: &AgentGenerateOptions,
-    ) -> Result<AgentGenerateResult> {
-        // 检查是否有工具调用需要处理
-        let mut has_tool_calls = false;
-        for step in &result.steps {
-            if !step.tool_calls.is_empty() {
-                has_tool_calls = true;
-                break;
-            }
-        }
+        tool_calls: &[crate::agent::types::ToolCall],
+    ) -> Result<Vec<crate::agent::types::ToolResult>> {
+        let mut tool_results = Vec::new();
 
-        if !has_tool_calls {
-            return Ok(result);
-        }
-
-        // 处理每个步骤中的工具调用
-        let mut updated_steps = Vec::new();
-        let mut final_response = result.response.clone();
-
-        for step in result.steps {
-            if step.tool_calls.is_empty() {
-                updated_steps.push(step);
-                continue;
-            }
-
-            // 执行工具调用
-            let mut tool_results = Vec::new();
-            for tool_call in &step.tool_calls {
-                match self.execute_tool_call(tool_call).await {
-                    Ok(result_value) => {
-                        tool_results.push(crate::agent::types::ToolResult {
-                            call_id: tool_call.id.clone(),
-                            name: tool_call.name.clone(),
-                            result: result_value,
-                            status: crate::agent::types::ToolResultStatus::Success,
-                        });
-                    }
-                    Err(e) => {
-                        tool_results.push(crate::agent::types::ToolResult {
-                            call_id: tool_call.id.clone(),
-                            name: tool_call.name.clone(),
-                            result: serde_json::json!({"error": e.to_string()}),
-                            status: crate::agent::types::ToolResultStatus::Error,
-                        });
-                    }
+        for tool_call in tool_calls {
+            match self.execute_tool_call(tool_call).await {
+                Ok(result_value) => {
+                    tool_results.push(crate::agent::types::ToolResult {
+                        call_id: tool_call.id.clone(),
+                        name: tool_call.name.clone(),
+                        result: result_value,
+                        status: crate::agent::types::ToolResultStatus::Success,
+                    });
+                }
+                Err(e) => {
+                    tool_results.push(crate::agent::types::ToolResult {
+                        call_id: tool_call.id.clone(),
+                        name: tool_call.name.clone(),
+                        result: serde_json::json!({"error": e.to_string()}),
+                        status: crate::agent::types::ToolResultStatus::Error,
+                    });
                 }
             }
-
-            // 更新步骤，包含工具结果
-            let mut updated_step = step.clone();
-            updated_step.tool_results = tool_results.clone();
-            updated_steps.push(updated_step);
-
-            // 如果有工具调用，更新最终响应，包含工具执行结果
-            if !tool_results.is_empty() {
-                let tool_results_summary: String = tool_results
-                    .iter()
-                    .map(|tr| {
-                        format!(
-                            "Tool {}: {}",
-                            tr.name,
-                            serde_json::to_string(&tr.result).unwrap_or_default()
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                final_response = format!("{}\n\nTool Results:\n{}", final_response, tool_results_summary);
-            }
         }
 
-        // 更新结果
-        result.steps = updated_steps;
-        result.response = final_response;
-
-        Ok(result)
+        Ok(tool_results)
     }
 
     /// 执行单个工具调用

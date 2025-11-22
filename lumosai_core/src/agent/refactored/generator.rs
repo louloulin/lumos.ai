@@ -469,6 +469,15 @@ impl AgentGenerator {
         &self,
         tool_calls: &[crate::agent::types::ToolCall],
     ) -> Result<Vec<crate::agent::types::ToolResult>> {
+        // TODO: 集成 ConcurrentToolExecutor
+        // 当前 AgentExecutor 使用 Box<dyn Tool> 存储工具，而 ConcurrentToolExecutor 需要 Arc<dyn Tool>
+        // 未来可以考虑：
+        // 1. 将 AgentExecutor 的工具存储改为 Arc<dyn Tool>
+        // 2. 或者创建一个包装器将 Box<dyn Tool> 转换为 Arc<dyn Tool>
+        // 3. 或者修改 ConcurrentToolExecutor 以支持 Box<dyn Tool>
+        // 目前暂时使用顺序执行
+        
+        // 否则使用顺序执行（原有逻辑）
         let mut tool_results = Vec::new();
 
         for tool_call in tool_calls {

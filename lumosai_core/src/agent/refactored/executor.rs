@@ -4,6 +4,7 @@
 //! 这是 BasicAgent 重构的第二步，将工具和内存管理从 BasicAgent 中分离出来。
 
 use crate::agent::refactored::core::AgentCore;
+use crate::agent::concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
 use crate::agent::error_handling::RetryExecutor;
 use crate::error::Result;
 use crate::memory::{create_working_memory, Memory, WorkingMemory};
@@ -45,6 +46,8 @@ pub struct AgentExecutor {
     working_memory: Option<Box<dyn WorkingMemory>>,
     /// 错误重试执行器（可选）
     retry_executor: Option<Arc<RetryExecutor>>,
+    /// 并发工具执行器（可选）
+    concurrent_tool_executor: Option<Arc<ConcurrentToolExecutor>>,
 }
 
 impl AgentExecutor {
@@ -96,6 +99,7 @@ impl AgentExecutor {
             memory,
             working_memory,
             retry_executor: None,
+            concurrent_tool_executor: None,
         })
     }
 
@@ -143,6 +147,17 @@ impl AgentExecutor {
     /// 获取错误重试执行器
     pub fn retry_executor(&self) -> Option<Arc<RetryExecutor>> {
         self.retry_executor.clone()
+    }
+
+    /// 设置并发工具执行器
+    pub fn with_concurrent_tool_executor(mut self, executor: Arc<ConcurrentToolExecutor>) -> Self {
+        self.concurrent_tool_executor = Some(executor);
+        self
+    }
+
+    /// 获取并发工具执行器
+    pub fn concurrent_tool_executor(&self) -> Option<Arc<ConcurrentToolExecutor>> {
+        self.concurrent_tool_executor.clone()
     }
 }
 
@@ -216,6 +231,33 @@ mod tests {
         let executor = executor.with_retry_executor(retry_executor.clone());
         assert!(executor.retry_executor().is_some());
         assert!(Arc::ptr_eq(&executor.retry_executor().unwrap(), &retry_executor));
+    }
+
+    #[test]
+    fn test_agent_executor_with_concurrent_tool_executor() {
+        use crate::agent::concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
+        
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+        
+        // 创建 ConcurrentToolExecutor
+        let concurrent_config = ConcurrentToolExecutorConfig {
+            max_concurrency: 5,
+            preserve_order: false,
+            timeout_seconds: Some(30),
+        };
+        let concurrent_executor = Arc::new(ConcurrentToolExecutor::new(concurrent_config));
+        
+        let executor = executor.with_concurrent_tool_executor(concurrent_executor.clone());
+        assert!(executor.concurrent_tool_executor().is_some());
+        assert!(Arc::ptr_eq(&executor.concurrent_tool_executor().unwrap(), &concurrent_executor));
     }
 }
 

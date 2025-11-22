@@ -7,6 +7,7 @@ use crate::agent::refactored::{AgentCore, AgentExecutor};
 use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStep, StepType, TokenUsage};
 use crate::error::Result;
 use crate::llm::{Message, Role};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -97,16 +98,23 @@ impl AgentGenerator {
         // 2. 准备工具：从执行器获取可用工具
         let tools = self.prepare_tools(options).await?;
 
-        // 3. 调用 LLM
-        let response = self.call_llm(&prepared_messages, &tools, options).await?;
+        // 3. 调用 LLM（如果支持函数调用且工具有效，使用函数调用模式）
+        let use_function_calling = !tools.is_empty() 
+            && self.executor.core().llm().supports_function_calling();
+        
+        let response = if use_function_calling {
+            self.call_llm_with_functions(&prepared_messages, &tools, options).await?
+        } else {
+            self.call_llm(&prepared_messages, &tools, options).await?
+        };
 
-        // 4. 处理工具调用（简化版本，暂时跳过）
-        // TODO: 实现工具调用处理逻辑
+        // 4. 处理工具调用（如果响应包含工具调用）
+        let final_response = self.handle_tool_calls(response, options).await?;
 
         // 5. 更新内存
-        self.update_memory(messages, &response).await?;
+        self.update_memory(messages, &final_response).await?;
 
-        Ok(response)
+        Ok(final_response)
     }
 
     /// 准备消息：从内存检索历史消息
@@ -175,7 +183,106 @@ impl AgentGenerator {
         Ok(function_definitions)
     }
 
-    /// 调用 LLM
+    /// 调用 LLM（使用函数调用模式）
+    async fn call_llm_with_functions(
+        &self,
+        messages: &[Message],
+        tools: &[crate::llm::FunctionDefinition],
+        options: &AgentGenerateOptions,
+    ) -> Result<AgentGenerateResult> {
+        let core = self.executor.core();
+        let llm = core.llm();
+
+        // 构建系统消息
+        let instructions = options
+            .instructions
+            .as_deref()
+            .unwrap_or_else(|| core.instructions());
+        let system_message = Message {
+            role: Role::System,
+            content: instructions.to_string(),
+            metadata: None,
+            name: None,
+        };
+
+        // 构建完整的消息列表
+        let mut all_messages = vec![system_message];
+        all_messages.extend_from_slice(messages);
+
+        // 调用 LLM with functions
+        let llm_options = &options.llm_options;
+        let tool_choice = match &options.tool_choice {
+            Some(crate::agent::types::ToolChoice::Auto) => crate::llm::ToolChoice::Auto,
+            Some(crate::agent::types::ToolChoice::None) => crate::llm::ToolChoice::None,
+            Some(crate::agent::types::ToolChoice::Required) => crate::llm::ToolChoice::Required,
+            Some(crate::agent::types::ToolChoice::Tool { tool_name }) => {
+                crate::llm::ToolChoice::Function {
+                    name: tool_name.clone(),
+                }
+            }
+            None => crate::llm::ToolChoice::Auto,
+        };
+
+        let response = llm
+            .generate_with_functions(&all_messages, tools, &tool_choice, llm_options)
+            .await
+            .map_err(|e| crate::error::Error::Llm(format!("LLM generation failed: {}", e)))?;
+
+        // 构建结果（包含函数调用信息）
+        let output_message = Message {
+            role: Role::Assistant,
+            content: response.content.clone().unwrap_or_default(),
+            metadata: None,
+            name: None,
+        };
+
+        // 估算 token 使用量
+        let estimated_prompt_tokens = all_messages
+            .iter()
+            .map(|m| m.content.len() / 4)
+            .sum::<usize>();
+        let estimated_completion_tokens = response.content.as_ref().map(|c| c.len() / 4).unwrap_or(0);
+
+        // 转换函数调用为工具调用
+        let tool_calls: Vec<crate::agent::types::ToolCall> = response
+            .function_calls
+            .iter()
+            .map(|fc| {
+                let arguments: HashMap<String, Value> = serde_json::from_str(&fc.arguments)
+                    .unwrap_or_else(|_| HashMap::new());
+                crate::agent::types::ToolCall {
+                    id: fc.id.clone().unwrap_or_else(|| Uuid::new_v4().to_string()),
+                    name: fc.name.clone(),
+                    arguments,
+                }
+            })
+            .collect();
+
+        Ok(AgentGenerateResult {
+            response: response.content.unwrap_or_default(),
+            steps: vec![AgentStep {
+                id: Uuid::new_v4().to_string(),
+                step_type: if tool_calls.is_empty() {
+                    StepType::Final
+                } else {
+                    StepType::Tool
+                },
+                input: all_messages.clone(),
+                output: Some(output_message),
+                tool_calls: tool_calls.clone(),
+                tool_results: vec![],
+                metadata: HashMap::new(),
+            }],
+            usage: TokenUsage {
+                prompt_tokens: estimated_prompt_tokens,
+                completion_tokens: estimated_completion_tokens,
+                total_tokens: estimated_prompt_tokens + estimated_completion_tokens,
+            },
+            metadata: HashMap::new(),
+        })
+    }
+
+    /// 调用 LLM（普通模式）
     async fn call_llm(
         &self,
         messages: &[Message],
@@ -242,6 +349,121 @@ impl AgentGenerator {
             },
             metadata: HashMap::new(),
         })
+    }
+
+    /// 处理工具调用
+    async fn handle_tool_calls(
+        &self,
+        mut result: AgentGenerateResult,
+        _options: &AgentGenerateOptions,
+    ) -> Result<AgentGenerateResult> {
+        // 检查是否有工具调用需要处理
+        let mut has_tool_calls = false;
+        for step in &result.steps {
+            if !step.tool_calls.is_empty() {
+                has_tool_calls = true;
+                break;
+            }
+        }
+
+        if !has_tool_calls {
+            return Ok(result);
+        }
+
+        // 处理每个步骤中的工具调用
+        let mut updated_steps = Vec::new();
+        let mut final_response = result.response.clone();
+
+        for step in result.steps {
+            if step.tool_calls.is_empty() {
+                updated_steps.push(step);
+                continue;
+            }
+
+            // 执行工具调用
+            let mut tool_results = Vec::new();
+            for tool_call in &step.tool_calls {
+                match self.execute_tool_call(tool_call).await {
+                    Ok(result_value) => {
+                        tool_results.push(crate::agent::types::ToolResult {
+                            call_id: tool_call.id.clone(),
+                            name: tool_call.name.clone(),
+                            result: result_value,
+                            status: crate::agent::types::ToolResultStatus::Success,
+                        });
+                    }
+                    Err(e) => {
+                        tool_results.push(crate::agent::types::ToolResult {
+                            call_id: tool_call.id.clone(),
+                            name: tool_call.name.clone(),
+                            result: serde_json::json!({"error": e.to_string()}),
+                            status: crate::agent::types::ToolResultStatus::Error,
+                        });
+                    }
+                }
+            }
+
+            // 更新步骤，包含工具结果
+            let mut updated_step = step.clone();
+            updated_step.tool_results = tool_results.clone();
+            updated_steps.push(updated_step);
+
+            // 如果有工具调用，更新最终响应，包含工具执行结果
+            if !tool_results.is_empty() {
+                let tool_results_summary: String = tool_results
+                    .iter()
+                    .map(|tr| {
+                        format!(
+                            "Tool {}: {}",
+                            tr.name,
+                            serde_json::to_string(&tr.result).unwrap_or_default()
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                final_response = format!("{}\n\nTool Results:\n{}", final_response, tool_results_summary);
+            }
+        }
+
+        // 更新结果
+        result.steps = updated_steps;
+        result.response = final_response;
+
+        Ok(result)
+    }
+
+    /// 执行单个工具调用
+    async fn execute_tool_call(
+        &self,
+        tool_call: &crate::agent::types::ToolCall,
+    ) -> Result<Value> {
+        let tools = self.executor.tools();
+        let tools_guard = tools.lock().map_err(|_| {
+            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
+        })?;
+
+        let tool = tools_guard.get(&tool_call.name).ok_or_else(|| {
+            crate::error::Error::NotFound(format!("Tool '{}' not found", tool_call.name))
+        })?;
+
+        // 克隆工具以避免持有锁
+        let tool_clone = tool.clone();
+        drop(tools_guard);
+
+        // 转换参数（tool_call.arguments 已经是 HashMap，可以直接转换为 Value）
+        let args_value = serde_json::to_value(&tool_call.arguments)
+            .map_err(|e| crate::error::Error::Parsing(format!("Failed to serialize tool arguments: {}", e)))?;
+
+        // 创建执行上下文
+        let context = crate::tool::ToolExecutionContext::new()
+            .with_tool_call_id(tool_call.id.clone());
+        let options = crate::tool::ToolExecutionOptions::default();
+
+        // 执行工具
+        tool_clone
+            .execute(args_value, context, &options)
+            .await
+            .map_err(|e| crate::error::Error::Tool(format!("Tool execution failed: {}", e)))
     }
 
     /// 更新内存：将消息存储到内存

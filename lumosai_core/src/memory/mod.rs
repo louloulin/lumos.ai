@@ -523,6 +523,35 @@ pub trait Memory: Send + Sync {
         ))
     }
 
+    /// 获取资源的所有线程（可选功能，list_threads 的别名）
+    ///
+    /// 这是 `list_threads` 的便捷方法，提供与计划中接口名称的一致性。
+    /// 默认实现委托给 `list_threads` 方法。
+    ///
+    /// # 参数
+    ///
+    /// * `resource_id` - 资源ID
+    ///
+    /// # 返回
+    ///
+    /// 该资源的所有线程列表
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::Memory;
+    ///
+    /// # async fn example(memory: &dyn Memory) -> lumosai_core::Result<()> {
+    /// let threads = memory.get_threads_by_resource("user-123").await?;
+    /// println!("Found {} threads for user", threads.len());
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn get_threads_by_resource(&self, resource_id: &str) -> Result<Vec<thread::MemoryThread>> {
+        // 默认实现委托给 list_threads
+        self.list_threads(resource_id).await
+    }
+
     /// 获取线程统计信息（可选功能）
     ///
     /// 默认实现返回错误，表示不支持线程管理。

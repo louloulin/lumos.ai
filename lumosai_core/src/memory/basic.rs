@@ -400,6 +400,11 @@ impl Memory for BasicMemory {
             .await
     }
 
+    async fn get_threads_by_resource(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
+        // 委托给 list_threads
+        self.list_threads(resource_id).await
+    }
+
     async fn get_thread_stats(
         &self,
         thread_id: &str,
@@ -644,6 +649,11 @@ impl BasicMemory {
             })?
             .list_threads(resource_id)
             .await
+    }
+
+    /// 获取资源的所有线程（list_threads 的别名）
+    pub async fn get_threads_by_resource(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
+        self.list_threads(resource_id).await
     }
 
     /// 获取线程统计信息

@@ -847,4 +847,67 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_memory_get_threads_by_resource() -> Result<()> {
+        use lumosai_core::memory::Memory;
+        use lumosai_core::memory::thread::{CreateThreadParams, InMemoryThreadStorage};
+        use std::sync::Arc;
+
+        // 创建带 thread storage 的 Memory
+        let storage = Arc::new(InMemoryThreadStorage::default());
+        let memory: Arc<dyn Memory> = Arc::new(
+            lumosai_core::memory::BasicMemory::with_thread_storage(None, None, Some(storage.clone()))
+        );
+
+        let resource_id = "user-123";
+
+        // 创建多个线程
+        let thread1 = memory
+            .create_thread(CreateThreadParams {
+                id: Some("thread-1".to_string()),
+                title: "Thread 1".to_string(),
+                agent_id: Some("agent-1".to_string()),
+                resource_id: Some(resource_id.to_string()),
+                metadata: None,
+            })
+            .await?;
+
+        let thread2 = memory
+            .create_thread(CreateThreadParams {
+                id: Some("thread-2".to_string()),
+                title: "Thread 2".to_string(),
+                agent_id: Some("agent-1".to_string()),
+                resource_id: Some(resource_id.to_string()),
+                metadata: None,
+            })
+            .await?;
+
+        // 创建另一个资源的线程
+        let thread3 = memory
+            .create_thread(CreateThreadParams {
+                id: Some("thread-3".to_string()),
+                title: "Thread 3".to_string(),
+                agent_id: Some("agent-1".to_string()),
+                resource_id: Some("user-456".to_string()),
+                metadata: None,
+            })
+            .await?;
+
+        // 使用 get_threads_by_resource 获取资源的所有线程
+        let threads = memory.get_threads_by_resource(resource_id).await?;
+
+        // 验证只返回该资源的线程
+        assert_eq!(threads.len(), 2);
+        assert!(threads.iter().any(|t| t.id == thread1.id));
+        assert!(threads.iter().any(|t| t.id == thread2.id));
+        assert!(!threads.iter().any(|t| t.id == thread3.id));
+
+        // 验证另一个资源的线程
+        let other_threads = memory.get_threads_by_resource("user-456").await?;
+        assert_eq!(other_threads.len(), 1);
+        assert_eq!(other_threads[0].id, thread3.id);
+
+        Ok(())
+    }
 }

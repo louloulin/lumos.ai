@@ -537,5 +537,49 @@ mod tests {
         assert!(!result.response.is_empty());
         assert_eq!(result.steps.len(), 1);
     }
+
+    #[tokio::test]
+    async fn test_agent_generator_with_tool() {
+        use crate::tool::{create_tool, Tool};
+
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you?".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let mut executor = AgentExecutor::new(core).unwrap();
+
+        // 添加一个测试工具
+        let echo_tool = create_tool(
+            "echo",
+            "Echo a message",
+            vec![("message", "string", "Message to echo", true)],
+            |params| {
+                let message = params
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("No message");
+                Ok(serde_json::json!({"echo": message}))
+            },
+        )
+        .unwrap();
+        executor.add_tool(Box::new(echo_tool)).unwrap();
+
+        let generator = AgentGenerator::new(executor);
+
+        let messages = vec![Message {
+            role: Role::User,
+            content: "Hello!".to_string(),
+            metadata: None,
+            name: None,
+        }];
+        let options = AgentGenerateOptions::default();
+        let result = generator.generate(&messages, &options).await.unwrap();
+        assert!(!result.response.is_empty());
+        assert_eq!(result.steps.len(), 1);
+    }
 }
 

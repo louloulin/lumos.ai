@@ -4,12 +4,13 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::llm::Message;
 use crate::memory::processor::MemoryProcessor;
 use crate::memory::semantic_memory::{SemanticMemoryTrait, SemanticSearchOptions};
 use crate::memory::thread::{
     CreateThreadParams, GetMessagesParams, MemoryThread, MemoryThreadManager, MemoryThreadStorage,
+    ThreadStats, UpdateThreadParams,
 };
 use crate::memory::working::WorkingMemory;
 use crate::memory::{Memory, MemoryConfig};
@@ -324,6 +325,214 @@ impl Memory for BasicMemory {
     }
 }
 
+impl BasicMemory {
+    /// 创建新线程
+    ///
+    /// # 参数
+    ///
+    /// * `params` - 线程创建参数
+    ///
+    /// # 错误
+    ///
+    /// 如果线程存储未配置，返回错误
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::{BasicMemory, CreateThreadParams};
+    ///
+    /// # async fn example(memory: BasicMemory) -> lumosai_core::Result<()> {
+    /// let thread = memory.create_thread(CreateThreadParams {
+    ///     id: None,
+    ///     title: "New Conversation".to_string(),
+    ///     agent_id: None,
+    ///     resource_id: Some("user-123".to_string()),
+    ///     metadata: None,
+    /// }).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn create_thread(
+        &self,
+        params: CreateThreadParams,
+    ) -> Result<MemoryThread> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .create_thread(params)
+            .await
+    }
+
+    /// 获取线程信息
+    ///
+    /// # 参数
+    ///
+    /// * `thread_id` - 线程ID
+    /// * `resource_id` - 可选的资源ID，用于所有权验证
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// # async fn example(memory: BasicMemory) -> lumosai_core::Result<()> {
+    /// if let Some(thread) = memory.get_thread("thread-123", Some("user-123")).await? {
+    ///     println!("Thread title: {}", thread.title);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_thread(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<Option<MemoryThread>> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .get_thread(thread_id, resource_id)
+            .await
+    }
+
+    /// 更新线程
+    ///
+    /// # 参数
+    ///
+    /// * `thread_id` - 线程ID
+    /// * `params` - 更新参数
+    /// * `resource_id` - 可选的资源ID，用于所有权验证
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::UpdateThreadParams;
+    ///
+    /// # async fn example(memory: BasicMemory) -> lumosai_core::Result<()> {
+    /// let updated = memory.update_thread(
+    ///     "thread-123",
+    ///     UpdateThreadParams {
+    ///         title: Some("Updated Title".to_string()),
+    ///         metadata: None,
+    ///     },
+    ///     Some("user-123"),
+    /// ).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn update_thread(
+        &self,
+        thread_id: &str,
+        params: UpdateThreadParams,
+        resource_id: Option<&str>,
+    ) -> Result<MemoryThread> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .update_thread(thread_id, params, resource_id)
+            .await
+    }
+
+    /// 删除线程
+    ///
+    /// # 参数
+    ///
+    /// * `thread_id` - 线程ID
+    /// * `resource_id` - 可选的资源ID，用于所有权验证
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// # async fn example(memory: BasicMemory) -> lumosai_core::Result<()> {
+    /// memory.delete_thread("thread-123", Some("user-123")).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn delete_thread(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<()> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .delete_thread(thread_id, resource_id)
+            .await
+    }
+
+    /// 列出资源的所有线程
+    ///
+    /// # 参数
+    ///
+    /// * `resource_id` - 资源ID
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// # async fn example(memory: BasicMemory) -> lumosai_core::Result<()> {
+    /// let threads = memory.list_threads("user-123").await?;
+    /// println!("Found {} threads", threads.len());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn list_threads(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .list_threads(resource_id)
+            .await
+    }
+
+    /// 获取线程统计信息
+    ///
+    /// # 参数
+    ///
+    /// * `thread_id` - 线程ID
+    /// * `resource_id` - 可选的资源ID，用于所有权验证
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// # async fn example(memory: BasicMemory) -> lumosai_core::Result<()> {
+    /// let stats = memory.get_thread_stats("thread-123", Some("user-123")).await?;
+    /// println!("Thread has {} messages", stats.message_count);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_thread_stats(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<ThreadStats> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .get_thread_stats(thread_id, resource_id)
+            .await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -536,6 +745,77 @@ mod tests {
         assert_eq!(retrieved.len(), 2);
         assert_eq!(retrieved[0].content, "recent update");
         assert_eq!(retrieved[1].content, "vector embeddings overview");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_basic_memory_thread_management() -> Result<()> {
+        let storage = Arc::new(InMemoryThreadStorage::default());
+        let mut memory = BasicMemory::with_thread_storage(None, None, Some(storage.clone()));
+
+        // 创建线程
+        let thread = memory
+            .create_thread(CreateThreadParams {
+                id: Some("test-thread".to_string()),
+                title: "Test Thread".to_string(),
+                agent_id: None,
+                resource_id: Some("user-123".to_string()),
+                metadata: None,
+            })
+            .await?;
+        assert_eq!(thread.id, "test-thread");
+        assert_eq!(thread.title, "Test Thread");
+
+        // 获取线程
+        let retrieved = memory.get_thread("test-thread", Some("user-123")).await?;
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().title, "Test Thread");
+
+        // 更新线程
+        let updated = memory
+            .update_thread(
+                "test-thread",
+                UpdateThreadParams {
+                    title: Some("Updated Title".to_string()),
+                    metadata: None,
+                },
+                Some("user-123"),
+            )
+            .await?;
+        assert_eq!(updated.title, "Updated Title");
+
+        // 列出线程
+        let threads = memory.list_threads("user-123").await?;
+        assert_eq!(threads.len(), 1);
+
+        // 获取统计信息
+        let stats = memory.get_thread_stats("test-thread", Some("user-123")).await?;
+        assert_eq!(stats.message_count, 0);
+
+        // 删除线程
+        memory.delete_thread("test-thread", Some("user-123")).await?;
+        let deleted = memory.get_thread("test-thread", Some("user-123")).await?;
+        assert!(deleted.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_basic_memory_thread_management_no_storage() -> Result<()> {
+        let memory = BasicMemory::new(None, None);
+
+        // 尝试在没有线程存储的情况下创建线程应该失败
+        let result = memory
+            .create_thread(CreateThreadParams {
+                id: None,
+                title: "Test".to_string(),
+                agent_id: None,
+                resource_id: None,
+                metadata: None,
+            })
+            .await;
+        assert!(result.is_err());
+
         Ok(())
     }
 }

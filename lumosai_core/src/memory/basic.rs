@@ -323,6 +323,98 @@ impl Memory for BasicMemory {
     fn as_thread_storage(&self) -> Option<Arc<dyn MemoryThreadStorage>> {
         self.thread_storage.clone()
     }
+
+    async fn create_thread(
+        &self,
+        params: CreateThreadParams,
+    ) -> Result<MemoryThread> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .create_thread(params)
+            .await
+    }
+
+    async fn get_thread(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<Option<MemoryThread>> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .get_thread(thread_id, resource_id)
+            .await
+    }
+
+    async fn update_thread(
+        &self,
+        thread_id: &str,
+        params: UpdateThreadParams,
+        resource_id: Option<&str>,
+    ) -> Result<MemoryThread> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .update_thread(thread_id, params, resource_id)
+            .await
+    }
+
+    async fn delete_thread(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<()> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .delete_thread(thread_id, resource_id)
+            .await
+    }
+
+    async fn list_threads(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .list_threads(resource_id)
+            .await
+    }
+
+    async fn get_thread_stats(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<ThreadStats> {
+        self.thread_manager
+            .as_ref()
+            .ok_or_else(|| {
+                Error::Configuration(
+                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+                )
+            })?
+            .get_thread_stats(thread_id, resource_id)
+            .await
+    }
 }
 
 impl BasicMemory {
@@ -589,7 +681,7 @@ mod tests {
                     context: None,
                 });
             }
-            Ok(results)
+        Ok(results)
         }
 
         async fn get_recent(&self, limit: usize) -> Result<Vec<Message>> {
@@ -747,6 +839,9 @@ mod tests {
         assert_eq!(retrieved[1].content, "vector embeddings overview");
         Ok(())
     }
+
+    // Remove duplicate methods from impl BasicMemory block since they're now in impl Memory
+    // The methods below are kept for backward compatibility but delegate to Memory trait methods
 
     #[tokio::test]
     async fn test_basic_memory_thread_management() -> Result<()> {

@@ -13,6 +13,7 @@ use tokio::sync::watch;
 use uuid::Uuid;
 
 use crate::agent::trait_def::Agent;
+use crate::agent::traits::ThreadManagementAgent;
 use crate::agent::trait_def::AgentStatus;
 use crate::agent::types::{system_message, tool_message};
 use crate::agent::types::{
@@ -2338,6 +2339,11 @@ impl BasicAgent {
         chunks
     }
 }
+
+// Note: BasicAgent implements Agent trait which provides get_memory() and generate_with_memory().
+// To use ThreadManagementAgent, we would need to implement MemoryAgent and CoreAgent traits.
+// However, since Agent trait is a different design, we'll skip explicit implementation for now.
+// Users can access thread management through memory directly: agent.get_memory()?.create_thread(...)
 
 // Chain operations are temporarily disabled for BasicAgent
 // due to the complexity of implementing Clone for all internal components

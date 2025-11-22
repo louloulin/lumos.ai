@@ -605,4 +605,69 @@ mod tests {
         );
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_agent_thread_management_through_memory() -> Result<()> {
+        use lumosai_core::memory::thread::{CreateThreadParams, InMemoryThreadStorage, UpdateThreadParams};
+
+        let llm = create_test_zhipu_provider_arc();
+        let storage = Arc::new(InMemoryThreadStorage::default());
+        let memory = Arc::new(
+            lumosai_core::memory::BasicMemory::with_thread_storage(None, None, Some(storage.clone())),
+        ) as Arc<dyn Memory>;
+
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a test agent".to_string(),
+            memory_config: Some(CoreMemoryConfig::default()),
+            ..Default::default()
+        };
+        let mut agent = BasicAgent::new(config, llm);
+        agent = agent.with_memory(memory.clone());
+
+        // 通过 Memory 创建线程
+        let thread = memory
+            .create_thread(CreateThreadParams {
+                id: Some("agent-thread".to_string()),
+                title: "Agent Test Thread".to_string(),
+                agent_id: Some(agent.get_name().to_string()),
+                resource_id: Some("user-123".to_string()),
+                metadata: None,
+            })
+            .await?;
+        assert_eq!(thread.id, "agent-thread");
+
+        // 通过 Memory 获取线程
+        let retrieved = memory.get_thread("agent-thread", Some("user-123")).await?;
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().title, "Agent Test Thread");
+
+        // 通过 Memory 更新线程
+        let updated = memory
+            .update_thread(
+                "agent-thread",
+                UpdateThreadParams {
+                    title: Some("Updated Agent Thread".to_string()),
+                    metadata: None,
+                },
+                Some("user-123"),
+            )
+            .await?;
+        assert_eq!(updated.title, "Updated Agent Thread");
+
+        // 通过 Memory 列出线程
+        let threads = memory.list_threads("user-123").await?;
+        assert_eq!(threads.len(), 1);
+
+        // 通过 Memory 获取统计信息
+        let stats = memory.get_thread_stats("agent-thread", Some("user-123")).await?;
+        assert_eq!(stats.message_count, 0);
+
+        // 通过 Memory 删除线程
+        memory.delete_thread("agent-thread", Some("user-123")).await?;
+        let deleted = memory.get_thread("agent-thread", Some("user-123")).await?;
+        assert!(deleted.is_none());
+
+        Ok(())
+    }
 }

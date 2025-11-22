@@ -7,6 +7,7 @@ use crate::base::Base;
 use crate::error::Result;
 use crate::llm::{LlmProvider, Message};
 use crate::memory::Memory;
+use crate::memory::thread::{CreateThreadParams, MemoryThread, ThreadStats, UpdateThreadParams};
 use crate::tool::Tool;
 use async_trait::async_trait;
 use futures::stream::BoxStream;
@@ -133,6 +134,241 @@ pub trait MemoryAgent: CoreAgent {
         
         // 回退到基础 generate 方法
         self.generate(messages, options).await
+    }
+}
+
+/// Thread Management Agent Trait
+///
+/// 为 Agent 添加线程管理功能，支持创建、获取、更新、删除线程等操作。
+/// 这个 trait 扩展了 MemoryAgent，要求 Agent 必须配置了 Memory 才能使用线程管理功能。
+///
+/// # Examples
+///
+/// ```rust
+/// use lumosai_core::agent::traits::{CoreAgent, MemoryAgent, ThreadManagementAgent};
+/// use lumosai_core::memory::thread::CreateThreadParams;
+///
+/// # async fn example(agent: &dyn ThreadManagementAgent) -> lumosai_core::Result<()> {
+/// // 创建新线程
+/// let thread = agent.create_thread(CreateThreadParams {
+///     id: None,
+///     title: "My Conversation".to_string(),
+///     agent_id: Some(agent.get_name().to_string()),
+///     resource_id: Some("user-123".to_string()),
+///     metadata: None,
+/// }).await?;
+///
+/// // 获取线程
+/// let retrieved = agent.get_thread("thread-123", Some("user-123")).await?;
+///
+/// // 列出用户的所有线程
+/// let threads = agent.list_threads("user-123").await?;
+/// # Ok(())
+/// # }
+/// ```
+#[async_trait]
+pub trait ThreadManagementAgent: MemoryAgent {
+    /// 创建新线程
+    ///
+    /// # 参数
+    ///
+    /// * `params` - 线程创建参数
+    ///
+    /// # 错误
+    ///
+    /// 如果 Agent 没有配置 Memory，或者 Memory 不支持线程存储，返回错误
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::traits::ThreadManagementAgent;
+    /// use lumosai_core::memory::thread::CreateThreadParams;
+    ///
+    /// # async fn example(agent: &dyn ThreadManagementAgent) -> lumosai_core::Result<()> {
+    /// let thread = agent.create_thread(CreateThreadParams {
+    ///     id: Some("thread-123".to_string()),
+    ///     title: "New Conversation".to_string(),
+    ///     agent_id: Some(agent.get_name().to_string()),
+    ///     resource_id: Some("user-123".to_string()),
+    ///     metadata: None,
+    /// }).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn create_thread(&self, params: CreateThreadParams) -> Result<MemoryThread> {
+        let memory = self
+            .get_memory()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Agent does not have memory configured. Cannot create thread.".to_string(),
+                )
+            })?;
+        memory.create_thread(params).await
+    }
+
+    /// 获取线程信息
+    ///
+    /// # 参数
+    ///
+    /// * `thread_id` - 线程ID
+    /// * `resource_id` - 可选的资源ID，用于所有权验证
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::traits::ThreadManagementAgent;
+    ///
+    /// # async fn example(agent: &dyn ThreadManagementAgent) -> lumosai_core::Result<()> {
+    /// if let Some(thread) = agent.get_thread("thread-123", Some("user-123")).await? {
+    ///     println!("Thread title: {}", thread.title);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn get_thread(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<Option<MemoryThread>> {
+        let memory = self
+            .get_memory()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Agent does not have memory configured. Cannot get thread.".to_string(),
+                )
+            })?;
+        memory.get_thread(thread_id, resource_id).await
+    }
+
+    /// 更新线程
+    ///
+    /// # 参数
+    ///
+    /// * `thread_id` - 线程ID
+    /// * `params` - 更新参数
+    /// * `resource_id` - 可选的资源ID，用于所有权验证
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::traits::ThreadManagementAgent;
+    /// use lumosai_core::memory::thread::UpdateThreadParams;
+    ///
+    /// # async fn example(agent: &dyn ThreadManagementAgent) -> lumosai_core::Result<()> {
+    /// let updated = agent.update_thread(
+    ///     "thread-123",
+    ///     UpdateThreadParams {
+    ///         title: Some("Updated Title".to_string()),
+    ///         metadata: None,
+    ///     },
+    ///     Some("user-123"),
+    /// ).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn update_thread(
+        &self,
+        thread_id: &str,
+        params: UpdateThreadParams,
+        resource_id: Option<&str>,
+    ) -> Result<MemoryThread> {
+        let memory = self
+            .get_memory()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Agent does not have memory configured. Cannot update thread.".to_string(),
+                )
+            })?;
+        memory.update_thread(thread_id, params, resource_id).await
+    }
+
+    /// 删除线程
+    ///
+    /// # 参数
+    ///
+    /// * `thread_id` - 线程ID
+    /// * `resource_id` - 可选的资源ID，用于所有权验证
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::traits::ThreadManagementAgent;
+    ///
+    /// # async fn example(agent: &dyn ThreadManagementAgent) -> lumosai_core::Result<()> {
+    /// agent.delete_thread("thread-123", Some("user-123")).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn delete_thread(&self, thread_id: &str, resource_id: Option<&str>) -> Result<()> {
+        let memory = self
+            .get_memory()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Agent does not have memory configured. Cannot delete thread.".to_string(),
+                )
+            })?;
+        memory.delete_thread(thread_id, resource_id).await
+    }
+
+    /// 列出资源的所有线程
+    ///
+    /// # 参数
+    ///
+    /// * `resource_id` - 资源ID
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::traits::ThreadManagementAgent;
+    ///
+    /// # async fn example(agent: &dyn ThreadManagementAgent) -> lumosai_core::Result<()> {
+    /// let threads = agent.list_threads("user-123").await?;
+    /// println!("Found {} threads", threads.len());
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn list_threads(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
+        let memory = self
+            .get_memory()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Agent does not have memory configured. Cannot list threads.".to_string(),
+                )
+            })?;
+        memory.list_threads(resource_id).await
+    }
+
+    /// 获取线程统计信息
+    ///
+    /// # 参数
+    ///
+    /// * `thread_id` - 线程ID
+    /// * `resource_id` - 可选的资源ID，用于所有权验证
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::agent::traits::ThreadManagementAgent;
+    ///
+    /// # async fn example(agent: &dyn ThreadManagementAgent) -> lumosai_core::Result<()> {
+    /// let stats = agent.get_thread_stats("thread-123", Some("user-123")).await?;
+    /// println!("Thread has {} messages", stats.message_count);
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn get_thread_stats(
+        &self,
+        thread_id: &str,
+        resource_id: Option<&str>,
+    ) -> Result<ThreadStats> {
+        let memory = self
+            .get_memory()
+            .ok_or_else(|| {
+                crate::error::Error::Configuration(
+                    "Agent does not have memory configured. Cannot get thread stats.".to_string(),
+                )
+            })?;
+        memory.get_thread_stats(thread_id, resource_id).await
     }
 }
 

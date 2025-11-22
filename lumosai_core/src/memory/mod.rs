@@ -464,6 +464,77 @@ pub trait Memory: Send + Sync {
     fn as_thread_storage(&self) -> Option<Arc<dyn thread::MemoryThreadStorage>> {
         None // Default implementation returns None
     }
+
+    /// 创建新线程（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    /// 支持线程管理的 Memory 实现应该覆盖此方法。
+    async fn create_thread(
+        &self,
+        _params: thread::CreateThreadParams,
+    ) -> Result<thread::MemoryThread> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 获取线程信息（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn get_thread(
+        &self,
+        _thread_id: &str,
+        _resource_id: Option<&str>,
+    ) -> Result<Option<thread::MemoryThread>> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 更新线程（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn update_thread(
+        &self,
+        _thread_id: &str,
+        _params: thread::UpdateThreadParams,
+        _resource_id: Option<&str>,
+    ) -> Result<thread::MemoryThread> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 删除线程（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn delete_thread(&self, _thread_id: &str, _resource_id: Option<&str>) -> Result<()> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 列出资源的所有线程（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn list_threads(&self, _resource_id: &str) -> Result<Vec<thread::MemoryThread>> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 获取线程统计信息（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn get_thread_stats(
+        &self,
+        _thread_id: &str,
+        _resource_id: Option<&str>,
+    ) -> Result<thread::ThreadStats> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
 }
 
 // 模块声明

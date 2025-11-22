@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use serde_json::Value;
-use std::sync::Arc;
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 use crate::error::Result;
 use crate::llm::Message;
@@ -22,6 +24,10 @@ pub struct BasicMemory {
     thread_storage: Option<Arc<dyn MemoryThreadStorage>>,
     /// 线程管理器（可选）
     thread_manager: Option<MemoryThreadManager<Arc<dyn MemoryThreadStorage>>>,
+    /// 已注册的处理器
+    processors: Arc<Mutex<Vec<Arc<dyn MemoryProcessor>>>>,
+    /// 已同步到线程管理器的处理器数量
+    applied_processors: AtomicUsize,
 }
 
 impl BasicMemory {
@@ -47,6 +53,8 @@ impl BasicMemory {
             semantic_memory,
             thread_storage,
             thread_manager,
+            processors: Arc::new(Mutex::new(Vec::new())),
+            applied_processors: AtomicUsize::new(0),
         }
     }
 
@@ -56,13 +64,45 @@ impl BasicMemory {
         self.thread_manager = thread_storage
             .as_ref()
             .map(|storage| MemoryThreadManager::new(storage.clone()));
+        self.applied_processors.store(0, Ordering::SeqCst);
     }
 
     /// 注册 Processor
     pub async fn add_processor(&self, processor: Arc<dyn MemoryProcessor>) -> Result<()> {
+        {
+            let mut processors = self.processors.lock().unwrap();
+            processors.push(processor.clone());
+        }
+
         if let Some(manager) = &self.thread_manager {
             manager.add_processor(processor).await;
+            self.applied_processors.fetch_add(1, Ordering::SeqCst);
         }
+        Ok(())
+    }
+
+    async fn apply_pending_processors(&self) -> Result<()> {
+        if self.thread_manager.is_none() {
+            return Ok(());
+        }
+
+        let applied = self.applied_processors.load(Ordering::SeqCst);
+        let processors = {
+            let processors = self.processors.lock().unwrap();
+            processors.clone()
+        };
+
+        if applied >= processors.len() {
+            return Ok(());
+        }
+
+        if let Some(manager) = &self.thread_manager {
+            for processor in processors.iter().skip(applied) {
+                manager.add_processor(processor.clone()).await;
+                self.applied_processors.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+
         Ok(())
     }
 
@@ -111,11 +151,37 @@ impl BasicMemory {
     fn value_to_string(value: &Value) -> Option<String> {
         value.as_str().map(|s| s.to_string())
     }
+
+    fn message_signature(message: &Message) -> String {
+        let metadata_str = message
+            .metadata
+            .as_ref()
+            .and_then(|meta| serde_json::to_string(meta).ok())
+            .unwrap_or_default();
+        let name = message.name.clone().unwrap_or_default();
+        format!("{:?}::{name}::{}::{metadata_str}", message.role, message.content)
+    }
+
+    fn dedup_messages(messages: Vec<Message>) -> Vec<Message> {
+        let mut seen = HashSet::new();
+        let mut deduped = Vec::new();
+
+        for message in messages {
+            let signature = Self::message_signature(&message);
+            if seen.insert(signature) {
+                deduped.push(message);
+            }
+        }
+
+        deduped
+    }
 }
 
 #[async_trait]
 impl Memory for BasicMemory {
     async fn store(&self, message: &Message) -> Result<()> {
+        self.apply_pending_processors().await?;
+
         if let Some(thread_manager) = &self.thread_manager {
             let (thread_id_metadata, resource_id_metadata) = message
                 .metadata
@@ -172,8 +238,12 @@ impl Memory for BasicMemory {
     }
 
     async fn retrieve(&self, config: &MemoryConfig) -> Result<Vec<Message>> {
-        let mut results = Vec::new();
+        self.apply_pending_processors().await?;
 
+        let mut thread_results = Vec::new();
+        let mut semantic_results = Vec::new();
+
+        // 先获取线程历史消息
         if let Some(thread_manager) = &self.thread_manager {
             let mut thread_id: Option<String> = None;
             let mut thread_owner: Option<String> = None;
@@ -208,17 +278,19 @@ impl Memory for BasicMemory {
                     .and_then(|limit| if limit == 0 { None } else { Some(limit) })
                 {
                     params.limit = Some(limit);
+                    params.reverse_order = true; // 获取最新的消息
                 }
 
                 if let Ok(messages) = thread_manager
                     .get_messages(&thread_id, &params, thread_owner.as_deref())
                     .await
                 {
-                    results.extend(messages);
+                    thread_results.extend(messages);
                 }
             }
         }
 
+        // 然后获取语义召回结果
         if let Some(ref semantic_memory) = self.semantic_memory {
             if let Some(ref semantic_recall) = config.semantic_recall {
                 if let Some(ref query) = config.query {
@@ -234,13 +306,17 @@ impl Memory for BasicMemory {
                     let search_results = semantic_memory.search(query, &options).await?;
 
                     for result in search_results {
-                        results.push(result.message);
+                        semantic_results.push(result.message);
                     }
                 }
             }
         }
 
-        Ok(results)
+        // 合并结果：线程历史消息在前（按时间顺序），语义召回结果在后
+        let mut combined = thread_results;
+        combined.extend(semantic_results);
+
+        Ok(Self::dedup_messages(combined))
     }
 
     fn as_thread_storage(&self) -> Option<Arc<dyn MemoryThreadStorage>> {
@@ -252,13 +328,80 @@ impl Memory for BasicMemory {
 mod tests {
     use super::*;
     use crate::llm::{Message, Role};
+    use crate::logger::NoopLogger;
+    use crate::memory::processor::MessageLimitProcessor;
+    use crate::memory::semantic_memory::{
+        SemanticMemoryTrait, SemanticSearchOptions, SemanticSearchResult,
+    };
     use crate::memory::thread::{GetMessagesParams, InMemoryThreadStorage};
+    use crate::memory::{MemoryConfig, MessageRange, SemanticRecallConfig};
     use serde_json::json;
+    use std::sync::Mutex;
 
     fn build_test_memory() -> (BasicMemory, Arc<dyn MemoryThreadStorage>) {
         let storage = Arc::new(InMemoryThreadStorage::new()) as Arc<dyn MemoryThreadStorage>;
         let memory = BasicMemory::with_thread_storage(None, None, Some(storage.clone()));
         (memory, storage)
+    }
+
+    fn build_memory_with_semantic(
+        semantic: Arc<dyn SemanticMemoryTrait>,
+    ) -> (BasicMemory, Arc<dyn MemoryThreadStorage>) {
+        let storage = Arc::new(InMemoryThreadStorage::new()) as Arc<dyn MemoryThreadStorage>;
+        let memory =
+            BasicMemory::with_thread_storage(None, Some(semantic), Some(storage.clone()));
+        (memory, storage)
+    }
+
+    #[derive(Default)]
+    struct MockSemanticMemory {
+        messages: Mutex<Vec<Message>>,
+    }
+
+    #[async_trait::async_trait]
+    impl SemanticMemoryTrait for MockSemanticMemory {
+        async fn add(&self, message: &Message) -> Result<()> {
+            let mut messages = self.messages.lock().unwrap();
+            messages.push(message.clone());
+            Ok(())
+        }
+
+        async fn search(
+            &self,
+            _query: &str,
+            options: &SemanticSearchOptions,
+        ) -> Result<Vec<SemanticSearchResult>> {
+            let messages = self.messages.lock().unwrap();
+            let mut results = Vec::new();
+            for message in messages.iter().rev().take(options.limit) {
+                results.push(SemanticSearchResult {
+                    message: message.clone(),
+                    score: 1.0,
+                    context: None,
+                });
+            }
+            Ok(results)
+        }
+
+        async fn get_recent(&self, limit: usize) -> Result<Vec<Message>> {
+            let messages = self.messages.lock().unwrap();
+            Ok(messages.iter().rev().take(limit).cloned().collect())
+        }
+
+        async fn get_context(
+            &self,
+            _message_id: &str,
+            _before: usize,
+            _after: usize,
+        ) -> Result<Vec<Message>> {
+            Ok(vec![])
+        }
+
+        async fn clear(&self) -> Result<()> {
+            let mut messages = self.messages.lock().unwrap();
+            messages.clear();
+            Ok(())
+        }
     }
 
     #[tokio::test]
@@ -321,6 +464,78 @@ mod tests {
             .get_messages("thread-abc", &GetMessagesParams::default(), None)
             .await?;
         assert_eq!(stored.len(), 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn processors_limit_messages() -> Result<()> {
+        let (memory, _) = build_test_memory();
+
+        let processor = Arc::new(MessageLimitProcessor::new(
+            1,
+            Arc::new(NoopLogger::default()),
+        ));
+        memory.add_processor(processor).await?;
+
+        let thread_id = "thread-limit";
+
+        let first = Message::new(Role::User, "first".to_string(), None, None)
+            .with_metadata("thread_id", json!(thread_id));
+        memory.store(&first).await?;
+
+        let second = Message::new(Role::User, "second".to_string(), None, None)
+            .with_metadata("thread_id", json!(thread_id));
+        memory.store(&second).await?;
+
+        let config = MemoryConfig {
+            namespace: Some(thread_id.to_string()),
+            last_messages: Some(10),
+            ..Default::default()
+        };
+
+        let retrieved = memory.retrieve(&config).await?;
+        assert_eq!(retrieved.len(), 1);
+        assert_eq!(retrieved[0].content, "second");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn semantic_recall_merges_with_thread_history() -> Result<()> {
+        let semantic = Arc::new(MockSemanticMemory::default()) as Arc<dyn SemanticMemoryTrait>;
+        let (memory, _) = build_memory_with_semantic(semantic);
+
+        let thread_id = "semantic-thread";
+        let earlier = Message::new(Role::User, "vector embeddings overview".into(), None, None)
+            .with_metadata("thread_id", json!(thread_id));
+        let latest = Message::new(Role::Assistant, "recent update".into(), None, None)
+            .with_metadata("thread_id", json!(thread_id));
+
+        memory.store(&earlier).await?;
+        memory.store(&latest).await?;
+
+        let recall = SemanticRecallConfig {
+            top_k: 2,
+            message_range: Some(MessageRange { before: 0, after: 0 }),
+            generate_summaries: false,
+            use_embeddings: true,
+            max_capacity: None,
+            max_results: None,
+            relevance_threshold: None,
+            template: None,
+        };
+
+        let config = MemoryConfig {
+            namespace: Some(thread_id.to_string()),
+            last_messages: Some(1),
+            semantic_recall: Some(recall),
+            query: Some("vector".to_string()),
+            ..Default::default()
+        };
+
+        let retrieved = memory.retrieve(&config).await?;
+        assert_eq!(retrieved.len(), 2);
+        assert_eq!(retrieved[0].content, "recent update");
+        assert_eq!(retrieved[1].content, "vector embeddings overview");
         Ok(())
     }
 }

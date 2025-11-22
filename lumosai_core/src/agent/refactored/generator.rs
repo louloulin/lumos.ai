@@ -4,9 +4,10 @@
 //! 这是 BasicAgent 重构的第三步，将生成逻辑从 BasicAgent 中分离出来。
 
 use crate::agent::refactored::{AgentCore, AgentExecutor};
-use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStep, StepType, TokenUsage};
+use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStep, AgentStreamOptions, StepType, TokenUsage};
 use crate::error::Result;
 use crate::llm::{Message, Role};
+use futures::stream::{BoxStream, StreamExt};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -502,6 +503,85 @@ impl AgentGenerator {
         Ok(())
     }
 
+    /// 流式生成响应
+    ///
+    /// 生成响应并以流的形式返回，支持实时输出。
+    ///
+    /// # 参数
+    ///
+    /// * `messages` - 输入消息列表
+    /// * `options` - 流式生成选项
+    ///
+    /// # 返回
+    ///
+    /// 返回一个流，每个元素是一个字符串块。
+    ///
+    /// # 实现说明
+    ///
+    /// 当前实现使用简化版本：先生成完整响应，然后分块返回。
+    /// 未来可以改进为使用 LLM 的原生流式接口。
+    pub async fn stream<'a>(
+        &'a self,
+        messages: &'a [Message],
+        options: &'a AgentStreamOptions,
+    ) -> Result<BoxStream<'a, Result<String>>> {
+        // 将 AgentStreamOptions 转换为 AgentGenerateOptions
+        let generate_options = AgentGenerateOptions {
+            system_message: None,
+            instructions: options.instructions.clone(),
+            context: options.context.clone(),
+            memory_options: options.memory_options.clone(),
+            thread_id: options.thread_id.clone(),
+            resource_id: options.resource_id.clone(),
+            run_id: options.run_id.clone(),
+            max_steps: options.max_steps,
+            tool_choice: options.tool_choice.clone(),
+            context_window: None,
+            llm_options: options.llm_options.clone(),
+        };
+
+        // 生成完整响应
+        let result = self.generate(messages, &generate_options).await?;
+
+        // 将响应分块返回（智能分块，尊重单词和句子边界）
+        let chunks = self.create_smart_chunks(&result.response);
+
+        // 创建流
+        let stream = futures::stream::iter(chunks).map(Ok).boxed();
+
+        Ok(stream)
+    }
+
+    /// 创建智能分块，尊重单词和句子边界
+    fn create_smart_chunks(&self, text: &str) -> Vec<String> {
+        let mut chunks = Vec::new();
+        let mut current_chunk = String::new();
+        let target_chunk_size = 50; // 每个块的目标大小（字符数）
+
+        for word in text.split_whitespace() {
+            if current_chunk.len() + word.len() + 1 > target_chunk_size && !current_chunk.is_empty() {
+                chunks.push(current_chunk.clone());
+                current_chunk.clear();
+            }
+
+            if !current_chunk.is_empty() {
+                current_chunk.push(' ');
+            }
+            current_chunk.push_str(word);
+        }
+
+        if !current_chunk.is_empty() {
+            chunks.push(current_chunk);
+        }
+
+        // 如果没有创建任何块，返回原始文本
+        if chunks.is_empty() && !text.is_empty() {
+            chunks.push(text.to_string());
+        }
+
+        chunks
+    }
+
     /// 获取执行器
     pub fn executor(&self) -> &AgentExecutor {
         &self.executor
@@ -596,6 +676,42 @@ mod tests {
         let result = generator.generate(&messages, &options).await.unwrap();
         assert!(!result.response.is_empty());
         assert_eq!(result.steps.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_agent_generator_stream() {
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you? This is a longer response to test streaming.".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+        let generator = AgentGenerator::new(executor);
+
+        let messages = vec![Message {
+            role: Role::User,
+            content: "Hello!".to_string(),
+            metadata: None,
+            name: None,
+        }];
+        let options = AgentStreamOptions::default();
+        let mut stream = generator.stream(&messages, &options).await.unwrap();
+
+        // 收集所有块
+        let mut chunks = Vec::new();
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result.unwrap();
+            chunks.push(chunk);
+        }
+
+        // 验证流式输出
+        assert!(!chunks.is_empty());
+        let full_response: String = chunks.join("");
+        assert!(!full_response.is_empty());
+        assert!(full_response.contains("Hello") || full_response.contains("help"));
     }
 }
 

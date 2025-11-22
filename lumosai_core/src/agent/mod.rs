@@ -54,6 +54,9 @@ pub mod reflection;
 // BasicAgent 重构模块
 pub mod refactored;
 
+// Re-export refactored modules for easy access
+pub use refactored::{AgentCore, AgentExecutor, AgentGenerator, RefactoredAgent};
+
 #[cfg(feature = "demos")]
 pub mod enhanced_streaming_demo;
 #[cfg(feature = "demos")]

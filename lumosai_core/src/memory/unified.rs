@@ -425,6 +425,11 @@ impl MemoryTrait for Memory {
             } => {
                 let mut combined = Vec::new();
 
+                // 先获取线程历史消息（按时间顺序，最新的在前）
+                let mut base_messages = basic.retrieve(config).await?;
+                combined.append(&mut base_messages);
+
+                // 然后获取语义召回结果
                 if let Some(semantic) = semantic {
                     if let Some(mut semantic_messages) =
                         Self::semantic_results(semantic, config).await?
@@ -432,9 +437,6 @@ impl MemoryTrait for Memory {
                         combined.append(&mut semantic_messages);
                     }
                 }
-
-                let mut base_messages = basic.retrieve(config).await?;
-                combined.append(&mut base_messages);
 
                 Ok(Self::dedup_messages(combined))
             }
@@ -1001,17 +1003,23 @@ mod tests {
 
         async fn search(
             &self,
-            _query: &str,
+            query: &str,
             options: &SemanticSearchOptions,
         ) -> Result<Vec<SemanticSearchResult>> {
             let messages = self.messages.lock().unwrap();
             let mut results = Vec::new();
-            for message in messages.iter().rev().take(options.limit) {
-                results.push(SemanticSearchResult {
-                    message: message.clone(),
-                    score: 1.0,
-                    context: None,
-                });
+            // 根据 query 过滤消息（简单的内容匹配）
+            for message in messages.iter().rev() {
+                if message.content.to_lowercase().contains(&query.to_lowercase()) {
+                    results.push(SemanticSearchResult {
+                        message: message.clone(),
+                        score: 1.0,
+                        context: None,
+                    });
+                    if results.len() >= options.limit {
+                        break;
+                    }
+                }
             }
             Ok(results)
         }

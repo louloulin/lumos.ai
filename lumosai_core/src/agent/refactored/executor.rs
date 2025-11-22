@@ -4,6 +4,7 @@
 //! 这是 BasicAgent 重构的第二步，将工具和内存管理从 BasicAgent 中分离出来。
 
 use crate::agent::refactored::core::AgentCore;
+use crate::agent::error_handling::RetryExecutor;
 use crate::error::Result;
 use crate::memory::{create_working_memory, Memory, WorkingMemory};
 use crate::tool::Tool;
@@ -42,6 +43,8 @@ pub struct AgentExecutor {
     memory: Option<Arc<dyn Memory>>,
     /// 工作内存
     working_memory: Option<Box<dyn WorkingMemory>>,
+    /// 错误重试执行器（可选）
+    retry_executor: Option<Arc<RetryExecutor>>,
 }
 
 impl AgentExecutor {
@@ -92,6 +95,7 @@ impl AgentExecutor {
             tools: Arc::new(Mutex::new(HashMap::new())),
             memory,
             working_memory,
+            retry_executor: None,
         })
     }
 
@@ -128,6 +132,17 @@ impl AgentExecutor {
     /// 获取工作内存
     pub fn working_memory(&self) -> Option<&Box<dyn WorkingMemory>> {
         self.working_memory.as_ref()
+    }
+
+    /// 设置错误重试执行器
+    pub fn with_retry_executor(mut self, retry_executor: Arc<RetryExecutor>) -> Self {
+        self.retry_executor = Some(retry_executor);
+        self
+    }
+
+    /// 获取错误重试执行器
+    pub fn retry_executor(&self) -> Option<Arc<RetryExecutor>> {
+        self.retry_executor.clone()
     }
 }
 
@@ -167,6 +182,40 @@ mod tests {
         let memory = crate::memory::BasicMemory::new(None, None);
         let executor = executor.with_memory(Arc::new(memory));
         assert!(executor.memory().is_some());
+    }
+
+    #[test]
+    fn test_agent_executor_with_retry_executor() {
+        use crate::agent::error_handling::{RetryExecutor, RetryStrategy, BackoffStrategy, AgentErrorType};
+        
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+        
+        // 创建 RetryExecutor
+        let strategy = RetryStrategy {
+            max_retries: 3,
+            backoff: BackoffStrategy::Exponential {
+                initial_delay_ms: 100,
+                multiplier: 2.0,
+            },
+            retryable_errors: vec![
+                AgentErrorType::LlmError,
+                AgentErrorType::NetworkError,
+            ],
+            max_delay_ms: Some(5000),
+        };
+        let retry_executor = Arc::new(RetryExecutor::with_default_recovery(strategy));
+        
+        let executor = executor.with_retry_executor(retry_executor.clone());
+        assert!(executor.retry_executor().is_some());
+        assert!(Arc::ptr_eq(&executor.retry_executor().unwrap(), &retry_executor));
     }
 }
 

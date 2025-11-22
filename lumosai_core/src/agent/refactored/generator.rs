@@ -4,7 +4,7 @@
 //! 这是 BasicAgent 重构的第三步，将生成逻辑从 BasicAgent 中分离出来。
 
 use crate::agent::refactored::{AgentCore, AgentExecutor};
-use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStep, AgentStreamOptions, StepType, TokenUsage};
+use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStep, AgentStreamOptions, RuntimeContext, StepType, TokenUsage};
 use crate::error::Result;
 use crate::llm::{Message, Role};
 use futures::stream::{BoxStream, StreamExt};
@@ -290,10 +290,35 @@ impl AgentGenerator {
             None => crate::llm::ToolChoice::Auto,
         };
 
-        let response = llm
-            .generate_with_functions(&all_messages, tools, &tool_choice, llm_options)
-            .await
-            .map_err(|e| crate::error::Error::Llm(format!("LLM generation failed: {}", e)))?;
+        // 使用 RetryExecutor 包装 LLM 调用（如果可用）
+        let response = if let Some(retry_executor) = self.executor.retry_executor() {
+            let context = RuntimeContext::default();
+            let llm_clone = llm.clone();
+            let all_messages_clone = all_messages.clone();
+            let tools_clone = tools.to_vec();
+            let tool_choice_clone = tool_choice.clone();
+            let llm_options_clone = llm_options.clone();
+            
+            retry_executor.execute(
+                || {
+                    let llm = llm_clone.clone();
+                    let all_messages = all_messages_clone.clone();
+                    let tools = tools_clone.clone();
+                    let tool_choice = tool_choice_clone.clone();
+                    let llm_options = llm_options_clone.clone();
+                    async move {
+                        llm.generate_with_functions(&all_messages, &tools, &tool_choice, &llm_options)
+                            .await
+                            .map_err(|e| crate::error::Error::Llm(format!("LLM generation failed: {}", e)))
+                    }
+                },
+                &context,
+            ).await?
+        } else {
+            llm.generate_with_functions(&all_messages, tools, &tool_choice, llm_options)
+                .await
+                .map_err(|e| crate::error::Error::Llm(format!("LLM generation failed: {}", e)))?
+        };
 
         // 构建结果（包含函数调用信息）
         let output_message = Message {
@@ -378,10 +403,31 @@ impl AgentGenerator {
         // 调用 LLM - 直接使用 options 中的 llm_options
         let llm_options = &options.llm_options;
 
-        let response_content = llm
-            .generate_with_messages(&all_messages, llm_options)
-            .await
-            .map_err(|e| crate::error::Error::Llm(format!("LLM generation failed: {}", e)))?;
+        // 使用 RetryExecutor 包装 LLM 调用（如果可用）
+        let response_content = if let Some(retry_executor) = self.executor.retry_executor() {
+            let context = RuntimeContext::default();
+            let llm_clone = llm.clone();
+            let all_messages_clone = all_messages.clone();
+            let llm_options_clone = llm_options.clone();
+            
+            retry_executor.execute(
+                || {
+                    let llm = llm_clone.clone();
+                    let all_messages = all_messages_clone.clone();
+                    let llm_options = llm_options_clone.clone();
+                    async move {
+                        llm.generate_with_messages(&all_messages, &llm_options)
+                            .await
+                            .map_err(|e| crate::error::Error::Llm(format!("LLM generation failed: {}", e)))
+                    }
+                },
+                &context,
+            ).await?
+        } else {
+            llm.generate_with_messages(&all_messages, llm_options)
+                .await
+                .map_err(|e| crate::error::Error::Llm(format!("LLM generation failed: {}", e)))?
+        };
 
         // 构建结果
         let output_message = Message {
@@ -476,11 +522,34 @@ impl AgentGenerator {
             .with_tool_call_id(tool_call.id.clone());
         let options = crate::tool::ToolExecutionOptions::default();
 
-        // 执行工具
-        tool_clone
-            .execute(args_value, context, &options)
-            .await
-            .map_err(|e| crate::error::Error::Tool(format!("Tool execution failed: {}", e)))
+        // 使用 RetryExecutor 包装工具调用（如果可用）
+        if let Some(retry_executor) = self.executor.retry_executor() {
+            let context_rt = RuntimeContext::default();
+            let tool_clone2 = tool_clone.clone();
+            let args_value_clone = args_value.clone();
+            let context_clone = context.clone();
+            let options_clone = options.clone();
+            
+            retry_executor.execute(
+                || {
+                    let tool = tool_clone2.clone();
+                    let args = args_value_clone.clone();
+                    let ctx = context_clone.clone();
+                    let opts = options_clone.clone();
+                    async move {
+                        tool.execute(args, ctx, &opts)
+                            .await
+                            .map_err(|e| crate::error::Error::Tool(format!("Tool execution failed: {}", e)))
+                    }
+                },
+                &context_rt,
+            ).await
+        } else {
+            tool_clone
+                .execute(args_value, context, &options)
+                .await
+                .map_err(|e| crate::error::Error::Tool(format!("Tool execution failed: {}", e)))
+        }
     }
 
     /// 更新内存：将消息存储到内存

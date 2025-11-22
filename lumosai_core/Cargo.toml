@@ -137,6 +137,10 @@ path = "tests/chain_call_dsl_tests.rs"
 name = "security_demo"
 path = "examples/security_demo.rs"
 
+[[example]]
+name = "refactored_agent_demo"
+path = "examples/refactored_agent_demo.rs"
+
 [[bench]]
 name = "tool_performance"
 harness = false

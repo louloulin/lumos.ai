@@ -9,7 +9,8 @@ use crate::agent::error_handling::RetryExecutor;
 use crate::error::Result;
 use crate::llm::LlmRouter;
 use crate::memory::{create_working_memory, Memory, WorkingMemory};
-use crate::tool::Tool;
+use crate::tool::{Tool, ToolRegistry, ToolMetadata};
+use regex::Regex;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -51,6 +52,8 @@ pub struct AgentExecutor {
     concurrent_tool_executor: Option<Arc<ConcurrentToolExecutor>>,
     /// LLM 路由器（可选）
     llm_router: Option<Arc<LlmRouter>>,
+    /// 工具注册表（可选，用于工具发现和依赖解析）
+    tool_registry: Option<Arc<ToolRegistry>>,
 }
 
 impl AgentExecutor {
@@ -104,6 +107,7 @@ impl AgentExecutor {
             retry_executor: None,
             concurrent_tool_executor: None,
             llm_router: None,
+            tool_registry: None,
         })
     }
 
@@ -181,6 +185,71 @@ impl AgentExecutor {
     /// 获取 LLM 路由器
     pub fn llm_router(&self) -> Option<Arc<LlmRouter>> {
         self.llm_router.clone()
+    }
+
+    /// 设置工具注册表
+    ///
+    /// # 参数
+    ///
+    /// * `registry` - 工具注册表
+    ///
+    /// # 返回
+    ///
+    /// 返回新的 `AgentExecutor` 实例，包含工具注册表。
+    pub fn with_tool_registry(mut self, registry: Arc<ToolRegistry>) -> Self {
+        self.tool_registry = Some(registry);
+        self
+    }
+
+    /// 获取工具注册表
+    pub fn tool_registry(&self) -> Option<Arc<ToolRegistry>> {
+        self.tool_registry.clone()
+    }
+
+    /// 发现工具（使用工具注册表，如果配置了的话）
+    ///
+    /// # 参数
+    ///
+    /// * `pattern` - 工具名称模式（支持通配符 * 和 ?）
+    ///
+    /// # 返回
+    ///
+    /// 返回匹配的工具列表。
+    ///
+    /// # 注意
+    ///
+    /// 此方法需要配置 ToolRegistry 才能使用。如果没有配置，将返回错误。
+    pub fn discover_tools(&self, pattern: &str) -> Result<Vec<Arc<dyn Tool>>> {
+        if let Some(registry) = &self.tool_registry {
+            registry.discover(pattern)
+        } else {
+            Err(crate::error::Error::Configuration(
+                "ToolRegistry not configured. Use with_tool_registry() first.".to_string(),
+            ))
+        }
+    }
+
+    /// 解析工具依赖（使用工具注册表，如果配置了的话）
+    ///
+    /// # 参数
+    ///
+    /// * `tool_name` - 工具名称
+    ///
+    /// # 返回
+    ///
+    /// 返回工具及其所有依赖的列表（按依赖顺序）。
+    ///
+    /// # 注意
+    ///
+    /// 此方法需要配置 ToolRegistry 才能使用。如果没有配置，将返回错误。
+    pub fn resolve_tool_dependencies(&self, tool_name: &str) -> Result<Vec<Arc<dyn Tool>>> {
+        if let Some(registry) = &self.tool_registry {
+            registry.resolve_dependencies(tool_name)
+        } else {
+            Err(crate::error::Error::Configuration(
+                "ToolRegistry not configured. Use with_tool_registry() first.".to_string(),
+            ))
+        }
     }
 }
 
@@ -306,6 +375,28 @@ mod tests {
         let executor = executor.with_llm_router(router.clone());
         assert!(executor.llm_router().is_some());
         assert!(Arc::ptr_eq(&executor.llm_router().unwrap(), &router));
+    }
+
+    #[test]
+    fn test_agent_executor_with_tool_registry() {
+        use crate::tool::{ToolRegistry, ToolMetadata, ToolCategory};
+        
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+        
+        // 创建 ToolRegistry
+        let registry = Arc::new(ToolRegistry::new());
+        
+        let executor = executor.with_tool_registry(registry.clone());
+        assert!(executor.tool_registry().is_some());
+        assert!(Arc::ptr_eq(&executor.tool_registry().unwrap(), &registry));
     }
 }
 

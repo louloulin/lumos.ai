@@ -572,6 +572,74 @@ pub trait Memory: Send + Sync {
             "Semantic recall is not supported by this memory implementation".to_string(),
         ))
     }
+
+    /// 添加消息处理器（可选功能）
+    ///
+    /// 添加一个消息处理器到处理管线中。处理器会在消息存储或检索时自动应用。
+    /// 默认实现不做任何操作，表示不支持处理器。
+    /// 支持处理器的 Memory 实现应该覆盖此方法。
+    ///
+    /// # 参数
+    ///
+    /// * `processor` - 消息处理器实例
+    ///
+    /// # 注意
+    ///
+    /// 由于 trait 对象不能是 `&mut self`，这个方法使用内部可变性。
+    /// 如果实现需要可变性，可以使用 `Arc<RwLock<...>>` 或 `Arc<Mutex<...>>`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::{Memory, processor::MessageLimitProcessor};
+    /// use lumosai_core::logger::NoopLogger;
+    /// use std::sync::Arc;
+    ///
+    /// # async fn example(memory: &dyn Memory) -> lumosai_core::Result<()> {
+    /// let processor = Arc::new(MessageLimitProcessor::new(50, Arc::new(NoopLogger)));
+    /// memory.add_processor(processor).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn add_processor(&self, _processor: Arc<dyn processor::MemoryProcessor>) -> Result<()> {
+        // 默认实现不做任何操作
+        // 支持处理器的 Memory 实现应该覆盖此方法
+        Ok(())
+    }
+
+    /// 处理消息列表（可选功能）
+    ///
+    /// 使用已注册的处理器处理消息列表，返回处理后的消息。
+    /// 默认实现直接返回输入消息，不做任何处理。
+    /// 支持处理器的 Memory 实现应该覆盖此方法。
+    ///
+    /// # 参数
+    ///
+    /// * `messages` - 待处理的消息列表
+    ///
+    /// # 返回
+    ///
+    /// 处理后的消息列表
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::Memory;
+    /// use lumosai_core::llm::{Message, Role};
+    ///
+    /// # async fn example(memory: &dyn Memory) -> lumosai_core::Result<()> {
+    /// let messages = vec![
+    ///     Message::new(Role::User, "Hello".to_string(), None, None),
+    ///     Message::new(Role::Assistant, "Hi there!".to_string(), None, None),
+    /// ];
+    /// let processed = memory.process_messages(messages).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn process_messages(&self, messages: Vec<Message>) -> Result<Vec<Message>> {
+        // 默认实现直接返回输入消息，不做任何处理
+        Ok(messages)
+    }
 }
 
 // 模块声明

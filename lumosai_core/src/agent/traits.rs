@@ -123,17 +123,49 @@ pub trait MemoryAgent: CoreAgent {
         thread_id: Option<String>,
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
+        use crate::memory::MemoryConfig;
+        use crate::llm::Role;
+
         // 默认实现：如果有内存，从内存中检索上下文
-        if let Some(_memory) = self.get_memory() {
-            // 如果有 thread_id，从该线程检索历史消息
-            if let Some(_thread_id) = thread_id {
-                // TODO: 实现从内存检索历史消息的逻辑
-                // 这里先使用基础 generate 方法
+        let mut input_messages = messages.to_vec();
+        if let Some(memory) = self.get_memory() {
+            // 构建内存配置
+            let mut memory_config = options.memory_options.clone().unwrap_or_default();
+            
+            // 如果有 thread_id，使用它作为 namespace
+            if let Some(tid) = thread_id {
+                if memory_config.namespace.is_none() {
+                    memory_config.namespace = Some(tid.clone());
+                }
+            }
+            
+            // 设置检索数量（如果没有指定，使用 context_window 或默认值）
+            if memory_config.last_messages.is_none() || memory_config.last_messages == Some(0) {
+                memory_config.last_messages = options.context_window.or(Some(10));
+            }
+            
+            // 提取用户的最后一条消息作为语义搜索 query（如果启用语义召回）
+            let user_query = messages
+                .iter()
+                .rev()
+                .find(|m| matches!(m.role, Role::User))
+                .map(|m| m.content.clone());
+            
+            if user_query.is_some() && memory_config.query.is_none() {
+                memory_config.query = user_query;
+            }
+            
+            // 从内存检索历史消息
+            if let Ok(historical) = memory.retrieve(&memory_config).await {
+                if !historical.is_empty() {
+                    // 将历史消息添加到输入前面（历史消息按时间顺序，最新的在最后）
+                    input_messages = historical.into_iter().chain(input_messages).collect();
+                }
             }
         }
         
-        // 回退到基础 generate 方法
-        self.generate(messages, options).await
+        // 使用合并后的消息调用基础 generate 方法
+        self.generate(&input_messages, options).await
     }
 }
 

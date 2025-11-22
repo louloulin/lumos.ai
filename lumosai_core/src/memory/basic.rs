@@ -442,6 +442,33 @@ impl Memory for BasicMemory {
             ))
         }
     }
+
+    async fn add_processor(&self, processor: Arc<dyn MemoryProcessor>) -> Result<()> {
+        // 调用 BasicMemory 的公共方法（避免递归）
+        {
+            let mut processors = self.processors.lock().unwrap();
+            processors.push(processor.clone());
+        }
+
+        if let Some(manager) = &self.thread_manager {
+            manager.add_processor(processor).await;
+            self.applied_processors.fetch_add(1, Ordering::SeqCst);
+        }
+        Ok(())
+    }
+
+    async fn process_messages(&self, messages: Vec<Message>) -> Result<Vec<Message>> {
+        use crate::memory::processor::MemoryProcessorOptions;
+        
+        // 如果有 thread_manager，使用它的 process_messages 方法
+        if let Some(manager) = &self.thread_manager {
+            let options = MemoryProcessorOptions::default();
+            manager.process_messages(messages, options).await
+        } else {
+            // 否则直接返回消息
+            Ok(messages)
+        }
+    }
 }
 
 impl BasicMemory {

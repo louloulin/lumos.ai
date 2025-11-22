@@ -589,6 +589,24 @@ impl MemoryTrait for Memory {
             _ => Ok(vec![]), // 其他类型不支持语义召回
         }
     }
+
+    async fn add_processor(&self, processor: Arc<dyn MemoryProcessor>) -> Result<()> {
+        // 委托给内部实现
+        match &self.inner {
+            MemoryImpl::Basic(basic) => basic.add_processor(processor).await,
+            MemoryImpl::Hybrid { basic, .. } => basic.add_processor(processor).await,
+            _ => Ok(()), // 其他类型不支持处理器
+        }
+    }
+
+    async fn process_messages(&self, messages: Vec<Message>) -> Result<Vec<Message>> {
+        // 委托给内部实现
+        match &self.inner {
+            MemoryImpl::Basic(basic) => basic.process_messages(messages).await,
+            MemoryImpl::Hybrid { basic, .. } => basic.process_messages(messages).await,
+            _ => Ok(messages), // 其他类型不支持处理器，直接返回
+        }
+    }
 }
 
 impl Memory {

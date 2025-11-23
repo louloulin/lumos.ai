@@ -71,7 +71,7 @@ mod tests {
     fn test_agent_creation_with_default_config() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert!(!agent.get_name().is_empty());
         assert!(!agent.get_instructions().is_empty());
@@ -86,7 +86,7 @@ mod tests {
             instructions: "Test instructions".to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_name(), "custom_agent");
     }

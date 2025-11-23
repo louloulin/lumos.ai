@@ -344,7 +344,7 @@ mod tests {
                 ..Default::default()
             },
             llm1,
-        ));
+        ).unwrap());
 
         let agent2 = Arc::new(BasicAgent::new(
             crate::agent::AgentConfig {
@@ -353,7 +353,7 @@ mod tests {
                 ..Default::default()
             },
             llm2,
-        ));
+        ).unwrap());
 
         // Add delay to avoid rate limiting
         tokio::time::sleep(Duration::from_millis(1000)).await;

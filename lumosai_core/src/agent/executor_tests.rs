@@ -50,7 +50,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut agent = BasicAgent::new(config, llm);
+        let mut agent = BasicAgent::new(config, llm).unwrap();
 
         // 测试初始值
         assert_eq!(agent.get_name(), "assistant");
@@ -87,7 +87,7 @@ mod tests {
     fn test_agent_status() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let mut agent = BasicAgent::new(config, llm);
+        let mut agent = BasicAgent::new(config, llm).unwrap();
 
         // 初始状态应该是 Idle
         assert_eq!(agent.get_status(), AgentStatus::Idle);
@@ -108,7 +108,7 @@ mod tests {
     fn test_agent_error_status() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let mut agent = BasicAgent::new(config, llm);
+        let mut agent = BasicAgent::new(config, llm).unwrap();
 
         agent.set_status(AgentStatus::Error("Test error".to_string()));
         
@@ -152,7 +152,7 @@ mod tests {
     fn test_llm_provider() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm.clone());
+        let agent = BasicAgent::new(config, llm.clone()).unwrap();
 
         let agent_llm = agent.get_llm();
         assert!(Arc::ptr_eq(&llm, &agent_llm));
@@ -194,7 +194,7 @@ mod tests {
             enable_function_calling: Some(true),
             ..Default::default()
         };
-        let agent_enabled = BasicAgent::new(config_enabled, llm.clone());
+        let agent_enabled = BasicAgent::new(config_enabled, llm.clone()).unwrap();
         assert!(agent_enabled.is_function_calling_enabled());
 
         // 测试禁用 function calling
@@ -202,12 +202,12 @@ mod tests {
             enable_function_calling: Some(false),
             ..Default::default()
         };
-        let agent_disabled = BasicAgent::new(config_disabled, llm.clone());
+        let agent_disabled = BasicAgent::new(config_disabled, llm.clone()).unwrap();
         assert!(!agent_disabled.is_function_calling_enabled());
 
         // 测试默认值（应该启用）
         let config_default = AgentConfig::default();
-        let agent_default = BasicAgent::new(config_default, llm);
+        let agent_default = BasicAgent::new(config_default, llm).unwrap();
         assert!(agent_default.is_function_calling_enabled());
     }
 
@@ -251,8 +251,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut agent1 = BasicAgent::new(config1, llm1);
-        let agent2 = BasicAgent::new(config2, llm2);
+        let mut agent1 = BasicAgent::new(config1, llm1).unwrap();
+        let agent2 = BasicAgent::new(config2, llm2).unwrap();
 
         // 验证两个 agent 是独立的
         assert_eq!(agent1.get_name(), "agent1");

@@ -7,7 +7,7 @@ use serde_json::Value;
 use std::sync::Arc;
 
 use super::builder::AgentBuilder;
-use super::executor::BasicAgent;
+use super::BasicAgent;
 use super::trait_def::Agent;
 use crate::error::Result;
 use crate::llm::{Message, Role};

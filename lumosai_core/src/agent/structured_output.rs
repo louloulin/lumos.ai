@@ -13,7 +13,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::executor::BasicAgent;
+use super::BasicAgent;
 use super::trait_def::{Agent, AgentStructuredOutput};
 use super::types::{AgentGenerateOptions, RuntimeContext};
 use crate::error::{Error, Result};

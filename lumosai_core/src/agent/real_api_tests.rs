@@ -11,7 +11,7 @@
 mod tests {
     use crate::agent::builder::AgentBuilder;
     use crate::agent::config::AgentConfig;
-    use crate::agent::executor::BasicAgent;
+    use crate::agent::BasicAgent;
     use crate::agent::trait_def::{Agent, AgentStatus};
     use crate::agent::types::AgentGenerateOptions;
     use crate::llm::test_helpers::create_test_zhipu_provider_arc;

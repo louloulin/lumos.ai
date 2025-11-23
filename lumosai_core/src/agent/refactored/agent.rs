@@ -1,7 +1,11 @@
-//! 统一的 Agent API 包装器 - BasicAgent 重构第四步
+//! BasicAgent 实现 - 模块化架构
 //!
-//! 这个模块提供了一个统一的 API 包装器，将重构后的模块（AgentCore、AgentExecutor、AgentGenerator）
-//! 组合成一个易于使用的 Agent 接口，类似于 BasicAgent 但使用新的模块化架构。
+//! 这个模块提供了 BasicAgent 的实现，使用模块化架构：
+//! - `AgentCore`: 管理核心配置和 LLM 提供者
+//! - `AgentExecutor`: 管理工具和内存
+//! - `AgentGenerator`: 协调生成逻辑
+//!
+//! 这是重构后的 BasicAgent，将原来 2300+ 行的单体实现拆分为多个专门的组件。
 
 use crate::agent::refactored::{AgentCore, AgentExecutor, AgentGenerator};
 use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStreamOptions, AgentStep, RuntimeContext, ToolCall};
@@ -19,9 +23,9 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-/// 重构后的 Agent 实现
+/// BasicAgent 实现
 ///
-/// 这是 BasicAgent 重构后的统一接口，使用模块化架构：
+/// 这是重构后的 BasicAgent，使用模块化架构：
 /// - `AgentCore`: 管理核心配置和 LLM 提供者
 /// - `AgentExecutor`: 管理工具和内存
 /// - `AgentGenerator`: 协调生成逻辑
@@ -29,7 +33,7 @@ use std::sync::{Arc, Mutex};
 /// # 示例
 ///
 /// ```rust
-/// use lumosai_core::agent::refactored::RefactoredAgent;
+/// use lumosai_core::agent::BasicAgent;
 /// use lumosai_core::agent::AgentConfig;
 /// use lumosai_core::llm::{Message, Role, MockLlmProvider};
 /// use std::sync::Arc;
@@ -42,7 +46,7 @@ use std::sync::{Arc, Mutex};
 /// };
 /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 ///
-/// let agent = RefactoredAgent::new(config, llm)?;
+/// let agent = BasicAgent::new(config, llm)?;
 ///
 /// let messages = vec![Message {
 ///     role: Role::User,
@@ -54,15 +58,15 @@ use std::sync::{Arc, Mutex};
 /// # Ok(())
 /// # }
 /// ```
-pub struct RefactoredAgent {
+pub struct BasicAgent {
     /// Agent 生成器
     generator: AgentGenerator,
     /// Base component for logging and telemetry
     base: BaseComponent,
 }
 
-impl RefactoredAgent {
-    /// 创建新的重构后的 Agent
+impl BasicAgent {
+    /// 创建新的 BasicAgent
     ///
     /// # 参数
     ///
@@ -71,7 +75,7 @@ impl RefactoredAgent {
     ///
     /// # 返回
     ///
-    /// 返回 `Result<RefactoredAgent>`。
+    /// 返回 `Result<BasicAgent>`。
     pub fn new(config: AgentConfig, llm: Arc<dyn LlmProvider>) -> Result<Self> {
         let core = AgentCore::new(config.clone(), llm)?;
         let executor = AgentExecutor::new(core)?;
@@ -87,7 +91,7 @@ impl RefactoredAgent {
         Ok(Self { generator, base })
     }
 
-    /// 使用内存创建 Agent
+    /// 使用内存创建 Agent（静态方法）
     ///
     /// # 参数
     ///
@@ -97,8 +101,13 @@ impl RefactoredAgent {
     ///
     /// # 返回
     ///
-    /// 返回 `Result<RefactoredAgent>`。
-    pub fn with_memory(
+    /// 返回 `Result<BasicAgent>`。
+    ///
+    /// # 注意
+    ///
+    /// 这是静态方法，用于创建时直接指定内存。
+    /// 如果需要在已有 Agent 上添加内存，请使用实例方法 `with_memory()`。
+    pub fn new_with_memory(
         config: AgentConfig,
         llm: Arc<dyn LlmProvider>,
         memory: Arc<dyn Memory>,
@@ -204,6 +213,63 @@ impl RefactoredAgent {
         self.generator.executor().tools()
     }
 
+    /// Check if LLM supports structured output
+    pub fn supports_structured_output(&self) -> bool {
+        self.generator.executor().core().llm().supports_structured_output()
+    }
+
+    /// 使用内存创建 Agent（构建器方法）
+    ///
+    /// # 参数
+    ///
+    /// * `memory` - 内存实例
+    ///
+    /// # 返回
+    ///
+    /// 返回新的 `BasicAgent` 实例，包含内存。
+    ///
+    /// # 注意
+    ///
+    /// 这个方法会重新构建整个 Agent 结构，因此会消耗一些资源。
+    /// 建议在创建 Agent 时就配置好所有需要的组件。
+    pub fn with_memory(mut self, memory: Arc<dyn Memory>) -> Result<Self> {
+        let core = self.generator.executor().core();
+        let config = core.config().clone();
+        let llm = core.llm().clone();
+        
+        let new_core = AgentCore::new(config, llm)?;
+        let mut new_executor = AgentExecutor::new(new_core)?;
+        new_executor = new_executor.with_memory(memory);
+        
+        // 复制现有配置
+        if let Some(retry_executor) = self.generator.executor().retry_executor() {
+            new_executor = new_executor.with_retry_executor(retry_executor);
+        }
+        if let Some(concurrent_executor) = self.generator.executor().concurrent_tool_executor() {
+            new_executor = new_executor.with_concurrent_tool_executor(concurrent_executor);
+        }
+        if let Some(llm_router) = self.generator.executor().llm_router() {
+            new_executor = new_executor.with_llm_router(llm_router);
+        }
+        if let Some(tool_registry) = self.generator.executor().tool_registry() {
+            new_executor = new_executor.with_tool_registry(tool_registry);
+        }
+        
+        let new_generator = AgentGenerator::new(new_executor);
+        
+        let component_config = ComponentConfig {
+            name: Some(self.base.name().unwrap_or("agent").to_string()),
+            component: Component::Agent,
+            log_level: None,
+        };
+        let base = BaseComponent::new(component_config);
+        
+        Ok(Self {
+            generator: new_generator,
+            base,
+        })
+    }
+
     /// 使用工具注册表创建 Agent（构建器方法）
     ///
     /// # 参数
@@ -212,7 +278,7 @@ impl RefactoredAgent {
     ///
     /// # 返回
     ///
-    /// 返回新的 `RefactoredAgent` 实例，包含工具注册表。
+    /// 返回新的 `BasicAgent` 实例，包含工具注册表。
     ///
     /// # 注意
     ///
@@ -253,7 +319,7 @@ impl RefactoredAgent {
     ///
     /// # 返回
     ///
-    /// 返回新的 `RefactoredAgent` 实例，包含 LLM 路由器。
+    /// 返回新的 `BasicAgent` 实例，包含 LLM 路由器。
     pub fn with_llm_router(mut self, router: Arc<crate::llm::LlmRouter>) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
@@ -289,7 +355,7 @@ impl RefactoredAgent {
     ///
     /// # 返回
     ///
-    /// 返回新的 `RefactoredAgent` 实例，包含重试执行器。
+    /// 返回新的 `BasicAgent` 实例，包含重试执行器。
     pub fn with_retry_executor(mut self, retry_executor: Arc<crate::agent::error_handling::RetryExecutor>) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
@@ -325,7 +391,7 @@ impl RefactoredAgent {
     ///
     /// # 返回
     ///
-    /// 返回新的 `RefactoredAgent` 实例，包含并发工具执行器。
+    /// 返回新的 `BasicAgent` 实例，包含并发工具执行器。
     pub fn with_concurrent_tool_executor(mut self, concurrent_executor: Arc<crate::agent::concurrent_tool_executor::ConcurrentToolExecutor>) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
@@ -355,7 +421,7 @@ impl RefactoredAgent {
 }
 
 // 实现 Base trait
-impl Base for RefactoredAgent {
+impl Base for BasicAgent {
     fn name(&self) -> Option<&str> {
         self.base.name()
     }
@@ -383,7 +449,7 @@ impl Base for RefactoredAgent {
 
 // 实现 Agent trait
 #[async_trait]
-impl Agent for RefactoredAgent {
+impl Agent for BasicAgent {
     fn get_name(&self) -> &str {
         self.name()
     }
@@ -416,7 +482,7 @@ impl Agent for RefactoredAgent {
     }
 
     fn get_working_memory(&self) -> Option<Arc<dyn WorkingMemory>> {
-        // RefactoredAgent 目前不支持 working memory
+        // BasicAgent 目前不支持 working memory
         None
     }
 
@@ -509,7 +575,7 @@ impl Agent for RefactoredAgent {
         &self,
         _context: &RuntimeContext,
     ) -> Result<HashMap<String, Arc<dyn Workflow>>> {
-        // RefactoredAgent 目前不支持 workflows
+        // BasicAgent 目前不支持 workflows
         Ok(HashMap::new())
     }
 
@@ -525,7 +591,7 @@ impl Agent for RefactoredAgent {
     }
 
     fn parse_tool_calls(&self, _response: &str) -> Result<Vec<ToolCall>> {
-        // 简化实现：RefactoredAgent 使用 LLM 的原生工具调用支持
+        // 简化实现：BasicAgent 使用 LLM 的原生工具调用支持
         // 工具调用解析由 LLM provider 处理
         Ok(Vec::new())
     }
@@ -600,7 +666,7 @@ impl Agent for RefactoredAgent {
         options: &AgentGenerateOptions,
         _max_steps: Option<u32>,
     ) -> Result<AgentGenerateResult> {
-        // RefactoredAgent 的 generate 已经支持多步骤生成
+        // BasicAgent 的 generate 已经支持多步骤生成
         self.generator.generate(messages, options).await
     }
 
@@ -638,30 +704,30 @@ impl Agent for RefactoredAgent {
     }
 
     fn get_voice(&self) -> Option<Arc<dyn VoiceProvider>> {
-        // RefactoredAgent 目前不支持 voice
+        // BasicAgent 目前不支持 voice
         None
     }
 
     fn set_voice(&mut self, _voice: Arc<dyn VoiceProvider>) {
-        // RefactoredAgent 目前不支持 voice
-        self.base.logger().warn("Voice provider setting is not supported by RefactoredAgent");
+        // BasicAgent 目前不支持 voice
+        self.base.logger().warn("Voice provider setting is not supported by BasicAgent");
     }
 
     async fn get_memory_value(&self, _key: &str) -> Result<Option<Value>> {
         Err(Error::Unsupported(
-            "Working memory not enabled for RefactoredAgent".to_string(),
+            "Working memory not enabled for BasicAgent".to_string(),
         ))
     }
 
     async fn set_memory_value(&self, _key: &str, _value: Value) -> Result<()> {
         Err(Error::Unsupported(
-            "Working memory not enabled for RefactoredAgent".to_string(),
+            "Working memory not enabled for BasicAgent".to_string(),
         ))
     }
 
     async fn clear_memory(&self) -> Result<()> {
         Err(Error::Unsupported(
-            "Working memory not enabled for RefactoredAgent".to_string(),
+            "Working memory not enabled for BasicAgent".to_string(),
         ))
     }
 }
@@ -673,7 +739,7 @@ mod tests {
     use crate::llm::MockLlmProvider;
 
     #[tokio::test]
-    async fn test_refactored_agent_creation() {
+    async fn test_basic_agent_creation() {
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -681,14 +747,14 @@ mod tests {
         };
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
-        let agent = RefactoredAgent::new(config, llm).unwrap();
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert_eq!(agent.name(), "test-agent");
         assert_eq!(agent.instructions(), "You are a helpful assistant.");
         assert!(!agent.has_memory());
     }
 
     #[tokio::test]
-    async fn test_refactored_agent_generate() {
+    async fn test_basic_agent_generate() {
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -696,7 +762,7 @@ mod tests {
         };
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you?".to_string()]));
 
-        let agent = RefactoredAgent::new(config, llm).unwrap();
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let messages = vec![Message {
             role: crate::llm::Role::User,
@@ -710,7 +776,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_refactored_agent_stream() {
+    async fn test_basic_agent_stream() {
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -718,7 +784,7 @@ mod tests {
         };
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you? This is a longer response.".to_string()]));
 
-        let agent = RefactoredAgent::new(config, llm).unwrap();
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let messages = vec![Message {
             role: crate::llm::Role::User,
@@ -741,7 +807,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_refactored_agent_add_tool() {
+    async fn test_basic_agent_add_tool() {
         use crate::tool::create_tool;
 
         let config = AgentConfig {
@@ -751,7 +817,7 @@ mod tests {
         };
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
-        let agent = RefactoredAgent::new(config, llm).unwrap();
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // 添加工具
         let echo_tool = create_tool(
@@ -777,7 +843,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_refactored_agent_builder_methods() {
+    async fn test_basic_agent_builder_methods() {
         use crate::agent::error_handling::{RetryExecutor, RetryStrategy, BackoffStrategy, AgentErrorType};
         use crate::agent::concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
         use crate::llm::{LlmRouter, RoutingStrategy};
@@ -790,7 +856,7 @@ mod tests {
         };
         let llm: Arc<dyn LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
-        let agent = RefactoredAgent::new(config.clone(), llm.clone()).unwrap();
+        let agent = BasicAgent::new(config.clone(), llm.clone()).unwrap();
         
         // 测试 with_retry_executor
         let strategy = RetryStrategy {
@@ -831,7 +897,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_refactored_agent_implements_agent_trait() {
+    async fn test_basic_agent_implements_agent_trait() {
         use crate::agent::Agent;
         use crate::agent::types::{AgentGenerateOptions, RuntimeContext};
         
@@ -842,7 +908,7 @@ mod tests {
         };
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
-        let agent = RefactoredAgent::new(config, llm).unwrap();
+        let agent = BasicAgent::new(config, llm).unwrap();
         
         // 测试 Agent trait 方法
         assert_eq!(agent.get_name(), "test-agent");

@@ -15,7 +15,8 @@ pub mod error_handling; // 新增：统一错误处理系统
 pub mod concurrent_tool_executor; // 新增：并发工具执行器
 pub mod evaluation;
 pub mod events;
-pub mod executor;
+// executor 模块已移除，BasicAgent 现在在 refactored 模块中
+// pub mod executor;
 pub mod feature_completion;
 pub mod mastra_compat;
 pub mod memory_resolver;
@@ -51,11 +52,11 @@ pub mod reflection;
 // 暂时移除模块化Agent组件（有编译错误）
 // pub mod modular;
 
-// BasicAgent 重构模块
+// BasicAgent 模块化组件
 pub mod refactored;
 
 // Re-export refactored modules for easy access
-pub use refactored::{AgentCore, AgentExecutor, AgentGenerator, RefactoredAgent};
+pub use refactored::{AgentCore, AgentExecutor, AgentGenerator, BasicAgent};
 
 #[cfg(feature = "demos")]
 pub mod enhanced_streaming_demo;
@@ -87,7 +88,7 @@ mod week1_agent_tests;
 mod real_api_tests;
 
 pub use config::{AgentConfig, AgentGenerateOptions};
-pub use executor::BasicAgent;
+// BasicAgent 现在从 refactored 模块导出（已在上面通过 refactored 模块导出）
 pub use message_utils::{
     assistant_message, count_messages_by_role, extract_text_content, filter_messages_by_role,
     format_messages, format_role, message_with_metadata, message_with_name, system_message,
@@ -220,8 +221,8 @@ pub fn create_basic_agent(
     name: impl Into<String>,
     instructions: impl Into<String>,
     llm: std::sync::Arc<dyn crate::llm::LlmProvider>,
-) -> BasicAgent {
-    let _config = AgentConfig {
+) -> crate::error::Result<BasicAgent> {
+    let config = AgentConfig {
         name: name.into(),
         instructions: instructions.into(),
         memory_config: None,
@@ -238,7 +239,7 @@ pub fn create_basic_agent(
         isolation_level: None,
     };
 
-    BasicAgent::new(_config, llm)
+    BasicAgent::new(config, llm)
 }
 
 /// Create an agent with minimal configuration (quick start)

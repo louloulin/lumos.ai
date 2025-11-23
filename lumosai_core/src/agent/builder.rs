@@ -1048,11 +1048,11 @@ impl AgentBuilder {
         };
 
         // Create agent
-        let mut agent = BasicAgent::new(config, model);
+        let mut agent = BasicAgent::new(config, model)?;
 
         // Set memory if provided directly
         if let Some(memory) = self.memory {
-            agent = agent.with_memory(memory);
+            agent = agent.with_memory(memory)?;
         }
 
         // Add tools
@@ -1115,11 +1115,11 @@ impl AgentBuilder {
         };
 
         // Create agent
-        let mut agent = BasicAgent::new(config, model);
+        let mut agent = BasicAgent::new(config, model)?;
 
         // Set memory if provided directly
         if let Some(memory) = self.memory {
-            agent = agent.with_memory(memory);
+            agent = agent.with_memory(memory)?;
         }
 
         // Add tools

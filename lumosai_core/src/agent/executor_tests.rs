@@ -11,7 +11,7 @@
 mod tests {
     use super::super::*;
     use crate::agent::config::AgentConfig;
-    use crate::agent::executor::BasicAgent;
+    use crate::agent::BasicAgent;
     use crate::agent::trait_def::Agent;
     use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     use crate::agent::types::{AgentGenerateOptions, AgentStatus};
@@ -33,7 +33,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_name(), "test_agent");
         assert_eq!(agent.get_instructions(), "You are a test assistant");
@@ -71,7 +71,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // 测试 Base trait 方法
         assert_eq!(agent.name(), Some("base_test"));
@@ -123,7 +123,7 @@ mod tests {
     fn test_tool_registration() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // 初始状态应该没有 tools
         assert_eq!(agent.get_tools().len(), 0);
@@ -140,7 +140,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // 默认情况下应该没有 memory
         assert!(agent.get_memory().is_none());
@@ -168,7 +168,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert!(agent.validate_config().is_ok());
     }
 
@@ -177,7 +177,7 @@ mod tests {
     fn test_agent_default_config() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert!(!agent.get_name().is_empty());
         assert!(!agent.get_instructions().is_empty());
@@ -222,7 +222,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // 验证所有属性都正确设置
         assert_eq!(agent.get_name(), "prop_test");

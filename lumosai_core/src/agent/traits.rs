@@ -166,9 +166,9 @@ pub trait MemoryAgent: CoreAgent {
         
         // 使用合并后的消息调用基础 generate 方法
         self.generate(&input_messages, options).await
-    }
-}
-
+            }
+        }
+        
 /// Thread Management Agent Trait
 ///
 /// 为 Agent 添加线程管理功能，支持创建、获取、更新、删除线程等操作。

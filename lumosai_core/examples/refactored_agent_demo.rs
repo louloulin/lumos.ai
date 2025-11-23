@@ -1,6 +1,6 @@
-//! Refactored Agent 使用示例
+//! BasicAgent 使用示例
 //!
-//! 这个示例展示了如何使用重构后的 Agent 模块（AgentCore、AgentExecutor、AgentGenerator、RefactoredAgent）
+//! 这个示例展示了如何使用模块化的 BasicAgent（AgentCore、AgentExecutor、AgentGenerator、BasicAgent）
 //!
 //! # 运行示例
 //!
@@ -8,7 +8,7 @@
 //! cargo run --example refactored_agent_demo --features="examples"
 //! ```
 
-use lumosai_core::agent::refactored::{AgentCore, AgentExecutor, AgentGenerator, RefactoredAgent};
+use lumosai_core::agent::refactored::{AgentCore, AgentExecutor, AgentGenerator, BasicAgent};
 use lumosai_core::agent::types::{AgentGenerateOptions, AgentStreamOptions};
 use lumosai_core::agent::AgentConfig;
 use lumosai_core::llm::{Message, Role, MockLlmProvider};
@@ -19,9 +19,9 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== Refactored Agent 使用示例 ===\n");
+    println!("=== BasicAgent 使用示例 ===\n");
 
-    // 示例 1: 使用 RefactoredAgent（最简单的方式）
+    // 示例 1: 使用 BasicAgent（最简单的方式）
     example1_simple_usage().await?;
     println!();
 
@@ -43,9 +43,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// 示例 1: 使用 RefactoredAgent（最简单的方式）
+/// 示例 1: 使用 BasicAgent（最简单的方式）
 async fn example1_simple_usage() -> Result<(), Box<dyn std::error::Error>> {
-    println!("示例 1: 使用 RefactoredAgent（最简单的方式）");
+    println!("示例 1: 使用 BasicAgent（最简单的方式）");
 
     let config = AgentConfig {
         name: "simple-agent".to_string(),
@@ -54,7 +54,7 @@ async fn example1_simple_usage() -> Result<(), Box<dyn std::error::Error>> {
     };
     let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you?".to_string()]));
 
-    let agent = RefactoredAgent::new(config, llm)?;
+    let agent = BasicAgent::new(config, llm)?;
 
     let messages = vec![Message {
         role: Role::User,
@@ -130,7 +130,7 @@ async fn example3_with_memory() -> Result<(), Box<dyn std::error::Error>> {
     let memory: Arc<dyn Memory> = Arc::new(BasicMemory::new(None, None));
 
     // 使用内存创建 Agent
-    let agent = RefactoredAgent::with_memory(config, llm, memory.clone())?;
+    let agent = BasicAgent::with_memory(config, llm, memory.clone())?;
 
     // 存储第一条消息
     let message1 = Message {
@@ -228,7 +228,7 @@ async fn example5_streaming() -> Result<(), Box<dyn std::error::Error>> {
         "This is a longer response that will be streamed in chunks.".to_string(),
     ]));
 
-    let agent = RefactoredAgent::new(config, llm)?;
+    let agent = BasicAgent::new(config, llm)?;
 
     let messages = vec![Message {
         role: Role::User,

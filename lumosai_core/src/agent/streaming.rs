@@ -568,7 +568,7 @@ mod tests {
         };
 
         let llm = create_test_zhipu_provider_arc();
-        let agent = BasicAgent::new(agent_config, llm);
+        let agent = BasicAgent::new(agent_config, llm).unwrap();
 
         let streaming_agent = agent.into_streaming();
         assert_eq!(streaming_agent.config.text_buffer_size, 1);
@@ -600,7 +600,7 @@ mod tests {
         };
 
         let llm = create_test_zhipu_provider_arc();
-        let agent = BasicAgent::new(agent_config, llm);
+        let agent = BasicAgent::new(agent_config, llm).unwrap();
 
         let streaming_agent = agent.into_streaming_with_config(config);
         assert_eq!(streaming_agent.config.text_buffer_size, 5);

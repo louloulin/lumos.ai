@@ -197,6 +197,7 @@ mod tests;
 pub mod together;
 pub mod types;
 pub mod router;
+pub mod cost_monitor;
 pub mod zhipu;
 
 #[cfg(test)]
@@ -225,4 +226,5 @@ pub use together::TogetherProvider;
 pub use types::{LlmOptions, Message, Role};
 pub use zhipu::ZhipuProvider;
 pub use router::{LlmRouter, ProviderStats, RoutingStrategy};
+pub use cost_monitor::{CostMonitor, CostRecord, CostStats, ProviderCostStats};
 pub mod function_calling_utils;

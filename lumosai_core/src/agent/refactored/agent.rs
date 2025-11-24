@@ -91,6 +91,11 @@ impl BasicAgent {
         Ok(Self { generator, base })
     }
 
+    /// 获取 generator（可变引用，用于内部更新）
+    fn generator_mut(&mut self) -> &mut AgentGenerator {
+        &mut self.generator
+    }
+
     /// 使用内存创建 Agent（静态方法）
     ///
     /// # 参数
@@ -460,13 +465,12 @@ impl Agent for BasicAgent {
 
     fn set_instructions(&mut self, instructions: String) {
         // 更新 core 中的 instructions
-        // 注意：由于 core 是不可变的，我们需要重新构建整个结构
-        // 为了简化，这里我们只记录日志，实际的 instructions 更新需要在重构时处理
+        // 通过 generator -> executor -> core 的链式访问来更新
+        self.generator_mut().executor_mut().core_mut().set_instructions(instructions.clone());
         self.base.logger().debug(&format!(
-            "Instructions update requested for agent '{}'",
+            "Instructions updated for agent '{}'",
             self.name()
         ));
-        // TODO: 实现真正的 instructions 更新（需要重新构建 AgentCore）
     }
 
     fn get_llm(&self) -> Arc<dyn LlmProvider> {

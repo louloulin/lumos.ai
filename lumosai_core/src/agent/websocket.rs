@@ -560,7 +560,7 @@ mod tests {
         };
 
         let llm = create_test_zhipu_provider_arc();
-        let agent = BasicAgent::new(agent_config, llm);
+        let agent = BasicAgent::new(agent_config, llm).unwrap();
 
         let streaming_config = StreamingConfig::default();
         let websocket_config = WebSocketConfig::default();

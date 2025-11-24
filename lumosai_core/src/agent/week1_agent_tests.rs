@@ -100,7 +100,7 @@ mod tests {
             instructions: instructions.to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_instructions(), instructions);
     }
@@ -113,7 +113,7 @@ mod tests {
             instructions: "Test".to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // 空名称应该被接受（或者使用默认值）
         assert!(agent.get_name().is_empty() || !agent.get_name().is_empty());
@@ -128,7 +128,7 @@ mod tests {
             instructions: "Test".to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_name(), long_name);
     }
@@ -142,7 +142,7 @@ mod tests {
             instructions: "Test".to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_name(), special_name);
     }
@@ -156,7 +156,7 @@ mod tests {
             instructions: "Test".to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_name(), unicode_name);
     }
@@ -169,7 +169,7 @@ mod tests {
             instructions: "".to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // 空指令应该被接受（或者使用默认值）
         assert!(agent.get_instructions().is_empty() || !agent.get_instructions().is_empty());
@@ -184,7 +184,7 @@ mod tests {
             instructions: long_instructions.clone(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_instructions(), long_instructions);
     }
@@ -198,7 +198,7 @@ mod tests {
             instructions: multiline_instructions.to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_instructions(), multiline_instructions);
     }
@@ -211,7 +211,7 @@ mod tests {
     fn test_agent_initial_status_is_ready() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_status(), AgentStatus::Ready);
     }
@@ -220,7 +220,7 @@ mod tests {
     fn test_agent_status_after_creation() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // 新创建的 agent 应该是 Ready 状态
         assert_eq!(agent.get_status(), AgentStatus::Ready);
@@ -234,7 +234,7 @@ mod tests {
             instructions: "Test".to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_name(), "getter_test");
     }
@@ -248,7 +248,7 @@ mod tests {
             instructions: instructions.to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_instructions(), instructions);
     }
@@ -257,7 +257,7 @@ mod tests {
     fn test_agent_tools_getter_empty() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert_eq!(agent.get_tools().len(), 0);
     }
@@ -266,7 +266,7 @@ mod tests {
     fn test_agent_memory_getter_none() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert!(agent.get_memory().is_none());
     }
@@ -320,7 +320,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert!(agent.validate_config().is_ok());
     }
 
@@ -364,7 +364,7 @@ mod tests {
     async fn test_agent_generate_with_empty_input() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let messages = vec![Message::new(Role::User, "".to_string(), None, None)];
         let options = AgentGenerateOptions::default();
@@ -378,7 +378,7 @@ mod tests {
     async fn test_agent_generate_with_very_long_input() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let long_input = "test ".repeat(10000);
         let messages = vec![Message::new(Role::User, long_input, None, None)];
@@ -393,7 +393,7 @@ mod tests {
     async fn test_agent_generate_with_special_characters() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let special_input = "Test with special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?";
         let messages = vec![Message::new(
@@ -421,7 +421,7 @@ mod tests {
     async fn test_agent_generate_with_unicode_input() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let unicode_input = "你好，世界！🌍 こんにちは";
         let messages = vec![Message::new(
@@ -449,7 +449,7 @@ mod tests {
     async fn test_agent_generate_with_newlines() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let multiline_input = "Line 1\nLine 2\n\nLine 4";
         let messages = vec![Message::new(
@@ -468,7 +468,7 @@ mod tests {
     async fn test_agent_generate_with_tabs() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let tab_input = "Column1\tColumn2\tColumn3";
         let messages = vec![Message::new(Role::User, tab_input.to_string(), None, None)];
@@ -489,7 +489,7 @@ mod tests {
     async fn test_agent_generate_with_json_input() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let json_input = r#"{"key": "value", "number": 123, "nested": {"inner": "data"}}"#;
         let messages = vec![Message::new(Role::User, json_input.to_string(), None, None)];
@@ -510,7 +510,7 @@ mod tests {
     async fn test_agent_generate_with_code_input() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let code_input = r#"
 fn main() {
@@ -535,7 +535,7 @@ fn main() {
     async fn test_agent_generate_with_html_input() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let html_input = r#"<html><body><h1>Title</h1><p>Paragraph</p></body></html>"#;
         let messages = vec![Message::new(Role::User, html_input.to_string(), None, None)];
@@ -556,7 +556,7 @@ fn main() {
     async fn test_agent_generate_with_markdown_input() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let markdown_input = r#"
 # Title

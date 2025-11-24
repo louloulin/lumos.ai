@@ -110,9 +110,14 @@ impl AgentExecutor {
         })
     }
 
-    /// 获取 Agent 核心
+    /// 获取 Agent 核心（不可变引用）
     pub fn core(&self) -> &AgentCore {
         &self.core
+    }
+
+    /// 获取 Agent 核心（可变引用）
+    pub fn core_mut(&mut self) -> &mut AgentCore {
+        &mut self.core
     }
 
     /// 获取工具映射

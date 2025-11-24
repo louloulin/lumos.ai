@@ -8,10 +8,84 @@ use crate::agent::refactored::AgentExecutor;
 use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStep, AgentStreamOptions, RuntimeContext, StepType, TokenUsage};
 use crate::error::Result;
 use crate::llm::{Message, Role};
+use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
+use async_trait::async_trait;
 use futures::stream::{BoxStream, StreamExt};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
+
+/// 包装器：将 Box<dyn Tool> 转换为 Arc<dyn Tool>
+/// 
+/// 这个包装器允许我们在 ConcurrentToolExecutor 中使用 Box<dyn Tool>
+#[derive(Clone)]
+struct BoxToolWrapper {
+    tool: Box<dyn Tool>,
+    base: crate::base::BaseComponent,
+}
+
+impl std::fmt::Debug for BoxToolWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BoxToolWrapper")
+            .field("tool_id", &self.tool.id())
+            .finish_non_exhaustive()
+    }
+}
+
+impl crate::base::Base for BoxToolWrapper {
+    fn name(&self) -> Option<&str> {
+        self.base.name()
+    }
+
+    fn component(&self) -> crate::compat::Component {
+        self.base.component()
+    }
+
+    fn logger(&self) -> std::sync::Arc<dyn crate::logger::Logger> {
+        self.base.logger()
+    }
+
+    fn set_logger(&mut self, logger: std::sync::Arc<dyn crate::logger::Logger>) {
+        self.base.set_logger(logger);
+    }
+
+    fn telemetry(&self) -> Option<std::sync::Arc<dyn crate::telemetry::TelemetrySink>> {
+        self.base.telemetry()
+    }
+
+    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn crate::telemetry::TelemetrySink>) {
+        self.base.set_telemetry(telemetry);
+    }
+}
+
+#[async_trait]
+impl Tool for BoxToolWrapper {
+    fn id(&self) -> &str {
+        self.tool.id()
+    }
+
+    fn description(&self) -> &str {
+        self.tool.description()
+    }
+
+    fn schema(&self) -> crate::tool::ToolSchema {
+        self.tool.schema()
+    }
+
+    async fn execute(
+        &self,
+        args: Value,
+        context: ToolExecutionContext,
+        options: &ToolExecutionOptions,
+    ) -> Result<Value> {
+        self.tool.execute(args, context, options).await
+    }
+
+    fn clone_box(&self) -> Box<dyn Tool> {
+        self.tool.clone_box()
+    }
+}
 
 /// Agent 生成器
 ///
@@ -498,39 +572,76 @@ impl AgentGenerator {
         &self,
         tool_calls: &[crate::agent::types::ToolCall],
     ) -> Result<Vec<crate::agent::types::ToolResult>> {
-        // TODO: 集成 ConcurrentToolExecutor
-        // 当前 AgentExecutor 使用 Box<dyn Tool> 存储工具，而 ConcurrentToolExecutor 需要 Arc<dyn Tool>
-        // 未来可以考虑：
-        // 1. 将 AgentExecutor 的工具存储改为 Arc<dyn Tool>
-        // 2. 或者创建一个包装器将 Box<dyn Tool> 转换为 Arc<dyn Tool>
-        // 3. 或者修改 ConcurrentToolExecutor 以支持 Box<dyn Tool>
-        // 目前暂时使用顺序执行
-        
-        // 否则使用顺序执行（原有逻辑）
-        let mut tool_results = Vec::new();
-
-        for tool_call in tool_calls {
-            match self.execute_tool_call(tool_call).await {
-                Ok(result_value) => {
-                    tool_results.push(crate::agent::types::ToolResult {
-                        call_id: tool_call.id.clone(),
-                        name: tool_call.name.clone(),
-                        result: result_value,
-                        status: crate::agent::types::ToolResultStatus::Success,
+        // 如果配置了 ConcurrentToolExecutor，使用并发执行
+        if let Some(concurrent_executor) = self.executor.concurrent_tool_executor() {
+            // 在同步块中获取工具并转换为 Arc<dyn Tool>，确保 MutexGuard 在 await 之前被释放
+            let tools_map: std::collections::HashMap<String, Arc<dyn crate::tool::Tool>> = {
+                let tools_arc = self.executor.tools();
+                let tools_guard = tools_arc.lock().map_err(|_| {
+                    crate::error::Error::Internal("Failed to lock tools".to_string())
+                })?;
+                
+                // 将 Box<dyn Tool> 转换为 Arc<dyn Tool>
+                let mut tools_map: std::collections::HashMap<String, Arc<dyn crate::tool::Tool>> = 
+                    std::collections::HashMap::new();
+                for (name, tool) in tools_guard.iter() {
+                    // 创建一个包装器，将 Box<dyn Tool> 转换为 Arc<dyn Tool>
+                    // 由于 Box<dyn Tool> 不能直接转换为 Arc，我们需要克隆工具
+                    // 这里我们使用一个简单的包装器
+                    let tool_arc: Arc<dyn crate::tool::Tool> = Arc::new(BoxToolWrapper {
+                        tool: tool.clone(),
+                        base: crate::base::BaseComponent::new_with_name(
+                            tool.id().to_string(),
+                            crate::compat::Component::Tool,
+                        ),
                     });
+                    tools_map.insert(name.clone(), tool_arc);
                 }
-                Err(e) => {
-                    tool_results.push(crate::agent::types::ToolResult {
-                        call_id: tool_call.id.clone(),
-                        name: tool_call.name.clone(),
-                        result: serde_json::json!({"error": e.to_string()}),
-                        status: crate::agent::types::ToolResultStatus::Error,
-                    });
+                // tools_guard 在这里被释放
+                tools_map
+            };
+            
+            // 准备工具调用和上下文
+            let tool_calls_vec: Vec<crate::agent::types::ToolCall> = tool_calls.to_vec();
+            let context = crate::tool::ToolExecutionContext::default();
+            let options = crate::tool::ToolExecutionOptions::default();
+            
+            // 使用并发执行器执行工具
+            let results = concurrent_executor.execute_tools(
+                tool_calls_vec,
+                &tools_map,
+                &context,
+                &options,
+            ).await;
+            
+            Ok(results)
+        } else {
+            // 否则使用顺序执行（原有逻辑）
+            let mut tool_results = Vec::new();
+
+            for tool_call in tool_calls {
+                match self.execute_tool_call(tool_call).await {
+                    Ok(result_value) => {
+                        tool_results.push(crate::agent::types::ToolResult {
+                            call_id: tool_call.id.clone(),
+                            name: tool_call.name.clone(),
+                            result: result_value,
+                            status: crate::agent::types::ToolResultStatus::Success,
+                        });
+                    }
+                    Err(e) => {
+                        tool_results.push(crate::agent::types::ToolResult {
+                            call_id: tool_call.id.clone(),
+                            name: tool_call.name.clone(),
+                            result: serde_json::json!({"error": e.to_string()}),
+                            status: crate::agent::types::ToolResultStatus::Error,
+                        });
+                    }
                 }
             }
-        }
 
-        Ok(tool_results)
+            Ok(tool_results)
+        }
     }
 
     /// 执行单个工具调用
@@ -704,13 +815,20 @@ impl AgentGenerator {
     pub fn executor(&self) -> &AgentExecutor {
         &self.executor
     }
+
+    /// 获取执行器（可变引用）
+    pub fn executor_mut(&mut self) -> &mut AgentExecutor {
+        &mut self.executor
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::{AgentConfig, refactored::AgentCore};
+    use crate::agent::{AgentConfig, refactored::{AgentCore, AgentExecutor}};
     use crate::llm::{Message, Role, MockLlmProvider};
+    use crate::tool::{GenericTool, ToolSchema, ToolExecutionContext};
+    use serde_json::json;
 
     #[tokio::test]
     async fn test_agent_generator_creation() {
@@ -916,6 +1034,79 @@ mod tests {
         // 验证响应已生成（router 应该选择了某个 provider）
         assert!(!result.response.is_empty());
         assert_eq!(result.steps.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_calls_with_concurrent_executor() {
+        // 创建配置和 LLM
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        // 创建 core 和 executor
+        let core = AgentCore::new(config, llm).unwrap();
+        let mut executor = AgentExecutor::new(core).unwrap();
+
+        // 创建并发工具执行器
+        let concurrent_config = crate::agent::concurrent_tool_executor::ConcurrentToolExecutorConfig {
+            max_concurrency: 2,
+            preserve_order: true,
+            timeout_seconds: Some(10),
+        };
+        let concurrent_executor = Arc::new(crate::agent::concurrent_tool_executor::ConcurrentToolExecutor::new(concurrent_config));
+        executor = executor.with_concurrent_tool_executor(concurrent_executor);
+
+        // 创建测试工具
+        let tool1 = GenericTool::new(
+            "test_tool_1",
+            "Test tool 1",
+            ToolSchema::default(),
+            |_params: Value, _context: ToolExecutionContext| -> Result<Value> {
+                Ok(json!({"result": "tool1"}))
+            },
+        );
+        let tool2 = GenericTool::new(
+            "test_tool_2",
+            "Test tool 2",
+            ToolSchema::default(),
+            |_params: Value, _context: ToolExecutionContext| -> Result<Value> {
+                Ok(json!({"result": "tool2"}))
+            },
+        );
+
+        // 添加工具
+        executor.add_tool(Box::new(tool1)).unwrap();
+        executor.add_tool(Box::new(tool2)).unwrap();
+
+        // 创建 generator
+        let generator = AgentGenerator::new(executor);
+
+        // 创建工具调用
+        let tool_calls = vec![
+            crate::agent::types::ToolCall {
+                id: "call1".to_string(),
+                name: "test_tool_1".to_string(),
+                arguments: HashMap::new(),
+            },
+            crate::agent::types::ToolCall {
+                id: "call2".to_string(),
+                name: "test_tool_2".to_string(),
+                arguments: HashMap::new(),
+            },
+        ];
+
+        // 执行工具调用
+        let results = generator.execute_tool_calls(&tool_calls).await.unwrap();
+
+        // 验证结果
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].name, "test_tool_1");
+        assert_eq!(results[0].status, crate::agent::types::ToolResultStatus::Success);
+        assert_eq!(results[1].name, "test_tool_2");
+        assert_eq!(results[1].status, crate::agent::types::ToolResultStatus::Success);
     }
 }
 

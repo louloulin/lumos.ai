@@ -139,6 +139,12 @@ impl LlmProvider for MockLlmProvider {
     fn supports_function_calling(&self) -> bool {
         true
     }
+
+    async fn is_healthy(&self) -> bool {
+        // Mock provider is always healthy if it has responses configured
+        let responses = self.responses.lock().unwrap();
+        !responses.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -220,10 +226,22 @@ mod tests {
             assert!(
                 approx_eq!(f32, *a, *e, epsilon = FLOAT_EPSILON),
                 "向量元素 {} 不相等: {} != {}",
-                i,
-                a,
-                e
-            );
-        }
+            i,
+            a,
+            e
+        );
     }
+
+    #[tokio::test]
+    async fn test_mock_provider_is_healthy() {
+        let provider = MockLlmProvider::new(vec!["test".to_string()]);
+        assert!(provider.is_healthy().await);
+    }
+
+    #[tokio::test]
+    async fn test_mock_provider_is_unhealthy_when_no_responses() {
+        let provider = MockLlmProvider::new(vec![]);
+        assert!(!provider.is_healthy().await);
+    }
+}
 }

@@ -24,7 +24,7 @@ use crate::memory::{Memory, working::WorkingMemory};
 use crate::tool::Tool;
 use crate::workflow::Workflow;
 use async_trait::async_trait;
-use futures::stream::{BoxStream, StreamExt};
+use futures::stream::BoxStream;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -604,7 +604,7 @@ impl Agent for BasicAgent {
         // 更新 core 中的 instructions
         // 通过 generator -> executor -> core 的链式访问来更新
         self.generator_mut().executor_mut().core_mut().set_instructions(instructions.clone());
-        self.base.logger().debug(&format!(
+        let _ = self.base.logger().debug(&format!(
             "Instructions updated for agent '{}'",
             self.name()
         ));
@@ -653,7 +653,7 @@ impl Agent for BasicAgent {
         }
 
         tools.insert(tool_name.clone(), tool);
-        self.base.logger().debug(&format!(
+        let _ = self.base.logger().debug(&format!(
             "Tool '{}' added to agent '{}'",
             tool_name, self.name()
         ));
@@ -673,7 +673,7 @@ impl Agent for BasicAgent {
         }
 
         tools.remove(tool_name);
-        self.base.logger().debug(&format!(
+        let _ = self.base.logger().debug(&format!(
             "Tool '{}' removed from agent '{}'",
             tool_name, self.name()
         ));
@@ -822,7 +822,10 @@ impl Agent for BasicAgent {
 
     fn set_voice(&mut self, _voice: Arc<dyn VoiceProvider>) {
         // BasicAgent 目前不支持 voice
-        self.base.logger().warn("Voice provider setting is not supported by BasicAgent");
+        let _ = self
+            .base
+            .logger()
+            .warn("Voice provider setting is not supported by BasicAgent");
     }
 
     async fn get_memory_value(&self, _key: &str) -> Result<Option<Value>> {
@@ -849,6 +852,7 @@ mod tests {
     use super::*;
     use crate::agent::AgentConfig;
     use crate::llm::MockLlmProvider;
+    use futures::StreamExt;
 
     #[tokio::test]
     async fn test_basic_agent_creation() {

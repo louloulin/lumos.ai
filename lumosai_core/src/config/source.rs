@@ -4,7 +4,6 @@
 //! including files, environment variables, and remote sources.
 
 use crate::{Error, Result};
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;

@@ -11,7 +11,6 @@ use crate::llm::{Message, Role};
 use futures::stream::{BoxStream, StreamExt};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::Arc;
 use uuid::Uuid;
 
 /// Agent 生成器

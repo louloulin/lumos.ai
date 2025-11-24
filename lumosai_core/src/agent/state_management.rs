@@ -2,13 +2,13 @@
 //!
 //! 提供完整的Agent生命周期管理、状态持久化和健康检查功能。
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::RwLock;
 
 /// Agent状态枚举

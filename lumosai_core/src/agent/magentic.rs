@@ -6,14 +6,13 @@
 //! - AutoGen Magentic-One (Microsoft Research)
 //! - Dynamic Task Planning (2025)
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::Agent;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// 任务状态
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

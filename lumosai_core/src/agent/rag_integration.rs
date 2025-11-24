@@ -3,14 +3,12 @@
 //! This module provides simplified RAG integration for agents,
 //! making it easy to create agents with knowledge base capabilities.
 
-use serde_json::Value;
 use std::sync::Arc;
 
 use super::builder::AgentBuilder;
 use super::BasicAgent;
 use super::trait_def::Agent;
 use crate::error::Result;
-use crate::llm::{Message, Role};
 use crate::vector::{MemoryVectorStorage, VectorStorage};
 
 /// RAG 配置

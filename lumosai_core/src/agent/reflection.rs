@@ -7,12 +7,11 @@
 //! - AutoGen Reflection
 //! - Self-Refine (2023)
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use super::Agent;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// Reflection 迭代记录
 #[derive(Debug, Clone, Serialize, Deserialize)]

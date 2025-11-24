@@ -123,7 +123,7 @@ pub trait MemoryAgent: CoreAgent {
         thread_id: Option<String>,
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
-        use crate::memory::MemoryConfig;
+        
         use crate::llm::Role;
 
         // 默认实现：如果有内存，从内存中检索上下文

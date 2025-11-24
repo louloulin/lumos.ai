@@ -6,12 +6,11 @@
 //! - Maker-Checker Pattern (金融行业最佳实践)
 //! - Two-Phase Commit Pattern
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use super::Agent;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// 审核状态
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

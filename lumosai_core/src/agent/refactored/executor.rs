@@ -4,13 +4,12 @@
 //! 这是 BasicAgent 重构的第二步，将工具和内存管理从 BasicAgent 中分离出来。
 
 use crate::agent::refactored::core::AgentCore;
-use crate::agent::concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
+use crate::agent::concurrent_tool_executor::ConcurrentToolExecutor;
 use crate::agent::error_handling::RetryExecutor;
 use crate::error::Result;
 use crate::llm::LlmRouter;
 use crate::memory::{create_working_memory, Memory, WorkingMemory};
-use crate::tool::{Tool, ToolRegistry, ToolMetadata};
-use regex::Regex;
+use crate::tool::{Tool, ToolRegistry};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 

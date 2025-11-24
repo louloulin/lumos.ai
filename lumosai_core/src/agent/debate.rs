@@ -6,12 +6,11 @@
 //! - Multi-Agent Debate Strategies (2025)
 //! - Debating with More Persuasive LLMs (2024)
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use super::Agent;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// 辩论立场
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

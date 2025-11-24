@@ -7,7 +7,6 @@
 //! - Azure AI Agent Orchestration Patterns (2025)
 //! - Consensus-LLM (2025)
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -16,7 +15,6 @@ use tokio::sync::RwLock;
 use super::communication::AgentCommunicationManager;
 use super::Agent;
 use crate::error::{Error, Result};
-use crate::llm::{Message, Role};
 
 /// Group Chat 消息
 #[derive(Debug, Clone, Serialize, Deserialize)]

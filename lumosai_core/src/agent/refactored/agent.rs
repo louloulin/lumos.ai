@@ -232,7 +232,7 @@ impl BasicAgent {
     ///
     /// 这个方法会重新构建整个 Agent 结构，因此会消耗一些资源。
     /// 建议在创建 Agent 时就配置好所有需要的组件。
-    pub fn with_memory(mut self, memory: Arc<dyn Memory>) -> Result<Self> {
+    pub fn with_memory(self, memory: Arc<dyn Memory>) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();
@@ -284,7 +284,7 @@ impl BasicAgent {
     ///
     /// 这个方法会重新构建整个 Agent 结构，因此会消耗一些资源。
     /// 建议在创建 Agent 时就配置好所有需要的组件。
-    pub fn with_tool_registry(mut self, registry: Arc<crate::tool::ToolRegistry>) -> Result<Self> {
+    pub fn with_tool_registry(self, registry: Arc<crate::tool::ToolRegistry>) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();
@@ -320,7 +320,7 @@ impl BasicAgent {
     /// # 返回
     ///
     /// 返回新的 `BasicAgent` 实例，包含 LLM 路由器。
-    pub fn with_llm_router(mut self, router: Arc<crate::llm::LlmRouter>) -> Result<Self> {
+    pub fn with_llm_router(self, router: Arc<crate::llm::LlmRouter>) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();
@@ -356,7 +356,7 @@ impl BasicAgent {
     /// # 返回
     ///
     /// 返回新的 `BasicAgent` 实例，包含重试执行器。
-    pub fn with_retry_executor(mut self, retry_executor: Arc<crate::agent::error_handling::RetryExecutor>) -> Result<Self> {
+    pub fn with_retry_executor(self, retry_executor: Arc<crate::agent::error_handling::RetryExecutor>) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();
@@ -392,7 +392,7 @@ impl BasicAgent {
     /// # 返回
     ///
     /// 返回新的 `BasicAgent` 实例，包含并发工具执行器。
-    pub fn with_concurrent_tool_executor(mut self, concurrent_executor: Arc<crate::agent::concurrent_tool_executor::ConcurrentToolExecutor>) -> Result<Self> {
+    pub fn with_concurrent_tool_executor(self, concurrent_executor: Arc<crate::agent::concurrent_tool_executor::ConcurrentToolExecutor>) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();

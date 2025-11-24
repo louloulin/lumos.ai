@@ -25,6 +25,12 @@ struct BoxToolWrapper {
     base: crate::base::BaseComponent,
 }
 
+#[derive(Debug, Clone, Default)]
+struct ResolvedContext {
+    thread_id: Option<String>,
+    resource_id: Option<String>,
+}
+
 impl std::fmt::Debug for BoxToolWrapper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BoxToolWrapper")
@@ -170,8 +176,12 @@ impl AgentGenerator {
         messages: &[Message],
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
+        let resolved_context = Self::resolve_context(messages, options);
+
         // 1. 准备消息：从内存检索历史消息
-        let mut all_messages = self.prepare_messages(messages, options).await?;
+        let mut all_messages = self
+            .prepare_messages(messages, options, &resolved_context)
+            .await?;
 
         // 2. 准备工具：从执行器获取可用工具
         let tools = self.prepare_tools(options).await?;
@@ -256,7 +266,7 @@ impl AgentGenerator {
         };
 
         // 4. 更新内存
-        self.update_memory(messages, &result).await?;
+        self.update_memory(messages, &resolved_context, &result).await?;
 
         Ok(result)
     }
@@ -266,6 +276,7 @@ impl AgentGenerator {
         &self,
         messages: &[Message],
         options: &AgentGenerateOptions,
+        resolved_context: &ResolvedContext,
     ) -> Result<Vec<Message>> {
         let mut prepared = messages.to_vec();
 
@@ -279,8 +290,8 @@ impl AgentGenerator {
                 .map(|m| m.content.clone());
             
             let memory_config = crate::memory::MemoryConfig {
-                store_id: None,
-                namespace: options.thread_id.clone(),
+                store_id: resolved_context.resource_id.clone(),
+                namespace: resolved_context.thread_id.clone(),
                 enabled: true,
                 working_memory: None,
                 semantic_recall: None,
@@ -716,20 +727,114 @@ impl AgentGenerator {
     async fn update_memory(
         &self,
         messages: &[Message],
-        _result: &AgentGenerateResult,
+        resolved_context: &ResolvedContext,
+        result: &AgentGenerateResult,
     ) -> Result<()> {
-        if let Some(memory) = self.executor.memory() {
-            // 存储用户消息
-            for message in messages {
-                if matches!(message.role, Role::User) {
-                    if let Err(e) = memory.store(message).await {
-                        // 静默失败，不影响主流程
-                        eprintln!("Failed to store message to memory: {}", e);
+        let Some(memory) = self.executor.memory() else {
+            return Ok(());
+        };
+
+        // 持久化当前调用中的用户消息
+        for message in messages.iter().filter(|m| matches!(m.role, Role::User)) {
+            let enriched = Self::attach_context_metadata(message, resolved_context);
+            if let Err(e) = memory.store(&enriched).await {
+                eprintln!("Failed to store user message to memory: {}", e);
+            }
+        }
+
+        // 持久化最终助手响应，确保线程上下文完整
+        if let Some(assistant_message) = Self::final_assistant_message(result) {
+            let enriched = Self::attach_context_metadata(&assistant_message, resolved_context);
+            if let Err(e) = memory.store(&enriched).await {
+                eprintln!("Failed to store assistant message to memory: {}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn attach_context_metadata(
+        message: &Message,
+        resolved_context: &ResolvedContext,
+    ) -> Message {
+        let mut cloned = message.clone();
+        let mut metadata = cloned.metadata.take().unwrap_or_default();
+
+        if let Some(thread_id) = &resolved_context.thread_id {
+            metadata
+                .entry("thread_id".to_string())
+                .or_insert_with(|| Value::String(thread_id.clone()));
+        }
+        if let Some(resource_id) = &resolved_context.resource_id {
+            metadata
+                .entry("resource_id".to_string())
+                .or_insert_with(|| Value::String(resource_id.clone()));
+        }
+
+        cloned.metadata = if metadata.is_empty() {
+            None
+        } else {
+            Some(metadata)
+        };
+        cloned
+    }
+
+    fn final_assistant_message(result: &AgentGenerateResult) -> Option<Message> {
+        if let Some(output) = result.steps.iter().rev().find_map(|step| step.output.clone()) {
+            return Some(output);
+        }
+
+        if result.response.trim().is_empty() {
+            None
+        } else {
+            Some(Message {
+                role: Role::Assistant,
+                content: result.response.clone(),
+                metadata: None,
+                name: None,
+            })
+        }
+    }
+
+    fn resolve_context(
+        messages: &[Message],
+        options: &AgentGenerateOptions,
+    ) -> ResolvedContext {
+        let mut resolved = ResolvedContext {
+            thread_id: options.thread_id.clone(),
+            resource_id: options.resource_id.clone(),
+        };
+
+        if resolved.thread_id.is_some() && resolved.resource_id.is_some() {
+            return resolved;
+        }
+
+        for message in messages.iter().rev() {
+            if let Some(metadata) = &message.metadata {
+                if resolved.thread_id.is_none() {
+                    if let Some(thread) = metadata
+                        .get("thread_id")
+                        .and_then(|value| value.as_str().map(|s| s.to_string()))
+                    {
+                        resolved.thread_id = Some(thread);
+                    }
+                }
+                if resolved.resource_id.is_none() {
+                    if let Some(resource) = metadata
+                        .get("resource_id")
+                        .and_then(|value| value.as_str().map(|s| s.to_string()))
+                    {
+                        resolved.resource_id = Some(resource);
                     }
                 }
             }
+
+            if resolved.thread_id.is_some() && resolved.resource_id.is_some() {
+                break;
+            }
         }
-        Ok(())
+
+        resolved
     }
 
     /// 流式生成响应
@@ -827,8 +932,12 @@ mod tests {
     use super::*;
     use crate::agent::{AgentConfig, refactored::{AgentCore, AgentExecutor}};
     use crate::llm::{Message, Role, MockLlmProvider};
+    use crate::memory::thread::{GetMessagesParams, InMemoryThreadStorage, MemoryThreadStorage};
+    use crate::memory::Memory;
+    use crate::memory::BasicMemory;
     use crate::tool::{GenericTool, ToolSchema, ToolExecutionContext};
     use serde_json::json;
+    use std::collections::HashMap;
 
     #[tokio::test]
     async fn test_agent_generator_creation() {
@@ -868,6 +977,145 @@ mod tests {
         let result = generator.generate(&messages, &options).await.unwrap();
         assert!(!result.response.is_empty());
         assert_eq!(result.steps.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_agent_generator_persists_thread_context() {
+        let config = AgentConfig {
+            name: "thread-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec![
+            "Persisted response".to_string(),
+        ]));
+
+        let thread_storage: Arc<dyn MemoryThreadStorage> = Arc::new(InMemoryThreadStorage::new());
+        let memory = Arc::new(BasicMemory::with_thread_storage(
+            None,
+            None,
+            Some(thread_storage.clone()),
+        ));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap().with_memory(memory);
+        let generator = AgentGenerator::new(executor);
+
+        let messages = vec![Message {
+            role: Role::User,
+            content: "Store me".to_string(),
+            metadata: None,
+            name: None,
+        }];
+
+        let mut options = AgentGenerateOptions::default();
+        options.thread_id = Some("thread-memory-test".to_string());
+        options.resource_id = Some("resource-42".to_string());
+
+        generator.generate(&messages, &options).await.unwrap();
+
+        let mut params = GetMessagesParams::default();
+        params.limit = Some(10);
+        let stored_messages = thread_storage
+            .get_messages("thread-memory-test", &params)
+            .await
+            .unwrap();
+
+        assert_eq!(stored_messages.len(), 2);
+        assert!(stored_messages.iter().any(|m| matches!(m.role, Role::User)));
+        assert!(stored_messages
+            .iter()
+            .any(|m| matches!(m.role, Role::Assistant)));
+
+        for message in stored_messages {
+            let metadata = message.metadata.expect("metadata missing");
+            assert_eq!(
+                metadata.get("thread_id").and_then(|v| v.as_str()),
+                Some("thread-memory-test")
+            );
+            assert_eq!(
+                metadata.get("resource_id").and_then(|v| v.as_str()),
+                Some("resource-42")
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_agent_generator_resolves_context_from_message_metadata() {
+        let config = AgentConfig {
+            name: "meta-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec![
+            "Metadata response".to_string(),
+        ]));
+
+        let thread_storage: Arc<dyn MemoryThreadStorage> = Arc::new(InMemoryThreadStorage::new());
+        let memory = Arc::new(BasicMemory::with_thread_storage(
+            None,
+            None,
+            Some(thread_storage.clone()),
+        ));
+
+        // Seed historical assistant message to ensure retrieval path hits the same thread
+        let mut historical_metadata = HashMap::new();
+        historical_metadata.insert(
+            "thread_id".to_string(),
+            Value::String("thread-from-messages".to_string()),
+        );
+        historical_metadata.insert(
+            "resource_id".to_string(),
+            Value::String("resource-from-messages".to_string()),
+        );
+        let historical_message = Message {
+            role: Role::Assistant,
+            content: "previous".to_string(),
+            metadata: Some(historical_metadata.clone()),
+            name: None,
+        };
+        memory.store(&historical_message).await.unwrap();
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap().with_memory(memory.clone());
+        let generator = AgentGenerator::new(executor);
+
+        let user_message = Message {
+            role: Role::User,
+            content: "continue".to_string(),
+            metadata: Some(historical_metadata.clone()),
+            name: None,
+        };
+
+        let options = AgentGenerateOptions::default(); // 没有 thread_id/resource_id
+        generator.generate(&[user_message], &options).await.unwrap();
+
+        let mut params = GetMessagesParams::default();
+        params.limit = Some(10);
+        let stored_messages = thread_storage
+            .get_messages("thread-from-messages", &params)
+            .await
+            .unwrap();
+
+        assert!(
+            stored_messages.len() >= 3,
+            "expected historical + new user + new assistant messages"
+        );
+
+        // 验证最新的助手消息继承了从消息推断的线程/资源元数据
+        if let Some(last_message) = stored_messages.last() {
+            let metadata = last_message.metadata.as_ref().expect("metadata missing");
+            assert_eq!(
+                metadata.get("thread_id").and_then(|v| v.as_str()),
+                Some("thread-from-messages")
+            );
+            assert_eq!(
+                metadata.get("resource_id").and_then(|v| v.as_str()),
+                Some("resource-from-messages")
+            );
+        } else {
+            panic!("No stored messages retrieved");
+        }
     }
 
     #[tokio::test]

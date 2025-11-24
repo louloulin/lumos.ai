@@ -282,14 +282,14 @@ impl Memory for BasicMemory {
                     params.reverse_order = true; // 获取最新的消息
                 }
 
-                if let Ok(messages) = thread_manager
+                        if let Ok(messages) = thread_manager
                     .get_messages(&thread_id, &params, thread_owner.as_deref())
-                    .await
-                {
+                            .await
+                        {
                     thread_results.extend(messages);
+                        }
+                    }
                 }
-            }
-        }
 
         // 然后获取语义召回结果
         if let Some(ref semantic_memory) = self.semantic_memory {

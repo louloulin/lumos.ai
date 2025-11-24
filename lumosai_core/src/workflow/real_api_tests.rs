@@ -100,7 +100,7 @@ mod tests {
                 ..Default::default()
             },
             llm1,
-        ));
+        ).unwrap());
 
         let agent2 = Arc::new(BasicAgent::new(
             AgentConfig {
@@ -108,8 +108,8 @@ mod tests {
                 instructions: "Summarize the analysis concisely".to_string(),
                 ..Default::default()
             },
-            llm2,).unwrap()
-        ));
+            llm2,
+        ).unwrap());
 
         let mut workflow = BasicWorkflow::new("multi_step_workflow");
 
@@ -156,8 +156,8 @@ mod tests {
                 instructions: "Process the input".to_string(),
                 ..Default::default()
             },
-            llm,).unwrap()
-        ));
+            llm,
+        ).unwrap());
 
         let workflow =
             BasicWorkflow::new("test_workflow").with_description("A test workflow for validation");
@@ -178,8 +178,8 @@ mod tests {
                 instructions: "Test instructions".to_string(),
                 ..Default::default()
             },
-            llm,).unwrap()
-        ));
+            llm,
+        ).unwrap());
 
         let mut workflow = BasicWorkflow::new("steps_test");
 
@@ -216,8 +216,8 @@ mod tests {
                 instructions: "Always execute".to_string(),
                 ..Default::default()
             },
-            llm,).unwrap()
-        ));
+            llm,
+        ).unwrap());
 
         let mut workflow = BasicWorkflow::new("condition_test");
         workflow.add_step(WorkflowStep {
@@ -248,8 +248,8 @@ mod tests {
                 instructions: "Handle empty input".to_string(),
                 ..Default::default()
             },
-            llm,).unwrap()
-        ));
+            llm,
+        ).unwrap());
 
         let mut workflow = BasicWorkflow::new("empty_input_test");
         workflow.add_step(WorkflowStep {

@@ -226,11 +226,11 @@ mod tests {
             assert!(
                 approx_eq!(f32, *a, *e, epsilon = FLOAT_EPSILON),
                 "向量元素 {} 不相等: {} != {}",
-            i,
-            a,
-            e
-        );
-    }
+                i,
+                a,
+                e
+            );
+        }
 
     #[tokio::test]
     async fn test_mock_provider_is_healthy() {
@@ -243,5 +243,5 @@ mod tests {
         let provider = MockLlmProvider::new(vec![]);
         assert!(!provider.is_healthy().await);
     }
-}
+    }
 }

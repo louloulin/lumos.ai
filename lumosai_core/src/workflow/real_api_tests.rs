@@ -60,7 +60,7 @@ mod tests {
                 ..Default::default()
             },
             llm,
-        ));
+        ).unwrap());
 
         let mut workflow = BasicWorkflow::new("single_step_workflow");
         workflow.add_step(WorkflowStep {
@@ -108,7 +108,7 @@ mod tests {
                 instructions: "Summarize the analysis concisely".to_string(),
                 ..Default::default()
             },
-            llm2,
+            llm2,).unwrap()
         ));
 
         let mut workflow = BasicWorkflow::new("multi_step_workflow");
@@ -156,7 +156,7 @@ mod tests {
                 instructions: "Process the input".to_string(),
                 ..Default::default()
             },
-            llm,
+            llm,).unwrap()
         ));
 
         let workflow =
@@ -178,7 +178,7 @@ mod tests {
                 instructions: "Test instructions".to_string(),
                 ..Default::default()
             },
-            llm,
+            llm,).unwrap()
         ));
 
         let mut workflow = BasicWorkflow::new("steps_test");
@@ -216,7 +216,7 @@ mod tests {
                 instructions: "Always execute".to_string(),
                 ..Default::default()
             },
-            llm,
+            llm,).unwrap()
         ));
 
         let mut workflow = BasicWorkflow::new("condition_test");
@@ -248,7 +248,7 @@ mod tests {
                 instructions: "Handle empty input".to_string(),
                 ..Default::default()
             },
-            llm,
+            llm,).unwrap()
         ));
 
         let mut workflow = BasicWorkflow::new("empty_input_test");

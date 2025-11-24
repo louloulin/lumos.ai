@@ -231,13 +231,13 @@ mod tests {
         let agent1 = Arc::new(create_basic_agent(
             "agent_001",
             "You are agent 1",
-            mock_llm1,
+            mock_llm1,).unwrap()
         ).unwrap()) as Arc<dyn Agent>;
 
         let agent2 = Arc::new(create_basic_agent(
             "agent_002",
             "You are agent 2",
-            mock_llm2,
+            mock_llm2,).unwrap()
         ).unwrap()) as Arc<dyn Agent>;
 
         // 创建协作任务
@@ -316,13 +316,13 @@ mod tests {
         let agent1 = Arc::new(create_basic_agent(
             "parallel_agent_001",
             "You are parallel agent 1",
-            mock_llm1,
+            mock_llm1,).unwrap()
         ).unwrap()) as Arc<dyn Agent>;
 
         let agent2 = Arc::new(create_basic_agent(
             "parallel_agent_002",
             "You are parallel agent 2",
-            mock_llm2,
+            mock_llm2,).unwrap()
         ).unwrap()) as Arc<dyn Agent>;
 
         // 创建并行协作任务

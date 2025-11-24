@@ -572,7 +572,7 @@ mod tests {
             "TestAgent".to_string(),
             "You are a test agent.".to_string(),
             mock_llm,
-        );
+        ).unwrap();
         agent.add_tool(Box::new(echo_tool)).unwrap();
 
         // Generate a response

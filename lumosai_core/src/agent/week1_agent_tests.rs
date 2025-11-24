@@ -335,8 +335,8 @@ mod tests {
             ..Default::default()
         };
 
-        let agent1 = BasicAgent::new(config.clone(), llm1);
-        let agent2 = BasicAgent::new(config.clone(), llm2);
+        let agent1 = BasicAgent::new(config.clone(), llm1).unwrap();
+        let agent2 = BasicAgent::new(config.clone(), llm2).unwrap();
 
         assert_eq!(agent1.get_name(), agent2.get_name());
         assert_eq!(agent1.get_instructions(), agent2.get_instructions());

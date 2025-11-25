@@ -36,7 +36,6 @@ use std::sync::{Arc, Mutex};
 /// let core = AgentCore::new(config, llm)?;
 /// let executor = AgentExecutor::new(core)?;
 /// ```
-#[derive(Debug)]
 pub struct AgentExecutor {
     /// Agent 核心
     core: AgentCore,
@@ -387,6 +386,21 @@ impl AgentExecutor {
                 "ToolRegistry not configured. Use with_tool_registry() first.".to_string(),
             ))
         }
+    }
+}
+
+impl std::fmt::Debug for AgentExecutor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentExecutor")
+            .field("core", &self.core)
+            .field("tool_count", &self.tool_count())
+            .field("has_memory", &self.memory.is_some())
+            .field("has_working_memory", &self.working_memory.is_some())
+            .field("has_retry_executor", &self.retry_executor.is_some())
+            .field("has_concurrent_tool_executor", &self.concurrent_tool_executor.is_some())
+            .field("has_llm_router", &self.llm_router.is_some())
+            .field("has_tool_registry", &self.tool_registry.is_some())
+            .finish_non_exhaustive()
     }
 }
 

@@ -132,7 +132,6 @@ impl Tool for BoxToolWrapper {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug)]
 pub struct AgentGenerator {
     /// Agent 执行器
     executor: AgentExecutor,
@@ -846,6 +845,32 @@ impl AgentGenerator {
     /// 获取执行器（可变引用）
     pub fn executor_mut(&mut self) -> &mut AgentExecutor {
         &mut self.executor
+    }
+
+    /// 检查是否有工具
+    ///
+    /// # 返回
+    ///
+    /// 如果有工具返回 `true`，否则返回 `false`。
+    pub fn has_tools(&self) -> bool {
+        self.executor.has_tools()
+    }
+
+    /// 获取工具数量
+    ///
+    /// # 返回
+    ///
+    /// 返回已注册的工具数量。
+    pub fn tool_count(&self) -> usize {
+        self.executor.tool_count()
+    }
+}
+
+impl std::fmt::Debug for AgentGenerator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentGenerator")
+            .field("executor", &self.executor)
+            .finish()
     }
 }
 

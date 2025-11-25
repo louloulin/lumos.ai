@@ -34,7 +34,7 @@ pub mod llm {
     }
 
     /// 创建Claude提供商
-    pub fn claude(model: &str) -> Result<Arc<dyn LlmProvider>> {
+    pub fn claude(_model: &str) -> Result<Arc<dyn LlmProvider>> {
         let provider = ClaudeProvider::from_env()?;
         Ok(Arc::new(provider))
     }

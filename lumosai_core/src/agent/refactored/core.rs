@@ -30,6 +30,7 @@ use std::sync::Arc;
 ///
 /// let core = AgentCore::new(config, llm)?;
 /// ```
+#[derive(Debug)]
 pub struct AgentCore {
     /// Agent 名称
     name: String,
@@ -53,6 +54,16 @@ impl AgentCore {
     ///
     /// 返回 `Result<AgentCore>`，如果配置无效则返回错误。
     pub fn new(config: AgentConfig, llm: Arc<dyn LlmProvider>) -> Result<Self> {
+        // 验证配置
+        if config.name.is_empty() {
+            return Err(crate::error::Error::InvalidInput(
+                "Agent name cannot be empty".to_string()
+            ));
+        }
+        
+        // 验证 LLM provider 不为空
+        // Arc 本身不会为空，但我们可以检查是否有效
+        
         Ok(Self {
             name: config.name.clone(),
             instructions: config.instructions.clone(),
@@ -143,6 +154,23 @@ mod tests {
         let mut core = AgentCore::new(config, llm).unwrap();
         core.set_name("updated-name".to_string());
         assert_eq!(core.name(), "updated-name");
+    }
+
+    #[test]
+    fn test_agent_core_validation() {
+        use crate::llm::MockLlmProvider;
+        
+        // 测试空名称验证
+        let config = AgentConfig {
+            name: "".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+        
+        let result = AgentCore::new(config, llm);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("name cannot be empty"));
     }
 }
 

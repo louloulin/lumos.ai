@@ -36,6 +36,7 @@ use std::sync::{Arc, Mutex};
 /// let core = AgentCore::new(config, llm)?;
 /// let executor = AgentExecutor::new(core)?;
 /// ```
+#[derive(Debug)]
 pub struct AgentExecutor {
     /// Agent 核心
     core: AgentCore,
@@ -208,6 +209,62 @@ impl AgentExecutor {
             Err(_) => return false,
         };
         tools.contains_key(tool_name)
+    }
+
+    /// 获取工具数量
+    ///
+    /// # 返回
+    ///
+    /// 返回已注册的工具数量。
+    pub fn tool_count(&self) -> usize {
+        let tools = match self.tools.lock() {
+            Ok(guard) => guard,
+            Err(_) => return 0,
+        };
+        tools.len()
+    }
+
+    /// 检查是否有工具
+    ///
+    /// # 返回
+    ///
+    /// 如果有工具返回 `true`，否则返回 `false`。
+    pub fn has_tools(&self) -> bool {
+        self.tool_count() > 0
+    }
+
+    /// 清空所有工具
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Result<()>`，如果清空失败则返回错误。
+    pub fn clear_tools(&self) -> Result<()> {
+        let mut tools = self.tools.lock().map_err(|_| {
+            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
+        })?;
+        tools.clear();
+        Ok(())
+    }
+
+    /// 批量添加工具
+    ///
+    /// # 参数
+    ///
+    /// * `tools` - 要添加的工具列表
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Result<()>`，如果添加失败则返回错误。
+    pub fn add_tools(&self, tools: Vec<Box<dyn Tool>>) -> Result<()> {
+        let mut tools_map = self.tools.lock().map_err(|_| {
+            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
+        })?;
+        
+        for tool in tools {
+            tools_map.insert(tool.id().to_string(), tool);
+        }
+        
+        Ok(())
     }
 
     /// 获取内存
@@ -531,6 +588,67 @@ mod tests {
         // 测试移除不存在的工具
         let result = executor.remove_tool("nonexistent");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_agent_executor_tool_utilities() {
+        use crate::tool::create_tool;
+        
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+
+        // 测试工具数量
+        assert_eq!(executor.tool_count(), 0);
+        assert!(!executor.has_tools());
+
+        // 添加工具
+        let echo_tool = create_tool(
+            "echo",
+            "Echo a message",
+            vec![("message", "string", "Message to echo", true)],
+            |params| {
+                let message = params
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("No message");
+                Ok(serde_json::json!({"echo": message}))
+            },
+        ).unwrap();
+
+        executor.add_tool(Box::new(echo_tool)).unwrap();
+        
+        // 测试工具数量
+        assert_eq!(executor.tool_count(), 1);
+        assert!(executor.has_tools());
+
+        // 测试批量添加工具
+        let tool1 = create_tool(
+            "tool1",
+            "Tool 1",
+            vec![],
+            |_params| Ok(serde_json::json!({"result": "tool1"})),
+        ).unwrap();
+        let tool2 = create_tool(
+            "tool2",
+            "Tool 2",
+            vec![],
+            |_params| Ok(serde_json::json!({"result": "tool2"})),
+        ).unwrap();
+
+        executor.add_tools(vec![Box::new(tool1), Box::new(tool2)]).unwrap();
+        assert_eq!(executor.tool_count(), 3);
+
+        // 测试清空工具
+        executor.clear_tools().unwrap();
+        assert_eq!(executor.tool_count(), 0);
+        assert!(!executor.has_tools());
     }
 }
 

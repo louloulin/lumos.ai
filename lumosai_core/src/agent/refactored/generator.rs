@@ -132,6 +132,7 @@ impl Tool for BoxToolWrapper {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct AgentGenerator {
     /// Agent 执行器
     executor: AgentExecutor,
@@ -219,7 +220,12 @@ impl AgentGenerator {
 
             if has_tool_calls {
                 // 处理工具调用
-                let tool_step = response.steps.first().unwrap();
+                // 找到第一个包含工具调用的步骤
+                let tool_step = response.steps.iter()
+                    .find(|step| !step.tool_calls.is_empty())
+                    .ok_or_else(|| crate::error::Error::Internal(
+                        "Tool calls detected but no step found".to_string()
+                    ))?;
                 let tool_results = self.execute_tool_calls(&tool_step.tool_calls).await?;
 
                 // 将工具结果添加到消息中，以便下一轮 LLM 调用
@@ -237,8 +243,8 @@ impl AgentGenerator {
                 let mut tool_step_clone = tool_step.clone();
                 tool_step_clone.tool_results = tool_results;
                 all_steps.push(tool_step_clone);
-
-                // 继续下一轮
+                
+                // 继续下一轮（循环条件会自动检查 max_steps）
                 continue;
             } else {
                 // 没有工具调用，这是最终响应

@@ -21,7 +21,7 @@ impl From<Error> for VectorError {
             Error::Configuration(msg) => VectorError::InvalidConfig(msg),
             Error::NotFound(msg) => VectorError::IndexNotFound(msg),
             Error::AlreadyExists(msg) => VectorError::IndexAlreadyExists(msg),
-            Error::Timeout(msg) => VectorError::QueryTimeout { seconds: 30 },
+            Error::Timeout(_msg) => VectorError::QueryTimeout { seconds: 30 },
             Error::Internal(msg) => VectorError::Internal(msg),
             _ => VectorError::Internal(err.to_string()),
         }
@@ -313,7 +313,7 @@ pub fn create_vector_storage(
                 )?))
             }
         }
-        VectorStorageConfig::Qdrant { url, api_key } => {
+        VectorStorageConfig::Qdrant { url: _, api_key: _ } => {
             #[cfg(feature = "qdrant")]
             {
                 use crate::vector::qdrant::QdrantVectorStorage;
@@ -333,7 +333,7 @@ pub fn create_vector_storage(
                 ))
             }
         }
-        VectorStorageConfig::Weaviate { url, api_key } => {
+        VectorStorageConfig::Weaviate { url: _, api_key: _ } => {
             #[cfg(feature = "weaviate")]
             {
                 use crate::vector::weaviate::WeaviateVectorStorage;

@@ -3,6 +3,8 @@
 //! Provides flexible configuration loading from multiple sources including
 //! environment variables, files, and remote configuration services.
 
+use super::format::ConfigFormat;
+use super::yaml_config::YamlConfig;
 use crate::{Error, Result};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -90,6 +92,70 @@ impl ConfigLoader {
             max_retries,
             user_agent: format!("lumosai/{}", env!("CARGO_PKG_VERSION")),
         }
+    }
+
+    /// Blocking helper to load a configuration from disk.
+    pub fn load(path: impl AsRef<Path>) -> Result<YamlConfig> {
+        let path = path.as_ref();
+        let format = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .and_then(ConfigFormat::from_extension)
+            .unwrap_or(ConfigFormat::Yaml);
+
+        let content = std::fs::read_to_string(path).map_err(|e| {
+            Error::Configuration(format!(
+                "Failed to read configuration file {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        let config = Self::parse_config_string(&content, format).map_err(|e| {
+            Error::Configuration(format!(
+                "Failed to parse configuration {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        config.validate()?;
+        Ok(config)
+    }
+
+    /// Attempt to locate a configuration file with common names.
+    pub fn auto_detect() -> Result<YamlConfig> {
+        const CANDIDATES: [(&str, ConfigFormat); 4] = [
+            ("lumosai.yaml", ConfigFormat::Yaml),
+            ("lumosai.yml", ConfigFormat::Yaml),
+            ("lumosai.toml", ConfigFormat::Toml),
+            ("lumosai.json", ConfigFormat::Json),
+        ];
+
+        for (name, _) in CANDIDATES {
+            let path = Path::new(name);
+            if path.exists() {
+                return Self::load(path);
+            }
+        }
+
+        Err(Error::Configuration(
+            "Unable to auto-detect configuration file (expected lumosai.yaml/.yml/.toml/.json)"
+                .to_string(),
+        ))
+    }
+
+    /// Generate a default configuration file in the requested format.
+    pub fn create_default(path: impl AsRef<Path>, format: ConfigFormat) -> Result<()> {
+        let config = YamlConfig::default();
+        let content = Self::serialize_config(&config, format)?;
+        std::fs::write(path.as_ref(), content).map_err(|e| {
+            Error::Configuration(format!(
+                "Failed to write configuration {}: {}",
+                path.as_ref().display(),
+                e
+            ))
+        })
     }
 
     /// Load raw configuration from the specified source
@@ -406,6 +472,29 @@ impl ConfigLoader {
 
         serde_yaml::from_str(&toml_string)
             .map_err(|e| Error::Configuration(format!("Failed to convert TOML to JSON: {}", e)))
+    }
+}
+
+impl ConfigLoader {
+    fn parse_config_string(content: &str, format: ConfigFormat) -> Result<YamlConfig> {
+        match format {
+            ConfigFormat::Yaml => YamlConfig::from_str(content),
+            ConfigFormat::Toml => toml::from_str(content)
+                .map_err(|e| Error::Configuration(format!("Failed to parse TOML: {}", e))),
+            ConfigFormat::Json => serde_json::from_str(content)
+                .map_err(|e| Error::Configuration(format!("Failed to parse JSON: {}", e))),
+        }
+    }
+
+    fn serialize_config(config: &YamlConfig, format: ConfigFormat) -> Result<String> {
+        match format {
+            ConfigFormat::Yaml => serde_yaml::to_string(config)
+                .map_err(|e| Error::Configuration(format!("Failed to write YAML: {}", e))),
+            ConfigFormat::Toml => toml::to_string_pretty(config)
+                .map_err(|e| Error::Configuration(format!("Failed to write TOML: {}", e))),
+            ConfigFormat::Json => serde_json::to_string_pretty(config)
+                .map_err(|e| Error::Configuration(format!("Failed to write JSON: {}", e))),
+        }
     }
 }
 

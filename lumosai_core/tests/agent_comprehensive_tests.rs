@@ -59,7 +59,7 @@ fn test_agent_creation_with_minimal_config() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     assert_eq!(agent.get_name(), "minimal");
     assert_eq!(agent.get_instructions(), "Test");
@@ -70,7 +70,7 @@ fn test_agent_creation_with_full_config() {
     let llm = create_test_zhipu_provider_arc();
     let config = create_test_config("full_config");
 
-    let agent = BasicAgent::new(config.clone(), llm);
+    let agent = BasicAgent::new(config.clone(), llm).expect("Failed to create BasicAgent");
 
     assert_eq!(agent.get_name(), "full_config");
     assert_eq!(
@@ -83,7 +83,7 @@ fn test_agent_creation_with_full_config() {
 fn test_agent_default_config() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 默认配置应该有合理的值
     assert!(!agent.get_name().is_empty());
@@ -100,7 +100,7 @@ fn test_agent_name_validation() {
         instructions: "Test".to_string(),
         ..Default::default()
     };
-    let agent = BasicAgent::new(config, llm.clone());
+    let agent = BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent");
     // 空名称应该被接受（或使用默认值）
     assert!(!agent.get_name().is_empty() || agent.get_name().is_empty());
 
@@ -111,7 +111,7 @@ fn test_agent_name_validation() {
         instructions: "Test".to_string(),
         ..Default::default()
     };
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
     assert_eq!(agent.get_name(), long_name);
 }
 
@@ -125,7 +125,7 @@ fn test_agent_instructions_validation() {
         instructions: "".to_string(),
         ..Default::default()
     };
-    let agent = BasicAgent::new(config, llm.clone());
+    let agent = BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent");
     assert!(!agent.get_instructions().is_empty() || agent.get_instructions().is_empty());
 
     // 测试长指令
@@ -135,7 +135,7 @@ fn test_agent_instructions_validation() {
         instructions: long_instructions.clone(),
         ..Default::default()
     };
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
     assert_eq!(agent.get_instructions(), long_instructions);
 }
 
@@ -143,7 +143,7 @@ fn test_agent_instructions_validation() {
 fn test_agent_config_update() {
     let llm = create_test_zhipu_provider_arc();
     let config = create_test_config("updatable");
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 更新指令
     agent.set_instructions("New instructions".to_string());
@@ -166,7 +166,7 @@ fn test_agent_model_config() {
             model_id: Some(model.to_string()),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm.clone());
+        let agent = BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent");
         assert_eq!(agent.get_name(), format!("model_{}", model));
     }
 }
@@ -183,7 +183,7 @@ fn test_agent_config_variations() {
             model_id: Some(format!("model-{}", i)),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm.clone());
+        let agent = BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent");
         assert_eq!(agent.get_name(), format!("config_{}", i));
     }
 }
@@ -192,11 +192,11 @@ fn test_agent_config_variations() {
 fn test_agent_clone_independence() {
     let llm = create_test_zhipu_provider_arc();
     let config = create_test_config("original");
-    let mut agent1 = BasicAgent::new(config, llm.clone());
+    let mut agent1 = BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent");
 
     // 克隆 agent（如果支持）或创建新的
     let config2 = create_test_config("clone");
-    let agent2 = BasicAgent::new(config2, llm);
+    let agent2 = BasicAgent::new(config2, llm).expect("Failed to create BasicAgent");
 
     // 修改 agent1 不应影响 agent2
     agent1.set_instructions("Modified".to_string());
@@ -213,7 +213,7 @@ fn test_agent_multiple_instances() {
     let agents: Vec<BasicAgent> = (0..10)
         .map(|i| {
             let config = create_test_config(&format!("agent_{}", i));
-            BasicAgent::new(config, llm.clone())
+            BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent")
         })
         .collect();
 
@@ -231,7 +231,7 @@ fn test_agent_multiple_instances() {
 fn test_agent_initial_status() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 初始状态应该是 Ready
     let status = agent.get_status();
@@ -246,7 +246,7 @@ fn test_agent_initial_status() {
 fn test_agent_status_transitions() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 测试状态转换序列
     let transitions = vec![
@@ -266,7 +266,7 @@ fn test_agent_status_transitions() {
 fn test_agent_error_status() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 设置错误状态
     let error_msg = "Test error occurred";
@@ -283,7 +283,7 @@ fn test_agent_error_status() {
 fn test_agent_status_from_error_recovery() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 设置错误状态
     let _ = agent.set_status(AgentStatus::Error("Error".to_string()));
@@ -297,7 +297,7 @@ fn test_agent_status_from_error_recovery() {
 fn test_agent_status_idempotent() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 多次设置相同状态应该是幂等的
     for _ in 0..5 {
@@ -343,7 +343,7 @@ fn test_agent_config_builder_pattern() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
     assert_eq!(agent.get_name(), "builder_test");
 }
 
@@ -360,7 +360,7 @@ fn test_agent_with_unicode_name() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
     assert_eq!(agent.get_name(), "测试Agent🤖");
 }
 
@@ -374,7 +374,7 @@ fn test_agent_with_special_characters() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
     assert_eq!(agent.get_name(), special_name);
 }
 
@@ -388,7 +388,7 @@ fn test_agent_with_newlines_in_instructions() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
     assert_eq!(agent.get_instructions(), instructions);
 }
 
@@ -400,7 +400,7 @@ fn test_agent_with_newlines_in_instructions() {
 fn test_agent_tool_registration() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册工具
     let tool = create_test_tool("calculator");
@@ -414,7 +414,7 @@ fn test_agent_tool_registration() {
 fn test_agent_multiple_tools_registration() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册多个工具
     let tools = vec!["tool1", "tool2", "tool3"];
@@ -432,7 +432,7 @@ fn test_agent_multiple_tools_registration() {
 fn test_agent_tool_unregistration() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册并注销工具
     let _ = agent.add_tool(create_test_tool("temp_tool"));
@@ -446,7 +446,7 @@ fn test_agent_tool_unregistration() {
 fn test_agent_tool_reregistration() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册工具
     let _ = agent.add_tool(create_test_tool("reregister"));
@@ -461,7 +461,7 @@ fn test_agent_tool_reregistration() {
 fn test_agent_list_tools() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册多个工具
     let _ = agent.add_tool(create_test_tool("tool_a"));
@@ -477,7 +477,7 @@ fn test_agent_list_tools() {
 fn test_agent_tool_count() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 初始应该没有工具
     assert_eq!(agent.get_tools().len(), 0);
@@ -498,7 +498,7 @@ fn test_agent_tool_count() {
 fn test_agent_clear_all_tools() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册多个工具
     for i in 0..5 {
@@ -518,7 +518,7 @@ fn test_agent_clear_all_tools() {
 fn test_agent_tool_with_empty_name() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 尝试注册空名称的工具
     let tool = create_test_tool("");
@@ -532,7 +532,7 @@ fn test_agent_tool_with_empty_name() {
 fn test_agent_tool_with_special_characters() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册带特殊字符的工具名
     let special_names = vec!["tool-1", "tool_2", "tool.3", "tool@4"];
@@ -547,7 +547,7 @@ fn test_agent_tool_with_special_characters() {
 fn test_agent_tool_case_sensitivity() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册工具
     let _ = agent.add_tool(create_test_tool("MyTool"));
@@ -568,7 +568,8 @@ fn test_agent_concurrent_status_updates() {
 
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent = Arc::new(Mutex::new(BasicAgent::new(config, llm)));
+    let agent =
+        Arc::new(Mutex::new(BasicAgent::new(config, llm).expect("Failed to create BasicAgent")));
 
     let mut handles = vec![];
 
@@ -604,7 +605,8 @@ fn test_agent_concurrent_tool_registration() {
 
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent = Arc::new(Mutex::new(BasicAgent::new(config, llm)));
+    let agent =
+        Arc::new(Mutex::new(BasicAgent::new(config, llm).expect("Failed to create BasicAgent")));
 
     let mut handles = vec![];
 
@@ -642,7 +644,8 @@ fn test_agent_creation_performance() {
     // 创建 100 个 agent
     for i in 0..100 {
         let config = create_test_config(&format!("perf_agent_{}", i));
-        let _agent = BasicAgent::new(config, llm.clone());
+        let _agent =
+            BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent");
     }
 
     let duration = start.elapsed();
@@ -664,7 +667,7 @@ fn test_agent_memory_footprint() {
     let agents: Vec<BasicAgent> = (0..1000)
         .map(|i| {
             let config = create_test_config(&format!("mem_agent_{}", i));
-            BasicAgent::new(config, llm.clone())
+            BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent")
         })
         .collect();
 
@@ -678,7 +681,7 @@ fn test_agent_tool_registration_performance() {
 
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     let start = Instant::now();
 
@@ -699,7 +702,7 @@ fn test_agent_status_update_performance() {
 
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     let start = Instant::now();
 
@@ -753,7 +756,7 @@ fn test_agent_config_clone_performance() {
 fn test_agent_handles_invalid_status_transition() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 尝试无效的状态转换（如果有验证）
     let _ = agent.set_status(AgentStatus::Stopped);
@@ -770,7 +773,7 @@ fn test_agent_handles_invalid_status_transition() {
 fn test_agent_error_recovery() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 设置错误状态
     let _ = agent.set_status(AgentStatus::Error("Critical error".to_string()));
@@ -786,7 +789,7 @@ fn test_agent_error_recovery() {
 fn test_agent_handles_tool_not_found() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 查询不存在的工具
     assert!(agent.get_tool("nonexistent_tool").is_none());
@@ -796,7 +799,7 @@ fn test_agent_handles_tool_not_found() {
 fn test_agent_handles_duplicate_tool_names() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册同名工具两次
     let _ = agent.add_tool(create_test_tool("duplicate"));
@@ -810,7 +813,7 @@ fn test_agent_handles_duplicate_tool_names() {
 fn test_agent_handles_empty_tool_list() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 空工具列表应该正常工作
     assert_eq!(agent.get_tools().len(), 0);
@@ -827,7 +830,7 @@ fn test_agent_handles_null_or_empty_values() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 应该能够处理空值
     let _ = agent.get_name();
@@ -847,7 +850,7 @@ fn test_agent_handles_extreme_config_values() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
     assert_eq!(agent.get_name(), "extreme");
 }
 
@@ -859,7 +862,7 @@ fn test_agent_handles_extreme_config_values() {
 fn test_agent_with_multiple_tools_workflow() {
     let llm = create_test_zhipu_provider_arc();
     let config = create_test_config("workflow_agent");
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 注册多个工具
     let _ = agent.add_tool(create_test_tool("search"));
@@ -877,7 +880,7 @@ fn test_agent_with_multiple_tools_workflow() {
 fn test_agent_lifecycle() {
     let llm = create_test_zhipu_provider_arc();
     let config = create_test_config("lifecycle_agent");
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 完整的生命周期
     assert_eq!(agent.get_status(), AgentStatus::Ready);
@@ -898,7 +901,7 @@ fn test_agent_lifecycle() {
 fn test_agent_configuration_update_workflow() {
     let llm = create_test_zhipu_provider_arc();
     let config = create_test_config("update_workflow");
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 初始配置
     assert_eq!(agent.get_name(), "update_workflow");
@@ -916,7 +919,7 @@ fn test_agent_configuration_update_workflow() {
 fn test_agent_tool_management_workflow() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 添加工具
     let _ = agent.add_tool(create_test_tool("tool1"));
@@ -943,7 +946,7 @@ fn test_agent_tool_management_workflow() {
 fn test_agent_state_and_tool_interaction() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Failed to create BasicAgent");
 
     // 在不同状态下管理工具
     let _ = agent.set_status(AgentStatus::Ready);

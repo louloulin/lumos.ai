@@ -19,16 +19,19 @@ use uuid::Uuid;
 /// 包装器：将 Box<dyn Tool> 转换为 Arc<dyn Tool>
 /// 
 /// 这个包装器允许我们在 ConcurrentToolExecutor 中使用 Box<dyn Tool>
-#[derive(Clone)]
+/// 通过 clone_box() 方法实现克隆功能
 struct BoxToolWrapper {
     tool: Box<dyn Tool>,
     base: crate::base::BaseComponent,
 }
 
-#[derive(Debug, Clone, Default)]
-struct ResolvedContext {
-    thread_id: Option<String>,
-    resource_id: Option<String>,
+impl Clone for BoxToolWrapper {
+    fn clone(&self) -> Self {
+        Self {
+            tool: self.tool.clone_box(),
+            base: self.base.clone(),
+        }
+    }
 }
 
 impl std::fmt::Debug for BoxToolWrapper {
@@ -176,12 +179,8 @@ impl AgentGenerator {
         messages: &[Message],
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
-        let resolved_context = Self::resolve_context(messages, options);
-
         // 1. 准备消息：从内存检索历史消息
-        let mut all_messages = self
-            .prepare_messages(messages, options, &resolved_context)
-            .await?;
+        let mut all_messages = self.prepare_messages(messages, options).await?;
 
         // 2. 准备工具：从执行器获取可用工具
         let tools = self.prepare_tools(options).await?;
@@ -266,7 +265,7 @@ impl AgentGenerator {
         };
 
         // 4. 更新内存
-        self.update_memory(messages, &resolved_context, &result).await?;
+        self.update_memory(messages, &result).await?;
 
         Ok(result)
     }
@@ -276,7 +275,6 @@ impl AgentGenerator {
         &self,
         messages: &[Message],
         options: &AgentGenerateOptions,
-        resolved_context: &ResolvedContext,
     ) -> Result<Vec<Message>> {
         let mut prepared = messages.to_vec();
 
@@ -290,8 +288,8 @@ impl AgentGenerator {
                 .map(|m| m.content.clone());
             
             let memory_config = crate::memory::MemoryConfig {
-                store_id: resolved_context.resource_id.clone(),
-                namespace: resolved_context.thread_id.clone(),
+                store_id: None,
+                namespace: options.thread_id.clone(),
                 enabled: true,
                 working_memory: None,
                 semantic_recall: None,
@@ -579,7 +577,19 @@ impl AgentGenerator {
     }
 
     /// 执行多个工具调用
-    async fn execute_tool_calls(
+    ///
+    /// 这个方法支持并发和顺序两种执行模式：
+    /// - 如果配置了 ConcurrentToolExecutor，使用并发执行
+    /// - 否则使用顺序执行
+    ///
+    /// # 参数
+    ///
+    /// * `tool_calls` - 要执行的工具调用列表
+    ///
+    /// # 返回
+    ///
+    /// 返回工具执行结果列表
+    pub async fn execute_tool_calls(
         &self,
         tool_calls: &[crate::agent::types::ToolCall],
     ) -> Result<Vec<crate::agent::types::ToolResult>> {
@@ -727,114 +737,20 @@ impl AgentGenerator {
     async fn update_memory(
         &self,
         messages: &[Message],
-        resolved_context: &ResolvedContext,
-        result: &AgentGenerateResult,
+        _result: &AgentGenerateResult,
     ) -> Result<()> {
-        let Some(memory) = self.executor.memory() else {
-            return Ok(());
-        };
-
-        // 持久化当前调用中的用户消息
-        for message in messages.iter().filter(|m| matches!(m.role, Role::User)) {
-            let enriched = Self::attach_context_metadata(message, resolved_context);
-            if let Err(e) = memory.store(&enriched).await {
-                eprintln!("Failed to store user message to memory: {}", e);
+        if let Some(memory) = self.executor.memory() {
+            // 存储用户消息
+            for message in messages {
+                if matches!(message.role, Role::User) {
+                    if let Err(e) = memory.store(message).await {
+                        // 静默失败，不影响主流程
+                        eprintln!("Failed to store message to memory: {}", e);
+                    }
+                }
             }
         }
-
-        // 持久化最终助手响应，确保线程上下文完整
-        if let Some(assistant_message) = Self::final_assistant_message(result) {
-            let enriched = Self::attach_context_metadata(&assistant_message, resolved_context);
-            if let Err(e) = memory.store(&enriched).await {
-                eprintln!("Failed to store assistant message to memory: {}", e);
-            }
-        }
-
         Ok(())
-    }
-
-    fn attach_context_metadata(
-        message: &Message,
-        resolved_context: &ResolvedContext,
-    ) -> Message {
-        let mut cloned = message.clone();
-        let mut metadata = cloned.metadata.take().unwrap_or_default();
-
-        if let Some(thread_id) = &resolved_context.thread_id {
-            metadata
-                .entry("thread_id".to_string())
-                .or_insert_with(|| Value::String(thread_id.clone()));
-        }
-        if let Some(resource_id) = &resolved_context.resource_id {
-            metadata
-                .entry("resource_id".to_string())
-                .or_insert_with(|| Value::String(resource_id.clone()));
-        }
-
-        cloned.metadata = if metadata.is_empty() {
-            None
-        } else {
-            Some(metadata)
-        };
-        cloned
-    }
-
-    fn final_assistant_message(result: &AgentGenerateResult) -> Option<Message> {
-        if let Some(output) = result.steps.iter().rev().find_map(|step| step.output.clone()) {
-            return Some(output);
-        }
-
-        if result.response.trim().is_empty() {
-            None
-        } else {
-            Some(Message {
-                role: Role::Assistant,
-                content: result.response.clone(),
-                metadata: None,
-                name: None,
-            })
-        }
-    }
-
-    fn resolve_context(
-        messages: &[Message],
-        options: &AgentGenerateOptions,
-    ) -> ResolvedContext {
-        let mut resolved = ResolvedContext {
-            thread_id: options.thread_id.clone(),
-            resource_id: options.resource_id.clone(),
-        };
-
-        if resolved.thread_id.is_some() && resolved.resource_id.is_some() {
-            return resolved;
-        }
-
-        for message in messages.iter().rev() {
-            if let Some(metadata) = &message.metadata {
-                if resolved.thread_id.is_none() {
-                    if let Some(thread) = metadata
-                        .get("thread_id")
-                        .and_then(|value| value.as_str().map(|s| s.to_string()))
-                    {
-                        resolved.thread_id = Some(thread);
-                    }
-                }
-                if resolved.resource_id.is_none() {
-                    if let Some(resource) = metadata
-                        .get("resource_id")
-                        .and_then(|value| value.as_str().map(|s| s.to_string()))
-                    {
-                        resolved.resource_id = Some(resource);
-                    }
-                }
-            }
-
-            if resolved.thread_id.is_some() && resolved.resource_id.is_some() {
-                break;
-            }
-        }
-
-        resolved
     }
 
     /// 流式生成响应
@@ -932,12 +848,8 @@ mod tests {
     use super::*;
     use crate::agent::{AgentConfig, refactored::{AgentCore, AgentExecutor}};
     use crate::llm::{Message, Role, MockLlmProvider};
-    use crate::memory::thread::{GetMessagesParams, InMemoryThreadStorage, MemoryThreadStorage};
-    use crate::memory::Memory;
-    use crate::memory::BasicMemory;
     use crate::tool::{GenericTool, ToolSchema, ToolExecutionContext};
     use serde_json::json;
-    use std::collections::HashMap;
 
     #[tokio::test]
     async fn test_agent_generator_creation() {
@@ -980,147 +892,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_agent_generator_persists_thread_context() {
-        let config = AgentConfig {
-            name: "thread-agent".to_string(),
-            instructions: "You are a helpful assistant.".to_string(),
-            ..Default::default()
-        };
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Persisted response".to_string(),
-        ]));
-
-        let thread_storage: Arc<dyn MemoryThreadStorage> = Arc::new(InMemoryThreadStorage::new());
-        let memory = Arc::new(BasicMemory::with_thread_storage(
-            None,
-            None,
-            Some(thread_storage.clone()),
-        ));
-
-        let core = AgentCore::new(config, llm).unwrap();
-        let executor = AgentExecutor::new(core).unwrap().with_memory(memory);
-        let generator = AgentGenerator::new(executor);
-
-        let messages = vec![Message {
-            role: Role::User,
-            content: "Store me".to_string(),
-            metadata: None,
-            name: None,
-        }];
-
-        let mut options = AgentGenerateOptions::default();
-        options.thread_id = Some("thread-memory-test".to_string());
-        options.resource_id = Some("resource-42".to_string());
-
-        generator.generate(&messages, &options).await.unwrap();
-
-        let mut params = GetMessagesParams::default();
-        params.limit = Some(10);
-        let stored_messages = thread_storage
-            .get_messages("thread-memory-test", &params)
-            .await
-            .unwrap();
-
-        assert_eq!(stored_messages.len(), 2);
-        assert!(stored_messages.iter().any(|m| matches!(m.role, Role::User)));
-        assert!(stored_messages
-            .iter()
-            .any(|m| matches!(m.role, Role::Assistant)));
-
-        for message in stored_messages {
-            let metadata = message.metadata.expect("metadata missing");
-            assert_eq!(
-                metadata.get("thread_id").and_then(|v| v.as_str()),
-                Some("thread-memory-test")
-            );
-            assert_eq!(
-                metadata.get("resource_id").and_then(|v| v.as_str()),
-                Some("resource-42")
-            );
-        }
-    }
-
-    #[tokio::test]
-    async fn test_agent_generator_resolves_context_from_message_metadata() {
-        let config = AgentConfig {
-            name: "meta-agent".to_string(),
-            instructions: "You are a helpful assistant.".to_string(),
-            ..Default::default()
-        };
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Metadata response".to_string(),
-        ]));
-
-        let thread_storage: Arc<dyn MemoryThreadStorage> = Arc::new(InMemoryThreadStorage::new());
-        let memory = Arc::new(BasicMemory::with_thread_storage(
-            None,
-            None,
-            Some(thread_storage.clone()),
-        ));
-
-        // Seed historical assistant message to ensure retrieval path hits the same thread
-        let mut historical_metadata = HashMap::new();
-        historical_metadata.insert(
-            "thread_id".to_string(),
-            Value::String("thread-from-messages".to_string()),
-        );
-        historical_metadata.insert(
-            "resource_id".to_string(),
-            Value::String("resource-from-messages".to_string()),
-        );
-        let historical_message = Message {
-            role: Role::Assistant,
-            content: "previous".to_string(),
-            metadata: Some(historical_metadata.clone()),
-            name: None,
-        };
-        memory.store(&historical_message).await.unwrap();
-
-        let core = AgentCore::new(config, llm).unwrap();
-        let executor = AgentExecutor::new(core).unwrap().with_memory(memory.clone());
-        let generator = AgentGenerator::new(executor);
-
-        let user_message = Message {
-            role: Role::User,
-            content: "continue".to_string(),
-            metadata: Some(historical_metadata.clone()),
-            name: None,
-        };
-
-        let options = AgentGenerateOptions::default(); // 没有 thread_id/resource_id
-        generator.generate(&[user_message], &options).await.unwrap();
-
-        let mut params = GetMessagesParams::default();
-        params.limit = Some(10);
-        let stored_messages = thread_storage
-            .get_messages("thread-from-messages", &params)
-            .await
-            .unwrap();
-
-        assert!(
-            stored_messages.len() >= 3,
-            "expected historical + new user + new assistant messages"
-        );
-
-        // 验证最新的助手消息继承了从消息推断的线程/资源元数据
-        if let Some(last_message) = stored_messages.last() {
-            let metadata = last_message.metadata.as_ref().expect("metadata missing");
-            assert_eq!(
-                metadata.get("thread_id").and_then(|v| v.as_str()),
-                Some("thread-from-messages")
-            );
-            assert_eq!(
-                metadata.get("resource_id").and_then(|v| v.as_str()),
-                Some("resource-from-messages")
-            );
-        } else {
-            panic!("No stored messages retrieved");
-        }
-    }
-
-    #[tokio::test]
     async fn test_agent_generator_with_tool() {
-        use crate::tool::{create_tool, Tool};
+        use crate::tool::create_tool;
 
         let config = AgentConfig {
             name: "test-agent".to_string(),
@@ -1130,7 +903,7 @@ mod tests {
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you?".to_string()]));
 
         let core = AgentCore::new(config, llm).unwrap();
-        let mut executor = AgentExecutor::new(core).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
 
         // 添加一个测试工具
         let echo_tool = create_tool(
@@ -1200,8 +973,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generator_api_standardization() {
-        use crate::agent::api_consistency::ApiStandardizer;
-        
         let config = crate::agent::AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -1355,6 +1126,114 @@ mod tests {
         assert_eq!(results[0].status, crate::agent::types::ToolResultStatus::Success);
         assert_eq!(results[1].name, "test_tool_2");
         assert_eq!(results[1].status, crate::agent::types::ToolResultStatus::Success);
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_calls_sequential() {
+        // 测试顺序执行模式（没有配置并发执行器）
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+
+        // 创建测试工具
+        let tool1 = GenericTool::new(
+            "test_tool_1",
+            "Test tool 1",
+            ToolSchema::default(),
+            |_params: Value, _context: ToolExecutionContext| -> Result<Value> {
+                Ok(json!({"result": "tool1"}))
+            },
+        );
+        let tool2 = GenericTool::new(
+            "test_tool_2",
+            "Test tool 2",
+            ToolSchema::default(),
+            |_params: Value, _context: ToolExecutionContext| -> Result<Value> {
+                Ok(json!({"result": "tool2"}))
+            },
+        );
+
+        // 添加工具
+        executor.add_tool(Box::new(tool1)).unwrap();
+        executor.add_tool(Box::new(tool2)).unwrap();
+
+        // 创建 generator（不配置并发执行器，使用顺序执行）
+        let generator = AgentGenerator::new(executor);
+
+        // 创建工具调用
+        let tool_calls = vec![
+            crate::agent::types::ToolCall {
+                id: "call1".to_string(),
+                name: "test_tool_1".to_string(),
+                arguments: HashMap::new(),
+            },
+            crate::agent::types::ToolCall {
+                id: "call2".to_string(),
+                name: "test_tool_2".to_string(),
+                arguments: HashMap::new(),
+            },
+        ];
+
+        // 执行工具调用（应该使用顺序执行）
+        let results = generator.execute_tool_calls(&tool_calls).await.unwrap();
+
+        // 验证结果
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].name, "test_tool_1");
+        assert_eq!(results[0].status, crate::agent::types::ToolResultStatus::Success);
+        assert_eq!(results[1].name, "test_tool_2");
+        assert_eq!(results[1].status, crate::agent::types::ToolResultStatus::Success);
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_calls_error_handling() {
+        // 测试工具执行错误处理
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+
+        // 创建一个会失败的工具
+        let failing_tool = GenericTool::new(
+            "failing_tool",
+            "A tool that always fails",
+            ToolSchema::default(),
+            |_params: Value, _context: ToolExecutionContext| -> Result<Value> {
+                Err(crate::error::Error::Internal("Tool execution failed".to_string()))
+            },
+        );
+
+        executor.add_tool(Box::new(failing_tool)).unwrap();
+
+        let generator = AgentGenerator::new(executor);
+
+        let tool_calls = vec![
+            crate::agent::types::ToolCall {
+                id: "call1".to_string(),
+                name: "failing_tool".to_string(),
+                arguments: HashMap::new(),
+            },
+        ];
+
+        // 执行工具调用（应该捕获错误并返回错误状态）
+        let results = generator.execute_tool_calls(&tool_calls).await.unwrap();
+
+        // 验证错误处理
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "failing_tool");
+        assert_eq!(results[0].status, crate::agent::types::ToolResultStatus::Error);
+        assert!(results[0].result.get("error").is_some());
     }
 }
 

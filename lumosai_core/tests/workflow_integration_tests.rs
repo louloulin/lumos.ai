@@ -4,6 +4,7 @@
 //! workflow creation, and execution.
 
 use lumosai_core::agent::AgentBuilder;
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use lumosai_core::app::LumosApp;
 use lumosai_core::config::{ConfigLoader, YamlConfig};
 use lumosai_core::workflow::{EnhancedWorkflow, WorkflowBuilder};
@@ -151,9 +152,10 @@ async fn test_workflow_builder() {
         .expect("Failed to build coder agent");
 
     // Create workflow using builder
-    let workflow = WorkflowBuilder::new()
-        .id("test_workflow")
-        .name("Test Workflow")
+    let workflow = WorkflowBuilder::new(
+        "test_workflow".to_string(),
+        "Test Workflow".to_string(),
+    )
         .description("A test workflow")
         .trigger("user_message")
         .timeout(300)

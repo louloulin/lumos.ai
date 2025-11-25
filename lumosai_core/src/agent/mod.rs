@@ -96,12 +96,7 @@ pub use message_utils::{
 };
 pub use runtime_context::{create_context_manager, ContextManager, RuntimeContext, ToolCallRecord};
 pub use trait_def::{Agent, AgentStructuredOutput};
-pub use traits::FullAgent;
-pub use traits::{
-    CoreAgent as CoreAgentTrait, MemoryAgent as MemoryAgentTrait,
-    StreamingAgentTrait as StreamingAgentCoreTrait, ThreadManagementAgent as ThreadManagementAgentTrait,
-    ToolAgent as ToolAgentTrait,
-};
+pub use traits::{CoreAgent, FullAgent, MemoryAgent, StreamingAgentTrait, ToolAgent};
 
 // Re-export builder
 pub use builder::AgentBuilder;

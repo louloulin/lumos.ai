@@ -76,6 +76,15 @@ impl AgentCore {
         self.instructions = instructions;
     }
 
+    /// 设置 Agent 名称
+    ///
+    /// # 参数
+    ///
+    /// * `name` - 新的 Agent 名称
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
     /// 获取 LLM 提供者
     pub fn llm(&self) -> &Arc<dyn LlmProvider> {
         &self.llm
@@ -120,6 +129,20 @@ mod tests {
         let mut core = AgentCore::new(config, llm).unwrap();
         core.set_instructions("Updated instructions.".to_string());
         assert_eq!(core.instructions(), "Updated instructions.");
+    }
+
+    #[test]
+    fn test_agent_core_set_name() {
+        let config = AgentConfig {
+            name: "initial-name".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let mut core = AgentCore::new(config, llm).unwrap();
+        core.set_name("updated-name".to_string());
+        assert_eq!(core.name(), "updated-name");
     }
 }
 

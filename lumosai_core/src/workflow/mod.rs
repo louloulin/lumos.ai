@@ -532,6 +532,7 @@ pub enum WorkflowStatus {
 pub use basic::BasicWorkflow;
 pub use dag_scheduler::{Dag, DagNode, DagScheduler};
 pub use dag_workflow::{DagWorkflow, DagWorkflowBuilder, DagWorkflowRun};
+pub use workflow::WorkflowBuilder;
 pub use enhanced::{EnhancedWorkflow, StepExecutor, StepFlowEntry, StepType, WorkflowStep};
 pub use execution_engine::{DefaultExecutionEngine, ExecutionEngine, ExecutionMetrics};
 pub use step::{BasicStep, StepBuilder, StepConfig};

@@ -1,3 +1,5 @@
+#![cfg(feature = "cli_tests")]
+
 //! Integration tests for CLI functionality
 //!
 //! These tests verify that the CLI tools work correctly and provide

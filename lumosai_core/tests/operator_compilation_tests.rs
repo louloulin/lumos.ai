@@ -15,11 +15,14 @@ use std::sync::Arc;
 fn create_test_agent(name: &str, response: &str) -> Arc<dyn Agent> {
     let llm_provider: Arc<dyn LlmProvider> = create_test_zhipu_provider_arc();
 
-    Arc::new(create_basic_agent(
-        name.to_string(),
-        format!("You are {}", name),
-        llm_provider,
-    ))
+    Arc::new(
+        create_basic_agent(
+            name.to_string(),
+            format!("You are {}", name),
+            llm_provider,
+        )
+        .expect("Failed to create test agent"),
+    )
 }
 
 /// 测试 1: AgentPipeline 基础编译

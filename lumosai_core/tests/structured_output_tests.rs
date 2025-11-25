@@ -6,15 +6,16 @@ use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{AgentBuilder, AgentStructuredOutput};
 use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use lumosai_core::llm::{Message, Role};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 struct SimpleResponse {
     message: String,
     status: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct TaskList {
     tasks: Vec<String>,
     total: usize,
@@ -181,13 +182,13 @@ fn test_extract_json_error_handling() {
 }
 
 /// 测试 9: 复杂嵌套结构
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct NestedStructure {
     title: String,
     data: DataSection,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct DataSection {
     items: Vec<String>,
     count: usize,

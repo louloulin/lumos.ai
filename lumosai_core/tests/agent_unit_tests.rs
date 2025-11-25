@@ -10,7 +10,15 @@
 
 use lumosai_core::agent::trait_def::AgentStatus; // 使用 trait_def 中的 AgentStatus
 use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use std::sync::Arc;
+
+fn build_agent(
+    config: AgentConfig,
+    llm: Arc<dyn lumosai_core::llm::LlmProvider>,
+) -> BasicAgent {
+    BasicAgent::new(config, llm).expect("Failed to create BasicAgent")
+}
 
 /// 测试 1: Agent 基本创建
 #[test]
@@ -22,7 +30,7 @@ fn test_agent_creation_with_name() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = build_agent(config, llm);
 
     assert_eq!(agent.get_name(), "test_agent");
     assert_eq!(agent.get_instructions(), "You are a helpful assistant");
@@ -33,7 +41,7 @@ fn test_agent_creation_with_name() {
 fn test_agent_default_configuration() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent = BasicAgent::new(config, llm);
+    let agent = build_agent(config, llm);
 
     // 默认配置应该有名称和指令
     assert!(!agent.get_name().is_empty());
@@ -50,7 +58,7 @@ fn test_agent_instructions_update() {
         ..Default::default()
     };
 
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = build_agent(config, llm);
 
     // 验证初始指令
     assert_eq!(agent.get_instructions(), "Initial instructions");
@@ -67,7 +75,7 @@ fn test_agent_instructions_update() {
 fn test_agent_status_transitions() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = build_agent(config, llm);
 
     // 初始状态应该是 Ready（根据实际测试结果）
     assert_eq!(agent.get_status(), AgentStatus::Ready);
@@ -90,7 +98,7 @@ fn test_agent_status_transitions() {
 fn test_agent_error_status() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = build_agent(config, llm);
 
     // 设置错误状态
     let _ = agent.set_status(AgentStatus::Error("Test error message".to_string()));
@@ -109,7 +117,7 @@ fn test_agent_error_status() {
 fn test_agent_tool_management() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent = BasicAgent::new(config, llm);
+    let agent = build_agent(config, llm);
 
     // 初始状态应该没有 tools
     assert_eq!(agent.get_tools().len(), 0);
@@ -125,7 +133,7 @@ fn test_agent_memory_integration() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = build_agent(config, llm);
 
     // 默认情况下应该没有 memory
     assert!(agent.get_memory().is_none());
@@ -137,7 +145,7 @@ fn test_agent_memory_integration() {
 fn test_agent_llm_provider() {
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent = BasicAgent::new(config, llm.clone());
+    let agent = build_agent(config, llm.clone());
 
     // 验证 LLM provider 存在
     let agent_llm = agent.get_llm();
@@ -156,7 +164,7 @@ fn test_agent_function_calling_config() {
         enable_function_calling: Some(true),
         ..Default::default()
     };
-    let _agent_enabled = BasicAgent::new(config_enabled, llm.clone());
+    let _agent_enabled = build_agent(config_enabled, llm.clone());
     // 注意：is_function_calling_enabled 方法不是公共 API，所以我们只测试配置能正确创建
 
     // 测试显式禁用
@@ -164,11 +172,11 @@ fn test_agent_function_calling_config() {
         enable_function_calling: Some(false),
         ..Default::default()
     };
-    let _agent_disabled = BasicAgent::new(config_disabled, llm.clone());
+    let _agent_disabled = build_agent(config_disabled, llm.clone());
 
     // 测试默认值
     let config_default = AgentConfig::default();
-    let _agent_default = BasicAgent::new(config_default, llm);
+    let _agent_default = build_agent(config_default, llm);
 }
 
 /// 测试 10: Agent 配置验证
@@ -181,7 +189,7 @@ fn test_agent_config_validation() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = build_agent(config, llm);
 
     // 验证配置应该成功
     assert!(agent.validate_config().is_ok());
@@ -205,8 +213,8 @@ fn test_multiple_agents_independence() {
         ..Default::default()
     };
 
-    let mut agent1 = BasicAgent::new(config1, llm1);
-    let agent2 = BasicAgent::new(config2, llm2);
+    let mut agent1 = build_agent(config1, llm1);
+    let agent2 = build_agent(config2, llm2);
 
     // 验证两个 agent 是独立的
     assert_eq!(agent1.get_name(), "agent1");
@@ -232,7 +240,7 @@ fn test_agents_with_different_names() {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm.clone());
+        let agent = build_agent(config, llm.clone());
         assert_eq!(agent.get_name(), name);
     }
 }
@@ -247,7 +255,7 @@ fn test_agent_empty_instructions() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = build_agent(config, llm);
 
     // 即使指令为空，agent 也应该能创建
     assert_eq!(agent.get_instructions(), "");
@@ -265,7 +273,7 @@ fn test_agent_long_instructions() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = build_agent(config, llm);
 
     // 验证长指令能正确存储
     assert_eq!(agent.get_instructions(), long_instructions);
@@ -284,7 +292,7 @@ fn test_agent_special_characters() {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = build_agent(config, llm);
 
     assert_eq!(agent.get_name(), special_name);
     assert_eq!(agent.get_instructions(), special_instructions);

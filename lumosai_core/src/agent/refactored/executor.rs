@@ -126,12 +126,88 @@ impl AgentExecutor {
     }
 
     /// 添加工具
+    ///
+    /// # 参数
+    ///
+    /// * `tool` - 要添加的工具
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Result<()>`，如果添加失败则返回错误。
     pub fn add_tool(&self, tool: Box<dyn Tool>) -> Result<()> {
         let mut tools = self.tools.lock().map_err(|_| {
             crate::error::Error::Internal("Failed to lock tools mutex".to_string())
         })?;
         tools.insert(tool.id().to_string(), tool);
         Ok(())
+    }
+
+    /// 移除工具
+    ///
+    /// # 参数
+    ///
+    /// * `tool_name` - 要移除的工具名称
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Result<()>`，如果工具不存在则返回错误。
+    pub fn remove_tool(&self, tool_name: &str) -> Result<()> {
+        let mut tools = self.tools.lock().map_err(|_| {
+            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
+        })?;
+        
+        if !tools.contains_key(tool_name) {
+            return Err(crate::error::Error::NotFound(
+                format!("Tool '{}' not found", tool_name)
+            ));
+        }
+        
+        tools.remove(tool_name);
+        Ok(())
+    }
+
+    /// 获取工具
+    ///
+    /// # 参数
+    ///
+    /// * `tool_name` - 工具名称
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Option<Box<dyn Tool>>`，如果工具不存在则返回 `None`。
+    pub fn get_tool(&self, tool_name: &str) -> Option<Box<dyn Tool>> {
+        let tools = self.tools.lock().ok()?;
+        tools.get(tool_name).cloned()
+    }
+
+    /// 列出所有工具名称
+    ///
+    /// # 返回
+    ///
+    /// 返回所有已注册的工具名称列表。
+    pub fn list_tools(&self) -> Vec<String> {
+        let tools = match self.tools.lock() {
+            Ok(guard) => guard,
+            Err(_) => return Vec::new(),
+        };
+        tools.keys().cloned().collect()
+    }
+
+    /// 检查工具是否存在
+    ///
+    /// # 参数
+    ///
+    /// * `tool_name` - 工具名称
+    ///
+    /// # 返回
+    ///
+    /// 如果工具存在返回 `true`，否则返回 `false`。
+    pub fn has_tool(&self, tool_name: &str) -> bool {
+        let tools = match self.tools.lock() {
+            Ok(guard) => guard,
+            Err(_) => return false,
+        };
+        tools.contains_key(tool_name)
     }
 
     /// 获取内存
@@ -383,7 +459,7 @@ mod tests {
 
     #[test]
     fn test_agent_executor_with_tool_registry() {
-        use crate::tool::{ToolRegistry, ToolMetadata, ToolCategory};
+        use crate::tool::ToolRegistry;
         
         let config = AgentConfig {
             name: "test-agent".to_string(),
@@ -401,6 +477,60 @@ mod tests {
         let executor = executor.with_tool_registry(registry.clone());
         assert!(executor.tool_registry().is_some());
         assert!(Arc::ptr_eq(&executor.tool_registry().unwrap(), &registry));
+    }
+
+    #[test]
+    fn test_agent_executor_tool_management() {
+        use crate::tool::create_tool;
+        
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+
+        // 测试添加工具
+        let echo_tool = create_tool(
+            "echo",
+            "Echo a message",
+            vec![("message", "string", "Message to echo", true)],
+            |params| {
+                let message = params
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("No message");
+                Ok(serde_json::json!({"echo": message}))
+            },
+        ).unwrap();
+
+        executor.add_tool(Box::new(echo_tool)).unwrap();
+        
+        // 测试列出工具
+        let tools = executor.list_tools();
+        assert_eq!(tools.len(), 1);
+        assert!(tools.contains(&"echo".to_string()));
+        
+        // 测试检查工具是否存在
+        assert!(executor.has_tool("echo"));
+        assert!(!executor.has_tool("nonexistent"));
+        
+        // 测试获取工具
+        let tool = executor.get_tool("echo");
+        assert!(tool.is_some());
+        assert_eq!(tool.unwrap().id(), "echo");
+        
+        // 测试移除工具
+        executor.remove_tool("echo").unwrap();
+        assert!(!executor.has_tool("echo"));
+        assert_eq!(executor.list_tools().len(), 0);
+        
+        // 测试移除不存在的工具
+        let result = executor.remove_tool("nonexistent");
+        assert!(result.is_err());
     }
 }
 

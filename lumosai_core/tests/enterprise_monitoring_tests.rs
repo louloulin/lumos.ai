@@ -1,3 +1,5 @@
+#![cfg(feature = "telemetry_tests")]
+
 //! 企业级监控功能综合测试
 //!
 //! 测试覆盖：

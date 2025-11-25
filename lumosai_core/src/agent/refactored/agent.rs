@@ -8,13 +8,7 @@
 //! 这是重构后的 BasicAgent，将原来 2300+ 行的单体实现拆分为多个专门的组件。
 
 use crate::agent::refactored::{AgentCore, AgentExecutor, AgentGenerator};
-use crate::agent::traits::{
-    CoreAgent, MemoryAgent, StreamingAgentTrait, ThreadManagementAgent, ToolAgent,
-};
-use crate::agent::types::{
-    AgentGenerateOptions, AgentGenerateResult, AgentStreamOptions, AgentStep, RuntimeContext,
-    ToolCall,
-};
+use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStreamOptions, AgentStep, RuntimeContext, ToolCall};
 use crate::agent::{Agent, AgentConfig};
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::compat::{Component, VoiceProvider};
@@ -24,7 +18,7 @@ use crate::memory::{Memory, working::WorkingMemory};
 use crate::tool::Tool;
 use crate::workflow::Workflow;
 use async_trait::async_trait;
-use futures::stream::BoxStream;
+use futures::stream::{BoxStream, StreamExt};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -195,11 +189,6 @@ impl BasicAgent {
         self.generator.executor().core().name()
     }
 
-    /// 兼容 Agent trait 的 get_name（避免 Trait 方法冲突）
-    pub fn get_name(&self) -> &str {
-        self.name()
-    }
-
     /// 获取 Agent 指令
     pub fn instructions(&self) -> &str {
         self.generator.executor().core().instructions()
@@ -210,19 +199,9 @@ impl BasicAgent {
         self.generator.executor().core().llm().clone()
     }
 
-    /// 兼容 Agent trait 的 get_llm（避免 Trait 方法冲突）
-    pub fn get_llm(&self) -> Arc<dyn LlmProvider> {
-        self.llm()
-    }
-
     /// 获取内存（如果已配置）
     pub fn memory(&self) -> Option<Arc<dyn Memory>> {
         self.generator.executor().memory()
-    }
-
-    /// 兼容 Agent trait 的 get_memory（避免 Trait 方法冲突）
-    pub fn get_memory(&self) -> Option<Arc<dyn Memory>> {
-        self.memory()
     }
 
     /// 检查是否有内存
@@ -239,28 +218,35 @@ impl BasicAgent {
         self.generator.executor().tools()
     }
 
-    /// 兼容 Agent trait 的 get_tools（避免 Trait 方法冲突）
-    pub fn get_tools(&self) -> HashMap<String, Box<dyn Tool>> {
-        self.cloned_tools_map()
+    /// 列出所有工具名称
+    ///
+    /// # 返回
+    ///
+    /// 返回所有已注册的工具名称列表。
+    pub fn list_tools(&self) -> Vec<String> {
+        self.generator.executor().list_tools()
     }
 
-    /// 兼容 Agent trait 的异步工具获取方法
-    pub async fn get_tools_with_context(
-        &self,
-        context: &RuntimeContext,
-    ) -> Result<HashMap<String, Box<dyn Tool>>> {
-        ToolAgent::get_tools_with_context(self, context).await
+    /// 检查工具是否存在
+    ///
+    /// # 参数
+    ///
+    /// * `tool_name` - 工具名称
+    ///
+    /// # 返回
+    ///
+    /// 如果工具存在返回 `true`，否则返回 `false`。
+    pub fn has_tool(&self, tool_name: &str) -> bool {
+        self.generator.executor().has_tool(tool_name)
     }
 
-    /// 快照当前工具映射，避免在外部持有锁
-    fn cloned_tools_map(&self) -> HashMap<String, Box<dyn Tool>> {
-        match self.tools().lock() {
-            Ok(guard) => guard
-                .iter()
-                .map(|(name, tool)| (name.clone(), tool.clone()))
-                .collect(),
-            Err(_) => HashMap::new(),
-        }
+    /// 获取工具数量
+    ///
+    /// # 返回
+    ///
+    /// 返回已注册的工具数量。
+    pub fn tool_count(&self) -> usize {
+        self.list_tools().len()
     }
 
     /// Check if LLM supports structured output
@@ -497,98 +483,6 @@ impl Base for BasicAgent {
     }
 }
 
-#[async_trait]
-impl CoreAgent for BasicAgent {
-    fn get_name(&self) -> &str {
-        self.name()
-    }
-
-    fn get_llm(&self) -> Arc<dyn LlmProvider> {
-        self.llm()
-    }
-
-    async fn generate(
-        &self,
-        messages: &[Message],
-        options: &AgentGenerateOptions,
-    ) -> Result<AgentGenerateResult> {
-        self.generator.generate(messages, options).await
-    }
-}
-
-#[async_trait]
-impl MemoryAgent for BasicAgent {
-    fn get_memory(&self) -> Option<Arc<dyn Memory>> {
-        self.memory()
-    }
-
-    async fn generate_with_memory(
-        &self,
-        messages: &[Message],
-        thread_id: Option<String>,
-        options: &AgentGenerateOptions,
-    ) -> Result<AgentGenerateResult> {
-        use crate::llm::Role;
-
-        let mut input_messages = messages.to_vec();
-        if let Some(memory) = MemoryAgent::get_memory(self) {
-            let mut memory_config = options.memory_options.clone().unwrap_or_default();
-
-            if let Some(ref tid) = thread_id {
-                if memory_config.namespace.is_none() {
-                    memory_config.namespace = Some(tid.clone());
-                }
-            }
-
-            if memory_config.last_messages.is_none() || memory_config.last_messages == Some(0) {
-                memory_config.last_messages = options.context_window.or(Some(10));
-            }
-
-            let user_query = messages
-                .iter()
-                .rev()
-                .find(|m| matches!(m.role, Role::User))
-                .map(|m| m.content.clone());
-
-            if user_query.is_some() && memory_config.query.is_none() {
-                memory_config.query = user_query;
-            }
-
-            if let Ok(historical) = memory.retrieve(&memory_config).await {
-                if !historical.is_empty() {
-                    input_messages = historical.into_iter().chain(input_messages).collect();
-                }
-            }
-        }
-
-        let mut options_with_thread = options.clone();
-        if let Some(tid) = thread_id {
-            options_with_thread.thread_id = Some(tid);
-        }
-
-        self.generate(&input_messages, &options_with_thread).await
-    }
-}
-
-impl ToolAgent for BasicAgent {
-    fn get_tools(&self) -> HashMap<String, Box<dyn Tool>> {
-        self.cloned_tools_map()
-    }
-}
-
-#[async_trait]
-impl StreamingAgentTrait for BasicAgent {
-    async fn stream<'a>(
-        &'a self,
-        messages: &'a [Message],
-        options: &'a AgentStreamOptions,
-    ) -> Result<BoxStream<'a, Result<String>>> {
-        self.generator.stream(messages, options).await
-    }
-}
-
-impl ThreadManagementAgent for BasicAgent {}
-
 // 实现 Agent trait
 #[async_trait]
 impl Agent for BasicAgent {
@@ -604,7 +498,7 @@ impl Agent for BasicAgent {
         // 更新 core 中的 instructions
         // 通过 generator -> executor -> core 的链式访问来更新
         self.generator_mut().executor_mut().core_mut().set_instructions(instructions.clone());
-        let _ = self.base.logger().debug(&format!(
+        self.base.logger().debug(&format!(
             "Instructions updated for agent '{}'",
             self.name()
         ));
@@ -628,14 +522,38 @@ impl Agent for BasicAgent {
     }
 
     fn get_tools(&self) -> HashMap<String, Box<dyn Tool>> {
-        self.cloned_tools_map()
+        match self.tools().lock() {
+            Ok(guard) => {
+                let mut tools_copy = HashMap::new();
+                for (name, tool) in guard.iter() {
+                    tools_copy.insert(name.clone(), tool.clone());
+                }
+                tools_copy
+            }
+            Err(_) => HashMap::new(),
+        }
     }
 
     async fn get_tools_with_context(
         &self,
-        context: &RuntimeContext,
+        _context: &RuntimeContext,
     ) -> Result<HashMap<String, Box<dyn Tool>>> {
-        ToolAgent::get_tools_with_context(self, context).await
+        // 直接获取工具，避免调用 self.get_tools()
+        // 在同步块中完成所有操作，避免生命周期问题
+        let tools_arc = self.generator.executor().tools();
+        let tools = {
+            match tools_arc.lock() {
+                Ok(guard) => {
+                    let mut tools_copy = HashMap::new();
+                    for (name, tool) in guard.iter() {
+                        tools_copy.insert(name.clone(), tool.clone());
+                    }
+                    tools_copy
+                }
+                Err(_) => HashMap::new(),
+            }
+        };
+        Ok(tools)
     }
 
     fn add_tool(&mut self, tool: Box<dyn Tool>) -> Result<()> {
@@ -653,7 +571,7 @@ impl Agent for BasicAgent {
         }
 
         tools.insert(tool_name.clone(), tool);
-        let _ = self.base.logger().debug(&format!(
+        self.base.logger().debug(&format!(
             "Tool '{}' added to agent '{}'",
             tool_name, self.name()
         ));
@@ -673,7 +591,7 @@ impl Agent for BasicAgent {
         }
 
         tools.remove(tool_name);
-        let _ = self.base.logger().debug(&format!(
+        self.base.logger().debug(&format!(
             "Tool '{}' removed from agent '{}'",
             tool_name, self.name()
         ));
@@ -793,7 +711,12 @@ impl Agent for BasicAgent {
         thread_id: Option<String>,
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
-        MemoryAgent::generate_with_memory(self, messages, thread_id, options).await
+        // 如果提供了 thread_id，将其添加到 options 中
+        let mut options = options.clone();
+        if let Some(tid) = thread_id {
+            options.thread_id = Some(tid);
+        }
+        self.generator.generate(messages, &options).await
     }
 
     async fn stream<'a>(
@@ -801,7 +724,7 @@ impl Agent for BasicAgent {
         messages: &'a [Message],
         options: &'a AgentStreamOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
-        StreamingAgentTrait::stream(self, messages, options).await
+        self.generator.stream(messages, options).await
     }
 
     async fn stream_with_callbacks<'a>(
@@ -822,10 +745,7 @@ impl Agent for BasicAgent {
 
     fn set_voice(&mut self, _voice: Arc<dyn VoiceProvider>) {
         // BasicAgent 目前不支持 voice
-        let _ = self
-            .base
-            .logger()
-            .warn("Voice provider setting is not supported by BasicAgent");
+        self.base.logger().warn("Voice provider setting is not supported by BasicAgent");
     }
 
     async fn get_memory_value(&self, _key: &str) -> Result<Option<Value>> {
@@ -852,7 +772,6 @@ mod tests {
     use super::*;
     use crate::agent::AgentConfig;
     use crate::llm::MockLlmProvider;
-    use futures::StreamExt;
 
     #[tokio::test]
     async fn test_basic_agent_creation() {
@@ -1013,6 +932,53 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_basic_agent_tool_management() {
+        use crate::tool::create_tool;
+        
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let agent = BasicAgent::new(config, llm).unwrap();
+
+        // 测试添加工具
+        let echo_tool = create_tool(
+            "echo",
+            "Echo a message",
+            vec![("message", "string", "Message to echo", true)],
+            |params| {
+                let message = params
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("No message");
+                Ok(serde_json::json!({"echo": message}))
+            },
+        ).unwrap();
+
+        agent.add_tool(Box::new(echo_tool)).unwrap();
+        
+        // 测试列出工具
+        let tools = agent.list_tools();
+        assert_eq!(tools.len(), 1);
+        assert!(tools.contains(&"echo".to_string()));
+        
+        // 测试检查工具是否存在
+        assert!(agent.has_tool("echo"));
+        assert!(!agent.has_tool("nonexistent"));
+        
+        // 测试获取工具数量
+        assert_eq!(agent.tool_count(), 1);
+        
+        // 测试获取工具
+        let tool = agent.get_tool("echo");
+        assert!(tool.is_some());
+        assert_eq!(tool.unwrap().id(), "echo");
+    }
+
+    #[tokio::test]
     async fn test_basic_agent_implements_agent_trait() {
         use crate::agent::Agent;
         use crate::agent::types::{AgentGenerateOptions, RuntimeContext};
@@ -1056,127 +1022,6 @@ mod tests {
         // 测试 get_instructions_with_context
         let instructions = agent.get_instructions_with_context(&context).await.unwrap();
         assert_eq!(instructions, "You are a helpful assistant.");
-    }
-
-    #[tokio::test]
-    async fn test_basic_agent_split_traits_integration() {
-        use crate::agent::traits::{
-            CoreAgent, MemoryAgent, StreamingAgentTrait, ThreadManagementAgent, ToolAgent,
-        };
-        use crate::agent::types::{AgentGenerateOptions, RuntimeContext};
-        use crate::memory::thread::{CreateThreadParams, InMemoryThreadStorage, MemoryThreadStorage};
-        use crate::tool::create_tool;
-        use futures::StreamExt;
-
-        let config = AgentConfig {
-            name: "trait-agent".to_string(),
-            instructions: "You are a helpful assistant.".to_string(),
-            ..Default::default()
-        };
-        let llm = Arc::new(MockLlmProvider::new(vec![
-            "Hello from trait stream!".to_string(),
-        ]));
-
-        let thread_storage: Arc<dyn MemoryThreadStorage> =
-            Arc::new(InMemoryThreadStorage::new());
-        let memory = Arc::new(crate::memory::BasicMemory::with_thread_storage(
-            None,
-            None,
-            Some(thread_storage),
-        ));
-
-        let agent = BasicAgent::new(config, llm).unwrap().with_memory(memory).unwrap();
-
-        // Attach a tool for ToolAgent tests
-        let echo_tool = create_tool(
-            "trait_echo",
-            "Echo helper",
-            vec![("message", "string", "content", true)],
-            |params| {
-                let message = params
-                    .get("message")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default();
-                Ok(serde_json::json!({ "echo": message }))
-            },
-        )
-        .unwrap();
-        agent.add_tool(Box::new(echo_tool)).unwrap();
-
-        // CoreAgent
-        let core_agent: &dyn CoreAgent = &agent;
-        assert_eq!(core_agent.get_name(), "trait-agent");
-        core_agent
-            .generate(&[Message {
-                role: Role::User,
-                content: "ping".to_string(),
-                metadata: None,
-                name: None,
-            }], &AgentGenerateOptions::default())
-            .await
-            .unwrap();
-
-        // MemoryAgent & ThreadManagementAgent
-        let memory_agent: &dyn MemoryAgent = &agent;
-        assert!(memory_agent.get_memory().is_some());
-
-        let thread_agent: &dyn ThreadManagementAgent = &agent;
-        let params = CreateThreadParams {
-            id: Some("trait-thread".to_string()),
-            title: "Trait Thread".to_string(),
-            agent_id: Some("trait-agent".to_string()),
-            resource_id: Some("user-123".to_string()),
-            metadata: None,
-        };
-        let created = thread_agent.create_thread(params).await.unwrap();
-        assert_eq!(created.id, "trait-thread");
-        let fetched = thread_agent
-            .get_thread("trait-thread", Some("user-123"))
-            .await
-            .unwrap();
-        assert!(fetched.is_some());
-        let listed = thread_agent.list_threads("user-123").await.unwrap();
-        assert_eq!(listed.len(), 1);
-
-        // ToolAgent
-        let tool_agent: &dyn ToolAgent = &agent;
-        let tools = tool_agent.get_tools();
-        assert!(tools.contains_key("trait_echo"));
-        let context_tools = tool_agent
-            .get_tools_with_context(&RuntimeContext::default())
-            .await
-            .unwrap();
-        assert!(context_tools.contains_key("trait_echo"));
-
-        // StreamingAgentTrait
-        let streaming_agent: &dyn StreamingAgentTrait = &agent;
-        let messages = vec![Message {
-            role: Role::User,
-            content: "stream?".to_string(),
-            metadata: None,
-            name: None,
-        }];
-        let stream_options = AgentStreamOptions::default();
-        let mut stream = streaming_agent
-            .stream(&messages, &stream_options)
-            .await
-            .unwrap();
-        let mut combined = String::new();
-        while let Some(chunk) = stream.next().await {
-            combined.push_str(&chunk.unwrap());
-        }
-        assert!(!combined.is_empty());
-
-        // MemoryAgent::generate_with_memory should succeed and include thread context
-        let result = memory_agent
-            .generate_with_memory(
-                &messages,
-                Some("trait-thread".to_string()),
-                &AgentGenerateOptions::default(),
-            )
-            .await
-            .unwrap();
-        assert!(!result.response.is_empty());
     }
 }
 

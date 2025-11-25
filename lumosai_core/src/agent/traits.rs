@@ -504,11 +504,11 @@ pub trait StreamingAgentTrait: CoreAgent {
     /// # Returns
     ///
     /// 一个流，每个元素是一个文本片段或错误
-    async fn stream<'a>(
-        &'a self,
-        messages: &'a [Message],
-        options: &'a AgentStreamOptions,
-    ) -> Result<BoxStream<'a, Result<String>>>;
+    async fn stream(
+        &self,
+        messages: &[Message],
+        options: &AgentStreamOptions,
+    ) -> Result<BoxStream<'_, Result<String>>>;
 }
 
 /// 组合 Agent Trait

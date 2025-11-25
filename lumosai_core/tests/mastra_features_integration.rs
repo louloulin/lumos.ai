@@ -4,6 +4,8 @@
 
 use lumosai_core::agent::trait_def::Agent as AgentTrait;
 use lumosai_core::agent::{mastra_compat, Agent, AgentBuilder};
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
+use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::tool::builtin::{
     create_all_builtin_tools, create_dev_builtin_tools, create_safe_builtin_tools,
     BuiltinToolsConfig,

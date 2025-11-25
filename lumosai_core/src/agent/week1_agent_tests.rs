@@ -18,11 +18,20 @@ mod tests {
     use crate::agent::trait_def::{Agent, AgentStatus};
     use crate::agent::types::AgentGenerateOptions;
     use crate::llm::test_helpers::create_test_zhipu_provider_arc;
-    use crate::llm::{LlmOptions, Message, Role};
-    use crate::tool::{Tool, ToolExecutionContext, ToolExecutionOptions};
-    use serde_json::{json, Value};
-    use std::sync::Arc;
+    use crate::llm::{Message, Role};
+    use std::future::Future;
     use std::time::Duration;
+
+    const TEST_TIMEOUT: Duration = Duration::from_secs(180);
+
+    async fn run_with_test_timeout<Fut, T>(future: Fut) -> T
+    where
+        Fut: Future<Output = T>,
+    {
+        tokio::time::timeout(TEST_TIMEOUT, future)
+            .await
+            .expect("Test exceeded timeout limit; increase TEST_TIMEOUT if necessary")
+    }
 
     /// Helper function to retry API calls with exponential backoff
     async fn retry_with_backoff<F, Fut, T>(
@@ -113,10 +122,18 @@ mod tests {
             instructions: "Test".to_string(),
             ..Default::default()
         };
-        let agent = BasicAgent::new(config, llm).unwrap();
+        let result = BasicAgent::new(config, llm);
 
-        // 空名称应该被接受（或者使用默认值）
-        assert!(agent.get_name().is_empty() || !agent.get_name().is_empty());
+        // 空名称现在应被拒绝并返回 InvalidInput 错误
+        assert!(result.is_err(), "Expected BasicAgent::new to fail with empty name");
+        if let Err(err) = result {
+            match err {
+                crate::error::Error::InvalidInput(msg) => {
+                    assert!(msg.to_lowercase().contains("name"), "Unexpected error message: {}", msg);
+                }
+                other => panic!("Unexpected error type: {:?}", other),
+            }
+        }
     }
 
     #[test]
@@ -362,218 +379,248 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_generate_with_empty_input() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let messages = vec![Message::new(Role::User, "".to_string(), None, None)];
-        let options = AgentGenerateOptions::default();
-        let result = agent.generate(&messages, &options).await;
+            let messages = vec![Message::new(Role::User, "".to_string(), None, None)];
+            let options = AgentGenerateOptions::default();
+            let result = agent.generate(&messages, &options).await;
 
-        // 空输入应该被处理（可能返回错误或默认响应）
-        assert!(result.is_ok() || result.is_err());
+            // 空输入应该被处理（可能返回错误或默认响应）
+            assert!(result.is_ok() || result.is_err());
+        })
+        .await;
     }
 
     #[tokio::test]
     async fn test_agent_generate_with_very_long_input() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let long_input = "test ".repeat(10000);
-        let messages = vec![Message::new(Role::User, long_input, None, None)];
-        let options = AgentGenerateOptions::default();
-        let result = agent.generate(&messages, &options).await;
+            let long_input = "test ".repeat(10000);
+            let messages = vec![Message::new(Role::User, long_input, None, None)];
+            let options = AgentGenerateOptions::default();
+            let result = agent.generate(&messages, &options).await;
 
-        // 长输入应该被处理
-        assert!(result.is_ok() || result.is_err());
+            // 长输入应该被处理
+            assert!(result.is_ok() || result.is_err());
+        })
+        .await;
     }
 
     #[tokio::test]
     async fn test_agent_generate_with_special_characters() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let special_input = "Test with special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?";
-        let messages = vec![Message::new(
-            Role::User,
-            special_input.to_string(),
-            None,
-            None,
-        )];
-        let options = AgentGenerateOptions::default();
+            let special_input = "Test with special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?";
+            let messages = vec![Message::new(
+                Role::User,
+                special_input.to_string(),
+                None,
+                None,
+            )];
+            let options = AgentGenerateOptions::default();
 
-        // Add delay to avoid rate limiting
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+            // Add delay to avoid rate limiting
+            tokio::time::sleep(Duration::from_millis(1000)).await;
 
-        let result = retry_with_backoff(
-            || async { agent.generate(&messages, &options).await },
-            5,
-            2000,
-        )
+            let result = retry_with_backoff(
+                || async { agent.generate(&messages, &options).await },
+                5,
+                2000,
+            )
+            .await;
+
+            assert!(result.is_ok(), "Failed with error: {:?}", result.err());
+        })
         .await;
-
-        assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
 
     #[tokio::test]
     async fn test_agent_generate_with_unicode_input() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let unicode_input = "你好，世界！🌍 こんにちは";
-        let messages = vec![Message::new(
-            Role::User,
-            unicode_input.to_string(),
-            None,
-            None,
-        )];
-        let options = AgentGenerateOptions::default();
+            let unicode_input = "你好，世界！🌍 こんにちは";
+            let messages = vec![Message::new(
+                Role::User,
+                unicode_input.to_string(),
+                None,
+                None,
+            )];
+            let options = AgentGenerateOptions::default();
 
-        // Add delay to avoid rate limiting
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+            // Add delay to avoid rate limiting
+            tokio::time::sleep(Duration::from_millis(1000)).await;
 
-        let result = retry_with_backoff(
-            || async { agent.generate(&messages, &options).await },
-            5,
-            2000,
-        )
+            let result = retry_with_backoff(
+                || async { agent.generate(&messages, &options).await },
+                5,
+                2000,
+            )
+            .await;
+
+            assert!(result.is_ok(), "Failed with error: {:?}", result.err());
+        })
         .await;
-
-        assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
 
     #[tokio::test]
     async fn test_agent_generate_with_newlines() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let multiline_input = "Line 1\nLine 2\n\nLine 4";
-        let messages = vec![Message::new(
-            Role::User,
-            multiline_input.to_string(),
-            None,
-            None,
-        )];
-        let options = AgentGenerateOptions::default();
-        let result = agent.generate(&messages, &options).await;
+            let multiline_input = "Line 1\nLine 2\n\nLine 4";
+            let messages = vec![Message::new(
+                Role::User,
+                multiline_input.to_string(),
+                None,
+                None,
+            )];
+            let options = AgentGenerateOptions::default();
+            let result = agent.generate(&messages, &options).await;
 
-        assert!(result.is_ok());
+            assert!(result.is_ok());
+        })
+        .await;
     }
 
     #[tokio::test]
     async fn test_agent_generate_with_tabs() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let tab_input = "Column1\tColumn2\tColumn3";
-        let messages = vec![Message::new(Role::User, tab_input.to_string(), None, None)];
-        let options = AgentGenerateOptions::default();
+            let tab_input = "Column1\tColumn2\tColumn3";
+            let messages = vec![Message::new(Role::User, tab_input.to_string(), None, None)];
+            let options = AgentGenerateOptions::default();
 
-        tokio::time::sleep(Duration::from_millis(2000)).await;
-        let result = retry_with_backoff(
-            || async { agent.generate(&messages, &options).await },
-            7,
-            3000,
-        )
+            tokio::time::sleep(Duration::from_millis(2000)).await;
+            let result = retry_with_backoff(
+                || async { agent.generate(&messages, &options).await },
+                7,
+                3000,
+            )
+            .await;
+
+            assert!(result.is_ok(), "Failed with error: {:?}", result.err());
+        })
         .await;
-
-        assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
 
     #[tokio::test]
     async fn test_agent_generate_with_json_input() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let json_input = r#"{"key": "value", "number": 123, "nested": {"inner": "data"}}"#;
-        let messages = vec![Message::new(Role::User, json_input.to_string(), None, None)];
-        let options = AgentGenerateOptions::default();
+            let json_input = r#"{"key": "value", "number": 123, "nested": {"inner": "data"}}"#;
+            let messages = vec![Message::new(Role::User, json_input.to_string(), None, None)];
+            let options = AgentGenerateOptions::default();
 
-        tokio::time::sleep(Duration::from_millis(1000)).await;
-        let result = retry_with_backoff(
-            || async { agent.generate(&messages, &options).await },
-            5,
-            2000,
-        )
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+            let result = retry_with_backoff(
+                || async { agent.generate(&messages, &options).await },
+                5,
+                2000,
+            )
+            .await;
+
+            assert!(result.is_ok(), "Failed with error: {:?}", result.err());
+        })
         .await;
-
-        assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
 
     #[tokio::test]
     async fn test_agent_generate_with_code_input() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let code_input = r#"
+            let code_input = r#"
 fn main() {
     println!("Hello, world!");
 }
 "#;
-        let messages = vec![Message::new(Role::User, code_input.to_string(), None, None)];
-        let options = AgentGenerateOptions::default();
+            let messages = vec![Message::new(Role::User, code_input.to_string(), None, None)];
+            let options = AgentGenerateOptions::default();
 
-        tokio::time::sleep(Duration::from_millis(1000)).await;
-        let result = retry_with_backoff(
-            || async { agent.generate(&messages, &options).await },
-            5,
-            2000,
-        )
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+            let result = retry_with_backoff(
+                || async { agent.generate(&messages, &options).await },
+                5,
+                2000,
+            )
+            .await;
+
+            assert!(result.is_ok(), "Failed with error: {:?}", result.err());
+        })
         .await;
-
-        assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
 
     #[tokio::test]
     async fn test_agent_generate_with_html_input() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let html_input = r#"<html><body><h1>Title</h1><p>Paragraph</p></body></html>"#;
-        let messages = vec![Message::new(Role::User, html_input.to_string(), None, None)];
-        let options = AgentGenerateOptions::default();
+            let html_input = r#"<html><body><h1>Title</h1><p>Paragraph</p></body></html>"#;
+            let messages = vec![Message::new(Role::User, html_input.to_string(), None, None)];
+            let options = AgentGenerateOptions::default();
 
-        tokio::time::sleep(Duration::from_millis(1000)).await;
-        let result = retry_with_backoff(
-            || async { agent.generate(&messages, &options).await },
-            5,
-            2000,
-        )
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+            let result = retry_with_backoff(
+                || async { agent.generate(&messages, &options).await },
+                5,
+                2000,
+            )
+            .await;
+
+            assert!(result.is_ok(), "Failed with error: {:?}", result.err());
+        })
         .await;
-
-        assert!(result.is_ok(), "Failed with error: {:?}", result.err());
     }
 
     #[tokio::test]
     async fn test_agent_generate_with_markdown_input() {
-        let llm = create_test_zhipu_provider_arc();
-        let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm).unwrap();
+        run_with_test_timeout(async {
+            let llm = create_test_zhipu_provider_arc();
+            let config = AgentConfig::default();
+            let agent = BasicAgent::new(config, llm).unwrap();
 
-        let markdown_input = r#"
+            let markdown_input = r#"
 # Title
 ## Subtitle
 - Item 1
 - Item 2
 **Bold** and *italic*
 "#;
-        let messages = vec![Message::new(
-            Role::User,
-            markdown_input.to_string(),
-            None,
-            None,
-        )];
-        let options = AgentGenerateOptions::default();
-        let result = agent.generate(&messages, &options).await;
+            let messages = vec![Message::new(
+                Role::User,
+                markdown_input.to_string(),
+                None,
+                None,
+            )];
+            let options = AgentGenerateOptions::default();
+            let result = agent.generate(&messages, &options).await;
 
-        assert!(result.is_ok());
+            assert!(result.is_ok());
+        })
+        .await;
     }
 }

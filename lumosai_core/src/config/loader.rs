@@ -456,7 +456,7 @@ impl ConfigLoader {
 
         // Build nested structure
         let mut nested_value = value;
-        for part in parts.iter().rev().skip(1) {
+        for _part in parts.iter().rev().skip(1) {
             let mut inner_map = serde_json::Map::new();
             inner_map.insert(parts[parts.len() - 1].to_string(), nested_value);
             nested_value = Value::Object(inner_map);

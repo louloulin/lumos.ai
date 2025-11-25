@@ -254,6 +254,42 @@ impl BasicAgent {
         self.generator.executor().core().llm().supports_structured_output()
     }
 
+    /// 检查是否配置了错误重试执行器
+    ///
+    /// # 返回
+    ///
+    /// 如果配置了 RetryExecutor 返回 `true`，否则返回 `false`。
+    pub fn has_retry_executor(&self) -> bool {
+        self.generator.executor().retry_executor().is_some()
+    }
+
+    /// 检查是否配置了并发工具执行器
+    ///
+    /// # 返回
+    ///
+    /// 如果配置了 ConcurrentToolExecutor 返回 `true`，否则返回 `false`。
+    pub fn has_concurrent_tool_executor(&self) -> bool {
+        self.generator.executor().concurrent_tool_executor().is_some()
+    }
+
+    /// 检查是否配置了 LLM 路由器
+    ///
+    /// # 返回
+    ///
+    /// 如果配置了 LlmRouter 返回 `true`，否则返回 `false`。
+    pub fn has_llm_router(&self) -> bool {
+        self.generator.executor().llm_router().is_some()
+    }
+
+    /// 检查是否配置了工具注册表
+    ///
+    /// # 返回
+    ///
+    /// 如果配置了 ToolRegistry 返回 `true`，否则返回 `false`。
+    pub fn has_tool_registry(&self) -> bool {
+        self.generator.executor().tool_registry().is_some()
+    }
+
     /// 使用内存创建 Agent（构建器方法）
     ///
     /// # 参数
@@ -453,6 +489,17 @@ impl BasicAgent {
         new_executor = new_executor.with_concurrent_tool_executor(concurrent_executor);
         let generator = AgentGenerator::new(new_executor);
         Ok(Self { generator, base: self.base.clone() })
+    }
+}
+
+impl std::fmt::Debug for BasicAgent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BasicAgent")
+            .field("name", &self.name())
+            .field("generator", &self.generator)
+            .field("has_memory", &self.has_memory())
+            .field("tool_count", &self.tool_count())
+            .finish_non_exhaustive()
     }
 }
 
@@ -1022,6 +1069,61 @@ mod tests {
         // 测试 get_instructions_with_context
         let instructions = agent.get_instructions_with_context(&context).await.unwrap();
         assert_eq!(instructions, "You are a helpful assistant.");
+    }
+
+    #[tokio::test]
+    async fn test_basic_agent_configuration_checks() {
+        use crate::agent::error_handling::{RetryExecutor, RetryStrategy, BackoffStrategy, AgentErrorType};
+        use crate::agent::concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
+        use crate::llm::{LlmRouter, RoutingStrategy};
+        use crate::tool::ToolRegistry;
+        
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm: Arc<dyn LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let agent = BasicAgent::new(config.clone(), llm.clone()).unwrap();
+        
+        // 测试初始状态
+        assert!(!agent.has_retry_executor());
+        assert!(!agent.has_concurrent_tool_executor());
+        assert!(!agent.has_llm_router());
+        assert!(!agent.has_tool_registry());
+        
+        // 测试配置后状态
+        let strategy = RetryStrategy {
+            max_retries: 3,
+            backoff: BackoffStrategy::Exponential {
+                initial_delay_ms: 100,
+                multiplier: 2.0,
+            },
+            retryable_errors: vec![AgentErrorType::LlmError],
+            max_delay_ms: Some(5000),
+        };
+        let retry_executor = Arc::new(RetryExecutor::with_default_recovery(strategy));
+        let agent = agent.with_retry_executor(retry_executor).unwrap();
+        assert!(agent.has_retry_executor());
+        
+        let concurrent_config = ConcurrentToolExecutorConfig {
+            max_concurrency: 5,
+            preserve_order: false,
+            timeout_seconds: Some(30),
+        };
+        let concurrent_executor = Arc::new(ConcurrentToolExecutor::new(concurrent_config));
+        let agent = agent.with_concurrent_tool_executor(concurrent_executor).unwrap();
+        assert!(agent.has_concurrent_tool_executor());
+        
+        let providers = vec![llm.clone()];
+        let router = Arc::new(LlmRouter::new(providers).with_strategy(RoutingStrategy::RoundRobin));
+        let agent = agent.with_llm_router(router).unwrap();
+        assert!(agent.has_llm_router());
+        
+        let registry = Arc::new(ToolRegistry::new());
+        let agent = agent.with_tool_registry(registry).unwrap();
+        assert!(agent.has_tool_registry());
     }
 }
 

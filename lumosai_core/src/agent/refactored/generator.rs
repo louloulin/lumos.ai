@@ -179,6 +179,13 @@ impl AgentGenerator {
         messages: &[Message],
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
+        // 输入验证
+        if messages.is_empty() {
+            return Err(crate::error::Error::InvalidInput(
+                "Messages cannot be empty".to_string()
+            ));
+        }
+        
         // 1. 准备消息：从内存检索历史消息
         let mut all_messages = self.prepare_messages(messages, options).await?;
 
@@ -598,6 +605,11 @@ impl AgentGenerator {
         &self,
         tool_calls: &[crate::agent::types::ToolCall],
     ) -> Result<Vec<crate::agent::types::ToolResult>> {
+        // 输入验证：空工具调用列表直接返回
+        if tool_calls.is_empty() {
+            return Ok(Vec::new());
+        }
+        
         // 如果配置了 ConcurrentToolExecutor，使用并发执行
         if let Some(concurrent_executor) = self.executor.concurrent_tool_executor() {
             // 在同步块中获取工具并转换为 Arc<dyn Tool>，确保 MutexGuard 在 await 之前被释放
@@ -780,6 +792,13 @@ impl AgentGenerator {
         messages: &'a [Message],
         options: &'a AgentStreamOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
+        // 输入验证
+        if messages.is_empty() {
+            return Err(crate::error::Error::InvalidInput(
+                "Messages cannot be empty".to_string()
+            ));
+        }
+        
         // 将 AgentStreamOptions 转换为 AgentGenerateOptions
         let generate_options = AgentGenerateOptions {
             system_message: None,
@@ -1265,6 +1284,33 @@ mod tests {
         assert_eq!(results[0].name, "failing_tool");
         assert_eq!(results[0].status, crate::agent::types::ToolResultStatus::Error);
         assert!(results[0].result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_agent_generator_input_validation() {
+        let config = AgentConfig {
+            name: "test-agent".to_string(),
+            instructions: "You are a helpful assistant.".to_string(),
+            ..Default::default()
+        };
+        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
+
+        let core = AgentCore::new(config, llm).unwrap();
+        let executor = AgentExecutor::new(core).unwrap();
+        let generator = AgentGenerator::new(executor);
+
+        // 测试空消息验证
+        let empty_messages = vec![];
+        let options = AgentGenerateOptions::default();
+        let result = generator.generate(&empty_messages, &options).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("cannot be empty"));
+
+        // 测试空工具调用（应该返回空列表，不报错）
+        let empty_tool_calls = vec![];
+        let result = generator.execute_tool_calls(&empty_tool_calls).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
     }
 }
 

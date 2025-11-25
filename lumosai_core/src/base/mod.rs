@@ -74,7 +74,7 @@ impl BaseComponent {
     pub fn new(config: ComponentConfig) -> Self {
         let name = config.name.unwrap_or_else(|| "unnamed".to_string());
         let component = config.component;
-        let log_level = config.log_level.unwrap_or_default();
+        let _log_level = config.log_level.unwrap_or_default();
 
         Self {
             name: Some(name.clone()),

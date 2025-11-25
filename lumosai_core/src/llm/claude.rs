@@ -256,7 +256,7 @@ impl LlmProvider for ClaudeProvider {
         self.generate_stream_with_messages(&messages, options).await
     }
 
-    async fn get_embedding(&self, text: &str) -> Result<Vec<f32>> {
+    async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
         // Claude不直接支持嵌入，返回错误
         Err(LumosError::Unsupported(
             "Claude does not support embeddings".to_string(),

@@ -124,7 +124,7 @@ impl ConfigValidator {
         self.validate(config)?;
 
         // Get environment-specific settings
-        let env_settings = self.env_specific.get(environment);
+        let _env_settings = self.env_specific.get(environment);
 
         // TODO: Apply environment-specific validation rules
 

@@ -30,7 +30,6 @@ use std::sync::Arc;
 ///
 /// let core = AgentCore::new(config, llm)?;
 /// ```
-#[derive(Debug)]
 pub struct AgentCore {
     /// Agent 名称
     name: String,
@@ -104,6 +103,16 @@ impl AgentCore {
     /// 获取 Agent 配置
     pub fn config(&self) -> &AgentConfig {
         &self.config
+    }
+}
+
+impl std::fmt::Debug for AgentCore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentCore")
+            .field("name", &self.name)
+            .field("instructions", &self.instructions)
+            .field("config", &self.config)
+            .finish_non_exhaustive()
     }
 }
 

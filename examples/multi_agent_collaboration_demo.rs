@@ -5,6 +5,7 @@
 use lumosai_core::agent::{
     AgentBuilder, AgentTask, CollaborationMode, Crew, CrewAgentRole, TaskStatus,
 };
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use std::sync::Arc;
 
 #[tokio::main]

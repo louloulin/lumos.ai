@@ -1,4 +1,7 @@
 use lumosai_core::agent::{AgentConfig, BasicAgent};
+use lumosai_core::error::Result;
+use lumosai_core::llm::mock::MockLlmProvider;
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use lumosai_core::prelude::*;
 use lumosai_core::vector::MemoryVectorStorage;
 use lumosai_network::AgentNetwork;

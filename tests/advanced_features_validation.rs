@@ -7,7 +7,7 @@ use lumosai_core::agent::{
     trait_def::{Agent, AgentStatus},
     BasicAgent,
 };
-use lumosai_core::error::Error;
+use lumosai_core::error::{Error, Result};
 use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role};
 use lumosai_core::tool::{FunctionTool, ParameterSchema, ToolSchema};
 use serde_json::json;
@@ -242,7 +242,10 @@ async fn test_feature_completeness_check() -> Result<()> {
         !result.recommendations.is_empty(),
         "Should provide improvement recommendations"
     );
+    
+    println!("Feature Completeness Result: {:?}", result);
     Ok(())
+}
 
     println!("Feature Completeness Result: {:?}", result);
 

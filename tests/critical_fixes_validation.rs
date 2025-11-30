@@ -20,8 +20,6 @@ async fn test_error_handling_fixes() -> Result<()> {
         instructions: "你是一个测试助手".to_string(),
         isolation_level: None,
         tenant_id: None,
-        isolation_level: None,
-        tenant_id: None,
         ..Default::default()
     };
 

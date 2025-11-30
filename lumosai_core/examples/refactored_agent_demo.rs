@@ -134,7 +134,7 @@ async fn example3_with_memory() -> Result<(), Box<dyn std::error::Error>> {
     let memory: Arc<dyn Memory> = Arc::new(BasicMemory::new(None, None));
 
     // 使用内存创建 Agent
-    let agent = BasicAgent::with_memory(config, llm, memory.clone())?;
+    let agent = BasicAgent::new_with_memory(config, llm, memory.clone())?;
 
     // 存储第一条消息
     let message1 = Message {
@@ -180,7 +180,7 @@ async fn example4_with_tools() -> Result<(), Box<dyn std::error::Error>> {
 
     // 创建 AgentCore 和 AgentExecutor
     let core = AgentCore::new(config, llm)?;
-    let mut executor = AgentExecutor::new(core)?;
+    let executor = AgentExecutor::new(core)?;
 
     // 添加工具
     let echo_tool = create_tool(

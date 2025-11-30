@@ -1,4 +1,4 @@
-use lumosai_core::cache::{AdvancedCache, Cache, CacheConfig, CacheEvictionPolicy};
+use lumosai_core::cache::{AdvancedCache, Cache, CacheConfig};
 use lumosai_core::data_processing::{
     AdvancedDataProcessor, DataOperation, ProcessingPipeline, ProcessingRule,
 };
@@ -11,11 +11,12 @@ use tokio;
 #[tokio::test]
 async fn test_advanced_cache_basic_operations() -> Result<()> {
     let config = CacheConfig {
-        max_size: 100,
-        default_ttl: Some(Duration::from_secs(60)),
-        eviction_policy: CacheEvictionPolicy::LRU,
-        cleanup_interval: Duration::from_secs(10),
-        enable_metrics: true,
+        max_entries: 100,
+        default_ttl: Duration::from_secs(60),
+        enable_lru: true,
+        stats_interval: Duration::from_secs(10),
+        enable_warmup: false,
+        warmup_keys: Vec::new(),
     };
 
     let cache = AdvancedCache::<String>::new(config);
@@ -49,11 +50,12 @@ async fn test_advanced_cache_basic_operations() -> Result<()> {
 #[tokio::test]
 async fn test_cache_ttl_functionality() -> Result<()> {
     let config = CacheConfig {
-        max_size: 10,
-        default_ttl: Some(Duration::from_millis(100)),
-        eviction_policy: CacheEvictionPolicy::TTL,
-        cleanup_interval: Duration::from_millis(50),
-        enable_metrics: true,
+        max_entries: 10,
+        default_ttl: Duration::from_millis(100),
+        enable_lru: true,
+        stats_interval: Duration::from_millis(50),
+        enable_warmup: false,
+        warmup_keys: Vec::new(),
     };
 
     let cache = AdvancedCache::<String>::new(config);

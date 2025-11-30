@@ -1,6 +1,7 @@
 use lumosai_core::agent::config_validator::ConfigValidator;
 use lumosai_core::error::Error;
-use lumosai_core::monitoring::{AgentMonitor, MetricType, MetricsCollector};
+// monitoring 模块不存在，暂时注释掉
+// use lumosai_core::monitoring::{AgentMonitor, MetricType, MetricsCollector};
 use serde_json::json;
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

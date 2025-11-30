@@ -21,16 +21,20 @@ async fn test_agent_builder_validation() {
     let config = AgentConfig {
         name: "test-agent".to_string(),
         instructions: "You are a test agent".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm.clone());
-    // BasicAgent::new 返回 BasicAgent，不是 Result
+    let agent = BasicAgent::new(config, llm.clone()).expect("Agent创建应该成功");
+    // BasicAgent::new 返回 Result<BasicAgent, Error>
 
     // 测试空名称
     let invalid_config = AgentConfig {
         name: "".to_string(),
         instructions: "You are a test agent".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
@@ -46,10 +50,12 @@ async fn test_agent_with_invalid_model() {
     let config = AgentConfig {
         name: "test-agent".to_string(),
         instructions: "Test agent".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm)?;
 
     // 测试空响应的处理
     let messages = vec![Message::new(Role::User, "Hello".to_string(), None, None)];
@@ -69,10 +75,12 @@ async fn test_agent_memory_configuration() {
         name: "memory-agent".to_string(),
         instructions: "Agent with memory".to_string(),
         memory_config: Some(lumosai_core::memory::MemoryConfig::default()),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm)?;
 
     let messages = vec![Message::new(
         Role::User,
@@ -241,10 +249,12 @@ async fn test_agent_error_recovery() {
     let config = AgentConfig {
         name: "error-recovery".to_string(),
         instructions: "Test error recovery".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm)?;
 
     let messages1 = vec![Message::new(
         Role::User,

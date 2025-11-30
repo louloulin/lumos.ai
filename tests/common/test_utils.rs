@@ -17,7 +17,7 @@ impl TestUtils {
             instructions: "Test agent".to_string(),
             ..Default::default()
         };
-        Ok(BasicAgent::new(config, llm))
+        BasicAgent::new(config, llm)
     }
 
     /// 创建带自定义响应的测试Agent
@@ -31,7 +31,7 @@ impl TestUtils {
             instructions: "Test agent with custom responses".to_string(),
             ..Default::default()
         };
-        Ok(BasicAgent::new(config, llm))
+        BasicAgent::new(config, llm)
     }
 
     /// 创建测试用RAG系统

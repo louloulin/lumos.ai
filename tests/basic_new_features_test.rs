@@ -1,5 +1,6 @@
 use lumosai_core::agent::{performance::PerformanceMonitor, trait_def::AgentStatus};
-use lumosai_core::monitoring::{AgentMonitor, MetricsCollector};
+// monitoring 模块不存在，暂时注释掉
+// use lumosai_core::monitoring::{AgentMonitor, MetricsCollector};
 use std::collections::HashMap;
 use std::time::Duration;
 

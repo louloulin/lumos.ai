@@ -166,6 +166,8 @@ async fn test_audio_processing() -> std::result::Result<(), Box<dyn std::error::
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
     let audio_agent = BasicAgent::new(audio_agent_config, Arc::new(llm))?;
@@ -257,6 +259,8 @@ async fn test_multimodal_understanding() -> std::result::Result<(), Box<dyn std:
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
     let multimodal_agent = BasicAgent::new(multimodal_agent_config, Arc::new(llm))?;
@@ -351,6 +355,8 @@ async fn test_multimodal_generation() -> std::result::Result<(), Box<dyn std::er
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
     let generation_agent = BasicAgent::new(generation_agent_config, Arc::new(llm))?;
@@ -445,6 +451,8 @@ async fn test_cross_modal_conversion() -> std::result::Result<(), Box<dyn std::e
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
     let conversion_agent = BasicAgent::new(conversion_agent_config, Arc::new(llm))?;

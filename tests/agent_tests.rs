@@ -43,7 +43,7 @@ async fn test_agent_builder_validation() {
 }
 
 #[tokio::test]
-async fn test_agent_with_invalid_model() {
+async fn test_agent_with_invalid_model() -> Result<()> {
     // 测试无效模型配置的错误处理
     let llm = create_test_zhipu_provider_arc(); // 空响应
 
@@ -63,10 +63,11 @@ async fn test_agent_with_invalid_model() {
     let result = agent.generate(&messages, &options).await;
     // 应该优雅地处理空响应
     assert!(result.is_ok() || result.is_err());
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_agent_memory_configuration() {
+async fn test_agent_memory_configuration() -> Result<()> {
     // 测试不同内存配置的Agent创建
     let llm = create_test_zhipu_provider_arc();
 
@@ -91,6 +92,7 @@ async fn test_agent_memory_configuration() {
     let options = AgentGenerateOptions::default();
     let response = agent.generate(&messages, &options).await;
     assert!(response.is_ok());
+    Ok(())
 }
 
 #[tokio::test]
@@ -243,7 +245,7 @@ async fn test_agent_performance_baseline() {
 }
 
 #[tokio::test]
-async fn test_agent_error_recovery() {
+async fn test_agent_error_recovery() -> Result<()> {
     // 测试错误恢复机制
     let llm = create_test_zhipu_provider_arc(); // 空响应会导致错误
     let config = AgentConfig {
@@ -279,6 +281,7 @@ async fn test_agent_error_recovery() {
     // 至少有一个结果应该是可处理的
     assert!(result1.is_ok() || result1.is_err());
     assert!(result2.is_ok() || result2.is_err());
+    Ok(())
 }
 
 #[tokio::test]

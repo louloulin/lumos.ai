@@ -3,9 +3,9 @@
 //! 这个模块定义了 AgentExecutor，负责管理 Agent 的工具和内存。
 //! 这是 BasicAgent 重构的第二步，将工具和内存管理从 BasicAgent 中分离出来。
 
-use crate::agent::refactored::core::AgentCore;
 use crate::agent::concurrent_tool_executor::ConcurrentToolExecutor;
 use crate::agent::error_handling::RetryExecutor;
+use crate::agent::refactored::core::AgentCore;
 use crate::error::Result;
 use crate::llm::LlmRouter;
 use crate::memory::{create_working_memory, Memory, WorkingMemory};
@@ -135,9 +135,10 @@ impl AgentExecutor {
     ///
     /// 返回 `Result<()>`，如果添加失败则返回错误。
     pub fn add_tool(&self, tool: Box<dyn Tool>) -> Result<()> {
-        let mut tools = self.tools.lock().map_err(|_| {
-            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
-        })?;
+        let mut tools = self
+            .tools
+            .lock()
+            .map_err(|_| crate::error::Error::Internal("Failed to lock tools mutex".to_string()))?;
         tools.insert(tool.id().to_string(), tool);
         Ok(())
     }
@@ -152,16 +153,18 @@ impl AgentExecutor {
     ///
     /// 返回 `Result<()>`，如果工具不存在则返回错误。
     pub fn remove_tool(&self, tool_name: &str) -> Result<()> {
-        let mut tools = self.tools.lock().map_err(|_| {
-            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
-        })?;
-        
+        let mut tools = self
+            .tools
+            .lock()
+            .map_err(|_| crate::error::Error::Internal("Failed to lock tools mutex".to_string()))?;
+
         if !tools.contains_key(tool_name) {
-            return Err(crate::error::Error::NotFound(
-                format!("Tool '{}' not found", tool_name)
-            ));
+            return Err(crate::error::Error::NotFound(format!(
+                "Tool '{}' not found",
+                tool_name
+            )));
         }
-        
+
         tools.remove(tool_name);
         Ok(())
     }
@@ -238,9 +241,10 @@ impl AgentExecutor {
     ///
     /// 返回 `Result<()>`，如果清空失败则返回错误。
     pub fn clear_tools(&self) -> Result<()> {
-        let mut tools = self.tools.lock().map_err(|_| {
-            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
-        })?;
+        let mut tools = self
+            .tools
+            .lock()
+            .map_err(|_| crate::error::Error::Internal("Failed to lock tools mutex".to_string()))?;
         tools.clear();
         Ok(())
     }
@@ -255,14 +259,15 @@ impl AgentExecutor {
     ///
     /// 返回 `Result<()>`，如果添加失败则返回错误。
     pub fn add_tools(&self, tools: Vec<Box<dyn Tool>>) -> Result<()> {
-        let mut tools_map = self.tools.lock().map_err(|_| {
-            crate::error::Error::Internal("Failed to lock tools mutex".to_string())
-        })?;
-        
+        let mut tools_map = self
+            .tools
+            .lock()
+            .map_err(|_| crate::error::Error::Internal("Failed to lock tools mutex".to_string()))?;
+
         for tool in tools {
             tools_map.insert(tool.id().to_string(), tool);
         }
-        
+
         Ok(())
     }
 
@@ -397,7 +402,10 @@ impl std::fmt::Debug for AgentExecutor {
             .field("has_memory", &self.memory.is_some())
             .field("has_working_memory", &self.working_memory.is_some())
             .field("has_retry_executor", &self.retry_executor.is_some())
-            .field("has_concurrent_tool_executor", &self.concurrent_tool_executor.is_some())
+            .field(
+                "has_concurrent_tool_executor",
+                &self.concurrent_tool_executor.is_some(),
+            )
             .field("has_llm_router", &self.llm_router.is_some())
             .field("has_tool_registry", &self.tool_registry.is_some())
             .finish_non_exhaustive()
@@ -436,7 +444,7 @@ mod tests {
 
         let core = AgentCore::new(config, llm).unwrap();
         let executor = AgentExecutor::new(core).unwrap();
-        
+
         let memory = crate::memory::BasicMemory::new(None, None);
         let executor = executor.with_memory(Arc::new(memory));
         assert!(executor.memory().is_some());
@@ -444,8 +452,10 @@ mod tests {
 
     #[test]
     fn test_agent_executor_with_retry_executor() {
-        use crate::agent::error_handling::{RetryExecutor, RetryStrategy, BackoffStrategy, AgentErrorType};
-        
+        use crate::agent::error_handling::{
+            AgentErrorType, BackoffStrategy, RetryExecutor, RetryStrategy,
+        };
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -455,7 +465,7 @@ mod tests {
 
         let core = AgentCore::new(config, llm).unwrap();
         let executor = AgentExecutor::new(core).unwrap();
-        
+
         // 创建 RetryExecutor
         let strategy = RetryStrategy {
             max_retries: 3,
@@ -463,23 +473,25 @@ mod tests {
                 initial_delay_ms: 100,
                 multiplier: 2.0,
             },
-            retryable_errors: vec![
-                AgentErrorType::LlmError,
-                AgentErrorType::NetworkError,
-            ],
+            retryable_errors: vec![AgentErrorType::LlmError, AgentErrorType::NetworkError],
             max_delay_ms: Some(5000),
         };
         let retry_executor = Arc::new(RetryExecutor::with_default_recovery(strategy));
-        
+
         let executor = executor.with_retry_executor(retry_executor.clone());
         assert!(executor.retry_executor().is_some());
-        assert!(Arc::ptr_eq(&executor.retry_executor().unwrap(), &retry_executor));
+        assert!(Arc::ptr_eq(
+            &executor.retry_executor().unwrap(),
+            &retry_executor
+        ));
     }
 
     #[test]
     fn test_agent_executor_with_concurrent_tool_executor() {
-        use crate::agent::concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
-        
+        use crate::agent::concurrent_tool_executor::{
+            ConcurrentToolExecutor, ConcurrentToolExecutorConfig,
+        };
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -489,7 +501,7 @@ mod tests {
 
         let core = AgentCore::new(config, llm).unwrap();
         let executor = AgentExecutor::new(core).unwrap();
-        
+
         // 创建 ConcurrentToolExecutor
         let concurrent_config = ConcurrentToolExecutorConfig {
             max_concurrency: 5,
@@ -497,16 +509,19 @@ mod tests {
             timeout_seconds: Some(30),
         };
         let concurrent_executor = Arc::new(ConcurrentToolExecutor::new(concurrent_config));
-        
+
         let executor = executor.with_concurrent_tool_executor(concurrent_executor.clone());
         assert!(executor.concurrent_tool_executor().is_some());
-        assert!(Arc::ptr_eq(&executor.concurrent_tool_executor().unwrap(), &concurrent_executor));
+        assert!(Arc::ptr_eq(
+            &executor.concurrent_tool_executor().unwrap(),
+            &concurrent_executor
+        ));
     }
 
     #[test]
     fn test_agent_executor_with_llm_router() {
         use crate::llm::{LlmRouter, RoutingStrategy};
-        
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -516,13 +531,15 @@ mod tests {
 
         let core = AgentCore::new(config, llm).unwrap();
         let executor = AgentExecutor::new(core).unwrap();
-        
+
         // 创建 LlmRouter
-        let provider1: Arc<dyn crate::llm::LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Response 1".to_string()]));
-        let provider2: Arc<dyn crate::llm::LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Response 2".to_string()]));
+        let provider1: Arc<dyn crate::llm::LlmProvider> =
+            Arc::new(MockLlmProvider::new(vec!["Response 1".to_string()]));
+        let provider2: Arc<dyn crate::llm::LlmProvider> =
+            Arc::new(MockLlmProvider::new(vec!["Response 2".to_string()]));
         let providers = vec![provider1, provider2];
         let router = Arc::new(LlmRouter::new(providers).with_strategy(RoutingStrategy::RoundRobin));
-        
+
         let executor = executor.with_llm_router(router.clone());
         assert!(executor.llm_router().is_some());
         assert!(Arc::ptr_eq(&executor.llm_router().unwrap(), &router));
@@ -531,7 +548,7 @@ mod tests {
     #[test]
     fn test_agent_executor_with_tool_registry() {
         use crate::tool::ToolRegistry;
-        
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -541,10 +558,10 @@ mod tests {
 
         let core = AgentCore::new(config, llm).unwrap();
         let executor = AgentExecutor::new(core).unwrap();
-        
+
         // 创建 ToolRegistry
         let registry = Arc::new(ToolRegistry::new());
-        
+
         let executor = executor.with_tool_registry(registry.clone());
         assert!(executor.tool_registry().is_some());
         assert!(Arc::ptr_eq(&executor.tool_registry().unwrap(), &registry));
@@ -553,7 +570,7 @@ mod tests {
     #[test]
     fn test_agent_executor_tool_management() {
         use crate::tool::create_tool;
-        
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -576,29 +593,30 @@ mod tests {
                     .unwrap_or("No message");
                 Ok(serde_json::json!({"echo": message}))
             },
-        ).unwrap();
+        )
+        .unwrap();
 
         executor.add_tool(Box::new(echo_tool)).unwrap();
-        
+
         // 测试列出工具
         let tools = executor.list_tools();
         assert_eq!(tools.len(), 1);
         assert!(tools.contains(&"echo".to_string()));
-        
+
         // 测试检查工具是否存在
         assert!(executor.has_tool("echo"));
         assert!(!executor.has_tool("nonexistent"));
-        
+
         // 测试获取工具
         let tool = executor.get_tool("echo");
         assert!(tool.is_some());
         assert_eq!(tool.unwrap().id(), "echo");
-        
+
         // 测试移除工具
         executor.remove_tool("echo").unwrap();
         assert!(!executor.has_tool("echo"));
         assert_eq!(executor.list_tools().len(), 0);
-        
+
         // 测试移除不存在的工具
         let result = executor.remove_tool("nonexistent");
         assert!(result.is_err());
@@ -607,7 +625,7 @@ mod tests {
     #[test]
     fn test_agent_executor_tool_utilities() {
         use crate::tool::create_tool;
-        
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -634,29 +652,28 @@ mod tests {
                     .unwrap_or("No message");
                 Ok(serde_json::json!({"echo": message}))
             },
-        ).unwrap();
+        )
+        .unwrap();
 
         executor.add_tool(Box::new(echo_tool)).unwrap();
-        
+
         // 测试工具数量
         assert_eq!(executor.tool_count(), 1);
         assert!(executor.has_tools());
 
         // 测试批量添加工具
-        let tool1 = create_tool(
-            "tool1",
-            "Tool 1",
-            vec![],
-            |_params| Ok(serde_json::json!({"result": "tool1"})),
-        ).unwrap();
-        let tool2 = create_tool(
-            "tool2",
-            "Tool 2",
-            vec![],
-            |_params| Ok(serde_json::json!({"result": "tool2"})),
-        ).unwrap();
+        let tool1 = create_tool("tool1", "Tool 1", vec![], |_params| {
+            Ok(serde_json::json!({"result": "tool1"}))
+        })
+        .unwrap();
+        let tool2 = create_tool("tool2", "Tool 2", vec![], |_params| {
+            Ok(serde_json::json!({"result": "tool2"}))
+        })
+        .unwrap();
 
-        executor.add_tools(vec![Box::new(tool1), Box::new(tool2)]).unwrap();
+        executor
+            .add_tools(vec![Box::new(tool1), Box::new(tool2)])
+            .unwrap();
         assert_eq!(executor.tool_count(), 3);
 
         // 测试清空工具
@@ -665,4 +682,3 @@ mod tests {
         assert!(!executor.has_tools());
     }
 }
-

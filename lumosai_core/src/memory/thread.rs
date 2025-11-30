@@ -436,10 +436,7 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
     async fn update_thread(&self, thread: &MemoryThread) -> Result<MemoryThread> {
         let mut threads = self.threads.write().await;
         if !threads.contains_key(&thread.id) {
-            return Err(Error::NotFound(format!(
-                "Thread {} not found",
-                thread.id
-            )));
+            return Err(Error::NotFound(format!("Thread {} not found", thread.id)));
         }
         let mut updated = thread.clone();
         updated.updated_at = Utc::now();
@@ -476,12 +473,7 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
         let threads = self.threads.read().await;
         Ok(threads
             .values()
-            .filter(|thread| {
-                thread
-                    .agent_id
-                    .as_ref()
-                    .is_some_and(|aid| aid == agent_id)
-            })
+            .filter(|thread| thread.agent_id.as_ref().is_some_and(|aid| aid == agent_id))
             .cloned()
             .collect())
     }
@@ -579,11 +571,7 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
         for stored_messages in messages.values() {
             for stored in stored_messages {
                 if !query_lower.is_empty()
-                    && !stored
-                        .message
-                        .content
-                        .to_lowercase()
-                        .contains(&query_lower)
+                    && !stored.message.content.to_lowercase().contains(&query_lower)
                 {
                     continue;
                 }
@@ -624,9 +612,11 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
         for stored in stored_messages {
             message_count += 1;
             size_bytes += stored.message.content.len();
-            last_message_at = Some(last_message_at.map_or(stored.timestamp, |current: DateTime<Utc>| {
-                current.max(stored.timestamp)
-            }));
+            last_message_at = Some(
+                last_message_at.map_or(stored.timestamp, |current: DateTime<Utc>| {
+                    current.max(stored.timestamp)
+                }),
+            );
 
             match stored.message.role {
                 crate::llm::Role::User => user_count += 1,
@@ -908,9 +898,7 @@ mod tests {
         let fetched = storage.get_thread(&created.id).await?;
         assert!(fetched.is_some());
 
-        let by_resource = storage
-            .list_threads_by_resource("resource-1")
-            .await?;
+        let by_resource = storage.list_threads_by_resource("resource-1").await?;
         assert_eq!(by_resource.len(), 1);
 
         let updated = MemoryThread {
@@ -942,10 +930,7 @@ mod tests {
         let user_message = Message {
             role: Role::User,
             content: "Hello assistant".to_string(),
-            metadata: Some(HashMap::from([(
-                "topic".to_string(),
-                json!("greeting"),
-            )])),
+            metadata: Some(HashMap::from([("topic".to_string(), json!("greeting"))])),
             name: None,
         };
         storage.add_message(&thread.id, &user_message).await?;

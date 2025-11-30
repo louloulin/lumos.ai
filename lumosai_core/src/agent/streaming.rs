@@ -298,7 +298,7 @@ impl<T: Agent> StreamingAgent<T> {
                             Ok(chunk) => {
                                 if !chunk.is_empty() {
                                     accumulated_response.push_str(&chunk);
-                                    
+
                                     // 立即发送每个chunk，真实流式
                                     yield Ok(AgentEvent::TextDelta {
                                         delta: chunk,
@@ -393,9 +393,9 @@ impl<T: Agent> StreamingAgent<T> {
         >,
         Box<dyn std::error::Error + Send + Sync>,
     > {
-        use tracing::info;
         use crate::llm::Role;
-        
+        use tracing::info;
+
         let step_id = Uuid::new_v4().to_string();
         let mut messages_vec = messages.to_vec();
         let options_clone = options.clone();
@@ -411,7 +411,11 @@ impl<T: Agent> StreamingAgent<T> {
                 .map(|m| m.content.clone());
 
             if let Some(ref query) = user_query {
-                info!("   🔍 Semantic search query: '{}' (length: {} chars)", query, query.len());
+                info!(
+                    "   🔍 Semantic search query: '{}' (length: {} chars)",
+                    query,
+                    query.len()
+                );
             } else {
                 info!("   ℹ️  No user query found, using history mode");
             }
@@ -428,8 +432,11 @@ impl<T: Agent> StreamingAgent<T> {
 
             match memory.retrieve(&memory_config).await {
                 Ok(historical) if !historical.is_empty() => {
-                    info!("   ✅ Retrieved {} memories from memory backend", historical.len());
-                    
+                    info!(
+                        "   ✅ Retrieved {} memories from memory backend",
+                        historical.len()
+                    );
+
                     // 创建一个memory context提示，让LLM知道这些是相关记忆
                     let memory_context = Message {
                         role: Role::System,
@@ -440,7 +447,7 @@ impl<T: Agent> StreamingAgent<T> {
                         metadata: None,
                         name: None,
                     };
-                    
+
                     for (idx, msg) in historical.iter().enumerate() {
                         // ⭐ 安全截断：按字符数避免UTF-8边界错误
                         let preview = if msg.content.chars().count() > 80 {
@@ -450,21 +457,27 @@ impl<T: Agent> StreamingAgent<T> {
                         };
                         info!("      {}. [{:?}] {}", idx + 1, msg.role, preview);
                     }
-                    
+
                     // 插入记忆：System提示 -> 历史记忆 -> 当前消息
                     let mut final_messages = vec![memory_context];
                     final_messages.extend(historical);
                     final_messages.extend(messages_vec);
                     messages_vec = final_messages;
-                    
-                    info!("   📝 Total messages after memory injection: {}", messages_vec.len());
+
+                    info!(
+                        "   📝 Total messages after memory injection: {}",
+                        messages_vec.len()
+                    );
                     info!("   🎯 Memory context injected to guide LLM");
                 }
                 Ok(_) => {
                     info!("   ℹ️  No historical memories found - responding without context");
                 }
                 Err(e) => {
-                    info!("   ⚠️  Memory retrieve failed: {} - continuing without memory", e);
+                    info!(
+                        "   ⚠️  Memory retrieve failed: {} - continuing without memory",
+                        e
+                    );
                 }
             }
         } else {
@@ -476,11 +489,16 @@ impl<T: Agent> StreamingAgent<T> {
         let text_buffer_size = self.config.text_buffer_size;
         let text_delta_delay_ms = self.config.text_delta_delay_ms;
         let llm_options = options_clone.llm_options.clone();
-        
+
         // ⭐ 修复：使用完整messages构建prompt，而不是只用最后一条
-        let formatted_messages = self.base_agent.format_messages(&messages_vec, &options_clone);
-        info!("   📤 Calling LLM with {} formatted messages", formatted_messages.len());
-        
+        let formatted_messages = self
+            .base_agent
+            .format_messages(&messages_vec, &options_clone);
+        info!(
+            "   📤 Calling LLM with {} formatted messages",
+            formatted_messages.len()
+        );
+
         let prompt = formatted_messages
             .iter()
             .map(|msg| format!("{:?}: {}", msg.role, msg.content))
@@ -498,7 +516,7 @@ impl<T: Agent> StreamingAgent<T> {
                             Ok(chunk) => {
                                 if !chunk.is_empty() {
                                     accumulated_response.push_str(&chunk);
-                                    
+
                                     // 立即发送每个chunk，真实流式
                                     yield Ok(AgentEvent::TextDelta {
                                         delta: chunk,

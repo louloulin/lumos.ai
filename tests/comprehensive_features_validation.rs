@@ -277,14 +277,14 @@ async fn test_custom_validation_rules() {
                 if s.starts_with("custom_") {
                     Ok(())
                 } else {
-                    Err(Error::Validation(
+                    Err(Error::ValidationError(
                         "Custom field must start with 'custom_'".to_string(),
                     ))
                 }
             } else {
-                Err(Error::Validation(
+                Err(Error::ValidationError(
                     "Custom field must be a string".to_string(),
-                ))
+                    ))
             }
         }),
     );

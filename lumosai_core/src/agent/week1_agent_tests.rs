@@ -14,9 +14,9 @@
 #[cfg(test)]
 mod tests {
     use crate::agent::config::AgentConfig;
-    use crate::agent::BasicAgent;
     use crate::agent::trait_def::{Agent, AgentStatus};
     use crate::agent::types::AgentGenerateOptions;
+    use crate::agent::BasicAgent;
     use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     use crate::llm::{Message, Role};
     use std::future::Future;
@@ -125,11 +125,18 @@ mod tests {
         let result = BasicAgent::new(config, llm);
 
         // 空名称现在应被拒绝并返回 InvalidInput 错误
-        assert!(result.is_err(), "Expected BasicAgent::new to fail with empty name");
+        assert!(
+            result.is_err(),
+            "Expected BasicAgent::new to fail with empty name"
+        );
         if let Err(err) = result {
             match err {
                 crate::error::Error::InvalidInput(msg) => {
-                    assert!(msg.to_lowercase().contains("name"), "Unexpected error message: {}", msg);
+                    assert!(
+                        msg.to_lowercase().contains("name"),
+                        "Unexpected error message: {}",
+                        msg
+                    );
                 }
                 other => panic!("Unexpected error type: {:?}", other),
             }

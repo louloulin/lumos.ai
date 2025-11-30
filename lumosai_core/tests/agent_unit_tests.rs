@@ -13,10 +13,7 @@ use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
 use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use std::sync::Arc;
 
-fn build_agent(
-    config: AgentConfig,
-    llm: Arc<dyn lumosai_core::llm::LlmProvider>,
-) -> BasicAgent {
+fn build_agent(config: AgentConfig, llm: Arc<dyn lumosai_core::llm::LlmProvider>) -> BasicAgent {
     BasicAgent::new(config, llm).expect("Failed to create BasicAgent")
 }
 

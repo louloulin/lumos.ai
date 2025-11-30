@@ -8,13 +8,16 @@
 //! 这是重构后的 BasicAgent，将原来 2300+ 行的单体实现拆分为多个专门的组件。
 
 use crate::agent::refactored::{AgentCore, AgentExecutor, AgentGenerator};
-use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStreamOptions, AgentStep, RuntimeContext, ToolCall};
+use crate::agent::types::{
+    AgentGenerateOptions, AgentGenerateResult, AgentStep, AgentStreamOptions, RuntimeContext,
+    ToolCall,
+};
 use crate::agent::{Agent, AgentConfig};
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::compat::{Component, VoiceProvider};
 use crate::error::{Error, Result};
 use crate::llm::{LlmProvider, Message, Role};
-use crate::memory::{Memory, working::WorkingMemory};
+use crate::memory::{working::WorkingMemory, Memory};
 use crate::tool::Tool;
 use crate::workflow::Workflow;
 use async_trait::async_trait;
@@ -80,7 +83,7 @@ impl BasicAgent {
         let core = AgentCore::new(config.clone(), llm)?;
         let executor = AgentExecutor::new(core)?;
         let generator = AgentGenerator::new(executor);
-        
+
         let component_config = ComponentConfig {
             name: Some(config.name.clone()),
             component: Component::Agent,
@@ -120,7 +123,7 @@ impl BasicAgent {
         let core = AgentCore::new(config.clone(), llm)?;
         let executor = AgentExecutor::new(core)?.with_memory(memory);
         let generator = AgentGenerator::new(executor);
-        
+
         let component_config = ComponentConfig {
             name: Some(config.name.clone()),
             component: Component::Agent,
@@ -251,7 +254,11 @@ impl BasicAgent {
 
     /// Check if LLM supports structured output
     pub fn supports_structured_output(&self) -> bool {
-        self.generator.executor().core().llm().supports_structured_output()
+        self.generator
+            .executor()
+            .core()
+            .llm()
+            .supports_structured_output()
     }
 
     /// 检查是否配置了错误重试执行器
@@ -269,7 +276,10 @@ impl BasicAgent {
     ///
     /// 如果配置了 ConcurrentToolExecutor 返回 `true`，否则返回 `false`。
     pub fn has_concurrent_tool_executor(&self) -> bool {
-        self.generator.executor().concurrent_tool_executor().is_some()
+        self.generator
+            .executor()
+            .concurrent_tool_executor()
+            .is_some()
     }
 
     /// 检查是否配置了 LLM 路由器
@@ -308,11 +318,11 @@ impl BasicAgent {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();
-        
+
         let new_core = AgentCore::new(config, llm)?;
         let mut new_executor = AgentExecutor::new(new_core)?;
         new_executor = new_executor.with_memory(memory);
-        
+
         // 复制现有配置
         if let Some(retry_executor) = self.generator.executor().retry_executor() {
             new_executor = new_executor.with_retry_executor(retry_executor);
@@ -326,16 +336,16 @@ impl BasicAgent {
         if let Some(tool_registry) = self.generator.executor().tool_registry() {
             new_executor = new_executor.with_tool_registry(tool_registry);
         }
-        
+
         let new_generator = AgentGenerator::new(new_executor);
-        
+
         let component_config = ComponentConfig {
             name: Some(self.base.name().unwrap_or("agent").to_string()),
             component: Component::Agent,
             log_level: None,
         };
         let base = BaseComponent::new(component_config);
-        
+
         Ok(Self {
             generator: new_generator,
             base,
@@ -360,10 +370,10 @@ impl BasicAgent {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();
-        
+
         let new_core = AgentCore::new(config, llm)?;
         let mut new_executor = AgentExecutor::new(new_core)?;
-        
+
         // 复制现有配置
         if let Some(memory) = self.generator.executor().memory() {
             new_executor = new_executor.with_memory(memory);
@@ -377,10 +387,13 @@ impl BasicAgent {
         if let Some(llm_router) = self.generator.executor().llm_router() {
             new_executor = new_executor.with_llm_router(llm_router);
         }
-        
+
         new_executor = new_executor.with_tool_registry(registry);
         let generator = AgentGenerator::new(new_executor);
-        Ok(Self { generator, base: self.base.clone() })
+        Ok(Self {
+            generator,
+            base: self.base.clone(),
+        })
     }
 
     /// 使用 LLM 路由器创建 Agent（构建器方法）
@@ -396,10 +409,10 @@ impl BasicAgent {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();
-        
+
         let new_core = AgentCore::new(config, llm)?;
         let mut new_executor = AgentExecutor::new(new_core)?;
-        
+
         // 复制现有配置
         if let Some(memory) = self.generator.executor().memory() {
             new_executor = new_executor.with_memory(memory);
@@ -413,10 +426,13 @@ impl BasicAgent {
         if let Some(tool_registry) = self.generator.executor().tool_registry() {
             new_executor = new_executor.with_tool_registry(tool_registry);
         }
-        
+
         new_executor = new_executor.with_llm_router(router);
         let generator = AgentGenerator::new(new_executor);
-        Ok(Self { generator, base: self.base.clone() })
+        Ok(Self {
+            generator,
+            base: self.base.clone(),
+        })
     }
 
     /// 使用重试执行器创建 Agent（构建器方法）
@@ -428,14 +444,17 @@ impl BasicAgent {
     /// # 返回
     ///
     /// 返回新的 `BasicAgent` 实例，包含重试执行器。
-    pub fn with_retry_executor(self, retry_executor: Arc<crate::agent::error_handling::RetryExecutor>) -> Result<Self> {
+    pub fn with_retry_executor(
+        self,
+        retry_executor: Arc<crate::agent::error_handling::RetryExecutor>,
+    ) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();
-        
+
         let new_core = AgentCore::new(config, llm)?;
         let mut new_executor = AgentExecutor::new(new_core)?;
-        
+
         // 复制现有配置
         if let Some(memory) = self.generator.executor().memory() {
             new_executor = new_executor.with_memory(memory);
@@ -449,10 +468,13 @@ impl BasicAgent {
         if let Some(tool_registry) = self.generator.executor().tool_registry() {
             new_executor = new_executor.with_tool_registry(tool_registry);
         }
-        
+
         new_executor = new_executor.with_retry_executor(retry_executor);
         let generator = AgentGenerator::new(new_executor);
-        Ok(Self { generator, base: self.base.clone() })
+        Ok(Self {
+            generator,
+            base: self.base.clone(),
+        })
     }
 
     /// 使用并发工具执行器创建 Agent（构建器方法）
@@ -464,14 +486,17 @@ impl BasicAgent {
     /// # 返回
     ///
     /// 返回新的 `BasicAgent` 实例，包含并发工具执行器。
-    pub fn with_concurrent_tool_executor(self, concurrent_executor: Arc<crate::agent::concurrent_tool_executor::ConcurrentToolExecutor>) -> Result<Self> {
+    pub fn with_concurrent_tool_executor(
+        self,
+        concurrent_executor: Arc<crate::agent::concurrent_tool_executor::ConcurrentToolExecutor>,
+    ) -> Result<Self> {
         let core = self.generator.executor().core();
         let config = core.config().clone();
         let llm = core.llm().clone();
-        
+
         let new_core = AgentCore::new(config, llm)?;
         let mut new_executor = AgentExecutor::new(new_core)?;
-        
+
         // 复制现有配置
         if let Some(memory) = self.generator.executor().memory() {
             new_executor = new_executor.with_memory(memory);
@@ -485,10 +510,13 @@ impl BasicAgent {
         if let Some(tool_registry) = self.generator.executor().tool_registry() {
             new_executor = new_executor.with_tool_registry(tool_registry);
         }
-        
+
         new_executor = new_executor.with_concurrent_tool_executor(concurrent_executor);
         let generator = AgentGenerator::new(new_executor);
-        Ok(Self { generator, base: self.base.clone() })
+        Ok(Self {
+            generator,
+            base: self.base.clone(),
+        })
     }
 }
 
@@ -544,11 +572,13 @@ impl Agent for BasicAgent {
     fn set_instructions(&mut self, instructions: String) {
         // 更新 core 中的 instructions
         // 通过 generator -> executor -> core 的链式访问来更新
-        self.generator_mut().executor_mut().core_mut().set_instructions(instructions.clone());
-        self.base.logger().debug(&format!(
-            "Instructions updated for agent '{}'",
-            self.name()
-        ));
+        self.generator_mut()
+            .executor_mut()
+            .core_mut()
+            .set_instructions(instructions.clone());
+        self.base
+            .logger()
+            .debug(&format!("Instructions updated for agent '{}'", self.name()));
     }
 
     fn get_llm(&self) -> Arc<dyn LlmProvider> {
@@ -620,7 +650,8 @@ impl Agent for BasicAgent {
         tools.insert(tool_name.clone(), tool);
         self.base.logger().debug(&format!(
             "Tool '{}' added to agent '{}'",
-            tool_name, self.name()
+            tool_name,
+            self.name()
         ));
 
         Ok(())
@@ -640,7 +671,8 @@ impl Agent for BasicAgent {
         tools.remove(tool_name);
         self.base.logger().debug(&format!(
             "Tool '{}' removed from agent '{}'",
-            tool_name, self.name()
+            tool_name,
+            self.name()
         ));
 
         Ok(())
@@ -680,12 +712,13 @@ impl Agent for BasicAgent {
 
     async fn execute_tool_call(&self, tool_call: &ToolCall) -> Result<Value> {
         let tool_name = &tool_call.name;
-        let tool = self.get_tool(tool_name).ok_or_else(|| {
-            Error::NotFound(format!("Tool '{tool_name}' not found"))
-        })?;
+        let tool = self
+            .get_tool(tool_name)
+            .ok_or_else(|| Error::NotFound(format!("Tool '{tool_name}' not found")))?;
 
         // Convert HashMap to Value
-        let args = serde_json::to_value(&tool_call.arguments).unwrap_or_else(|_| serde_json::json!({}));
+        let args =
+            serde_json::to_value(&tool_call.arguments).unwrap_or_else(|_| serde_json::json!({}));
         let context = crate::tool::ToolExecutionContext::default();
         let options = crate::tool::ToolExecutionOptions::default();
         let result = tool.execute(args, context, &options).await?;
@@ -693,7 +726,11 @@ impl Agent for BasicAgent {
         Ok(result)
     }
 
-    fn format_messages(&self, messages: &[Message], _options: &AgentGenerateOptions) -> Vec<Message> {
+    fn format_messages(
+        &self,
+        messages: &[Message],
+        _options: &AgentGenerateOptions,
+    ) -> Vec<Message> {
         // 简化实现：直接返回消息
         messages.to_vec()
     }
@@ -792,7 +829,9 @@ impl Agent for BasicAgent {
 
     fn set_voice(&mut self, _voice: Arc<dyn VoiceProvider>) {
         // BasicAgent 目前不支持 voice
-        self.base.logger().warn("Voice provider setting is not supported by BasicAgent");
+        self.base
+            .logger()
+            .warn("Voice provider setting is not supported by BasicAgent");
     }
 
     async fn get_memory_value(&self, _key: &str) -> Result<Option<Value>> {
@@ -842,7 +881,9 @@ mod tests {
             instructions: "You are a helpful assistant.".to_string(),
             ..Default::default()
         };
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you?".to_string()]));
+        let llm = Arc::new(MockLlmProvider::new(vec![
+            "Hello! How can I help you?".to_string()
+        ]));
 
         let agent = BasicAgent::new(config, llm).unwrap();
 
@@ -864,7 +905,9 @@ mod tests {
             instructions: "You are a helpful assistant.".to_string(),
             ..Default::default()
         };
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you? This is a longer response.".to_string()]));
+        let llm = Arc::new(MockLlmProvider::new(vec![
+            "Hello! How can I help you? This is a longer response.".to_string(),
+        ]));
 
         let agent = BasicAgent::new(config, llm).unwrap();
 
@@ -913,7 +956,8 @@ mod tests {
                     .unwrap_or("No message");
                 Ok(serde_json::json!({"echo": message}))
             },
-        ).unwrap();
+        )
+        .unwrap();
 
         // 测试 add_tool（现在不需要 &mut）
         agent.add_tool(Box::new(echo_tool)).unwrap();
@@ -926,11 +970,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_basic_agent_builder_methods() {
-        use crate::agent::error_handling::{RetryExecutor, RetryStrategy, BackoffStrategy, AgentErrorType};
-        use crate::agent::concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
+        use crate::agent::concurrent_tool_executor::{
+            ConcurrentToolExecutor, ConcurrentToolExecutorConfig,
+        };
+        use crate::agent::error_handling::{
+            AgentErrorType, BackoffStrategy, RetryExecutor, RetryStrategy,
+        };
         use crate::llm::{LlmRouter, RoutingStrategy};
         use crate::tool::ToolRegistry;
-        
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -939,7 +987,7 @@ mod tests {
         let llm: Arc<dyn LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
         let agent = BasicAgent::new(config.clone(), llm.clone()).unwrap();
-        
+
         // 测试 with_retry_executor
         let strategy = RetryStrategy {
             max_retries: 3,
@@ -952,7 +1000,7 @@ mod tests {
         };
         let retry_executor = Arc::new(RetryExecutor::with_default_recovery(strategy));
         let agent = agent.with_retry_executor(retry_executor).unwrap();
-        
+
         // 测试 with_concurrent_tool_executor
         let concurrent_config = ConcurrentToolExecutorConfig {
             max_concurrency: 5,
@@ -960,20 +1008,26 @@ mod tests {
             timeout_seconds: Some(30),
         };
         let concurrent_executor = Arc::new(ConcurrentToolExecutor::new(concurrent_config));
-        let agent = agent.with_concurrent_tool_executor(concurrent_executor).unwrap();
-        
+        let agent = agent
+            .with_concurrent_tool_executor(concurrent_executor)
+            .unwrap();
+
         // 测试 with_llm_router
         let providers = vec![llm.clone()];
         let router = Arc::new(LlmRouter::new(providers).with_strategy(RoutingStrategy::RoundRobin));
         let agent = agent.with_llm_router(router).unwrap();
-        
+
         // 测试 with_tool_registry
         let registry = Arc::new(ToolRegistry::new());
         let agent = agent.with_tool_registry(registry).unwrap();
-        
+
         // 验证所有配置都已应用
         assert!(agent.generator.executor().retry_executor().is_some());
-        assert!(agent.generator.executor().concurrent_tool_executor().is_some());
+        assert!(agent
+            .generator
+            .executor()
+            .concurrent_tool_executor()
+            .is_some());
         assert!(agent.generator.executor().llm_router().is_some());
         assert!(agent.generator.executor().tool_registry().is_some());
     }
@@ -981,7 +1035,7 @@ mod tests {
     #[tokio::test]
     async fn test_basic_agent_tool_management() {
         use crate::tool::create_tool;
-        
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -1003,22 +1057,23 @@ mod tests {
                     .unwrap_or("No message");
                 Ok(serde_json::json!({"echo": message}))
             },
-        ).unwrap();
+        )
+        .unwrap();
 
         agent.add_tool(Box::new(echo_tool)).unwrap();
-        
+
         // 测试列出工具
         let tools = agent.list_tools();
         assert_eq!(tools.len(), 1);
         assert!(tools.contains(&"echo".to_string()));
-        
+
         // 测试检查工具是否存在
         assert!(agent.has_tool("echo"));
         assert!(!agent.has_tool("nonexistent"));
-        
+
         // 测试获取工具数量
         assert_eq!(agent.tool_count(), 1);
-        
+
         // 测试获取工具
         let tool = agent.get_tool("echo");
         assert!(tool.is_some());
@@ -1027,9 +1082,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_basic_agent_implements_agent_trait() {
-        use crate::agent::Agent;
         use crate::agent::types::{AgentGenerateOptions, RuntimeContext};
-        
+        use crate::agent::Agent;
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -1038,14 +1093,14 @@ mod tests {
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
         let agent = BasicAgent::new(config, llm).unwrap();
-        
+
         // 测试 Agent trait 方法
         assert_eq!(agent.get_name(), "test-agent");
         assert_eq!(agent.get_instructions(), "You are a helpful assistant.");
         assert!(agent.get_llm().supports_function_calling());
         assert!(!agent.has_own_memory());
         assert_eq!(agent.get_tools().len(), 0);
-        
+
         // 测试异步方法
         let messages = vec![Message {
             role: Role::User,
@@ -1056,16 +1111,16 @@ mod tests {
         let options = AgentGenerateOptions::default();
         let result = agent.generate(&messages, &options).await.unwrap();
         assert!(!result.response.is_empty());
-        
+
         // 测试 generate_simple
         let response = agent.generate_simple("Test").await.unwrap();
         assert!(!response.is_empty());
-        
+
         // 测试 get_tools_with_context
         let context = RuntimeContext::default();
         let tools = agent.get_tools_with_context(&context).await.unwrap();
         assert_eq!(tools.len(), 0);
-        
+
         // 测试 get_instructions_with_context
         let instructions = agent.get_instructions_with_context(&context).await.unwrap();
         assert_eq!(instructions, "You are a helpful assistant.");
@@ -1073,11 +1128,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_basic_agent_configuration_checks() {
-        use crate::agent::error_handling::{RetryExecutor, RetryStrategy, BackoffStrategy, AgentErrorType};
-        use crate::agent::concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
+        use crate::agent::concurrent_tool_executor::{
+            ConcurrentToolExecutor, ConcurrentToolExecutorConfig,
+        };
+        use crate::agent::error_handling::{
+            AgentErrorType, BackoffStrategy, RetryExecutor, RetryStrategy,
+        };
         use crate::llm::{LlmRouter, RoutingStrategy};
         use crate::tool::ToolRegistry;
-        
+
         let config = AgentConfig {
             name: "test-agent".to_string(),
             instructions: "You are a helpful assistant.".to_string(),
@@ -1086,13 +1145,13 @@ mod tests {
         let llm: Arc<dyn LlmProvider> = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
 
         let agent = BasicAgent::new(config.clone(), llm.clone()).unwrap();
-        
+
         // 测试初始状态
         assert!(!agent.has_retry_executor());
         assert!(!agent.has_concurrent_tool_executor());
         assert!(!agent.has_llm_router());
         assert!(!agent.has_tool_registry());
-        
+
         // 测试配置后状态
         let strategy = RetryStrategy {
             max_retries: 3,
@@ -1106,24 +1165,25 @@ mod tests {
         let retry_executor = Arc::new(RetryExecutor::with_default_recovery(strategy));
         let agent = agent.with_retry_executor(retry_executor).unwrap();
         assert!(agent.has_retry_executor());
-        
+
         let concurrent_config = ConcurrentToolExecutorConfig {
             max_concurrency: 5,
             preserve_order: false,
             timeout_seconds: Some(30),
         };
         let concurrent_executor = Arc::new(ConcurrentToolExecutor::new(concurrent_config));
-        let agent = agent.with_concurrent_tool_executor(concurrent_executor).unwrap();
+        let agent = agent
+            .with_concurrent_tool_executor(concurrent_executor)
+            .unwrap();
         assert!(agent.has_concurrent_tool_executor());
-        
+
         let providers = vec![llm.clone()];
         let router = Arc::new(LlmRouter::new(providers).with_strategy(RoutingStrategy::RoundRobin));
         let agent = agent.with_llm_router(router).unwrap();
         assert!(agent.has_llm_router());
-        
+
         let registry = Arc::new(ToolRegistry::new());
         let agent = agent.with_tool_registry(registry).unwrap();
         assert!(agent.has_tool_registry());
     }
 }
-

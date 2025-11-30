@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tokio::sync::RwLock;
 
 /// 成本记录
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -147,10 +147,8 @@ impl CostMonitor {
         output_tokens: u32,
     ) -> Result<CostRecord, String> {
         let costs = self.provider_costs.read().await;
-        let (cost_per_1k_input, cost_per_1k_output) = costs
-            .get(&provider_name)
-            .copied()
-            .unwrap_or((0.002, 0.002)); // 默认成本
+        let (cost_per_1k_input, cost_per_1k_output) =
+            costs.get(&provider_name).copied().unwrap_or((0.002, 0.002)); // 默认成本
 
         let record = CostRecord::new(
             provider_name,
@@ -173,10 +171,7 @@ impl CostMonitor {
         total_tokens: u32,
     ) -> std::result::Result<CostRecord, String> {
         let costs = self.provider_costs.read().await;
-        let (cost_per_1k_input, _) = costs
-            .get(&provider_name)
-            .copied()
-            .unwrap_or((0.002, 0.002)); // 默认成本
+        let (cost_per_1k_input, _) = costs.get(&provider_name).copied().unwrap_or((0.002, 0.002)); // 默认成本
 
         let record = CostRecord::from_total_tokens(provider_name, total_tokens, cost_per_1k_input);
 
@@ -344,17 +339,22 @@ mod tests {
     #[tokio::test]
     async fn test_cost_monitor_basic() {
         let monitor = CostMonitor::new();
-        
+
         // 设置 provider 成本
-        monitor.set_provider_cost("openai".to_string(), 0.002, 0.002).await;
-        
+        monitor
+            .set_provider_cost("openai".to_string(), 0.002, 0.002)
+            .await;
+
         // 记录成本
-        let record = monitor.record_cost("openai".to_string(), 1000, 500).await.unwrap();
+        let record = monitor
+            .record_cost("openai".to_string(), 1000, 500)
+            .await
+            .unwrap();
         assert_eq!(record.input_tokens, 1000);
         assert_eq!(record.output_tokens, 500);
         assert_eq!(record.total_tokens, 1500);
         assert!((record.cost - 0.003).abs() < 0.0001); // 1000 * 0.002/1000 + 500 * 0.002/1000 = 0.003
-        
+
         // 获取统计
         let stats = monitor.get_total_stats().await;
         assert_eq!(stats.total_cost, record.cost);
@@ -365,20 +365,30 @@ mod tests {
     #[tokio::test]
     async fn test_cost_monitor_multiple_providers() {
         let monitor = CostMonitor::new();
-        
-        monitor.set_provider_cost("openai".to_string(), 0.002, 0.002).await;
-        monitor.set_provider_cost("anthropic".to_string(), 0.003, 0.003).await;
-        
-        monitor.record_cost("openai".to_string(), 1000, 500).await.unwrap();
-        monitor.record_cost("anthropic".to_string(), 2000, 1000).await.unwrap();
-        
+
+        monitor
+            .set_provider_cost("openai".to_string(), 0.002, 0.002)
+            .await;
+        monitor
+            .set_provider_cost("anthropic".to_string(), 0.003, 0.003)
+            .await;
+
+        monitor
+            .record_cost("openai".to_string(), 1000, 500)
+            .await
+            .unwrap();
+        monitor
+            .record_cost("anthropic".to_string(), 2000, 1000)
+            .await
+            .unwrap();
+
         let stats = monitor.get_total_stats().await;
         assert_eq!(stats.request_count, 2);
         assert_eq!(stats.by_provider.len(), 2);
-        
+
         let openai_stats = stats.by_provider.get("openai").unwrap();
         assert_eq!(openai_stats.total_tokens, 1500);
-        
+
         let anthropic_stats = stats.by_provider.get("anthropic").unwrap();
         assert_eq!(anthropic_stats.total_tokens, 3000);
     }
@@ -386,18 +396,23 @@ mod tests {
     #[tokio::test]
     async fn test_cost_monitor_time_range() {
         let monitor = CostMonitor::new();
-        
-        monitor.set_provider_cost("openai".to_string(), 0.002, 0.002).await;
-        
+
+        monitor
+            .set_provider_cost("openai".to_string(), 0.002, 0.002)
+            .await;
+
         // 记录一些成本
-        monitor.record_cost("openai".to_string(), 1000, 500).await.unwrap();
-        
+        monitor
+            .record_cost("openai".to_string(), 1000, 500)
+            .await
+            .unwrap();
+
         // 等待一秒
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        
+
         let current_time = now_timestamp();
         let future_time = current_time + 100;
-        
+
         // 获取时间范围内的统计（应该包含之前的记录）
         let stats = monitor.get_stats_in_range(0, future_time).await;
         assert_eq!(stats.request_count, 1);
@@ -406,11 +421,19 @@ mod tests {
     #[tokio::test]
     async fn test_cost_monitor_provider_stats() {
         let monitor = CostMonitor::new();
-        
-        monitor.set_provider_cost("openai".to_string(), 0.002, 0.002).await;
-        monitor.record_cost("openai".to_string(), 1000, 500).await.unwrap();
-        monitor.record_cost("openai".to_string(), 2000, 1000).await.unwrap();
-        
+
+        monitor
+            .set_provider_cost("openai".to_string(), 0.002, 0.002)
+            .await;
+        monitor
+            .record_cost("openai".to_string(), 1000, 500)
+            .await
+            .unwrap();
+        monitor
+            .record_cost("openai".to_string(), 2000, 1000)
+            .await
+            .unwrap();
+
         let stats = monitor.get_provider_stats("openai").await.unwrap();
         assert_eq!(stats.request_count, 2);
         assert_eq!(stats.total_tokens, 4500);
@@ -419,12 +442,16 @@ mod tests {
     #[tokio::test]
     async fn test_cost_monitor_simple() {
         let monitor = CostMonitor::new();
-        
-        monitor.set_provider_cost("openai".to_string(), 0.002, 0.002).await;
-        
-        let record = monitor.record_cost_simple("openai".to_string(), 1000).await.unwrap();
+
+        monitor
+            .set_provider_cost("openai".to_string(), 0.002, 0.002)
+            .await;
+
+        let record = monitor
+            .record_cost_simple("openai".to_string(), 1000)
+            .await
+            .unwrap();
         assert_eq!(record.total_tokens, 1000);
         assert!((record.cost - 0.002).abs() < 0.0001);
     }
 }
-

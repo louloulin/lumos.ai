@@ -6,8 +6,8 @@
 use std::sync::Arc;
 
 use super::builder::AgentBuilder;
-use super::BasicAgent;
 use super::trait_def::Agent;
+use super::BasicAgent;
 use crate::error::Result;
 use crate::vector::{MemoryVectorStorage, VectorStorage};
 

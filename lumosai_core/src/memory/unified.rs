@@ -450,10 +450,7 @@ impl MemoryTrait for Memory {
         self.thread_storage.clone()
     }
 
-    async fn create_thread(
-        &self,
-        params: CreateThreadParams,
-    ) -> Result<MemoryThread> {
+    async fn create_thread(&self, params: CreateThreadParams) -> Result<MemoryThread> {
         let manager = self.get_thread_manager()?;
         manager.create_thread(params).await
     }
@@ -691,10 +688,7 @@ impl Memory {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn create_thread(
-        &self,
-        params: CreateThreadParams,
-    ) -> Result<MemoryThread> {
+    pub async fn create_thread(&self, params: CreateThreadParams) -> Result<MemoryThread> {
         let manager = self.get_thread_manager()?;
         manager.create_thread(params).await
     }
@@ -775,11 +769,7 @@ impl Memory {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn delete_thread(
-        &self,
-        thread_id: &str,
-        resource_id: Option<&str>,
-    ) -> Result<()> {
+    pub async fn delete_thread(&self, thread_id: &str, resource_id: Option<&str>) -> Result<()> {
         let manager = self.get_thread_manager()?;
         manager.delete_thread(thread_id, resource_id).await
     }
@@ -949,21 +939,18 @@ pub struct SemanticMemoryConfig {
 impl Memory {
     /// 获取线程管理器（辅助方法，减少重复代码）
     fn get_thread_manager(&self) -> Result<MemoryThreadManager<Arc<dyn MemoryThreadStorage>>> {
-        let storage = self
-            .thread_storage
-            .as_ref()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Thread storage not configured. Use with_thread_storage() first.".to_string(),
-                )
-            })?;
-        Ok(MemoryThreadManager::new(storage.clone() as Arc<dyn MemoryThreadStorage>))
+        let storage = self.thread_storage.as_ref().ok_or_else(|| {
+            crate::error::Error::Configuration(
+                "Thread storage not configured. Use with_thread_storage() first.".to_string(),
+            )
+        })?;
+        Ok(MemoryThreadManager::new(
+            storage.clone() as Arc<dyn MemoryThreadStorage>
+        ))
     }
 
     async fn ensure_processors_registered(&self) -> Result<()> {
-        if self.processors.is_empty()
-            || self.processors_registered.load(Ordering::SeqCst)
-        {
+        if self.processors.is_empty() || self.processors_registered.load(Ordering::SeqCst) {
             return Ok(());
         }
 
@@ -992,7 +979,10 @@ impl Memory {
             .and_then(|meta| serde_json::to_string(meta).ok())
             .unwrap_or_default();
         let name = message.name.clone().unwrap_or_default();
-        format!("{:?}::{name}::{}::{metadata_str}", message.role, message.content)
+        format!(
+            "{:?}::{name}::{}::{metadata_str}",
+            message.role, message.content
+        )
     }
 
     fn dedup_messages(messages: Vec<Message>) -> Vec<Message> {
@@ -1288,7 +1278,11 @@ mod tests {
             let mut results = Vec::new();
             // 根据 query 过滤消息（简单的内容匹配）
             for message in messages.iter().rev() {
-                if message.content.to_lowercase().contains(&query.to_lowercase()) {
+                if message
+                    .content
+                    .to_lowercase()
+                    .contains(&query.to_lowercase())
+                {
                     results.push(SemanticSearchResult {
                         message: message.clone(),
                         score: 1.0,
@@ -1354,7 +1348,10 @@ mod tests {
 
         let recall = SemanticRecallConfig {
             top_k: 2,
-            message_range: Some(MessageRange { before: 0, after: 0 }),
+            message_range: Some(MessageRange {
+                before: 0,
+                after: 0,
+            }),
             generate_summaries: false,
             use_embeddings: true,
             max_capacity: None,
@@ -1404,7 +1401,9 @@ mod tests {
         assert_eq!(thread.title, "Unified Test Thread");
 
         // 获取线程
-        let retrieved = memory.get_thread("unified-thread", Some("user-456")).await?;
+        let retrieved = memory
+            .get_thread("unified-thread", Some("user-456"))
+            .await?;
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().title, "Unified Test Thread");
 
@@ -1426,12 +1425,18 @@ mod tests {
         assert_eq!(threads.len(), 1);
 
         // 获取统计信息
-        let stats = memory.get_thread_stats("unified-thread", Some("user-456")).await?;
+        let stats = memory
+            .get_thread_stats("unified-thread", Some("user-456"))
+            .await?;
         assert_eq!(stats.message_count, 0);
 
         // 删除线程
-        memory.delete_thread("unified-thread", Some("user-456")).await?;
-        let deleted = memory.get_thread("unified-thread", Some("user-456")).await?;
+        memory
+            .delete_thread("unified-thread", Some("user-456"))
+            .await?;
+        let deleted = memory
+            .get_thread("unified-thread", Some("user-456"))
+            .await?;
         assert!(deleted.is_none());
 
         Ok(())
@@ -1498,11 +1503,15 @@ mod tests {
         assert_eq!(threads.len(), 1);
 
         // 通过 Memory trait 获取统计信息
-        let stats = memory.get_thread_stats("trait-thread", Some("user-789")).await?;
+        let stats = memory
+            .get_thread_stats("trait-thread", Some("user-789"))
+            .await?;
         assert_eq!(stats.message_count, 0);
 
         // 通过 Memory trait 删除线程
-        memory.delete_thread("trait-thread", Some("user-789")).await?;
+        memory
+            .delete_thread("trait-thread", Some("user-789"))
+            .await?;
         let deleted = memory.get_thread("trait-thread", Some("user-789")).await?;
         assert!(deleted.is_none());
 
@@ -1516,23 +1525,25 @@ mod tests {
         // 创建带语义内存的 Hybrid Memory
         let semantic = Arc::new(MockSemanticMemory::default());
         let storage = Arc::new(InMemoryThreadStorage::new()) as Arc<dyn MemoryThreadStorage>;
-        
-        let memory: Arc<dyn MemoryTrait> = Arc::new(
-            Memory {
-                inner: MemoryImpl::Hybrid {
-                    basic: BasicMemory::with_thread_storage(None, Some(semantic.clone()), Some(storage.clone())),
-                    working: None,
-                    semantic: Some(semantic.clone()),
-                },
-                memory_type: MemoryType::Hybrid {
-                    working_size: None,
-                    enable_semantic: true,
-                },
-                thread_storage: Some(storage),
-                processors: Vec::new(),
-                processors_registered: AtomicBool::new(true),
-            }
-        );
+
+        let memory: Arc<dyn MemoryTrait> = Arc::new(Memory {
+            inner: MemoryImpl::Hybrid {
+                basic: BasicMemory::with_thread_storage(
+                    None,
+                    Some(semantic.clone()),
+                    Some(storage.clone()),
+                ),
+                working: None,
+                semantic: Some(semantic.clone()),
+            },
+            memory_type: MemoryType::Hybrid {
+                working_size: None,
+                enable_semantic: true,
+            },
+            thread_storage: Some(storage),
+            processors: Vec::new(),
+            processors_registered: AtomicBool::new(true),
+        });
 
         // 添加一些消息到语义内存
         let msg1 = Message::new(Role::User, "vector embeddings".into(), None, None);
@@ -1552,7 +1563,7 @@ mod tests {
             template: None,
         };
         let results = memory.semantic_recall("vector", &config, None).await?;
-        
+
         // 应该返回包含 "vector" 的消息
         assert!(!results.is_empty());
         assert!(results.iter().any(|m| m.content.contains("vector")));

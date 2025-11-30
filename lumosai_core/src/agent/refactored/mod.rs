@@ -59,6 +59,4 @@ mod tests {
     use crate::llm::MockLlmProvider;
     use crate::memory::BasicMemory;
     use std::sync::Arc;
-
 }
-

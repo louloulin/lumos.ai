@@ -53,14 +53,17 @@ mod tests {
     #[tokio::test]
     async fn test_workflow_single_step_execution() {
         let llm = create_test_zhipu_provider_arc();
-        let agent = Arc::new(BasicAgent::new(
-            AgentConfig {
-                name: "test_agent".to_string(),
-                instructions: "You are a helpful assistant. Respond concisely.".to_string(),
-                ..Default::default()
-            },
-            llm,
-        ).unwrap());
+        let agent = Arc::new(
+            BasicAgent::new(
+                AgentConfig {
+                    name: "test_agent".to_string(),
+                    instructions: "You are a helpful assistant. Respond concisely.".to_string(),
+                    ..Default::default()
+                },
+                llm,
+            )
+            .unwrap(),
+        );
 
         let mut workflow = BasicWorkflow::new("single_step_workflow");
         workflow.add_step(WorkflowStep {
@@ -93,23 +96,29 @@ mod tests {
         let llm1 = create_test_zhipu_provider_arc();
         let llm2 = create_test_zhipu_provider_arc();
 
-        let agent1 = Arc::new(BasicAgent::new(
-            AgentConfig {
-                name: "analyzer".to_string(),
-                instructions: "Analyze the input and extract key points".to_string(),
-                ..Default::default()
-            },
-            llm1,
-        ).unwrap());
+        let agent1 = Arc::new(
+            BasicAgent::new(
+                AgentConfig {
+                    name: "analyzer".to_string(),
+                    instructions: "Analyze the input and extract key points".to_string(),
+                    ..Default::default()
+                },
+                llm1,
+            )
+            .unwrap(),
+        );
 
-        let agent2 = Arc::new(BasicAgent::new(
-            AgentConfig {
-                name: "summarizer".to_string(),
-                instructions: "Summarize the analysis concisely".to_string(),
-                ..Default::default()
-            },
-            llm2,
-        ).unwrap());
+        let agent2 = Arc::new(
+            BasicAgent::new(
+                AgentConfig {
+                    name: "summarizer".to_string(),
+                    instructions: "Summarize the analysis concisely".to_string(),
+                    ..Default::default()
+                },
+                llm2,
+            )
+            .unwrap(),
+        );
 
         let mut workflow = BasicWorkflow::new("multi_step_workflow");
 
@@ -150,14 +159,17 @@ mod tests {
     #[tokio::test]
     async fn test_workflow_with_description() {
         let llm = create_test_zhipu_provider_arc();
-        let agent = Arc::new(BasicAgent::new(
-            AgentConfig {
-                name: "processor".to_string(),
-                instructions: "Process the input".to_string(),
-                ..Default::default()
-            },
-            llm,
-        ).unwrap());
+        let agent = Arc::new(
+            BasicAgent::new(
+                AgentConfig {
+                    name: "processor".to_string(),
+                    instructions: "Process the input".to_string(),
+                    ..Default::default()
+                },
+                llm,
+            )
+            .unwrap(),
+        );
 
         let workflow =
             BasicWorkflow::new("test_workflow").with_description("A test workflow for validation");
@@ -172,14 +184,17 @@ mod tests {
     #[tokio::test]
     async fn test_workflow_steps_list() {
         let llm = create_test_zhipu_provider_arc();
-        let agent = Arc::new(BasicAgent::new(
-            AgentConfig {
-                name: "test_agent".to_string(),
-                instructions: "Test instructions".to_string(),
-                ..Default::default()
-            },
-            llm,
-        ).unwrap());
+        let agent = Arc::new(
+            BasicAgent::new(
+                AgentConfig {
+                    name: "test_agent".to_string(),
+                    instructions: "Test instructions".to_string(),
+                    ..Default::default()
+                },
+                llm,
+            )
+            .unwrap(),
+        );
 
         let mut workflow = BasicWorkflow::new("steps_test");
 
@@ -210,14 +225,17 @@ mod tests {
     #[tokio::test]
     async fn test_workflow_condition_always() {
         let llm = create_test_zhipu_provider_arc();
-        let agent = Arc::new(BasicAgent::new(
-            AgentConfig {
-                name: "test_agent".to_string(),
-                instructions: "Always execute".to_string(),
-                ..Default::default()
-            },
-            llm,
-        ).unwrap());
+        let agent = Arc::new(
+            BasicAgent::new(
+                AgentConfig {
+                    name: "test_agent".to_string(),
+                    instructions: "Always execute".to_string(),
+                    ..Default::default()
+                },
+                llm,
+            )
+            .unwrap(),
+        );
 
         let mut workflow = BasicWorkflow::new("condition_test");
         workflow.add_step(WorkflowStep {
@@ -242,14 +260,17 @@ mod tests {
     #[tokio::test]
     async fn test_workflow_empty_input() {
         let llm = create_test_zhipu_provider_arc();
-        let agent = Arc::new(BasicAgent::new(
-            AgentConfig {
-                name: "test_agent".to_string(),
-                instructions: "Handle empty input".to_string(),
-                ..Default::default()
-            },
-            llm,
-        ).unwrap());
+        let agent = Arc::new(
+            BasicAgent::new(
+                AgentConfig {
+                    name: "test_agent".to_string(),
+                    instructions: "Handle empty input".to_string(),
+                    ..Default::default()
+                },
+                llm,
+            )
+            .unwrap(),
+        );
 
         let mut workflow = BasicWorkflow::new("empty_input_test");
         workflow.add_step(WorkflowStep {

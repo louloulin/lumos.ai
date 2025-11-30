@@ -92,58 +92,62 @@ impl ConcurrentToolExecutor {
     ) -> Vec<ToolResult> {
         let semaphore = self.semaphore.clone();
         // 克隆所有需要的资源，避免生命周期问题
-        let tools_clone: HashMap<String, Arc<dyn Tool>> = tools.iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
+        let tools_clone: HashMap<String, Arc<dyn Tool>> =
+            tools.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
         let context_clone = context.clone();
         let options_clone = options.clone();
         let timeout = self.config.timeout_seconds;
 
-        let futures: Vec<_> = tool_calls.into_iter().enumerate().map(|(index, call)| {
-            let sem = semaphore.clone();
-            let tools = tools_clone.clone();
-            let context = context_clone.clone();
-            let options = options_clone.clone();
-            let tool_name = call.name.clone();
-            let call_id = call.id.clone();
-            let args = call.arguments.clone();
-            let timeout = timeout;
+        let futures: Vec<_> = tool_calls
+            .into_iter()
+            .enumerate()
+            .map(|(index, call)| {
+                let sem = semaphore.clone();
+                let tools = tools_clone.clone();
+                let context = context_clone.clone();
+                let options = options_clone.clone();
+                let tool_name = call.name.clone();
+                let call_id = call.id.clone();
+                let args = call.arguments.clone();
+                let timeout = timeout;
 
-            async move {
-                let _permit = sem.acquire().await.map_err(|e| {
-                    Error::Internal(format!("Failed to acquire semaphore: {}", e))
-                })?;
+                async move {
+                    let _permit = sem.acquire().await.map_err(|e| {
+                        Error::Internal(format!("Failed to acquire semaphore: {}", e))
+                    })?;
 
-                let result: Result<Value> = if let Some(tool) = tools.get(&tool_name) {
-                    let args_value = serde_json::to_value(&args).map_err(Error::Json)?;
+                    let result: Result<Value> = if let Some(tool) = tools.get(&tool_name) {
+                        let args_value = serde_json::to_value(&args).map_err(Error::Json)?;
 
-                    // 应用超时
-                    if let Some(timeout_secs) = timeout {
-                        tokio::time::timeout(
-                            tokio::time::Duration::from_secs(timeout_secs),
-                            tool.execute(args_value, context, &options),
-                        )
-                        .await
-                        .map_err(|_| {
-                            Error::Timeout(format!(
-                                "Tool '{}' execution timed out after {} seconds",
-                                tool_name, timeout_secs
-                            ))
-                        })?
+                        // 应用超时
+                        if let Some(timeout_secs) = timeout {
+                            tokio::time::timeout(
+                                tokio::time::Duration::from_secs(timeout_secs),
+                                tool.execute(args_value, context, &options),
+                            )
+                            .await
+                            .map_err(|_| {
+                                Error::Timeout(format!(
+                                    "Tool '{}' execution timed out after {} seconds",
+                                    tool_name, timeout_secs
+                                ))
+                            })?
+                        } else {
+                            tool.execute(args_value, context, &options).await
+                        }
                     } else {
-                        tool.execute(args_value, context, &options).await
-                    }
-                } else {
-                    Err(Error::NotFound(format!("Tool '{}' not found", tool_name)))
-                };
+                        Err(Error::NotFound(format!("Tool '{}' not found", tool_name)))
+                    };
 
-                Ok((index, call_id, tool_name, result))
-            }
-        }).collect();
+                    Ok((index, call_id, tool_name, result))
+                }
+            })
+            .collect();
 
         // 等待所有任务完成
-        let task_results: Vec<Result<(usize, String, String, Result<Value>)>> = join_all(futures).await;
-        
+        let task_results: Vec<Result<(usize, String, String, Result<Value>)>> =
+            join_all(futures).await;
+
         // 按原始顺序排序
         let mut indexed_results: Vec<(usize, String, String, Result<Value>)> = task_results
             .into_iter()
@@ -181,62 +185,65 @@ impl ConcurrentToolExecutor {
     ) -> Vec<ToolResult> {
         let semaphore = self.semaphore.clone();
         // 克隆所有需要的资源，避免生命周期问题
-        let tools_clone: HashMap<String, Arc<dyn Tool>> = tools.iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
+        let tools_clone: HashMap<String, Arc<dyn Tool>> =
+            tools.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
         let context_clone = context.clone();
         let options_clone = options.clone();
         let timeout = self.config.timeout_seconds;
 
-        let futures: Vec<_> = tool_calls.into_iter().map(|call| {
-            let sem = semaphore.clone();
-            let tools = tools_clone.clone();
-            let context = context_clone.clone();
-            let options = options_clone.clone();
-            let tool_name = call.name.clone();
-            let call_id = call.id.clone();
-            let args = call.arguments.clone();
-            let timeout = timeout;
+        let futures: Vec<_> = tool_calls
+            .into_iter()
+            .map(|call| {
+                let sem = semaphore.clone();
+                let tools = tools_clone.clone();
+                let context = context_clone.clone();
+                let options = options_clone.clone();
+                let tool_name = call.name.clone();
+                let call_id = call.id.clone();
+                let args = call.arguments.clone();
+                let timeout = timeout;
 
-            async move {
-                let _permit = sem.acquire().await.map_err(|e| {
-                    Error::Internal(format!("Failed to acquire semaphore: {}", e))
-                })?;
+                async move {
+                    let _permit = sem.acquire().await.map_err(|e| {
+                        Error::Internal(format!("Failed to acquire semaphore: {}", e))
+                    })?;
 
-                let result: Result<Value> = if let Some(tool) = tools.get(&tool_name) {
-                    let args_value = serde_json::to_value(&args).map_err(Error::Json)?;
+                    let result: Result<Value> = if let Some(tool) = tools.get(&tool_name) {
+                        let args_value = serde_json::to_value(&args).map_err(Error::Json)?;
 
-                    // 应用超时
-                    if let Some(timeout_secs) = timeout {
-                        tokio::time::timeout(
-                            tokio::time::Duration::from_secs(timeout_secs),
-                            tool.execute(args_value, context, &options),
-                        )
-                        .await
-                        .map_err(|_| {
-                            Error::Timeout(format!(
-                                "Tool '{}' execution timed out after {} seconds",
-                                tool_name, timeout_secs
-                            ))
-                        })?
+                        // 应用超时
+                        if let Some(timeout_secs) = timeout {
+                            tokio::time::timeout(
+                                tokio::time::Duration::from_secs(timeout_secs),
+                                tool.execute(args_value, context, &options),
+                            )
+                            .await
+                            .map_err(|_| {
+                                Error::Timeout(format!(
+                                    "Tool '{}' execution timed out after {} seconds",
+                                    tool_name, timeout_secs
+                                ))
+                            })?
+                        } else {
+                            tool.execute(args_value, context, &options).await
+                        }
                     } else {
-                        tool.execute(args_value, context, &options).await
-                    }
-                } else {
-                    Err(Error::NotFound(format!("Tool '{}' not found", tool_name)))
-                };
+                        Err(Error::NotFound(format!("Tool '{}' not found", tool_name)))
+                    };
 
-                Ok((call_id, tool_name, result))
-            }
-        }).collect();
+                    Ok((call_id, tool_name, result))
+                }
+            })
+            .collect();
 
         // 等待所有任务完成
         let task_results: Vec<Result<(String, String, Result<Value>)>> = join_all(futures).await;
-        
-        task_results.into_iter().map(|task_result: Result<(String, String, Result<Value>)>| {
-            match task_result {
-                Ok((call_id, tool_name, result)) => {
-                    match result {
+
+        task_results
+            .into_iter()
+            .map(
+                |task_result: Result<(String, String, Result<Value>)>| match task_result {
+                    Ok((call_id, tool_name, result)) => match result {
                         Ok(value) => ToolResult {
                             call_id,
                             name: tool_name,
@@ -249,18 +256,16 @@ impl ConcurrentToolExecutor {
                             result: serde_json::json!({"error": e.to_string()}),
                             status: ToolResultStatus::Error,
                         },
-                    }
-                }
-                Err(e) => {
-                    ToolResult {
+                    },
+                    Err(e) => ToolResult {
                         call_id: String::new(),
                         name: String::new(),
                         result: serde_json::json!({"error": e.to_string()}),
                         status: ToolResultStatus::Error,
-                    }
-                }
-            }
-        }).collect()
+                    },
+                },
+            )
+            .collect()
     }
 
     /// 获取当前配置
@@ -293,9 +298,14 @@ mod tests {
         }]);
 
         let name_owned = name.to_string();
-        Arc::new(FunctionTool::new(name, "Test tool", schema, move |_params| {
-            Ok(serde_json::json!({ "result": format!("Processed by {}", name_owned) }))
-        }))
+        Arc::new(FunctionTool::new(
+            name,
+            "Test tool",
+            schema,
+            move |_params| {
+                Ok(serde_json::json!({ "result": format!("Processed by {}", name_owned) }))
+            },
+        ))
     }
 
     #[tokio::test]
@@ -341,9 +351,14 @@ mod tests {
         let elapsed = start.elapsed();
 
         // 并发执行应该很快（工具执行很快，主要是验证并发机制）
-        assert!(elapsed.as_millis() < 1000, "Concurrent execution should complete quickly");
+        assert!(
+            elapsed.as_millis() < 1000,
+            "Concurrent execution should complete quickly"
+        );
         assert_eq!(results.len(), 3);
-        assert!(results.iter().all(|r| matches!(r.status, ToolResultStatus::Success)));
+        assert!(results
+            .iter()
+            .all(|r| matches!(r.status, ToolResultStatus::Success)));
     }
 
     #[tokio::test]
@@ -457,4 +472,3 @@ mod tests {
         assert!(matches!(results[0].status, ToolResultStatus::Error));
     }
 }
-

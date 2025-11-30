@@ -75,14 +75,7 @@ pub fn format_messages(messages: &[Message]) -> String {
     messages
         .iter()
         .enumerate()
-        .map(|(i, msg)| {
-            format!(
-                "[{}] {}: {}",
-                i + 1,
-                format_role(&msg.role),
-                msg.content
-            )
-        })
+        .map(|(i, msg)| format!("[{}] {}: {}", i + 1, format_role(&msg.role), msg.content))
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -171,7 +164,10 @@ mod tests {
         assert_eq!(format_role(&Role::Assistant), "Assistant");
         assert_eq!(format_role(&Role::Tool), "Tool");
         assert_eq!(format_role(&Role::Function), "Function");
-        assert_eq!(format_role(&Role::Custom("test".to_string())), "Custom(test)");
+        assert_eq!(
+            format_role(&Role::Custom("test".to_string())),
+            "Custom(test)"
+        );
     }
 
     #[test]

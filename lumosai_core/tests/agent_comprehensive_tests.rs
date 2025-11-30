@@ -568,8 +568,9 @@ fn test_agent_concurrent_status_updates() {
 
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent =
-        Arc::new(Mutex::new(BasicAgent::new(config, llm).expect("Failed to create BasicAgent")));
+    let agent = Arc::new(Mutex::new(
+        BasicAgent::new(config, llm).expect("Failed to create BasicAgent"),
+    ));
 
     let mut handles = vec![];
 
@@ -605,8 +606,9 @@ fn test_agent_concurrent_tool_registration() {
 
     let llm = create_test_zhipu_provider_arc();
     let config = AgentConfig::default();
-    let agent =
-        Arc::new(Mutex::new(BasicAgent::new(config, llm).expect("Failed to create BasicAgent")));
+    let agent = Arc::new(Mutex::new(
+        BasicAgent::new(config, llm).expect("Failed to create BasicAgent"),
+    ));
 
     let mut handles = vec![];
 
@@ -644,8 +646,7 @@ fn test_agent_creation_performance() {
     // 创建 100 个 agent
     for i in 0..100 {
         let config = create_test_config(&format!("perf_agent_{}", i));
-        let _agent =
-            BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent");
+        let _agent = BasicAgent::new(config, llm.clone()).expect("Failed to create BasicAgent");
     }
 
     let duration = start.elapsed();

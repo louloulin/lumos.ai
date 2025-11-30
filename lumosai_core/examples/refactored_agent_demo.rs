@@ -8,13 +8,13 @@
 //! cargo run --example refactored_agent_demo --features="examples"
 //! ```
 
+use futures::stream::StreamExt;
 use lumosai_core::agent::refactored::{AgentCore, AgentExecutor, AgentGenerator, BasicAgent};
 use lumosai_core::agent::types::{AgentGenerateOptions, AgentStreamOptions};
 use lumosai_core::agent::AgentConfig;
-use lumosai_core::llm::{Message, Role, MockLlmProvider};
+use lumosai_core::llm::{Message, MockLlmProvider, Role};
 use lumosai_core::memory::{BasicMemory, Memory};
 use lumosai_core::tool::create_tool;
-use futures::stream::StreamExt;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -52,7 +52,9 @@ async fn example1_simple_usage() -> Result<(), Box<dyn std::error::Error>> {
         instructions: "You are a helpful assistant.".to_string(),
         ..Default::default()
     };
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you?".to_string()]));
+    let llm = Arc::new(MockLlmProvider::new(vec![
+        "Hello! How can I help you?".to_string()
+    ]));
 
     let agent = BasicAgent::new(config, llm)?;
 
@@ -83,7 +85,9 @@ async fn example2_modular_components() -> Result<(), Box<dyn std::error::Error>>
         instructions: "You are a helpful assistant.".to_string(),
         ..Default::default()
     };
-    let llm = Arc::new(MockLlmProvider::new(vec!["Hello! How can I help you?".to_string()]));
+    let llm = Arc::new(MockLlmProvider::new(vec![
+        "Hello! How can I help you?".to_string()
+    ]));
 
     // 步骤 1: 创建 AgentCore
     let core = AgentCore::new(config, llm)?;
@@ -249,4 +253,3 @@ async fn example5_streaming() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

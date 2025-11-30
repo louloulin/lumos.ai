@@ -5,6 +5,7 @@ pub mod builder;
 pub mod chain;
 pub mod collaboration;
 pub mod communication;
+pub mod concurrent_tool_executor; // 新增：并发工具执行器
 pub mod config;
 pub mod config_validator;
 pub mod convenience;
@@ -12,7 +13,6 @@ pub mod dag_orchestration;
 pub mod dynamic_config;
 pub mod enhanced_integration_test;
 pub mod error_handling; // 新增：统一错误处理系统
-pub mod concurrent_tool_executor; // 新增：并发工具执行器
 pub mod evaluation;
 pub mod events;
 // executor 模块已移除，BasicAgent 现在在 refactored 模块中
@@ -173,9 +173,7 @@ pub use api_consistency::{
 };
 
 // Re-export concurrent tool executor
-pub use concurrent_tool_executor::{
-    ConcurrentToolExecutor, ConcurrentToolExecutorConfig,
-};
+pub use concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
 
 // Re-export DAG orchestration
 pub use dag_orchestration::{AgentChain, AgentDagOrchestrator, AgentDagOrchestratorBuilder};
@@ -572,7 +570,8 @@ mod tests {
             "TestAgent".to_string(),
             "You are a test agent.".to_string(),
             mock_llm,
-        ).unwrap();
+        )
+        .unwrap();
         agent.add_tool(Box::new(echo_tool)).unwrap();
 
         // Generate a response

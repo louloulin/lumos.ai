@@ -1225,7 +1225,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_builder_dynamic_config() {
-        use crate::agent::dynamic_config::{dynamic_arg, EnhancedRuntimeContext, ComplexityLevel};
+        use crate::agent::dynamic_config::{dynamic_arg, ComplexityLevel, EnhancedRuntimeContext};
 
         let llm = create_test_zhipu_provider_arc();
 
@@ -1237,13 +1237,17 @@ mod tests {
 
         // 测试动态指令 - 使用 DynamicArgument::Dynamic 直接创建
         use crate::agent::dynamic_config::DynamicArgument;
-        let dynamic_instructions = DynamicArgument::Dynamic(Box::new(move |ctx: &EnhancedRuntimeContext| {
-            let role = ctx.user_role.clone().unwrap_or_else(|| "user".to_string());
-            let domain = ctx.domain.clone().unwrap_or_else(|| "general".to_string());
-            Box::pin(async move {
-                Ok(format!("You are a {} assistant specialized in {}.", role, domain))
-            })
-        }));
+        let dynamic_instructions =
+            DynamicArgument::Dynamic(Box::new(move |ctx: &EnhancedRuntimeContext| {
+                let role = ctx.user_role.clone().unwrap_or_else(|| "user".to_string());
+                let domain = ctx.domain.clone().unwrap_or_else(|| "general".to_string());
+                Box::pin(async move {
+                    Ok(format!(
+                        "You are a {} assistant specialized in {}.",
+                        role, domain
+                    ))
+                })
+            }));
 
         let agent = AgentBuilder::new()
             .name("test_agent")

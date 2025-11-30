@@ -422,7 +422,7 @@ impl ApiStandardizer {
         // 1. 应该使用 snake_case
         // 2. 应该以动词开头（get_, set_, create_, execute_, etc.）
         // 3. 不应该包含下划线前缀（私有方法）
-        
+
         if method_name.starts_with('_') {
             return false; // 私有方法，跳过检查
         }
@@ -434,12 +434,29 @@ impl ApiStandardizer {
 
         // 检查是否以标准动词开头
         let standard_prefixes = [
-            "get_", "set_", "create_", "execute_", "generate_", "stream_",
-            "add_", "remove_", "update_", "delete_", "find_", "search_",
-            "check_", "validate_", "parse_", "format_", "build_", "resolve_",
+            "get_",
+            "set_",
+            "create_",
+            "execute_",
+            "generate_",
+            "stream_",
+            "add_",
+            "remove_",
+            "update_",
+            "delete_",
+            "find_",
+            "search_",
+            "check_",
+            "validate_",
+            "parse_",
+            "format_",
+            "build_",
+            "resolve_",
         ];
 
-        standard_prefixes.iter().any(|prefix| method_name.starts_with(prefix))
+        standard_prefixes
+            .iter()
+            .any(|prefix| method_name.starts_with(prefix))
             || method_name == "new" // 允许 new() 构造函数
     }
 
@@ -449,10 +466,7 @@ impl ApiStandardizer {
     /// 1. 必需参数（按重要性排序）
     /// 2. 可选参数（options/context）
     /// 3. 回调函数（callbacks）
-    pub fn validate_parameter_order(
-        required_params: &[&str],
-        optional_params: &[&str],
-    ) -> bool {
+    pub fn validate_parameter_order(required_params: &[&str], optional_params: &[&str]) -> bool {
         // 简单检查：确保必需参数在可选参数之前
         // 实际实现中可以通过反射获取参数列表
         true // 占位实现
@@ -461,11 +475,14 @@ impl ApiStandardizer {
     /// 生成 API 规范文档
     pub fn generate_api_documentation<T: Agent>(agent: &T) -> String {
         let mut doc = String::new();
-        
+
         doc.push_str("# Agent API Documentation\n\n");
         doc.push_str(&format!("## Agent: {}\n\n", agent.get_name()));
-        doc.push_str(&format!("**Instructions**: {}\n\n", agent.get_instructions()));
-        
+        doc.push_str(&format!(
+            "**Instructions**: {}\n\n",
+            agent.get_instructions()
+        ));
+
         // 工具列表
         let tools = agent.get_tools();
         if !tools.is_empty() {
@@ -502,7 +519,9 @@ impl ApiSpecChecker {
                         method_name
                     ),
                     location: method_name.clone(),
-                    suggestion: "Use snake_case with standard verb prefixes (get_, set_, create_, etc.)".to_string(),
+                    suggestion:
+                        "Use snake_case with standard verb prefixes (get_, set_, create_, etc.)"
+                            .to_string(),
                 });
             }
         }
@@ -521,10 +540,7 @@ impl ApiSpecChecker {
             Some(ConsistencyIssue {
                 category: "Parameter Consistency".to_string(),
                 severity: "low".to_string(),
-                description: format!(
-                    "Method '{}' should accept options parameter",
-                    method_name
-                ),
+                description: format!("Method '{}' should accept options parameter", method_name),
                 location: method_name.to_string(),
                 suggestion: "Add AgentGenerateOptions parameter for consistency".to_string(),
             })
@@ -540,14 +556,8 @@ mod tests {
 
     #[test]
     fn test_standardize_response() {
-        assert_eq!(
-            ApiStandardizer::standardize_response("Hello"),
-            "Hello."
-        );
-        assert_eq!(
-            ApiStandardizer::standardize_response("Hello!"),
-            "Hello!"
-        );
+        assert_eq!(ApiStandardizer::standardize_response("Hello"), "Hello.");
+        assert_eq!(ApiStandardizer::standardize_response("Hello!"), "Hello!");
         assert_eq!(
             ApiStandardizer::standardize_response(""),
             "I apologize, but I couldn't generate a response. Please try again."
@@ -572,10 +582,7 @@ mod tests {
             ApiStandardizer::standardize_agent_name("my agent"),
             "My Agent"
         );
-        assert_eq!(
-            ApiStandardizer::standardize_agent_name(""),
-            "Unnamed Agent"
-        );
+        assert_eq!(ApiStandardizer::standardize_agent_name(""), "Unnamed Agent");
     }
 
     #[test]

@@ -185,7 +185,7 @@ pub trait LlmProvider: Send + Sync {
         let options = LlmOptions::default()
             .with_max_tokens(1)
             .with_temperature(0.0);
-        
+
         match self.generate("test", &options).await {
             Ok(_) => true,
             Err(_) => false,

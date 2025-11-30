@@ -648,9 +648,9 @@ impl ZhipuProvider {
         response: reqwest::Response,
     ) -> Result<impl futures::Stream<Item = Result<String>>> {
         use futures::stream::StreamExt;
-        
+
         let byte_stream = response.bytes_stream();
-        
+
         // ✅ 使用buffer处理跨chunk的SSE数据
         let stream = futures::stream::unfold(
             (byte_stream, String::new()),
@@ -661,27 +661,32 @@ impl ZhipuProvider {
                             // 解码并追加到buffer
                             let text = match String::from_utf8(chunk.to_vec()) {
                                 Ok(t) => t,
-                                Err(e) => return Some((Err(Error::Llm(format!("UTF-8 decode error: {e}"))), (byte_stream, buffer))),
+                                Err(e) => {
+                                    return Some((
+                                        Err(Error::Llm(format!("UTF-8 decode error: {e}"))),
+                                        (byte_stream, buffer),
+                                    ))
+                                }
                             };
-                            
+
                             buffer.push_str(&text);
-                            
+
                             // 处理buffer中的完整行
                             let lines: Vec<&str> = buffer.lines().collect();
-                            
+
                             // 检查最后一行是否完整（以\n结尾）
                             let has_trailing_newline = buffer.ends_with('\n');
-                            
+
                             let (complete_lines, remaining) = if has_trailing_newline {
                                 (lines.as_slice(), "")
                             } else if lines.len() > 0 {
                                 // 保留最后一行（可能不完整）
-                                (&lines[..lines.len()-1], lines[lines.len()-1])
+                                (&lines[..lines.len() - 1], lines[lines.len() - 1])
                             } else {
                                 // 没有完整行，继续读取
                                 continue;
                             };
-                            
+
                             // 处理完整的行
                             let mut results = Vec::new();
                             for line in complete_lines {
@@ -689,18 +694,21 @@ impl ZhipuProvider {
                                 if line.is_empty() || line.starts_with(':') {
                                     continue;
                                 }
-                                
+
                                 if let Some(data) = line.strip_prefix("data: ") {
                                     if data.trim() == "[DONE]" {
                                         return None; // 流结束
                                     }
-                                    
+
                                     match serde_json::from_str::<ZhipuStreamResponse>(data) {
                                         Ok(stream_response) => {
                                             if let Some(choice) = stream_response.choices.first() {
-                                                let content_to_use = choice.delta.content.as_ref()
+                                                let content_to_use = choice
+                                                    .delta
+                                                    .content
+                                                    .as_ref()
                                                     .or(choice.delta.reasoning_content.as_ref());
-                                                
+
                                                 if let Some(content) = content_to_use {
                                                     if !content.is_empty() {
                                                         results.push(content.clone());
@@ -715,10 +723,10 @@ impl ZhipuProvider {
                                     }
                                 }
                             }
-                            
+
                             // 更新buffer为剩余内容
                             buffer = remaining.to_string();
-                            
+
                             // 如果有结果，返回
                             if !results.is_empty() {
                                 let joined = results.join("");
@@ -727,7 +735,10 @@ impl ZhipuProvider {
                             // 否则继续循环读取下一个chunk
                         }
                         Some(Err(e)) => {
-                            return Some((Err(Error::Llm(format!("HTTP stream error: {e}"))), (byte_stream, buffer)));
+                            return Some((
+                                Err(Error::Llm(format!("HTTP stream error: {e}"))),
+                                (byte_stream, buffer),
+                            ));
                         }
                         None => {
                             // 流结束

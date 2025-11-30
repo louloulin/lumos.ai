@@ -165,10 +165,7 @@ impl LlmRouter {
             let name = format!("provider{}", index);
             // 默认配置：最大并发 10，成本根据 provider 类型估算
             let cost = estimate_cost_per_1k_tokens(provider.name());
-            stats.insert(
-                name.clone(),
-                ProviderStats::new(name, 10, cost),
-            );
+            stats.insert(name.clone(), ProviderStats::new(name, 10, cost));
         }
 
         Self {
@@ -186,19 +183,14 @@ impl LlmRouter {
     }
 
     /// 选择最佳的 provider
-    pub async fn select_provider(
-        &self,
-        _options: &LlmOptions,
-    ) -> Result<Arc<dyn LlmProvider>> {
+    pub async fn select_provider(&self, _options: &LlmOptions) -> Result<Arc<dyn LlmProvider>> {
         if self.providers.is_empty() {
             return Err(Error::Llm("No providers available".to_string()));
         }
 
         let stats = self.stats.read().await;
-        let available_stats: Vec<&ProviderStats> = stats
-            .values()
-            .filter(|s| s.is_available())
-            .collect();
+        let available_stats: Vec<&ProviderStats> =
+            stats.values().filter(|s| s.is_available()).collect();
 
         if available_stats.is_empty() {
             // 如果没有可用的，返回第一个（即使负载已满）
@@ -212,39 +204,33 @@ impl LlmRouter {
                 *index += 1;
                 Some(selected)
             }
-            RoutingStrategy::LeastLoad => {
-                available_stats
-                    .iter()
-                    .enumerate()
-                    .min_by(|(_, a), (_, b)| {
-                        a.load_ratio()
-                            .partial_cmp(&b.load_ratio())
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    })
-                    .map(|(idx, _)| idx)
-            }
-            RoutingStrategy::LeastCost => {
-                available_stats
-                    .iter()
-                    .enumerate()
-                    .min_by(|(_, a), (_, b)| {
-                        a.cost_per_1k_tokens
-                            .partial_cmp(&b.cost_per_1k_tokens)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    })
-                    .map(|(idx, _)| idx)
-            }
-            RoutingStrategy::BestLatency => {
-                available_stats
-                    .iter()
-                    .enumerate()
-                    .min_by(|(_, a), (_, b)| {
-                        a.avg_latency_ms
-                            .partial_cmp(&b.avg_latency_ms)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    })
-                    .map(|(idx, _)| idx)
-            }
+            RoutingStrategy::LeastLoad => available_stats
+                .iter()
+                .enumerate()
+                .min_by(|(_, a), (_, b)| {
+                    a.load_ratio()
+                        .partial_cmp(&b.load_ratio())
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .map(|(idx, _)| idx),
+            RoutingStrategy::LeastCost => available_stats
+                .iter()
+                .enumerate()
+                .min_by(|(_, a), (_, b)| {
+                    a.cost_per_1k_tokens
+                        .partial_cmp(&b.cost_per_1k_tokens)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .map(|(idx, _)| idx),
+            RoutingStrategy::BestLatency => available_stats
+                .iter()
+                .enumerate()
+                .min_by(|(_, a), (_, b)| {
+                    a.avg_latency_ms
+                        .partial_cmp(&b.avg_latency_ms)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .map(|(idx, _)| idx),
             RoutingStrategy::Balanced => {
                 // 综合评分：负载权重 0.4，成本权重 0.3，延迟权重 0.3
                 available_stats
@@ -253,7 +239,9 @@ impl LlmRouter {
                     .min_by(|(_, a), (_, b)| {
                         let score_a = calculate_balanced_score(a);
                         let score_b = calculate_balanced_score(b);
-                        score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
+                        score_a
+                            .partial_cmp(&score_b)
+                            .unwrap_or(std::cmp::Ordering::Equal)
                     })
                     .map(|(idx, _)| idx)
             }
@@ -261,7 +249,7 @@ impl LlmRouter {
 
         let selected_index = selected_index.unwrap_or(0);
         let selected_name = available_stats[selected_index].name.clone();
-        
+
         drop(stats);
 
         // 找到对应的 provider（通过名称匹配或索引）
@@ -272,7 +260,7 @@ impl LlmRouter {
                 }
             }
         }
-        
+
         // 回退：通过名称匹配
         self.providers
             .iter()
@@ -328,13 +316,13 @@ impl LlmRouter {
 fn estimate_cost_per_1k_tokens(provider_name: &str) -> f64 {
     match provider_name.to_lowercase().as_str() {
         "openai" | "gpt-3.5-turbo" | "gpt-4" => 0.002, // GPT-3.5 输入成本
-        "anthropic" | "claude" => 0.003,                // Claude 3 Sonnet
-        "qwen" => 0.001,                                 // Qwen 相对便宜
-        "zhipu" => 0.001,                                // 智谱 AI
-        "deepseek" => 0.0005,                            // DeepSeek 很便宜
-        "baidu" | "ernie" => 0.001,                     // 百度 ERNIE
-        "ollama" => 0.0,                                 // 本地模型免费
-        _ => 0.002,                                      // 默认值
+        "anthropic" | "claude" => 0.003,               // Claude 3 Sonnet
+        "qwen" => 0.001,                               // Qwen 相对便宜
+        "zhipu" => 0.001,                              // 智谱 AI
+        "deepseek" => 0.0005,                          // DeepSeek 很便宜
+        "baidu" | "ernie" => 0.001,                    // 百度 ERNIE
+        "ollama" => 0.0,                               // 本地模型免费
+        _ => 0.002,                                    // 默认值
     }
 }
 
@@ -363,9 +351,11 @@ mod tests {
     #[tokio::test]
     async fn test_round_robin_strategy() {
         // 创建自定义名称的 mock providers
-        let provider1 = Arc::new(MockLlmProvider::new(vec!["response1".to_string()])) as Arc<dyn LlmProvider>;
-        let provider2 = Arc::new(MockLlmProvider::new(vec!["response2".to_string()])) as Arc<dyn LlmProvider>;
-        
+        let provider1 =
+            Arc::new(MockLlmProvider::new(vec!["response1".to_string()])) as Arc<dyn LlmProvider>;
+        let provider2 =
+            Arc::new(MockLlmProvider::new(vec!["response2".to_string()])) as Arc<dyn LlmProvider>;
+
         // 由于 MockLlmProvider 的 name() 返回 "mock"，我们需要使用不同的方式
         // 这里我们直接测试路由逻辑，不依赖 provider 名称
         let providers = vec![provider1, provider2];
@@ -432,7 +422,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_stats_recording() {
-        let providers = vec![Arc::new(MockLlmProvider::new(vec!["response".to_string()])) as Arc<dyn LlmProvider>];
+        let providers =
+            vec![Arc::new(MockLlmProvider::new(vec!["response".to_string()]))
+                as Arc<dyn LlmProvider>];
 
         let router = LlmRouter::new(providers);
         let _options = LlmOptions::default();
@@ -467,4 +459,3 @@ mod tests {
         assert!(result.is_err());
     }
 }
-

@@ -10,7 +10,8 @@ mod tests {
     use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
     use lumosai_core::llm::{LlmOptions, Message, Role};
     use lumosai_core::memory::thread::{
-        CreateThreadParams, GetMessagesParams, MemoryThread, MemoryThreadManager, MemoryThreadStorage,
+        CreateThreadParams, GetMessagesParams, MemoryThread, MemoryThreadManager,
+        MemoryThreadStorage,
     };
     use lumosai_core::memory::{Memory, MemoryConfig as CoreMemoryConfig};
     use lumosai_core::Result;
@@ -575,8 +576,7 @@ mod tests {
         };
 
         let memory = Arc::new(MockMemoryWithThreads::new());
-        let agent =
-            BasicAgent::new(config, llm).with_memory(memory.clone() as Arc<dyn Memory>);
+        let agent = BasicAgent::new(config, llm).with_memory(memory.clone() as Arc<dyn Memory>);
 
         let user_message = Message::new(Role::User, "Remember this note.".to_string(), None, None);
         let options = AgentGenerateOptions {
@@ -608,13 +608,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_thread_management_through_memory() -> Result<()> {
-        use lumosai_core::memory::thread::{CreateThreadParams, InMemoryThreadStorage, UpdateThreadParams};
+        use lumosai_core::memory::thread::{
+            CreateThreadParams, InMemoryThreadStorage, UpdateThreadParams,
+        };
 
         let llm = create_test_zhipu_provider_arc();
         let storage = Arc::new(InMemoryThreadStorage::default());
-        let memory = Arc::new(
-            lumosai_core::memory::BasicMemory::with_thread_storage(None, None, Some(storage.clone())),
-        ) as Arc<dyn Memory>;
+        let memory = Arc::new(lumosai_core::memory::BasicMemory::with_thread_storage(
+            None,
+            None,
+            Some(storage.clone()),
+        )) as Arc<dyn Memory>;
 
         let config = AgentConfig {
             name: "test-agent".to_string(),
@@ -660,11 +664,15 @@ mod tests {
         assert_eq!(threads.len(), 1);
 
         // 通过 Memory 获取统计信息
-        let stats = memory.get_thread_stats("agent-thread", Some("user-123")).await?;
+        let stats = memory
+            .get_thread_stats("agent-thread", Some("user-123"))
+            .await?;
         assert_eq!(stats.message_count, 0);
 
         // 通过 Memory 删除线程
-        memory.delete_thread("agent-thread", Some("user-123")).await?;
+        memory
+            .delete_thread("agent-thread", Some("user-123"))
+            .await?;
         let deleted = memory.get_thread("agent-thread", Some("user-123")).await?;
         assert!(deleted.is_none());
 
@@ -674,13 +682,17 @@ mod tests {
     #[tokio::test]
     async fn test_memory_agent_trait_default_implementation() -> Result<()> {
         use lumosai_core::agent::traits::MemoryAgent;
-        use lumosai_core::memory::BasicMemory;
         use lumosai_core::memory::thread::InMemoryThreadStorage;
+        use lumosai_core::memory::BasicMemory;
 
         // 创建一个带 thread storage 的 Memory，能够存储和检索消息
         let storage = Arc::new(InMemoryThreadStorage::default());
-        let memory = Arc::new(BasicMemory::with_thread_storage(None, None, Some(storage.clone())));
-        
+        let memory = Arc::new(BasicMemory::with_thread_storage(
+            None,
+            None,
+            Some(storage.clone()),
+        ));
+
         // 先存储一些历史消息到线程中
         let thread_id = "test-thread-123";
         let historical_msg1 = Message::new(
@@ -688,7 +700,10 @@ mod tests {
             "My name is Bob".to_string(),
             Some({
                 let mut meta = HashMap::new();
-                meta.insert("thread_id".to_string(), serde_json::Value::String(thread_id.to_string()));
+                meta.insert(
+                    "thread_id".to_string(),
+                    serde_json::Value::String(thread_id.to_string()),
+                );
                 meta
             }),
             None,
@@ -698,7 +713,10 @@ mod tests {
             "Nice to meet you, Bob!".to_string(),
             Some({
                 let mut meta = HashMap::new();
-                meta.insert("thread_id".to_string(), serde_json::Value::String(thread_id.to_string()));
+                meta.insert(
+                    "thread_id".to_string(),
+                    serde_json::Value::String(thread_id.to_string()),
+                );
                 meta
             }),
             None,
@@ -730,10 +748,12 @@ mod tests {
                 // 简单实现：检查是否包含历史消息
                 // 历史消息应该在前面，新消息在后面
                 let has_historical = messages.iter().any(|m| m.content == "My name is Bob");
-                assert!(has_historical || messages.len() >= 2, 
-                    "Should have historical messages or at least 2 messages total. Got {} messages", 
-                    messages.len());
-                
+                assert!(
+                    has_historical || messages.len() >= 2,
+                    "Should have historical messages or at least 2 messages total. Got {} messages",
+                    messages.len()
+                );
+
                 Ok(lumosai_core::agent::types::AgentGenerateResult {
                     response: "Hello again!".to_string(),
                     steps: vec![],
@@ -762,11 +782,17 @@ mod tests {
 
             fn set_logger(&mut self, _logger: std::sync::Arc<dyn lumosai_core::logger::Logger>) {}
 
-            fn telemetry(&self) -> Option<std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>> {
+            fn telemetry(
+                &self,
+            ) -> Option<std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>> {
                 None
             }
 
-            fn set_telemetry(&mut self, _telemetry: std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>) {}
+            fn set_telemetry(
+                &mut self,
+                _telemetry: std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>,
+            ) {
+            }
         }
 
         #[async_trait]
@@ -784,12 +810,7 @@ mod tests {
         };
 
         // 测试 generate_with_memory：应该自动从内存检索历史消息
-        let new_message = Message::new(
-            Role::User,
-            "What's my name?".to_string(),
-            None,
-            None,
-        );
+        let new_message = Message::new(Role::User, "What's my name?".to_string(), None, None);
         let options = AgentGenerateOptions {
             context_window: Some(10),
             memory_options: Some(CoreMemoryConfig {
@@ -800,12 +821,12 @@ mod tests {
             }),
             ..Default::default()
         };
-        
+
         // 调用 generate_with_memory，应该自动检索历史消息
         let result = agent
             .generate_with_memory(&[new_message], Some(thread_id.to_string()), &options)
             .await?;
-        
+
         assert_eq!(result.response, "Hello again!");
 
         Ok(())
@@ -813,17 +834,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_trait_add_processor_and_process_messages() -> Result<()> {
-        use lumosai_core::memory::Memory;
+        use lumosai_core::logger::NoopLogger;
         use lumosai_core::memory::processor::MessageLimitProcessor;
         use lumosai_core::memory::thread::InMemoryThreadStorage;
-        use lumosai_core::logger::NoopLogger;
+        use lumosai_core::memory::Memory;
         use std::sync::Arc;
 
         // 创建带 thread storage 的 Memory
         let storage = Arc::new(InMemoryThreadStorage::default());
-        let memory: Arc<dyn Memory> = Arc::new(
-            lumosai_core::memory::BasicMemory::with_thread_storage(None, None, Some(storage.clone()))
-        );
+        let memory: Arc<dyn Memory> =
+            Arc::new(lumosai_core::memory::BasicMemory::with_thread_storage(
+                None,
+                None,
+                Some(storage.clone()),
+            ));
 
         // 添加处理器
         let processor = Arc::new(MessageLimitProcessor::new(50, Arc::new(NoopLogger)));
@@ -831,17 +855,12 @@ mod tests {
 
         // 创建一些消息
         let messages = (0..100)
-            .map(|i| Message::new(
-                Role::User,
-                format!("Message {}", i),
-                None,
-                None,
-            ))
+            .map(|i| Message::new(Role::User, format!("Message {}", i), None, None))
             .collect::<Vec<_>>();
 
         // 处理消息（应该被限制到50条）
         let processed = memory.process_messages(messages).await?;
-        
+
         // 验证消息被限制
         assert!(processed.len() <= 50, "Messages should be limited to 50");
 
@@ -850,15 +869,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_get_threads_by_resource() -> Result<()> {
-        use lumosai_core::memory::Memory;
         use lumosai_core::memory::thread::{CreateThreadParams, InMemoryThreadStorage};
+        use lumosai_core::memory::Memory;
         use std::sync::Arc;
 
         // 创建带 thread storage 的 Memory
         let storage = Arc::new(InMemoryThreadStorage::default());
-        let memory: Arc<dyn Memory> = Arc::new(
-            lumosai_core::memory::BasicMemory::with_thread_storage(None, None, Some(storage.clone()))
-        );
+        let memory: Arc<dyn Memory> =
+            Arc::new(lumosai_core::memory::BasicMemory::with_thread_storage(
+                None,
+                None,
+                Some(storage.clone()),
+            ));
 
         let resource_id = "user-123";
 

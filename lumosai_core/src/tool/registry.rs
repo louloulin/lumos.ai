@@ -417,9 +417,7 @@ impl ToolRegistry {
 
         // 简单的通配符匹配（支持 * 和 ?）
         let pattern_lower = pattern.to_lowercase();
-        let regex_pattern = pattern_lower
-            .replace("*", ".*")
-            .replace("?", ".");
+        let regex_pattern = pattern_lower.replace("*", ".*").replace("?", ".");
         let regex = Regex::new(&format!("^{}$", regex_pattern)).map_err(|e| {
             crate::error::Error::Internal(format!("Invalid pattern '{}': {}", pattern, e))
         })?;
@@ -454,8 +452,7 @@ impl ToolRegistry {
         })?;
 
         // 简单的版本比较（可以使用 semver 库进行更精确的比较）
-        Ok(metadata.version == required_version
-            || metadata.version.starts_with(required_version))
+        Ok(metadata.version == required_version || metadata.version.starts_with(required_version))
     }
 
     /// 获取所有工具及其依赖关系图
@@ -534,9 +531,7 @@ mod tests {
 
         // 创建依赖工具
         let (dep_tool, dep_metadata) = create_test_tool("dependency_tool", vec![]);
-        registry
-            .register_tool(dep_tool, dep_metadata)
-            .unwrap();
+        registry.register_tool(dep_tool, dep_metadata).unwrap();
 
         // 创建依赖 dependency_tool 的工具
         let (tool, metadata) = create_test_tool("main_tool", vec!["dependency_tool".to_string()]);
@@ -564,7 +559,10 @@ mod tests {
         // 应该检测到循环依赖
         let result = registry.resolve_dependencies("tool1");
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Circular dependency"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Circular dependency"));
     }
 
     #[tokio::test]

@@ -160,7 +160,10 @@ impl BasicMemory {
             .and_then(|meta| serde_json::to_string(meta).ok())
             .unwrap_or_default();
         let name = message.name.clone().unwrap_or_default();
-        format!("{:?}::{name}::{}::{metadata_str}", message.role, message.content)
+        format!(
+            "{:?}::{name}::{}::{metadata_str}",
+            message.role, message.content
+        )
     }
 
     fn dedup_messages(messages: Vec<Message>) -> Vec<Message> {
@@ -188,12 +191,8 @@ impl Memory for BasicMemory {
                 .metadata
                 .as_ref()
                 .map(|meta| {
-                    let thread_id = meta
-                        .get("thread_id")
-                        .and_then(Self::value_to_string);
-                    let resource_id = meta
-                        .get("resource_id")
-                        .and_then(Self::value_to_string);
+                    let thread_id = meta.get("thread_id").and_then(Self::value_to_string);
+                    let resource_id = meta.get("resource_id").and_then(Self::value_to_string);
                     (thread_id, resource_id)
                 })
                 .unwrap_or((None, None));
@@ -207,10 +206,7 @@ impl Memory for BasicMemory {
                 .await?;
                 Some(thread_id)
             } else if let Some(resource_id) = resource_id_metadata.as_deref() {
-                Some(
-                    Self::get_or_create_thread_id(thread_manager, resource_id)
-                        .await?,
-                )
+                Some(Self::get_or_create_thread_id(thread_manager, resource_id).await?)
             } else {
                 None
             };
@@ -274,22 +270,23 @@ impl Memory for BasicMemory {
 
             if let Some(thread_id) = thread_id {
                 let mut params = GetMessagesParams::default();
-                if let Some(limit) = config
-                    .last_messages
-                    .and_then(|limit| if limit == 0 { None } else { Some(limit) })
+                if let Some(limit) =
+                    config
+                        .last_messages
+                        .and_then(|limit| if limit == 0 { None } else { Some(limit) })
                 {
                     params.limit = Some(limit);
                     params.reverse_order = true; // 获取最新的消息
                 }
 
-                        if let Ok(messages) = thread_manager
+                if let Ok(messages) = thread_manager
                     .get_messages(&thread_id, &params, thread_owner.as_deref())
-                            .await
-                        {
+                    .await
+                {
                     thread_results.extend(messages);
-                        }
-                    }
                 }
+            }
+        }
 
         // 然后获取语义召回结果
         if let Some(ref semantic_memory) = self.semantic_memory {
@@ -324,10 +321,7 @@ impl Memory for BasicMemory {
         self.thread_storage.clone()
     }
 
-    async fn create_thread(
-        &self,
-        params: CreateThreadParams,
-    ) -> Result<MemoryThread> {
+    async fn create_thread(&self, params: CreateThreadParams) -> Result<MemoryThread> {
         self.thread_manager
             .as_ref()
             .ok_or_else(|| {
@@ -372,11 +366,7 @@ impl Memory for BasicMemory {
             .await
     }
 
-    async fn delete_thread(
-        &self,
-        thread_id: &str,
-        resource_id: Option<&str>,
-    ) -> Result<()> {
+    async fn delete_thread(&self, thread_id: &str, resource_id: Option<&str>) -> Result<()> {
         self.thread_manager
             .as_ref()
             .ok_or_else(|| {
@@ -464,7 +454,7 @@ impl Memory for BasicMemory {
 
     async fn process_messages(&self, messages: Vec<Message>) -> Result<Vec<Message>> {
         use crate::memory::processor::MemoryProcessorOptions;
-        
+
         // 如果有 thread_manager，使用它的 process_messages 方法
         if let Some(manager) = &self.thread_manager {
             let options = MemoryProcessorOptions::default();
@@ -503,10 +493,7 @@ impl BasicMemory {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn create_thread(
-        &self,
-        params: CreateThreadParams,
-    ) -> Result<MemoryThread> {
+    pub async fn create_thread(&self, params: CreateThreadParams) -> Result<MemoryThread> {
         self.thread_manager
             .as_ref()
             .ok_or_else(|| {
@@ -608,11 +595,7 @@ impl BasicMemory {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn delete_thread(
-        &self,
-        thread_id: &str,
-        resource_id: Option<&str>,
-    ) -> Result<()> {
+    pub async fn delete_thread(&self, thread_id: &str, resource_id: Option<&str>) -> Result<()> {
         self.thread_manager
             .as_ref()
             .ok_or_else(|| {
@@ -713,8 +696,7 @@ mod tests {
         semantic: Arc<dyn SemanticMemoryTrait>,
     ) -> (BasicMemory, Arc<dyn MemoryThreadStorage>) {
         let storage = Arc::new(InMemoryThreadStorage::new()) as Arc<dyn MemoryThreadStorage>;
-        let memory =
-            BasicMemory::with_thread_storage(None, Some(semantic), Some(storage.clone()));
+        let memory = BasicMemory::with_thread_storage(None, Some(semantic), Some(storage.clone()));
         (memory, storage)
     }
 
@@ -745,7 +727,7 @@ mod tests {
                     context: None,
                 });
             }
-        Ok(results)
+            Ok(results)
         }
 
         async fn get_recent(&self, limit: usize) -> Result<Vec<Message>> {
@@ -799,7 +781,11 @@ mod tests {
         let threads = manager.list_threads("user-2").await?;
         assert_eq!(threads.len(), 1);
         let stored = manager
-            .get_messages(&threads[0].id, &GetMessagesParams::default(), Some("user-2"))
+            .get_messages(
+                &threads[0].id,
+                &GetMessagesParams::default(),
+                Some("user-2"),
+            )
             .await?;
         assert_eq!(stored.len(), 1);
         assert_eq!(stored[0].content, "hello again");
@@ -880,7 +866,10 @@ mod tests {
 
         let recall = SemanticRecallConfig {
             top_k: 2,
-            message_range: Some(MessageRange { before: 0, after: 0 }),
+            message_range: Some(MessageRange {
+                before: 0,
+                after: 0,
+            }),
             generate_summaries: false,
             use_embeddings: true,
             max_capacity: None,
@@ -948,11 +937,15 @@ mod tests {
         assert_eq!(threads.len(), 1);
 
         // 获取统计信息
-        let stats = memory.get_thread_stats("test-thread", Some("user-123")).await?;
+        let stats = memory
+            .get_thread_stats("test-thread", Some("user-123"))
+            .await?;
         assert_eq!(stats.message_count, 0);
 
         // 删除线程
-        memory.delete_thread("test-thread", Some("user-123")).await?;
+        memory
+            .delete_thread("test-thread", Some("user-123"))
+            .await?;
         let deleted = memory.get_thread("test-thread", Some("user-123")).await?;
         assert!(deleted.is_none());
 

@@ -261,8 +261,7 @@ async fn test_performance_no_regression() {
 #[tokio::test]
 async fn test_error_handling_improvements() {
     // Test that error messages are helpful
-    let result =
-        SimplifiedAgent::quick("test", "instructions").build(); // Missing model - should give helpful error
+    let result = SimplifiedAgent::quick("test", "instructions").build(); // Missing model - should give helpful error
 
     assert!(result.is_err(), "Should fail without model");
 

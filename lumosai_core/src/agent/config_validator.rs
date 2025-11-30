@@ -424,36 +424,51 @@ mod tests {
     #[test]
     fn test_valid_models() {
         let validator = ConfigValidator::new();
-        let valid_models = vec!["gpt-4", "claude-3", "qwen-turbo", "gemini-pro", "llama-2", "mistral-7b", "yi-6b"];
-        
+        let valid_models = vec![
+            "gpt-4",
+            "claude-3",
+            "qwen-turbo",
+            "gemini-pro",
+            "llama-2",
+            "mistral-7b",
+            "yi-6b",
+        ];
+
         for model in valid_models {
             let config = json!({
                 "name": "test-agent",
                 "model": model
             });
-            assert!(validator.validate_json(&config).is_ok(), "Model {} should be valid", model);
+            assert!(
+                validator.validate_json(&config).is_ok(),
+                "Model {} should be valid",
+                model
+            );
         }
     }
 
     #[test]
     fn test_custom_rule() {
         let mut validator = ConfigValidator::new();
-        validator.add_rule("custom_field", Box::new(|value: &Value| {
-            if let Some(s) = value.as_str() {
-                if s.len() < 5 {
-                    return Err(Error::Validation {
+        validator.add_rule(
+            "custom_field",
+            Box::new(|value: &Value| {
+                if let Some(s) = value.as_str() {
+                    if s.len() < 5 {
+                        return Err(Error::Validation {
+                            field: "custom_field".to_string(),
+                            message: "Custom field must be at least 5 characters".to_string(),
+                        });
+                    }
+                    Ok(())
+                } else {
+                    Err(Error::Validation {
                         field: "custom_field".to_string(),
-                        message: "Custom field must be at least 5 characters".to_string(),
-                    });
+                        message: "Custom field must be a string".to_string(),
+                    })
                 }
-                Ok(())
-            } else {
-                Err(Error::Validation {
-                    field: "custom_field".to_string(),
-                    message: "Custom field must be a string".to_string(),
-                })
-            }
-        }));
+            }),
+        );
 
         // Test valid custom field
         let config = json!({
@@ -498,7 +513,7 @@ mod tests {
     #[test]
     fn test_temperature_boundary_values() {
         let validator = ConfigValidator::new();
-        
+
         // Test minimum valid temperature
         let config = json!({
             "name": "test-agent",

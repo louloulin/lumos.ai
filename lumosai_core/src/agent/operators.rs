@@ -337,23 +337,29 @@ mod tests {
         let llm1 = create_test_zhipu_provider_arc();
         let llm2 = create_test_zhipu_provider_arc();
 
-        let agent1 = Arc::new(BasicAgent::new(
-            crate::agent::AgentConfig {
-                name: "agent1".to_string(),
-                instructions: "Process step 1".to_string(),
-                ..Default::default()
-            },
-            llm1,
-        ).unwrap());
+        let agent1 = Arc::new(
+            BasicAgent::new(
+                crate::agent::AgentConfig {
+                    name: "agent1".to_string(),
+                    instructions: "Process step 1".to_string(),
+                    ..Default::default()
+                },
+                llm1,
+            )
+            .unwrap(),
+        );
 
-        let agent2 = Arc::new(BasicAgent::new(
-            crate::agent::AgentConfig {
-                name: "agent2".to_string(),
-                instructions: "Process step 2".to_string(),
-                ..Default::default()
-            },
-            llm2,
-        ).unwrap());
+        let agent2 = Arc::new(
+            BasicAgent::new(
+                crate::agent::AgentConfig {
+                    name: "agent2".to_string(),
+                    instructions: "Process step 2".to_string(),
+                    ..Default::default()
+                },
+                llm2,
+            )
+            .unwrap(),
+        );
 
         // Add delay to avoid rate limiting
         tokio::time::sleep(Duration::from_millis(1000)).await;

@@ -32,8 +32,7 @@ mod tests {
         };
 
         // Create agent
-        let agent =
-            BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test that agent supports function calling
         assert!(
@@ -71,8 +70,7 @@ mod tests {
         };
 
         // Create agent
-        let agent =
-            BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test streaming capability
         let messages = vec![lumosai_core::agent::message_utils::user_message(
@@ -109,8 +107,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent =
-            BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test memory operations
         if let Some(memory) = agent.get_working_memory() {
@@ -148,8 +145,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent =
-            BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test that telemetry components exist
         // Note: This is a basic validation that the structures exist
@@ -192,8 +188,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent =
-            BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test all capabilities together
         let messages = vec![lumosai_core::agent::message_utils::user_message(

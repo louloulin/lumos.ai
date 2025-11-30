@@ -56,13 +56,13 @@ impl AgentCore {
         // 验证配置
         if config.name.is_empty() {
             return Err(crate::error::Error::InvalidInput(
-                "Agent name cannot be empty".to_string()
+                "Agent name cannot be empty".to_string(),
             ));
         }
-        
+
         // 验证 LLM provider 不为空
         // Arc 本身不会为空，但我们可以检查是否有效
-        
+
         Ok(Self {
             name: config.name.clone(),
             instructions: config.instructions.clone(),
@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn test_agent_core_validation() {
         use crate::llm::MockLlmProvider;
-        
+
         // 测试空名称验证
         let config = AgentConfig {
             name: "".to_string(),
@@ -176,10 +176,12 @@ mod tests {
             ..Default::default()
         };
         let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
+
         let result = AgentCore::new(config, llm);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("name cannot be empty"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("name cannot be empty"));
     }
 }
-

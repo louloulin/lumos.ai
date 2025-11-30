@@ -2,12 +2,14 @@
 //!
 //! 将 Agent Trait 拆分为多个职责单一的 Trait，提高代码的可维护性和可扩展性
 
-use crate::agent::types::{AgentGenerateOptions, AgentGenerateResult, AgentStreamOptions, RuntimeContext};
+use crate::agent::types::{
+    AgentGenerateOptions, AgentGenerateResult, AgentStreamOptions, RuntimeContext,
+};
 use crate::base::Base;
 use crate::error::Result;
 use crate::llm::{LlmProvider, Message};
-use crate::memory::Memory;
 use crate::memory::thread::{CreateThreadParams, MemoryThread, ThreadStats, UpdateThreadParams};
+use crate::memory::Memory;
 use crate::tool::Tool;
 use async_trait::async_trait;
 use futures::stream::BoxStream;
@@ -123,7 +125,6 @@ pub trait MemoryAgent: CoreAgent {
         thread_id: Option<String>,
         options: &AgentGenerateOptions,
     ) -> Result<AgentGenerateResult> {
-        
         use crate::llm::Role;
 
         // 默认实现：如果有内存，从内存中检索上下文
@@ -131,30 +132,30 @@ pub trait MemoryAgent: CoreAgent {
         if let Some(memory) = self.get_memory() {
             // 构建内存配置
             let mut memory_config = options.memory_options.clone().unwrap_or_default();
-            
+
             // 如果有 thread_id，使用它作为 namespace
             if let Some(tid) = thread_id {
                 if memory_config.namespace.is_none() {
                     memory_config.namespace = Some(tid.clone());
                 }
             }
-            
+
             // 设置检索数量（如果没有指定，使用 context_window 或默认值）
             if memory_config.last_messages.is_none() || memory_config.last_messages == Some(0) {
                 memory_config.last_messages = options.context_window.or(Some(10));
             }
-            
+
             // 提取用户的最后一条消息作为语义搜索 query（如果启用语义召回）
             let user_query = messages
                 .iter()
                 .rev()
                 .find(|m| matches!(m.role, Role::User))
                 .map(|m| m.content.clone());
-            
+
             if user_query.is_some() && memory_config.query.is_none() {
                 memory_config.query = user_query;
             }
-            
+
             // 从内存检索历史消息
             if let Ok(historical) = memory.retrieve(&memory_config).await {
                 if !historical.is_empty() {
@@ -163,12 +164,12 @@ pub trait MemoryAgent: CoreAgent {
                 }
             }
         }
-        
+
         // 使用合并后的消息调用基础 generate 方法
         self.generate(&input_messages, options).await
-            }
-        }
-        
+    }
+}
+
 /// Thread Management Agent Trait
 ///
 /// 为 Agent 添加线程管理功能，支持创建、获取、更新、删除线程等操作。
@@ -228,13 +229,11 @@ pub trait ThreadManagementAgent: MemoryAgent {
     /// # }
     /// ```
     async fn create_thread(&self, params: CreateThreadParams) -> Result<MemoryThread> {
-        let memory = self
-            .get_memory()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Agent does not have memory configured. Cannot create thread.".to_string(),
-                )
-            })?;
+        let memory = self.get_memory().ok_or_else(|| {
+            crate::error::Error::Configuration(
+                "Agent does not have memory configured. Cannot create thread.".to_string(),
+            )
+        })?;
         memory.create_thread(params).await
     }
 
@@ -262,13 +261,11 @@ pub trait ThreadManagementAgent: MemoryAgent {
         thread_id: &str,
         resource_id: Option<&str>,
     ) -> Result<Option<MemoryThread>> {
-        let memory = self
-            .get_memory()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Agent does not have memory configured. Cannot get thread.".to_string(),
-                )
-            })?;
+        let memory = self.get_memory().ok_or_else(|| {
+            crate::error::Error::Configuration(
+                "Agent does not have memory configured. Cannot get thread.".to_string(),
+            )
+        })?;
         memory.get_thread(thread_id, resource_id).await
     }
 
@@ -304,13 +301,11 @@ pub trait ThreadManagementAgent: MemoryAgent {
         params: UpdateThreadParams,
         resource_id: Option<&str>,
     ) -> Result<MemoryThread> {
-        let memory = self
-            .get_memory()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Agent does not have memory configured. Cannot update thread.".to_string(),
-                )
-            })?;
+        let memory = self.get_memory().ok_or_else(|| {
+            crate::error::Error::Configuration(
+                "Agent does not have memory configured. Cannot update thread.".to_string(),
+            )
+        })?;
         memory.update_thread(thread_id, params, resource_id).await
     }
 
@@ -332,13 +327,11 @@ pub trait ThreadManagementAgent: MemoryAgent {
     /// # }
     /// ```
     async fn delete_thread(&self, thread_id: &str, resource_id: Option<&str>) -> Result<()> {
-        let memory = self
-            .get_memory()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Agent does not have memory configured. Cannot delete thread.".to_string(),
-                )
-            })?;
+        let memory = self.get_memory().ok_or_else(|| {
+            crate::error::Error::Configuration(
+                "Agent does not have memory configured. Cannot delete thread.".to_string(),
+            )
+        })?;
         memory.delete_thread(thread_id, resource_id).await
     }
 
@@ -360,13 +353,11 @@ pub trait ThreadManagementAgent: MemoryAgent {
     /// # }
     /// ```
     async fn list_threads(&self, resource_id: &str) -> Result<Vec<MemoryThread>> {
-        let memory = self
-            .get_memory()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Agent does not have memory configured. Cannot list threads.".to_string(),
-                )
-            })?;
+        let memory = self.get_memory().ok_or_else(|| {
+            crate::error::Error::Configuration(
+                "Agent does not have memory configured. Cannot list threads.".to_string(),
+            )
+        })?;
         memory.list_threads(resource_id).await
     }
 
@@ -393,13 +384,11 @@ pub trait ThreadManagementAgent: MemoryAgent {
         thread_id: &str,
         resource_id: Option<&str>,
     ) -> Result<ThreadStats> {
-        let memory = self
-            .get_memory()
-            .ok_or_else(|| {
-                crate::error::Error::Configuration(
-                    "Agent does not have memory configured. Cannot get thread stats.".to_string(),
-                )
-            })?;
+        let memory = self.get_memory().ok_or_else(|| {
+            crate::error::Error::Configuration(
+                "Agent does not have memory configured. Cannot get thread stats.".to_string(),
+            )
+        })?;
         memory.get_thread_stats(thread_id, resource_id).await
     }
 }
@@ -449,7 +438,7 @@ pub trait ToolAgent: CoreAgent {
     /// # Default Implementation
     ///
     /// 默认实现返回所有静态工具（通过 `get_tools()`）。
-        async fn get_tools_with_context(
+    async fn get_tools_with_context(
         &self,
         _context: &RuntimeContext,
     ) -> Result<HashMap<String, Box<dyn Tool>>> {
@@ -538,8 +527,8 @@ impl<T> FullAgent for T where T: CoreAgent + MemoryAgent + ToolAgent + Streaming
 mod tests {
     use super::*;
     use crate::agent::types::AgentGenerateOptions;
-    use crate::llm::{Message, Role};
     use crate::llm::MockLlmProvider;
+    use crate::llm::{Message, Role};
     use std::sync::Arc;
 
     // Mock implementation for testing
@@ -564,7 +553,10 @@ mod tests {
             _options: &AgentGenerateOptions,
         ) -> Result<AgentGenerateResult> {
             // 简单的 mock 实现
-            let response = self.llm.generate_with_messages(messages, &Default::default()).await?;
+            let response = self
+                .llm
+                .generate_with_messages(messages, &Default::default())
+                .await?;
             Ok(AgentGenerateResult {
                 response,
                 steps: vec![],
@@ -613,7 +605,7 @@ mod tests {
         };
 
         assert_eq!(agent.get_name(), "test_agent");
-        
+
         let messages = vec![Message {
             role: Role::User,
             content: "Hello".to_string(),
@@ -621,7 +613,10 @@ mod tests {
             name: None,
         }];
 
-        let result = agent.generate(&messages, &AgentGenerateOptions::default()).await.unwrap();
+        let result = agent
+            .generate(&messages, &AgentGenerateOptions::default())
+            .await
+            .unwrap();
         assert_eq!(result.response, "test response");
     }
 
@@ -781,4 +776,3 @@ mod tests {
         assert_eq!(context_tools.len(), 0);
     }
 }
-

@@ -547,7 +547,10 @@ pub trait Memory: Send + Sync {
     /// # Ok(())
     /// # }
     /// ```
-    async fn get_threads_by_resource(&self, resource_id: &str) -> Result<Vec<thread::MemoryThread>> {
+    async fn get_threads_by_resource(
+        &self,
+        resource_id: &str,
+    ) -> Result<Vec<thread::MemoryThread>> {
         // 默认实现委托给 list_threads
         self.list_threads(resource_id).await
     }

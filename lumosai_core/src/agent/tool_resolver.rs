@@ -8,8 +8,7 @@ use crate::error::{Error, Result};
 use crate::tool::builtin::{
     create_calculator_tool, create_csv_parser_tool, create_datetime_tool, create_file_reader_tool,
     create_file_writer_tool, create_http_request_tool, create_json_parser_tool,
-    create_uuid_generator_tool, create_web_scraper_tool, FileManagerTool,
-    WebSearchTool,
+    create_uuid_generator_tool, create_web_scraper_tool, FileManagerTool, WebSearchTool,
 };
 use crate::tool::Tool;
 

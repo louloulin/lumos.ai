@@ -453,7 +453,10 @@ mod tests {
         let context = create_test_context();
 
         let long_output = "a".repeat(100);
-        let result = metric.evaluate("Input", &long_output, &context).await.unwrap();
+        let result = metric
+            .evaluate("Input", &long_output, &context)
+            .await
+            .unwrap();
 
         assert_eq!(result.metric_name, "length");
         assert!(result.score < 1.0);
@@ -463,10 +466,10 @@ mod tests {
     async fn test_composite_metric() {
         let logger = create_test_logger();
         let mut composite = CompositeMetric::new("test_composite".to_string(), logger.clone());
-        
+
         let relevance = Box::new(RelevanceMetric::new(logger.clone(), 0.5));
         let length = Box::new(LengthMetric::new(logger, 10, 100));
-        
+
         composite.add_metric(relevance, 0.6);
         composite.add_metric(length, 0.4);
 

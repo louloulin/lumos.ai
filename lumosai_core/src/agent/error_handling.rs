@@ -6,8 +6,8 @@
 //! - 错误恢复机制
 //! - 错误上下文和追踪
 
-use crate::error::{Error, Result};
 use crate::agent::types::RuntimeContext;
+use crate::error::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -73,11 +73,21 @@ pub enum BackoffStrategy {
     /// 固定延迟
     Fixed { delay_ms: u64 },
     /// 线性回退
-    Linear { initial_delay_ms: u64, increment_ms: u64 },
+    Linear {
+        initial_delay_ms: u64,
+        increment_ms: u64,
+    },
     /// 指数回退
-    Exponential { initial_delay_ms: u64, multiplier: f64 },
+    Exponential {
+        initial_delay_ms: u64,
+        multiplier: f64,
+    },
     /// 指数回退（带抖动）
-    ExponentialJitter { initial_delay_ms: u64, multiplier: f64, max_delay_ms: u64 },
+    ExponentialJitter {
+        initial_delay_ms: u64,
+        multiplier: f64,
+        max_delay_ms: u64,
+    },
 }
 
 impl BackoffStrategy {
@@ -101,7 +111,8 @@ impl BackoffStrategy {
                 multiplier,
                 max_delay_ms,
             } => {
-                let base_delay = (*initial_delay_ms as f64 * multiplier.powi(attempt as i32)) as u64;
+                let base_delay =
+                    (*initial_delay_ms as f64 * multiplier.powi(attempt as i32)) as u64;
                 let delay = base_delay.min(*max_delay_ms);
                 // 添加随机抖动（简化实现，使用固定抖动）
                 let jitter = delay / 10;
@@ -260,11 +271,7 @@ impl RetryExecutor {
     }
 
     /// 执行带重试的操作
-    pub async fn execute<F, Fut, T>(
-        &self,
-        mut operation: F,
-        context: &RuntimeContext,
-    ) -> Result<T>
+    pub async fn execute<F, Fut, T>(&self, mut operation: F, context: &RuntimeContext) -> Result<T>
     where
         F: FnMut() -> Fut + Send + Sync,
         Fut: std::future::Future<Output = Result<T>> + Send,
@@ -284,8 +291,11 @@ impl RetryExecutor {
                     let error_type = AgentErrorType::from_error(&error);
 
                     // 尝试恢复
-                    let recovery_action = self.recovery.recover(&error, &error_type, context, attempt).await?;
-                    
+                    let recovery_action = self
+                        .recovery
+                        .recover(&error, &error_type, context, attempt)
+                        .await?;
+
                     match recovery_action {
                         RecoveryAction::Retry => {
                             attempt += 1;
@@ -469,4 +479,3 @@ mod tests {
         assert!(result.is_err());
     }
 }
-

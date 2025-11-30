@@ -232,16 +232,16 @@ mod tests {
             );
         }
 
-    #[tokio::test]
-    async fn test_mock_provider_is_healthy() {
-        let provider = MockLlmProvider::new(vec!["test".to_string()]);
-        assert!(provider.is_healthy().await);
-    }
+        #[tokio::test]
+        async fn test_mock_provider_is_healthy() {
+            let provider = MockLlmProvider::new(vec!["test".to_string()]);
+            assert!(provider.is_healthy().await);
+        }
 
-    #[tokio::test]
-    async fn test_mock_provider_is_unhealthy_when_no_responses() {
-        let provider = MockLlmProvider::new(vec![]);
-        assert!(!provider.is_healthy().await);
-    }
+        #[tokio::test]
+        async fn test_mock_provider_is_unhealthy_when_no_responses() {
+            let provider = MockLlmProvider::new(vec![]);
+            assert!(!provider.is_healthy().await);
+        }
     }
 }

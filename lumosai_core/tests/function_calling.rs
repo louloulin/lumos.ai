@@ -30,7 +30,8 @@ mod tests {
         };
 
         // Create agent
-        let mut agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
+        let mut agent =
+            BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Create calculator tool using GenericTool
         let schema = ToolSchema::new(vec![ParameterSchema {
@@ -89,7 +90,8 @@ mod tests {
         };
 
         // Create agent
-        let mut agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
+        let mut agent =
+            BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Create calculator tool using GenericTool
         let schema = ToolSchema::new(vec![ParameterSchema {
@@ -272,7 +274,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
+        let mut agent =
+            BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Create calculator tool
         let calc_schema = ToolSchema::new(vec![ParameterSchema {

@@ -12,9 +12,9 @@ use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use super::BasicAgent;
 use super::trait_def::{Agent, AgentStructuredOutput};
 use super::types::AgentGenerateOptions;
+use super::BasicAgent;
 use crate::error::{Error, Result};
 use crate::llm::{LlmOptions, LlmProvider, Message, Role};
 

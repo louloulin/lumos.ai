@@ -67,9 +67,11 @@ impl TestUtils {
         let config = AgentConfig {
             name: "real_test_agent".to_string(),
             instructions: "You are a test agent for validation".to_string(),
+            isolation_level: Default::default(),
+            tenant_id: None,
             ..Default::default()
         };
-        Ok(BasicAgent::new(config, llm))
+        BasicAgent::new(config, llm)
     }
 
     /// 创建性能测试环境

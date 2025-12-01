@@ -244,11 +244,7 @@ async fn test_feature_completeness_check() -> Result<()> {
     );
     
     println!("Feature Completeness Result: {:?}", result);
-    Ok(())
-}
-
-    println!("Feature Completeness Result: {:?}", result);
-
+    
     // 检查核心功能是否被识别
     let has_basic_generation = result
         .implemented_features
@@ -258,6 +254,8 @@ async fn test_feature_completeness_check() -> Result<()> {
         has_basic_generation,
         "Should recognize basic generation capability"
     );
+    
+    Ok(())
 }
 
 /// 测试Agent状态管理

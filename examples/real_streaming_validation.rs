@@ -69,6 +69,8 @@ async fn test_basic_streaming() -> std::result::Result<(), Box<dyn std::error::E
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));
@@ -180,9 +182,13 @@ async fn test_long_text_streaming() -> std::result::Result<(), Box<dyn std::erro
         working_memory: None,
         enable_function_calling: Some(false),
         context: None,
+        tenant_id: None,
+        isolation_level: None,
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));
@@ -319,6 +325,8 @@ async fn test_multi_turn_streaming() -> std::result::Result<(), Box<dyn std::err
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));
@@ -448,6 +456,8 @@ async fn test_streaming_performance() -> std::result::Result<(), Box<dyn std::er
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));
@@ -553,6 +563,8 @@ async fn test_streaming_error_handling() -> std::result::Result<(), Box<dyn std:
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));

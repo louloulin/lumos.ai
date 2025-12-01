@@ -186,7 +186,7 @@ async fn demo_full_dynamic_agent() -> Result<()> {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm)?;
 
     println!("✅ Agent 创建成功:");
     println!("   名称: {}", agent.get_name());

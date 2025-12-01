@@ -163,6 +163,8 @@ async fn test_rag_streaming_integration() -> std::result::Result<(), Box<dyn std
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));
@@ -286,6 +288,8 @@ async fn test_multi_agent_collaboration() -> std::result::Result<(), Box<dyn std
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     // 项目经理Agent
@@ -302,6 +306,8 @@ async fn test_multi_agent_collaboration() -> std::result::Result<(), Box<dyn std
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let tech_analyst = BasicAgent::new(tech_analyst_config, Arc::new(llm));
@@ -420,6 +426,8 @@ async fn test_complex_workflow() -> std::result::Result<(), Box<dyn std::error::
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let workflow_agent = BasicAgent::new(workflow_agent_config, Arc::new(llm));
@@ -513,6 +521,8 @@ async fn test_performance_stress() -> std::result::Result<(), Box<dyn std::error
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let stress_agent = Arc::new(BasicAgent::new(stress_agent_config, Arc::new(llm)));
@@ -608,6 +618,8 @@ async fn test_error_recovery() -> std::result::Result<(), Box<dyn std::error::Er
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let robust_agent = BasicAgent::new(robust_agent_config, Arc::new(llm));

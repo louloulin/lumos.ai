@@ -41,7 +41,7 @@ async fn test_basic_connection(provider: &ZhipuProvider) -> Result<(), Box<dyn s
 
     // 使用更简单的选项
     let mut options = LlmOptions::default();
-    options.temperature = Some(0.7);
+    options.temperature = Some(lumosai_core::llm::Temperature::new(0.7));
     options.max_tokens = Some(100);
 
     let start_time = Instant::now();

@@ -193,6 +193,8 @@ async fn test_agent_memory_integration() -> std::result::Result<(), Box<dyn std:
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let memory_agent = BasicAgent::new(agent_config, Arc::new(llm));

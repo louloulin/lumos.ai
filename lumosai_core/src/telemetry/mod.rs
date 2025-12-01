@@ -2,6 +2,39 @@
 //!
 //! 提供性能监控、指标收集和分布式追踪功能
 
+pub mod analyzer;
+pub mod collector;
+pub mod alert;
+pub mod monitor;
+pub mod otel;
+
+// 使用更具体的导出以避免名称冲突
+pub use analyzer::{
+    PerformanceAnalyzer, PerformanceAnalysis, PerformanceAnomaly, PerformanceBottleneck,
+    OptimizationRecommendation, PerformanceTrend, TimeRange,
+    ImplementationDifficulty, Priority,
+};
+// PerformancePrediction 在两个模块中都有定义，使用别名区分
+pub use analyzer::PerformancePrediction as AnalyzerPerformancePrediction;
+pub use collector::{
+    MetricsCollector, ToolMetrics, MemoryMetrics, AgentPerformance, ResourceUsage, MetricsSummary,
+};
+pub use alert::{
+    SmartAlertEngine, AlertEngineConfig, AlertRule, AlertSeverity, AlertCondition, Alert,
+    AlertStatistics, EscalationConfig, AutomationExecutor, AutomationAction, AutomationActionType,
+    DefaultAutomationExecutor, AutomationConfig,
+};
+pub use monitor::{
+    EnterprisePerformanceMonitor, PerformanceMonitorConfig, PerformanceThresholds,
+    PredictionConfig, AutoOptimizationConfig, OptimizationStrategy, CurrentPerformanceMetrics,
+    ResponseTimeMetrics, ThroughputMetrics, ResourceUsageMetrics, ErrorMetrics,
+    OptimizationSuggestion, PerformanceSummary, PerformancePrediction, MonitoringStatistics,
+};
+pub use otel::{
+    HttpOtlpExporter, OtelSpan, OtelMetric, DataPoint, AttributeValue, DataPointValue, SpanKind,
+    SpanStatus, SpanEvent,
+};
+
 use async_trait::async_trait;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -203,3 +236,4 @@ impl TelemetryManager {
         self.sink.record_event(name, data).await;
     }
 }
+

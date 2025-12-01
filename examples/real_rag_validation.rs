@@ -513,9 +513,11 @@ async fn test_end_to_end_rag() -> std::result::Result<(), Box<dyn std::error::Er
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
 
     println!("      ✓ RAG系统组件创建成功");
 

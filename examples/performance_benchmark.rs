@@ -4,6 +4,7 @@
 //! against the traditional builder pattern to validate our improvements.
 
 use lumosai_core::agent::{quick, web_agent, AgentBuilder};
+use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio;
@@ -241,6 +242,7 @@ fn get_memory_usage() -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 
     #[tokio::test]
     async fn test_api_performance_consistency() {

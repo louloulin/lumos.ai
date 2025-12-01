@@ -47,6 +47,7 @@ pub use config::*;
 pub use error::{Error, Result};
 pub use llm::{AnthropicProvider, MockLlmProvider, OpenAiProvider, QwenProvider};
 pub use llm::{LlmOptions, LlmProvider, Message, Role};
+pub use logger::Logger;
 pub use memory::{Memory, WorkingMemory, WorkingMemoryContent};
 pub use tool::Tool;
 

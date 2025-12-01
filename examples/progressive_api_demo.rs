@@ -8,6 +8,7 @@
 use lumosai_core::agent::simplified_api::{data_agent, file_agent, quick, web_agent, Agent};
 use lumosai_core::agent::trait_def::Agent as AgentTrait;
 use lumosai_core::error::Result;
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use std::sync::Arc;
 
 #[tokio::main]

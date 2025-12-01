@@ -10,6 +10,8 @@ use lumosai_core::app::LumosApp;
 use lumosai_core::config::{ConfigLoader, YamlConfig};
 use lumosai_core::Result;
 use std::env;
+use std::io::Write;
+use std::fs;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -217,8 +219,11 @@ port = 8080
 optimize = true
 "#;
 
-    // Parse TOML as YAML config
-    match ConfigLoader::parse_toml_content(toml_content) {
+    // Parse TOML content by creating a temporary file
+    let temp_file = std::env::temp_dir().join("lumosai_config.toml");
+    fs::write(&temp_file, toml_content).expect("Failed to write temp file");
+    
+    match ConfigLoader::load(&temp_file) {
         Ok(config) => {
             println!("   ✅ Successfully parsed TOML configuration");
             println!("   📋 Project: {}", config.project.as_ref().unwrap().name);
@@ -232,6 +237,9 @@ optimize = true
         }
         Err(e) => println!("   ❌ Failed to parse TOML: {}", e),
     }
+    
+    // Clean up temp file
+    let _ = fs::remove_file(&temp_file);
 
     Ok(())
 }

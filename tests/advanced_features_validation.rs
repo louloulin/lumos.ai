@@ -36,7 +36,7 @@ impl LlmProvider for MockLlmProvider {
         "mock-llm"
     }
 
-    async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String, Error> {
+    async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> std::result::Result<String, Error> {
         let mut index = self.current_index.lock().unwrap();
         let response = self
             .responses
@@ -51,7 +51,7 @@ impl LlmProvider for MockLlmProvider {
         &self,
         _messages: &[Message],
         _options: &LlmOptions,
-    ) -> Result<String, Error> {
+    ) -> std::result::Result<String, Error> {
         let mut index = self.current_index.lock().unwrap();
         let response = self
             .responses
@@ -66,15 +66,15 @@ impl LlmProvider for MockLlmProvider {
         &'a self,
         _prompt: &'a str,
         _options: &'a LlmOptions,
-    ) -> Result<futures::stream::BoxStream<'a, Result<String, Error>>, Error> {
+    ) -> std::result::Result<futures::stream::BoxStream<'a, std::result::Result<String, Error>>, Error> {
         use futures::stream::{self, StreamExt};
         let response = self.generate(_prompt, _options).await?;
-        let chunks: Vec<Result<String, Error>> =
+        let chunks: Vec<std::result::Result<String, Error>> =
             response.chars().map(|c| Ok(c.to_string())).collect();
         Ok(stream::iter(chunks).boxed())
     }
 
-    async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>, Error> {
+    async fn get_embedding(&self, _text: &str) -> std::result::Result<Vec<f32>, Error> {
         Ok(vec![0.1, 0.2, 0.3, 0.4, 0.5])
     }
 }
@@ -184,7 +184,6 @@ async fn test_api_consistency_check() -> Result<()> {
         !has_critical_issues,
         "Should not have critical consistency issues"
     );
-    Ok(())
     Ok(())
 }
 

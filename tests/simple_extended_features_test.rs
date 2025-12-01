@@ -75,7 +75,7 @@ async fn test_documentation_formats() -> Result<()> {
     // 模块不存在，暂时注释掉整个测试
     println!("⚠️  测试暂时禁用（模块不存在）");
     Ok(())
-
+}
 
 /// 测试负载均衡器节点过滤
 #[tokio::test]
@@ -83,7 +83,7 @@ async fn test_load_balancer_filtering() -> Result<()> {
     // 模块不存在，暂时注释掉整个测试
     println!("⚠️  测试暂时禁用（模块不存在）");
     Ok(())
-
+}
 
 /// 测试综合功能
 #[tokio::test]
@@ -91,4 +91,5 @@ async fn test_comprehensive_features() -> Result<()> {
     // 模块不存在，暂时注释掉整个测试
     println!("⚠️  测试暂时禁用（模块不存在）");
     Ok(())
+}
 

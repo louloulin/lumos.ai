@@ -236,7 +236,7 @@ async fn test_multi_tenant_support() -> std::result::Result<(), Box<dyn std::err
             metadata: None,
             max_tool_calls: None,
             tool_timeout: None,
-            tenant_id: Some(tenant_id.clone()),
+            tenant_id: Some(tenant_id.to_string()),
             isolation_level: Some("strict".to_string()),
         };
 

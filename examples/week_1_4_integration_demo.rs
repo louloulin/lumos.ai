@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-/*
+/* 注释掉的代码 - 需要 #[tool] 宏支持
 // 第三周功能：使用 #[tool] 宏创建工具
 #[tool]
 async fn calculate(operation: String, a: f64, b: f64) -> Result<f64> {
@@ -204,6 +204,7 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+*/
 
 /*
 #[cfg(test)]

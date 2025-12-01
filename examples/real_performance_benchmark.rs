@@ -74,7 +74,7 @@ async fn test_basic_performance() -> std::result::Result<(), Box<dyn std::error:
         isolation_level: None,
     };
 
-    let perf_agent = BasicAgent::new(perf_agent_config, Arc::new(llm));
+    let perf_agent = BasicAgent::new(perf_agent_config, Arc::new(llm))?;
 
     println!("      ✓ 性能测试Agent创建成功");
 
@@ -189,7 +189,7 @@ async fn test_concurrent_performance() -> std::result::Result<(), Box<dyn std::e
         isolation_level: None,
     };
 
-    let concurrent_agent = Arc::new(BasicAgent::new(concurrent_agent_config, Arc::new(llm)));
+    let concurrent_agent = Arc::new(BasicAgent::new(concurrent_agent_config, Arc::new(llm))?);
 
     // 测试用例 10.2.1: 并发请求性能测试
     println!("    🔀 测试并发请求性能");
@@ -330,7 +330,7 @@ async fn test_memory_optimization() -> std::result::Result<(), Box<dyn std::erro
             "https://dashscope.aliyuncs.com/compatible-mode/v1",
             QwenApiType::OpenAICompatible,
         );
-        let agent = BasicAgent::new(config, Arc::new(agent_llm));
+        let agent = BasicAgent::new(config, Arc::new(agent_llm))?;
         agents.push(agent);
     }
 
@@ -531,7 +531,7 @@ async fn test_long_running_stability() -> std::result::Result<(), Box<dyn std::e
         isolation_level: None,
     };
 
-    let stability_agent = BasicAgent::new(stability_agent_config, Arc::new(llm));
+    let stability_agent = BasicAgent::new(stability_agent_config, Arc::new(llm))?;
 
     // 测试用例 10.5.1: 长时间运行稳定性测试
     println!("    ⏱️ 测试长时间运行稳定性");

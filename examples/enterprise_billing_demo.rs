@@ -7,11 +7,23 @@
 //! - 支付处理和退款管理
 //! - 资源分配和自动扩缩容
 //! - 成本优化和需求预测
+//!
+//! 注意：此示例需要 billing 模块，当前模块不存在，暂时禁用
 
-use lumosai_core::billing::*;
-use std::collections::HashMap;
-use std::time::{Duration, SystemTime};
-use uuid::Uuid;
+// use lumosai_core::billing::*;
+// use std::collections::HashMap;
+// use std::time::{Duration, SystemTime};
+// use uuid::Uuid;
+
+#[tokio::main]
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    println!("⚠️  Enterprise Billing Demo 暂时禁用（billing 模块不存在）");
+    println!("=========================================================\n");
+    Ok(())
+}
+
+/*
+以下代码需要 billing 模块支持，暂时注释掉
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -412,4 +424,5 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
     println!("\n🔒 生产级计费系统已就绪！");
 
     Ok(())
+    */
 }

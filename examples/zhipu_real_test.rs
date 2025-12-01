@@ -11,11 +11,12 @@
 
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{Agent, AgentConfig, BasicAgent};
+use lumosai_core::error::Result;
 use lumosai_core::llm::{Message, Role, ZhipuProvider};
 use std::sync::Arc;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     // 从环境变量获取 API key
     let api_key = std::env::var("ZHIPU_API_KEY")
         .unwrap_or_else(|_| "99a311fa7920a59e9399cf26ecc1e938.ac4w6buZHr2Ggc3k".to_string());
@@ -46,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, zhipu.clone());
+    let agent = BasicAgent::new(config, zhipu.clone())?;
 
     let messages = vec![Message::new(
         Role::User,

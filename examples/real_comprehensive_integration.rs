@@ -310,7 +310,7 @@ async fn test_multi_agent_collaboration() -> std::result::Result<(), Box<dyn std
         isolation_level: None,
     };
 
-    let tech_analyst = BasicAgent::new(tech_analyst_config, Arc::new(llm));
+    let tech_analyst = BasicAgent::new(tech_analyst_config, Arc::new(llm))?;
 
     let llm2 = QwenProvider::new_with_api_type(
         "sk-bc977c4e31e542f1a34159cb42478198",
@@ -318,7 +318,7 @@ async fn test_multi_agent_collaboration() -> std::result::Result<(), Box<dyn std
         "https://dashscope.aliyuncs.com/compatible-mode/v1",
         QwenApiType::OpenAICompatible,
     );
-    let project_manager = BasicAgent::new(project_manager_config, Arc::new(llm2));
+    let project_manager = BasicAgent::new(project_manager_config, Arc::new(llm2))?;
 
     println!("      ✓ 技术分析师Agent创建成功");
     println!("      ✓ 项目经理Agent创建成功");
@@ -430,7 +430,7 @@ async fn test_complex_workflow() -> std::result::Result<(), Box<dyn std::error::
         isolation_level: None,
     };
 
-    let workflow_agent = BasicAgent::new(workflow_agent_config, Arc::new(llm));
+    let workflow_agent = BasicAgent::new(workflow_agent_config, Arc::new(llm))?;
 
     // 定义复杂工作流步骤
     let workflow_steps = vec![

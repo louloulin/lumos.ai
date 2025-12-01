@@ -197,7 +197,7 @@ async fn test_agent_memory_integration() -> std::result::Result<(), Box<dyn std:
         isolation_level: None,
     };
 
-    let memory_agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let memory_agent = BasicAgent::new(agent_config, Arc::new(llm))?;
     println!("      ✓ 带内存的Agent创建成功");
 
     // 测试用例 4.3.2: 多轮对话记忆测试

@@ -68,6 +68,8 @@ async fn test_agent_creation_configuration() -> std::result::Result<(), Box<dyn 
         metadata: None,
         max_tool_calls: Some(10),
         tool_timeout: Some(30),
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));
@@ -118,6 +120,8 @@ async fn test_agent_creation_configuration() -> std::result::Result<(), Box<dyn 
             metadata: None,
             max_tool_calls: Some(10),
             tool_timeout: Some(30),
+            tenant_id: None,
+            isolation_level: None,
         };
 
         let llm_clone = QwenProvider::new_with_api_type(
@@ -166,6 +170,8 @@ async fn test_agent_execution() -> std::result::Result<(), Box<dyn std::error::E
         metadata: None,
         max_tool_calls: Some(10),
         tool_timeout: Some(30),
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));

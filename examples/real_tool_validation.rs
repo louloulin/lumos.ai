@@ -164,7 +164,7 @@ async fn test_tool_execution() -> std::result::Result<(), Box<dyn std::error::Er
         tool_timeout: Some(30),
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
 
     // 测试用例 3.2.1: 单个工具调用
     println!("    🔧 测试单个工具调用");

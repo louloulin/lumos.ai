@@ -70,6 +70,8 @@ async fn test_basic_performance() -> std::result::Result<(), Box<dyn std::error:
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let perf_agent = BasicAgent::new(perf_agent_config, Arc::new(llm));
@@ -183,6 +185,8 @@ async fn test_concurrent_performance() -> std::result::Result<(), Box<dyn std::e
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let concurrent_agent = Arc::new(BasicAgent::new(concurrent_agent_config, Arc::new(llm)));
@@ -309,6 +313,8 @@ async fn test_memory_optimization() -> std::result::Result<(), Box<dyn std::erro
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     // 测试多个Agent实例的内存使用
@@ -399,9 +405,11 @@ async fn test_streaming_performance() -> std::result::Result<(), Box<dyn std::er
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let streaming_agent = BasicAgent::new(streaming_agent_config, Arc::new(llm));
+    let streaming_agent = BasicAgent::new(streaming_agent_config, Arc::new(llm))?;
     let streaming_agent = streaming_agent.into_streaming();
 
     // 测试用例 10.4.1: 流式响应性能测试
@@ -519,6 +527,8 @@ async fn test_long_running_stability() -> std::result::Result<(), Box<dyn std::e
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     let stability_agent = BasicAgent::new(stability_agent_config, Arc::new(llm));

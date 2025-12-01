@@ -71,7 +71,7 @@ async fn test_monitoring_and_logging() -> std::result::Result<(), Box<dyn std::e
         isolation_level: None,
     };
 
-    let monitoring_agent = BasicAgent::new(monitoring_agent_config, Arc::new(llm));
+    let monitoring_agent = BasicAgent::new(monitoring_agent_config, Arc::new(llm))?;
 
     // 验证日志输出
     println!("      🔍 验证Agent执行日志");

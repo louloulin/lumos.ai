@@ -7,10 +7,10 @@
 //! - 内置工具使用
 
 use async_trait::async_trait;
-use lumosai_core::agent::{AgentBuilder, AgentTrait};
+use lumosai_core::agent::{Agent, AgentBuilder};
 use lumosai_core::base::{Base, BaseComponent};
+use lumosai_core::compat::Component;
 use lumosai_core::llm::MockLlmProvider;
-use lumosai_core::logger::Component as LogComponent;
 use lumosai_core::telemetry::TelemetrySink;
 use lumosai_core::tool::{
     ParameterSchema, SchemaFormat, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
@@ -201,7 +201,7 @@ impl CalculatorTool {
     pub fn new() -> Self {
         Self {
             name: "calculator".to_string(),
-            base: BaseComponent::new_with_name("calculator".to_string(), LogComponent::Tool),
+            base: BaseComponent::new_with_name("calculator".to_string(), Component::Tool),
         }
     }
 }
@@ -211,8 +211,8 @@ impl Base for CalculatorTool {
         Some(&self.name)
     }
 
-    fn component(&self) -> LogComponent {
-        LogComponent::Tool
+    fn component(&self) -> Component {
+        Component::Tool
     }
 
     fn logger(&self) -> Arc<dyn lumosai_core::Logger> {
@@ -336,7 +336,7 @@ impl WeatherTool {
     pub fn new() -> Self {
         Self {
             name: "weather".to_string(),
-            base: BaseComponent::new_with_name("weather".to_string(), LogComponent::Tool),
+            base: BaseComponent::new_with_name("weather".to_string(), Component::Tool),
         }
     }
 }
@@ -346,8 +346,8 @@ impl Base for WeatherTool {
         Some(&self.name)
     }
 
-    fn component(&self) -> LogComponent {
-        LogComponent::Tool
+    fn component(&self) -> Component {
+        Component::Tool
     }
 
     fn logger(&self) -> Arc<dyn lumosai_core::Logger> {
@@ -486,7 +486,7 @@ impl DataFetcherTool {
     pub fn new() -> Self {
         Self {
             name: "data_fetcher".to_string(),
-            base: BaseComponent::new_with_name("data_fetcher".to_string(), LogComponent::Tool),
+            base: BaseComponent::new_with_name("data_fetcher".to_string(), Component::Tool),
         }
     }
 }
@@ -496,8 +496,8 @@ impl Base for DataFetcherTool {
         Some(&self.name)
     }
 
-    fn component(&self) -> LogComponent {
-        LogComponent::Tool
+    fn component(&self) -> Component {
+        Component::Tool
     }
 
     fn logger(&self) -> Arc<dyn lumosai_core::Logger> {
@@ -601,7 +601,7 @@ impl DataProcessorTool {
     pub fn new() -> Self {
         Self {
             name: "data_processor".to_string(),
-            base: BaseComponent::new_with_name("data_processor".to_string(), LogComponent::Tool),
+            base: BaseComponent::new_with_name("data_processor".to_string(), Component::Tool),
         }
     }
 }
@@ -611,8 +611,8 @@ impl Base for DataProcessorTool {
         Some(&self.name)
     }
 
-    fn component(&self) -> LogComponent {
-        LogComponent::Tool
+    fn component(&self) -> Component {
+        Component::Tool
     }
 
     fn logger(&self) -> Arc<dyn lumosai_core::Logger> {
@@ -715,7 +715,7 @@ impl ReportGeneratorTool {
     pub fn new() -> Self {
         Self {
             name: "report_generator".to_string(),
-            base: BaseComponent::new_with_name("report_generator".to_string(), LogComponent::Tool),
+            base: BaseComponent::new_with_name("report_generator".to_string(), Component::Tool),
         }
     }
 }
@@ -725,8 +725,8 @@ impl Base for ReportGeneratorTool {
         Some(&self.name)
     }
 
-    fn component(&self) -> LogComponent {
-        LogComponent::Tool
+    fn component(&self) -> Component {
+        Component::Tool
     }
 
     fn logger(&self) -> Arc<dyn lumosai_core::Logger> {

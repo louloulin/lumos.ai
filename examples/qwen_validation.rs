@@ -193,8 +193,9 @@ async fn test_llm_options(provider: &QwenProvider) -> Result<(), Box<dyn std::er
     println!("🧪 测试不同的LlmOptions配置...");
 
     // 测试温度参数
+    use lumosai_core::llm::types::Temperature;
     let mut options = LlmOptions::default();
-    options.temperature = Some(0.1);
+    options.temperature = Some(Temperature::from(0.1));
     options.max_tokens = Some(100);
 
     let result = provider.generate("请简单回答：什么是AI？", &options).await;

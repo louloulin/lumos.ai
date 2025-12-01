@@ -186,3 +186,56 @@ pub struct AutomationConfig {
     pub action_timeout_seconds: u64,
 }
 
+/// 告警通道
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlertChannel {
+    pub id: String,
+    pub name: String,
+    pub channel_type: AlertChannelType,
+    pub config: serde_json::Value,
+    pub enabled: bool,
+}
+
+/// 告警通道类型
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AlertChannelType {
+    Email,
+    Slack,
+    Webhook,
+    PagerDuty,
+    Sms,
+}
+
+/// 内存告警管理器
+pub struct InMemoryAlertManager {
+    rules: Arc<tokio::sync::RwLock<Vec<AlertRule>>>,
+    channels: Arc<tokio::sync::RwLock<Vec<AlertChannel>>>,
+}
+
+impl InMemoryAlertManager {
+    pub fn new() -> Self {
+        Self {
+            rules: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            channels: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+        }
+    }
+
+    pub async fn add_rule(
+        &self,
+        rule: AlertRule,
+    ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut rules = self.rules.write().await;
+        rules.push(rule);
+        Ok(())
+    }
+
+    pub async fn add_channel(
+        &self,
+        channel: AlertChannel,
+    ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut channels = self.channels.write().await;
+        channels.push(channel);
+        Ok(())
+    }
+}
+

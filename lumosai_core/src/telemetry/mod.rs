@@ -12,7 +12,7 @@ pub mod otel;
 pub use analyzer::{
     PerformanceAnalyzer, PerformanceAnalysis, PerformanceAnomaly, PerformanceBottleneck,
     OptimizationRecommendation, PerformanceTrend, TimeRange,
-    ImplementationDifficulty, Priority,
+    ImplementationDifficulty, Priority, IntelligentPerformanceAnalyzer,
 };
 // PerformancePrediction 在两个模块中都有定义，使用别名区分
 pub use analyzer::PerformancePrediction as AnalyzerPerformancePrediction;
@@ -22,7 +22,7 @@ pub use collector::{
 pub use alert::{
     SmartAlertEngine, AlertEngineConfig, AlertRule, AlertSeverity, AlertCondition, Alert,
     AlertStatistics, EscalationConfig, AutomationExecutor, AutomationAction, AutomationActionType,
-    DefaultAutomationExecutor, AutomationConfig,
+    DefaultAutomationExecutor, AutomationConfig, AlertChannel, AlertChannelType, InMemoryAlertManager,
 };
 pub use monitor::{
     EnterprisePerformanceMonitor, PerformanceMonitorConfig, PerformanceThresholds,

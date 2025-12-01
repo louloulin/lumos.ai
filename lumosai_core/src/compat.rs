@@ -263,33 +263,40 @@ pub struct AgentMetrics {
     pub token_usage: TelemetryTokenUsage,
     pub execution_time_ms: u64,
     pub tool_calls_count: usize,
+    pub agent_name: String,
+    pub success: bool,
+    pub error_count: u64,
+    pub memory_operations: usize,
 }
 
 impl AgentMetrics {
-    pub fn new(
-        total_calls: u64,
-        successful_calls: u64,
-        failed_calls: u64,
-        avg_response_time: f64,
-        token_usage: TelemetryTokenUsage,
-        execution_time_ms: u64,
-    ) -> Self {
+    pub fn new(agent_name: String, context: ExecutionContext) -> Self {
         Self {
-            total_calls,
-            successful_calls,
-            failed_calls,
-            avg_response_time,
-            token_usage,
-            execution_time_ms,
+            total_calls: 1,
+            successful_calls: 1,
+            failed_calls: 0,
+            avg_response_time: 0.0,
+            token_usage: TelemetryTokenUsage {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            },
+            execution_time_ms: 0,
             tool_calls_count: 0,
+            agent_name,
+            success: true,
+            error_count: 0,
+            memory_operations: 0,
         }
     }
 
     pub fn record_error(&mut self) {
         self.failed_calls += 1;
+        self.error_count += 1;
+        self.success = false;
     }
 
-    pub fn end_timing(&mut self, _duration: std::time::Duration) {
+    pub fn end_timing(&mut self) {
         // 临时实现
     }
 
@@ -297,8 +304,13 @@ impl AgentMetrics {
         self.token_usage = token_usage;
     }
 
-    pub fn set_success(&mut self, _success: bool) {
-        // 临时实现
+    pub fn set_success(&mut self, success: bool) {
+        self.success = success;
+        if success {
+            self.successful_calls += 1;
+        } else {
+            self.failed_calls += 1;
+        }
     }
 
     pub fn add_custom_metric(&mut self, _key: String, _value: MetricValue) {
@@ -315,12 +327,25 @@ pub struct TelemetryTokenUsage {
 
 #[derive(Debug, Clone)]
 pub struct ExecutionContext {
-    pub session_id: String,
+    pub session_id: Option<String>,
     pub user_id: Option<String>,
     pub request_id: Option<String>,
     pub environment: String,
     pub version: Option<String>,
     pub metadata: std::collections::HashMap<String, String>,
+}
+
+impl Default for ExecutionContext {
+    fn default() -> Self {
+        Self {
+            session_id: None,
+            user_id: None,
+            request_id: None,
+            environment: "development".to_string(),
+            version: None,
+            metadata: std::collections::HashMap::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -431,8 +456,18 @@ impl MetricsCollector for InMemoryMetricsCollector {
 
     async fn record_agent_execution(
         &self,
-        _metrics: AgentMetrics,
+        metrics: AgentMetrics,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if let Ok(mut m) = self.metrics.lock() {
+            m.insert(
+                format!("agent_{}_execution_time", metrics.agent_name),
+                MetricValue::Float(metrics.execution_time_ms as f64),
+            );
+            m.insert(
+                format!("agent_{}_success", metrics.agent_name),
+                MetricValue::Boolean(metrics.success),
+            );
+        }
         Ok(())
     }
 }

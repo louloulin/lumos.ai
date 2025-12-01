@@ -6,7 +6,12 @@
 //! - 自动化诊断和优化建议
 //! - 趋势预测和瓶颈识别
 
-use lumosai_core::telemetry::*;
+use lumosai_core::telemetry::{
+    AlertRule, AlertSeverity, AlertCondition, TimeRange, PerformanceTrend,
+    InMemoryAlertManager, AlertChannel, AlertChannelType, IntelligentPerformanceAnalyzer,
+    PerformanceAnalyzer,
+};
+use lumosai_core::compat::{InMemoryMetricsCollector, ExecutionContext, AgentMetrics, TelemetryTokenUsage};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -39,7 +44,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
         name: "响应时间告警".to_string(),
         description: "当代理响应时间超过阈值时触发告警".to_string(),
         condition: AlertCondition::ResponseTime {
-            threshold_ms: 1000,
+            threshold_ms: 1000.0,
             window_minutes: 5,
             percentile: 95.0,
         },
@@ -71,9 +76,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
         condition: AlertCondition::ErrorRate {
             threshold_percent: 5.0,
             window_minutes: 10,
-            min_requests: 10,
+            min_requests: Some(10),
         },
-        severity: AlertSeverity::Error,
+        severity: AlertSeverity::Critical,
         enabled: true,
         cooldown_duration: Duration::from_secs(600),
         channels: vec!["email".to_string(), "webhook".to_string()],
@@ -166,6 +171,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
             request_id: Some(Uuid::new_v4().to_string()),
             environment: "production".to_string(),
             version: Some("1.0.0".to_string()),
+            metadata: HashMap::new(),
         };
 
         let mut metrics = AgentMetrics::new(format!("ai-assistant-{}", i % 3), execution_context);
@@ -188,7 +194,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
         metrics.end_timing();
         metrics.tool_calls_count = (2 + (i % 4)) as usize;
         metrics.memory_operations = (3 + (i % 3)) as usize;
-        metrics.token_usage = TokenUsage {
+        metrics.token_usage = TelemetryTokenUsage {
             prompt_tokens: (150 + i * 10) as u32,
             completion_tokens: (80 + i * 5) as u32,
             total_tokens: (230 + i * 15) as u32,
@@ -199,6 +205,8 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
             // 注意：AgentMetrics 没有 error_message 字段，我们可以在其他地方记录错误信息
         }
 
+        // 使用 compat 模块的 MetricsCollector trait
+        use lumosai_core::compat::MetricsCollector as CompatMetricsCollector;
         metrics_collector
             .record_agent_execution(metrics.clone())
             .await?;
@@ -239,14 +247,20 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
         PerformanceTrend::Improving { rate } => {
             println!("   • 性能趋势: 📈 改善中 (改善率: {:.2})", rate);
         }
+        PerformanceTrend::Increasing { rate } => {
+            println!("   • 性能趋势: 📈 上升中 (上升率: {:.2})", rate);
+        }
         PerformanceTrend::Stable { variance } => {
             println!("   • 性能趋势: ➡️ 稳定 (方差: {:.2})", variance);
         }
         PerformanceTrend::Degrading { rate } => {
             println!("   • 性能趋势: 📉 下降中 (下降率: {:.2})", rate);
         }
-        PerformanceTrend::Volatile { amplitude } => {
-            println!("   • 性能趋势: 📊 波动 (波动幅度: {:.2})", amplitude);
+        PerformanceTrend::Decreasing { rate } => {
+            println!("   • 性能趋势: 📉 下降中 (下降率: {:.2})", rate);
+        }
+        PerformanceTrend::Volatile { variance, amplitude } => {
+            println!("   • 性能趋势: 📊 波动 (方差: {:.2}, 波动幅度: {:.2})", variance, amplitude);
         }
     }
 

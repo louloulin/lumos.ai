@@ -73,7 +73,7 @@ async fn test_basic_streaming() -> std::result::Result<(), Box<dyn std::error::E
         isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
     let streaming_agent = agent.into_streaming();
 
     println!("      ✓ 流式Agent创建成功");
@@ -191,7 +191,7 @@ async fn test_long_text_streaming() -> std::result::Result<(), Box<dyn std::erro
         isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
     let streaming_agent = agent.into_streaming();
 
     // 测试用例 6.2.1: 长文本生成
@@ -329,7 +329,7 @@ async fn test_multi_turn_streaming() -> std::result::Result<(), Box<dyn std::err
         isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
     let streaming_agent = agent.into_streaming();
 
     // 测试用例 6.3.1: 多轮对话流式处理
@@ -460,7 +460,7 @@ async fn test_streaming_performance() -> std::result::Result<(), Box<dyn std::er
         isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
     let streaming_agent = agent.into_streaming();
 
     // 测试用例 6.4.1: 流式处理延迟测试
@@ -567,7 +567,7 @@ async fn test_streaming_error_handling() -> std::result::Result<(), Box<dyn std:
         isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
     let streaming_agent = agent.into_streaming();
 
     let messages = vec![Message {

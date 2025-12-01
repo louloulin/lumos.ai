@@ -167,7 +167,7 @@ async fn test_rag_streaming_integration() -> std::result::Result<(), Box<dyn std
         isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
     let streaming_agent = agent.into_streaming();
 
     let queries = vec![
@@ -525,7 +525,7 @@ async fn test_performance_stress() -> std::result::Result<(), Box<dyn std::error
         isolation_level: None,
     };
 
-    let stress_agent = Arc::new(BasicAgent::new(stress_agent_config, Arc::new(llm)));
+    let stress_agent = Arc::new(BasicAgent::new(stress_agent_config, Arc::new(llm))?);
 
     // 创建多个并发任务
     let concurrent_tasks = 3; // 减少并发数以避免API限制
@@ -622,7 +622,7 @@ async fn test_error_recovery() -> std::result::Result<(), Box<dyn std::error::Er
         isolation_level: None,
     };
 
-    let robust_agent = BasicAgent::new(robust_agent_config, Arc::new(llm));
+    let robust_agent = BasicAgent::new(robust_agent_config, Arc::new(llm))?;
 
     // 测试各种边界情况
     let test_cases = vec![

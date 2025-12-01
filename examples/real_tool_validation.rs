@@ -281,9 +281,11 @@ async fn test_complex_tool_calls() -> std::result::Result<(), Box<dyn std::error
         metadata: None,
         max_tool_calls: Some(10),
         tool_timeout: Some(30),
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
 
     // 测试用例 3.3.1: 多步骤工具调用
     println!("    🔄 测试多步骤工具调用");
@@ -372,9 +374,11 @@ async fn test_tool_error_handling() -> std::result::Result<(), Box<dyn std::erro
         metadata: None,
         max_tool_calls: Some(10),
         tool_timeout: Some(30),
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
 
     // 测试用例 3.4.1: 错误场景处理
     println!("    ❌ 测试错误场景处理");

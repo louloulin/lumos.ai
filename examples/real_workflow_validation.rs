@@ -157,9 +157,11 @@ async fn test_basic_workflow() -> std::result::Result<(), Box<dyn std::error::Er
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let workflow_agent = Arc::new(BasicAgent::new(workflow_config, Arc::new(llm)));
+    let workflow_agent = Arc::new(BasicAgent::new(workflow_config, Arc::new(llm))?);
 
     // 创建真实的工作流
     let mut workflow = EnhancedWorkflow::new(

@@ -301,18 +301,18 @@ pub fn create_vector_storage(
             let storage = memory::MemoryVectorStorage::new(dimensions, capacity);
             Ok(Box::new(storage))
         }
-        #[cfg(feature = "vector_sqlite")]
-        VectorStorageConfig::Sqlite { db_path, in_memory } => {
-            if in_memory {
-                Ok(Box::new(
-                    self::sqlite::create_sqlite_vector_storage_in_memory()?,
-                ))
-            } else {
-                Ok(Box::new(self::sqlite::create_sqlite_vector_storage(
-                    db_path,
-                )?))
-            }
-        }
+        // #[cfg(feature = "vector_sqlite")]
+        // VectorStorageConfig::Sqlite { db_path, in_memory } => {
+        //     if in_memory {
+        //         Ok(Box::new(
+        //             self::sqlite::create_sqlite_vector_storage_in_memory()?,
+        //         ))
+        //     } else {
+        //         Ok(Box::new(self::sqlite::create_sqlite_vector_storage(
+        //             db_path,
+        //         )?))
+        //     }
+        // }
         VectorStorageConfig::Qdrant { url: _, api_key: _ } => {
             #[cfg(feature = "qdrant")]
             {

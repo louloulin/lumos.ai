@@ -2218,6 +2218,149 @@ impl AgentCommunicationManager {
         let agents = self.agents.read().await;
         agents.keys().cloned().collect()
     }
+
+    /// 创建会话
+    pub async fn create_session(
+        &self,
+        session_type: SessionType,
+        participants: Vec<String>,
+        metadata: SessionMetadata,
+    ) -> Result<String> {
+        self.session_manager
+            .create_session(session_type, participants, metadata)
+            .await
+    }
+
+    /// 获取活跃会话列表
+    pub async fn get_active_sessions(&self) -> Vec<AgentSession> {
+        self.session_manager.get_active_sessions().await
+    }
+
+    /// 订阅主题
+    pub async fn subscribe(
+        &self,
+        subscriber_id: String,
+        topic: String,
+        filter: Option<SubscriptionFilter>,
+    ) -> Result<()> {
+        self.subscription_manager
+            .subscribe(subscriber_id, topic, filter)
+            .await
+    }
+
+    /// 委派任务（使用 TaskDelegation 消息类型）
+    pub async fn delegate_task(
+        &self,
+        delegator_id: String,
+        delegatee_id: String,
+        task_description: String,
+        deadline: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<String> {
+        let message = AgentMessage::new(
+            delegator_id,
+            vec![delegatee_id],
+            AgentMessageType::TaskDelegation,
+            task_description,
+        )
+        .with_expiry(deadline.unwrap_or(chrono::Utc::now() + chrono::Duration::hours(24)));
+        let task_id = message.id.clone();
+        self.send_message(message).await?;
+        Ok(task_id)
+    }
+
+    /// 共享资源（使用 ResourceShare 消息类型）
+    pub async fn share_resource(
+        &self,
+        sharer_id: String,
+        resource_name: String,
+        resource_data: Vec<u8>,
+        recipients: Vec<String>,
+    ) -> Result<()> {
+        use base64::Engine;
+        let content = serde_json::json!({
+            "resource_name": resource_name,
+            "resource_data": base64::engine::general_purpose::STANDARD.encode(&resource_data),
+        })
+        .to_string();
+        let message = AgentMessage::new(
+            sharer_id,
+            recipients,
+            AgentMessageType::ResourceShare,
+            content,
+        );
+        self.send_message(message).await
+    }
+
+    /// 获取消息历史（支持过滤器）
+    pub async fn get_message_history_with_filters(
+        &self,
+        filters: MessageHistoryFilters,
+    ) -> Vec<AgentMessage> {
+        let history = self.message_history.read().await;
+        let mut result: Vec<AgentMessage> = history
+            .iter()
+            .filter(|msg| {
+                if let Some(ref sender_id) = filters.sender_id {
+                    if msg.sender_id != *sender_id {
+                        return false;
+                    }
+                }
+                if let Some(ref session_id) = filters.session_id {
+                    if msg.session_id.as_ref() != Some(session_id) {
+                        return false;
+                    }
+                }
+                if let Some(ref msg_type) = filters.message_type {
+                    if msg.message_type != *msg_type {
+                        return false;
+                    }
+                }
+                if let Some(ref start_time) = filters.start_time {
+                    if msg.timestamp < *start_time {
+                        return false;
+                    }
+                }
+                if let Some(ref end_time) = filters.end_time {
+                    if msg.timestamp > *end_time {
+                        return false;
+                    }
+                }
+                true
+            })
+            .cloned()
+            .collect();
+        result.reverse();
+        if let Some(limit) = filters.limit {
+            result.truncate(limit);
+        }
+        result
+    }
+
+    /// 获取统计信息
+    pub async fn get_stats(&self) -> CommunicationStats {
+        let stats = self.stats.read().await.clone();
+        // 更新会话和主题统计
+        let mut stats = stats;
+        stats.total_sessions = self.session_manager.get_session_count().await;
+        stats.active_sessions = self.session_manager.get_active_sessions().await.len();
+        stats.total_topics = self.subscription_manager.get_topic_count().await;
+        stats.queue_size = self.queue_manager.get_queue_size().await;
+        // 计算平均投递时间
+        if stats.total_messages > 0 {
+            stats.avg_response_time = stats.total_delivery_time as f64 / stats.total_messages as f64;
+        }
+        stats
+    }
+
+    /// 获取队列状态
+    pub async fn get_queue_status(&self) -> QueueStatus {
+        self.queue_manager.get_status().await
+    }
+
+    /// 清理过期会话
+    pub async fn cleanup_expired_sessions(&self) {
+        self.session_manager.cleanup_expired_sessions().await;
+    }
 }
 
 /// 创建默认的通信管理器

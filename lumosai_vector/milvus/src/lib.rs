@@ -15,9 +15,10 @@
 //!
 //! ## Quick Start
 //!
-//! ```rust
+//! ```rust,no_run
 //! use lumosai_vector_milvus::{MilvusStorage, MilvusConfig};
 //! use lumosai_vector_core::traits::VectorStorage;
+//! use lumosai_vector_core::{Document, IndexConfig, SimilarityMetric};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {

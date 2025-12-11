@@ -14,9 +14,12 @@
 //!
 //! ## Quick Start
 //!
-//! ```rust
-//! use lumosai_vector_lancedb::{LanceDbStorage, LanceDbConfig};
-//! use lumosai_vector_core::traits::VectorStorage;
+//! ```rust,no_run
+//! use lumosai_vector_lancedb::{LanceDbConfig, LanceDbStorage};
+//! use lumosai_vector_core::{
+//!     traits::VectorStorage,
+//!     Document, IndexConfig, SimilarityMetric,
+//! };
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {

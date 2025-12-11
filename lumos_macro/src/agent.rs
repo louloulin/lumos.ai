@@ -258,7 +258,7 @@ pub fn agent(input: TokenStream) -> TokenStream {
                 #agent_name.to_string(),
                 #instructions.to_string(),
                 llm_provider
-            );
+            ).expect("Failed to create basic agent");
 
             // 添加工具
             #(#tool_registrations)*

@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     println!("🚀 LanceDB Batch Operations Example");
-    println!("=" * 50);
+    println!("{}", "=".repeat(50));
 
     // Configuration for batch operations
     let batch_size = 1000;
@@ -41,7 +41,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔧 Creating optimized index...");
     let index_config = IndexConfig::new("batch_documents", vector_dimension)
         .with_metric(SimilarityMetric::Cosine)
-        .with_description("Batch operations index");
+        .with_option(
+            "description",
+            lumosai_vector_core::types::MetadataValue::String(
+                "Batch operations index".to_string()
+            ),
+        );
 
     storage.create_index(index_config).await?;
     println!("✅ Index created for {} dimensions", vector_dimension);
@@ -104,14 +109,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for query_idx in 0..num_queries {
         let query_vector = generate_sample_embedding(vector_dimension, query_idx as u64);
 
-        let search_request = SearchRequest {
-            index_name: "batch_documents".to_string(),
-            vector: query_vector,
-            top_k: 10,
-            similarity_metric: Some(SimilarityMetric::Cosine),
-            filter: None,
-            include_metadata: false, // Faster without metadata
-        };
+        let search_request = SearchRequest::new("batch_documents", query_vector)
+            .with_top_k(10)
+            .with_include_metadata(false); // Faster without metadata
 
         let search_response = storage.search(search_request).await?;
         total_results += search_response.results.len();
@@ -135,14 +135,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get index information
     let index_info = storage.describe_index("batch_documents").await?;
-    println!("   Documents in index: {}", index_info.document_count);
-
-    if let Some(storage_size) = index_info.storage_size {
-        let size_mb = storage_size as f64 / (1024.0 * 1024.0);
-        println!("   Storage size: {:.2} MB", size_mb);
-
-        let bytes_per_doc = storage_size as f64 / index_info.document_count as f64;
-        println!("   Bytes per document: {:.0}", bytes_per_doc);
+    println!("   Vectors in index: {}", index_info.vector_count);
+    println!(
+        "   Storage size: {:.2} MB",
+        index_info.size_bytes as f64 / (1024.0 * 1024.0)
+    );
+    if index_info.vector_count > 0 {
+        let bytes_per_vector = index_info.size_bytes as f64 / index_info.vector_count as f64;
+        println!("   Bytes per vector: {:.0}", bytes_per_vector);
     }
 
     // 6. Demonstrate filtered batch search
@@ -160,14 +160,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for query_idx in 0..filtered_queries {
         let query_vector = generate_sample_embedding(vector_dimension, query_idx as u64);
 
-        let search_request = SearchRequest {
-            index_name: "batch_documents".to_string(),
-            vector: query_vector,
-            top_k: 5,
-            similarity_metric: Some(SimilarityMetric::Cosine),
-            filter: Some(filter.clone()),
-            include_metadata: true,
-        };
+        let search_request = SearchRequest::new("batch_documents", query_vector)
+            .with_top_k(5)
+            .with_filter(filter.clone())
+            .with_include_metadata(true);
 
         let search_response = storage.search(search_request).await?;
         filtered_results += search_response.results.len();
@@ -205,8 +201,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n📈 Final Statistics:");
     let final_index_info = storage.describe_index("batch_documents").await?;
     println!(
-        "   Remaining documents: {}",
-        final_index_info.document_count
+        "   Remaining vectors: {}",
+        final_index_info.vector_count
     );
 
     let backend_info = storage.backend_info();

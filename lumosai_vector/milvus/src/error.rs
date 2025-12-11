@@ -355,10 +355,10 @@ mod tests {
         let vector_err: lumosai_vector_core::error::VectorError = milvus_err.into();
 
         match vector_err {
-            lumosai_vector_core::error::VectorError::StorageBackend(msg) => {
+            lumosai_vector_core::error::VectorError::OperationFailed(msg) => {
                 assert!(msg.contains("Test database error"));
             }
-            _ => panic!("Expected StorageBackend error"),
+            _ => panic!("Expected OperationFailed error"),
         }
     }
 

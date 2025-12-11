@@ -12,15 +12,13 @@ use lumosai_vector_core::{
     types::{Document, IndexConfig, SearchRequest, SimilarityMetric},
 };
 use lumosai_vector_lancedb::{LanceDbConfig, LanceDbStorage};
-use std::collections::HashMap;
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     env_logger::init();
 
     println!("🚀 LanceDB Basic Usage Example");
-    println!("=" * 50);
+    println!("{}", "=".repeat(50));
 
     // 1. Create LanceDB storage with local file storage
     println!("\n📦 Creating LanceDB storage...");
@@ -33,7 +31,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔧 Creating vector index...");
     let index_config = IndexConfig::new("documents", 384)
         .with_metric(SimilarityMetric::Cosine)
-        .with_description("Example document index");
+        .with_option(
+            "description",
+            lumosai_vector_core::types::MetadataValue::String(
+                "Example document index".to_string()
+            ),
+        );
 
     storage.create_index(index_config).await?;
     println!("✅ Index 'documents' created successfully");
@@ -81,14 +84,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔍 Performing vector search...");
     let query_vector = generate_sample_embedding(384, 2); // Similar to doc2
 
-    let search_request = SearchRequest {
-        index_name: "documents".to_string(),
-        vector: query_vector,
-        top_k: 3,
-        similarity_metric: Some(SimilarityMetric::Cosine),
-        filter: None,
-        include_metadata: true,
-    };
+    let search_request = SearchRequest::new("documents", query_vector.clone())
+        .with_top_k(3)
+        .with_include_metadata(true);
 
     let search_response = storage.search(search_request).await?;
 
@@ -112,14 +110,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         lumosai_vector_core::types::MetadataValue::String("technology".to_string()),
     );
 
-    let filtered_search_request = SearchRequest {
-        index_name: "documents".to_string(),
-        vector: query_vector,
-        top_k: 5,
-        similarity_metric: Some(SimilarityMetric::Cosine),
-        filter: Some(filter),
-        include_metadata: true,
-    };
+    let filtered_search_request = SearchRequest::new("documents", query_vector)
+        .with_top_k(5)
+        .with_filter(filter)
+        .with_include_metadata(true);
 
     let filtered_response = storage.search(filtered_search_request).await?;
 
@@ -146,7 +140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(
             "  - {}: {}",
             doc.id,
-            doc.content.as_deref().unwrap_or("No content")
+            doc.content.as_str()
         );
     }
 
@@ -181,7 +175,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   - Name: {}", index_info.name);
     println!("   - Dimension: {}", index_info.dimension);
     println!("   - Metric: {:?}", index_info.metric);
-    println!("   - Document count: {}", index_info.document_count);
+    println!("   - Vector count: {}", index_info.vector_count);
 
     // 11. Health check
     println!("\n🏥 Performing health check...");

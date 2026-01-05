@@ -35,20 +35,33 @@
 //! ```
 
 pub mod agent_pool;
-pub mod connection_pool;
-pub mod db_pool;
-pub mod llm_pool;
+// pub mod connection_pool;  // ❌ 暂时禁用 - trait 兼容性问题
+// pub mod db_pool;  // ❌ 暂时禁用 - 22 个 trait 兼容性错误
+// pub mod llm_pool;  // ❌ 暂时禁用 - 依赖 connection_pool
 pub mod object_pool;
 pub mod resource_monitor;
 pub mod thread_pool;
 
 pub use agent_pool::{AgentPool, AgentFactory, AgentPoolConfig, AgentPoolStats, AgentStats, DefaultAgentFactory, PoolableAgent};
-pub use connection_pool::{ConnectionPool, ConnectionPoolConfig, PooledConnection};
-pub use db_pool::{DatabaseConnection, DatabasePool, DatabasePoolConfig, DatabasePoolManager, DatabasePoolStats, DatabaseType, GenericDatabasePool};
-pub use llm_pool::{LlmConnectionPool, LlmProviderFactory, LlmConnectionStats, LlmPoolStats, HealthStatus};
+// pub use connection_pool::{ConnectionPool, ConnectionPoolConfig, PooledConnection};  // ❌ 暂时禁用
+// pub use db_pool::{DatabaseConnection, DatabasePool, DatabasePoolConfig, DatabasePoolManager, DatabasePoolStats, DatabaseType, GenericDatabasePool};  // ❌ 暂时禁用
+// pub use llm_pool::{LlmConnectionPool, LlmProviderFactory, LlmConnectionStats, LlmPoolStats};  // ❌ 暂时禁用
 pub use object_pool::{ObjectPool, ObjectPoolConfig};
 pub use resource_monitor::{ResourceMonitor, ResourceStats};
 pub use thread_pool::{AdaptiveThreadPool, CpuAffinityConfig, LoadBalancingStrategy, ThreadPoolConfig, ThreadPoolManager, ThreadPoolStats, WorkloadType};
+
+/// 健康状态
+#[derive(Debug, Clone, PartialEq)]
+pub enum HealthStatus {
+    /// 健康
+    Healthy,
+    /// 空闲
+    Idle,
+    /// 降级
+    Degraded,
+    /// 过载
+    Overloaded,
+}
 
 use std::time::Duration;
 

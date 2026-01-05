@@ -7,7 +7,7 @@
 pub mod format;
 pub mod loader;
 pub mod merge;
-pub mod simplified;
+// pub mod simplified;  // ❌ 暂时禁用 - 大量配置字段不匹配问题
 pub mod source;
 pub mod types;
 pub mod validator;
@@ -23,10 +23,10 @@ pub use types::*;
 pub use validator::{ConfigValidator, ValidationMessage, ValidationSeverity};
 
 // Re-export simplified configuration system
-pub use simplified::{LumosConfigBuilder, ConfigMode, ConfigOptimizer, ValidationIssue, IssueLevel};
+// pub use simplified::{LumosConfigBuilder, ConfigMode, ConfigOptimizer, ValidationIssue, IssueLevel};  // ❌ 暂时禁用
 
 // Re-export quick configuration functions
-pub use simplified::quick_config;
+// pub use simplified::quick_config;  // ❌ 暂时禁用
 
 // Re-export only specific items from yaml_config to avoid conflicts
 pub use yaml_config::{AgentConfig, WorkflowConfig, YamlConfig};

@@ -146,6 +146,9 @@ pub struct SemanticQuery {
     /// 文本查询
     pub query: String,
 
+    /// 查询向量嵌入（可选，用于语义搜索）
+    pub query_embedding: Option<Vec<f32>>,
+
     /// 上下文类型过滤
     pub context_types: Option<Vec<ContextType>>,
 
@@ -314,9 +317,10 @@ impl ContextFileSystem for InMemoryContextFS {
     async fn search_context(&self, query: &SemanticQuery) -> Result<Vec<Context>> {
         let contexts = self.contexts.read().await;
 
-        // 简单的文本搜索实现
-        // TODO: 实现真正的向量相似度搜索
-        let results: Vec<Context> = contexts
+        // ✅ 实现真正的向量相似度搜索
+        let query_embedding = &query.query_embedding;
+
+        let mut scored_contexts: Vec<(f64, Context)> = contexts
             .values()
             .filter(|ctx| {
                 // 类型过滤
@@ -333,11 +337,40 @@ impl ContextFileSystem for InMemoryContextFS {
                     }
                 }
 
-                // 简单的文本匹配
-                Self::matches_query(&ctx.content, &query.query)
+                // 必须有向量嵌入才能进行语义搜索
+                ctx.embeddings.is_some()
             })
-            .cloned()
-            .take(query.limit.unwrap_or(10))
+            .filter_map(|ctx| {
+                // 计算余弦相似度
+                if let (Some(query_emb), Some(ctx_emb)) = (query_embedding, &ctx.embeddings) {
+                    if query_emb.len() != ctx_emb.len() {
+                        return None;  // 维度不匹配，跳过
+                    }
+
+                    let similarity = Self::cosine_similarity(query_emb, ctx_emb);
+                    Some((similarity, ctx.clone()))
+                } else if query_embedding.is_none() {
+                    // 回退到文本匹配
+                    if Self::matches_query(&ctx.content, &query.query) {
+                        Some((0.5, ctx.clone()))  // 默认中等相似度
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // 按相似度排序（降序）
+        scored_contexts.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+
+        // 取前 N 个结果
+        let limit = query.limit.unwrap_or(10);
+        let results: Vec<Context> = scored_contexts
+            .into_iter()
+            .take(limit)
+            .map(|(_, ctx)| ctx)
             .collect();
 
         Ok(results)
@@ -350,6 +383,39 @@ impl ContextFileSystem for InMemoryContextFS {
 }
 
 impl InMemoryContextFS {
+    /// 计算两个向量的余弦相似度
+    ///
+    /// 返回值范围: [-1, 1]
+    /// - 1.0: 完全相同方向
+    /// - 0.0: 正交（无关）
+    /// - -1.0: 完全相反方向
+    fn cosine_similarity(a: &[f32], b: &[f32]) -> f64 {
+        if a.len() != b.len() {
+            return 0.0;  // 维度不匹配
+        }
+
+        let dot_product: f64 = a.iter()
+            .zip(b.iter())
+            .map(|(x, y)| (*x as f64) * (*y as f64))
+            .sum();
+
+        let norm_a: f64 = a.iter()
+            .map(|x| (*x as f64) * (*x as f64))
+            .sum::<f64>()
+            .sqrt();
+
+        let norm_b: f64 = b.iter()
+            .map(|x| (*x as f64) * (*x as f64))
+            .sum::<f64>()
+            .sqrt();
+
+        if norm_a == 0.0 || norm_b == 0.0 {
+            0.0
+        } else {
+            dot_product / (norm_a * norm_b)
+        }
+    }
+
     fn matches_query(content: &ContextContent, query: &str) -> bool {
         match content {
             ContextContent::Text(text) => text.to_lowercase().contains(&query.to_lowercase()),

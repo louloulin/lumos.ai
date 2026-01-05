@@ -5,7 +5,7 @@
 
 use async_trait::async_trait;
 use futures::stream::{self, BoxStream};
-use lumosai_core::agent::executor::BasicAgent;
+use lumosai_core::agent::refactored::agent::BasicAgent;
 use lumosai_core::agent::types::AgentGenerateOptions;
 use lumosai_core::agent::{Agent, AgentConfig};
 use lumosai_core::base::{Base, BaseComponent, ComponentConfig};

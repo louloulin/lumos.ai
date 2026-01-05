@@ -2,7 +2,9 @@
 //!
 //! 专门为LLM提供者设计的连接池，支持并发访问和自动健康检查
 
-use super::{ConnectionPool, ConnectionPoolConfig, PooledConnection, PoolStats};
+// ❌ 暂时禁用 connection_pool 相关导入
+// use super::{ConnectionPool, ConnectionPoolConfig, PooledConnection, PoolStats};
+use super::PoolStats;
 use crate::llm::{LlmProvider, LlmOptions, Message};
 use crate::Result;
 use async_trait::async_trait;

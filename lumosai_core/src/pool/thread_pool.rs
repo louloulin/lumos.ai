@@ -114,7 +114,8 @@ pub struct ThreadPoolStats {
 }
 
 /// 工作负载类型
-#[derive(Debug, Clone, PartialEq)]
+/// ✅ 添加 Hash 和 Eq trait 支持
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WorkloadType {
     /// CPU密集型任务
     CpuIntensive,
@@ -245,12 +246,24 @@ impl AdaptiveThreadPool {
     pub async fn stats(&self) -> ThreadPoolStats {
         let mut stats = self.stats.read().await.clone();
 
-        // 获取实际的运行时统计
-        if let Ok(metrics) = self.runtime.metrics() {
-            stats.active_threads = metrics.active_tasks_count();
-            stats.total_threads = metrics.worker_threads_count();
-            // 注意：Tokio metrics可能不提供所有统计信息
-        }
+        // ✅ 使用 Tokio RuntimeMetrics 获取实际运行时统计
+        let metrics = self.runtime.metrics();
+
+        // 获取工作线程数（总数）
+        stats.total_threads = metrics.num_workers();
+
+        // 获取活跃任务数
+        // 注意：当前简化实现，使用总线程数作为活跃线程数
+        // 更精确的实现需要跟踪正在执行的任务数量
+        stats.active_threads = metrics.num_workers();
+
+        // 存储原始 metrics 供将来使用
+        let _metrics = metrics;
+
+        // TODO: v1.3 增强 - 利用更多 RuntimeMetrics 指标：
+        // - 添加字段存储 remote_schedule_count(), budget_forced_yield_count()
+        // - 计算任务吞吐量、平均延迟等高级指标
+        // - 实现历史趋势分析和容量规划建议
 
         stats
     }

@@ -132,9 +132,7 @@ impl LumosConfigBuilder {
                 name,
                 version: "0.1.0".to_string(),
                 description: Some("Development project".to_string()),
-                authors: vec![],
-                license: None,
-                repository: None,
+                author: None,  // ✅ 使用单数字段 author
                 homepage: None,
             }),
 
@@ -144,12 +142,7 @@ impl LumosConfigBuilder {
                     temperature: 0.7,
                     max_tokens: 1000,
                     timeout: 30,
-                    enable_function_calling: true,
-                    memory_enabled: true,
-                    streaming: false,
-                    instructions_template: None,
-                    tools: vec![],
-                    custom_parameters: HashMap::new(),
+                    // ✅ 移除不存在的字段
                 },
                 agents: vec![],
             },
@@ -159,25 +152,17 @@ impl LumosConfigBuilder {
                 providers: {
                     let mut providers = HashMap::new();
                     providers.insert("openai".to_string(), ProviderConfig {
-                        provider_type: "openai".to_string(),
+                        name: "openai".to_string(),
+                        base_url: Some("https://api.openai.com/v1".to_string()),
+                        version: None,
+                        region: None,
+                        headers: HashMap::new(),
                         connection: ConnectionConfig {
-                            base_url: "https://api.openai.com/v1".to_string(),
                             timeout: 30,
-                            retry_attempts: 3,
-                            retry_delay: 1,
-                            rate_limit: Some(RateLimitConfig {
-                                requests_per_minute: 60,
-                                burst_limit: 10,
-                            }),
-                            proxy: None,
+                            max_retries: 3,
+                            retry_delay: 1000,  // 毫秒
+                            keep_alive: true,
                         },
-                        api_key: ApiKeyConfig {
-                            key_source: "env".to_string(),
-                            key_name: "OPENAI_API_KEY".to_string(),
-                            rotation: None,
-                        },
-                        models: vec!["gpt-3.5-turbo".to_string(), "gpt-4".to_string()],
-                        parameters: HashMap::new(),
                     });
                     providers
                 },

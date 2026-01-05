@@ -1,12 +1,44 @@
 //! 遥测和监控模块
 //!
 //! 提供性能监控、指标收集和分布式追踪功能
+//!
+//! # Phase 1 (v1.3): 增强的可观测性
+//!
+//! - ✅ OpenTelemetry 集成
+//! - ✅ Prometheus Metrics
+//! - ✅ Tracing 集成
+//!
+//! # 示例
+//!
+//! ```rust,no_run
+//! use lumosai_core::telemetry::{tracing::OpenTelemetryTracer, metrics::PrometheusMetrics};
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // 初始化追踪
+//!     let tracer_config = lumosai_core::telemetry::tracing::TracerConfig::builder()
+//!         .with_service_name("my-agent")
+//!         .with_jaeger_endpoint("http://localhost:14268/api/traces")
+//!         .build()?;
+//!
+//!     let tracer = OpenTelemetryTracer::new(tracer_config)?;
+//!     tracer.init()?;
+//!
+//!     // 初始化指标
+//!     let metrics = PrometheusMetrics::new(Default::default());
+//!     metrics.register_agent_metrics()?;
+//!
+//!     Ok(())
+//! }
+//! ```
 
 pub mod analyzer;
 pub mod collector;
 pub mod alert;
 pub mod monitor;
 pub mod otel;
+pub mod tracing;
+pub mod metrics;
 
 // 使用更具体的导出以避免名称冲突
 pub use analyzer::{
@@ -34,6 +66,12 @@ pub use otel::{
     HttpOtlpExporter, OtelSpan, OtelMetric, DataPoint, AttributeValue, DataPointValue, SpanKind,
     SpanStatus, SpanEvent,
 };
+
+// ✅ Phase 1: OpenTelemetry Tracing 导出
+pub use tracing::{OpenTelemetryTracer, TracerConfig, TracerConfigBuilder};
+
+// ✅ Phase 1: Prometheus Metrics 导出
+pub use metrics::{PrometheusMetrics, MetricsConfig};
 
 use async_trait::async_trait;
 use serde_json::Value;

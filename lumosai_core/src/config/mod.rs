@@ -7,6 +7,7 @@
 pub mod format;
 pub mod loader;
 pub mod merge;
+pub mod simplified;
 pub mod source;
 pub mod types;
 pub mod validator;
@@ -20,6 +21,12 @@ pub use format::ConfigFormat;
 pub use loader::{ConfigLoader, ConfigSource, MergeStrategy};
 pub use types::*;
 pub use validator::{ConfigValidator, ValidationMessage, ValidationSeverity};
+
+// Re-export simplified configuration system
+pub use simplified::{LumosConfigBuilder, ConfigMode, ConfigOptimizer, ValidationIssue, IssueLevel};
+
+// Re-export quick configuration functions
+pub use simplified::quick_config;
 
 // Re-export only specific items from yaml_config to avoid conflicts
 pub use yaml_config::{AgentConfig, WorkflowConfig, YamlConfig};

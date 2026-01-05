@@ -34,13 +34,21 @@
 //! }
 //! ```
 
+pub mod agent_pool;
 pub mod connection_pool;
+pub mod db_pool;
+pub mod llm_pool;
 pub mod object_pool;
 pub mod resource_monitor;
+pub mod thread_pool;
 
+pub use agent_pool::{AgentPool, AgentFactory, AgentPoolConfig, AgentPoolStats, AgentStats, DefaultAgentFactory, PoolableAgent};
 pub use connection_pool::{ConnectionPool, ConnectionPoolConfig, PooledConnection};
+pub use db_pool::{DatabaseConnection, DatabasePool, DatabasePoolConfig, DatabasePoolManager, DatabasePoolStats, DatabaseType, GenericDatabasePool};
+pub use llm_pool::{LlmConnectionPool, LlmProviderFactory, LlmConnectionStats, LlmPoolStats, HealthStatus};
 pub use object_pool::{ObjectPool, ObjectPoolConfig};
 pub use resource_monitor::{ResourceMonitor, ResourceStats};
+pub use thread_pool::{AdaptiveThreadPool, CpuAffinityConfig, LoadBalancingStrategy, ThreadPoolConfig, ThreadPoolManager, ThreadPoolStats, WorkloadType};
 
 use std::time::Duration;
 

@@ -90,6 +90,15 @@ use std::sync::Arc;
 // 导入统一内存系统
 pub mod unified;
 
+// 导入Repository-First存储策略
+pub mod repository_first;
+
+// 导入ENGRAM记忆类型系统
+pub mod engram;
+
+// 导入A-MemGuard安全框架
+pub mod amemguard;
+
 /// Configuration for semantic recall (memory retrieval)
 ///
 /// Semantic recall uses vector embeddings to find relevant past messages
@@ -718,6 +727,33 @@ pub use working::{
 
 // 导出统一内存系统 - 这是新的推荐API
 pub use unified::{Memory as UnifiedMemory, MemoryType};
+
+// 导出Repository-First存储策略
+pub use repository_first::{
+    ConsistencyChecker, ConsistencyReport, InMemoryRepository, InMemoryVectorStore,
+    Repository, RepositoryFirstStorage, RepositoryFirstStorageImpl, RepositoryQuery,
+    RepositoryStats, SearchOptions, SearchResult, SemanticQuery, SortBy,
+    StorageQuery, StorageStats, StoredMessage, SyncManager, TimeRange,
+    VectorEntry, VectorStats, VectorStore, QueryType, Inconsistency, InconsistencyType
+};
+
+// 导出ENGRAM记忆类型系统
+pub use engram::{
+    CompressionAlgorithm, CompressionConfig, CompressionResult, ConsolidationConfig,
+    ConsolidationResult, EngramConfig, EngramMemoryManager, EngramMemorySystem,
+    Event, ForgetConfig, ForgetResult, MemoryContent, MemoryContext, MemoryEntry as EngramMemoryEntry,
+    MemoryQuery as EngramMemoryQuery, MemorySortBy, MemoryStats as EngramMemoryStats,
+    MemoryType as EngramMemoryType, SkillDefinition
+};
+
+// 导出A-MemGuard安全框架
+pub use amemguard::{
+    AMemGuard, AMemGuardConfig, AMemGuardSecurity, AnomalyDetector, AnomalyReport, AnomalyType,
+    AuditLogger, AuditLogLevel, AutoRecoveryPolicy, ConsensusVerifier, ConsistencyReport as AMemGuardConsistencyReport,
+    InMemorySecureBackend, IsolationLevel, IsolationManager, IsolationReport, IsolationStatus,
+    Inconsistency as AMemGuardInconsistency, InconsistencyType as AMemGuardInconsistencyType,
+    SecureMemoryBackend, SecureMemoryEntry, SecurityAuditEvent, SecurityEventType, SecuritySeverity, SecurityStats
+};
 
 /// 添加兼容函数，用于创建基本工作内存
 #[inline]

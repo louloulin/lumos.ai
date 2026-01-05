@@ -16,6 +16,7 @@
 pub mod agent;
 pub mod cache; // 新增：缓存系统
 pub mod config;
+pub mod contextfs; // 新增：ContextFS文件系统抽象
 pub mod error;
 pub mod llm;
 pub mod logger;

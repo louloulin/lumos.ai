@@ -1,47 +1,102 @@
 //! Agent module for LLM-based agents
+//!
+//! 重构后的模块化架构，按功能分类组织：
+//!
+//! ## 核心模块 (Core Modules)
+//! - trait_def, traits: Agent trait定义和组合traits
+//! - types, config: 类型定义和配置
+//! - builder: Agent构建器
+//! - refactored: BasicAgent模块化实现
+//!
+//! ## 执行模块 (Execution Modules)
+//! - orchestration: Agent编排引擎
+//! - chain: 链式调用
+//! - dag_orchestration: DAG工作流编排
+//! - operators: Agent操作符
+//! - concurrent_tool_executor: 并发工具执行器
+//! - tool_resolver: 工具解析
+//! - performance: 性能监控
+//! - error_handling: 错误处理
+//! - session: 会话管理
+//!
+//! ## 通信模块 (Communication Modules)
+//! - communication: Agent间通信
+//! - streaming: 流式输出
+//! - structured_output: 结构化输出
+//! - websocket: WebSocket通信
+//! - events: 事件处理
+//!
+//! ## 多Agent模块 (Multi-Agent Modules)
+//! - collaboration: 基础协作
+//! - debate: 辩论模式
+//! - group_chat: 群体聊天
+//! - handoff: 工作交接
+//! - magentic: 磁性协作
+//! - maker_checker: Maker-Checker模式
+//! - reflection: 自省能力
+//!
+//! ## 工作流模块 (Workflow Modules)
+//! - sop_environment, sop_simple, sop_types: SOP标准操作程序
+//! - simplified_api: 简化API
+//! - rag_integration: RAG集成
+//!
+//! ## 配置模块 (Configuration Modules)
+//! - config_validator: 配置验证
+//! - dynamic_config: 动态配置
+//! - convenience: 便利功能
+//! - api_consistency: API一致性检查
+//! - feature_completion: 功能完成检查
+//!
+//! ## 工具模块 (Utility Modules)
+//! - memory_resolver: 内存解析
+//! - message_utils: 消息处理工具
+//! - model_resolver: 模型解析
+//! - runtime_context: 运行时上下文
+//! - state_management: 状态管理
+//!
+//! ## 集成模块 (Integration Modules)
+//! - mastra_compat: Mastra兼容性
+//! - evaluation: 评估功能
+//!
+//! ## 测试模块 (Test Modules)
+//! - enhanced_integration_test: 集成测试
 
-pub mod api_consistency;
-pub mod builder;
-pub mod chain;
-pub mod collaboration;
-pub mod communication;
-pub mod concurrent_tool_executor; // 新增：并发工具执行器
-pub mod config;
-pub mod config_validator;
-pub mod convenience;
-pub mod dag_orchestration;
-pub mod dynamic_config;
-pub mod enhanced_integration_test;
-pub mod error_handling; // 新增：统一错误处理系统
-pub mod evaluation;
-pub mod events;
-// executor 模块已移除，BasicAgent 现在在 refactored 模块中
-// pub mod executor;
-pub mod feature_completion;
-pub mod mastra_compat;
-pub mod memory_resolver;
-pub mod message_utils;
-pub mod model_resolver;
-pub mod operators; // 新增：Agent 操作符支持
-pub mod orchestration;
-pub mod performance;
-pub mod rag_integration;
-pub mod runtime_context;
-pub mod session;
-pub mod simplified_api;
-pub mod sop_environment;
-pub mod sop_simple;
-pub mod sop_types;
-pub mod state_management; // 新增：Agent状态管理
-pub mod streaming;
-pub mod structured_output;
-pub mod tool_resolver;
+// ================================
+// 核心模块 (Core Modules)
+// ================================
 pub mod trait_def;
 pub mod traits;
 pub mod types;
-pub mod websocket;
+pub mod config;
+pub mod builder;
+pub mod refactored;
 
-// 高级协作模式（2025 研究成果）
+// ================================
+// 执行模块 (Execution Modules)
+// ================================
+pub mod orchestration;
+pub mod chain;
+pub mod dag_orchestration;
+pub mod operators;
+pub mod concurrent_tool_executor;
+pub mod tool_resolver;
+pub mod performance;
+pub mod error_handling;
+pub mod session;
+
+// ================================
+// 通信模块 (Communication Modules)
+// ================================
+pub mod communication;
+pub mod streaming;
+pub mod structured_output;
+pub mod websocket;
+pub mod events;
+
+// ================================
+// 多Agent模块 (Multi-Agent Modules)
+// ================================
+pub mod collaboration;
 pub mod debate;
 pub mod group_chat;
 pub mod handoff;
@@ -49,13 +104,45 @@ pub mod magentic;
 pub mod maker_checker;
 pub mod reflection;
 
-// 暂时移除模块化Agent组件（有编译错误）
-// pub mod modular;
+// ================================
+// 工作流模块 (Workflow Modules)
+// ================================
+pub mod sop_environment;
+pub mod sop_simple;
+pub mod sop_types;
+pub mod simplified_api;
+pub mod rag_integration;
 
-// BasicAgent 模块化组件
-pub mod refactored;
+// ================================
+// 配置模块 (Configuration Modules)
+// ================================
+pub mod config_validator;
+pub mod dynamic_config;
+pub mod convenience;
+pub mod api_consistency;
+pub mod feature_completion;
 
-// Re-export refactored modules for easy access
+// ================================
+// 工具模块 (Utility Modules)
+// ================================
+pub mod memory_resolver;
+pub mod message_utils;
+pub mod model_resolver;
+pub mod runtime_context;
+pub mod state_management;
+
+// ================================
+// 集成模块 (Integration Modules)
+// ================================
+pub mod mastra_compat;
+pub mod evaluation;
+
+// ================================
+// 测试模块 (Test Modules)
+// ================================
+pub mod enhanced_integration_test;
+
+// Re-export key modules for easy access
 pub use refactored::{AgentCore, AgentExecutor, AgentGenerator, BasicAgent};
 
 #[cfg(feature = "demos")]
@@ -96,7 +183,14 @@ pub use message_utils::{
 };
 pub use runtime_context::{create_context_manager, ContextManager, RuntimeContext, ToolCallRecord};
 pub use trait_def::{Agent, AgentStructuredOutput};
-pub use traits::{CoreAgent, FullAgent, MemoryAgent, StreamingAgentTrait, ToolAgent};
+// Export new composition-based traits (P0 implementation)
+pub use traits::{CoreAgent, FullAgent, MemoryAgent, StreamingAgentTrait, ToolAgent, ThreadManagementAgent};
+
+// Legacy Agent adapter for backward compatibility (P0 implementation)
+mod legacy_adapter;
+
+// Export legacy adapter
+pub use legacy_adapter::LegacyAgentAdapter;
 
 // Re-export builder
 pub use builder::AgentBuilder;

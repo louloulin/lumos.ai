@@ -123,10 +123,9 @@ impl ReActAgent {
     }
 
     /// 添加工具
-    pub async fn with_tool(mut self, tool: impl Into<String>) -> Self {
+    pub async fn add_tool(&self, tool: impl Into<String>) {
         let mut tools = self.tools.write().await;
         tools.push(tool.into());
-        self
     }
 
     /// 设置工具列表
@@ -266,7 +265,7 @@ impl ReActAgent {
                 .split("Final Answer:")
                 .last()
                 .map(|s| s.trim().to_string())
-                .unwrap_or_else(|| thought.clone()))
+                .unwrap_or_else(|| thought.to_string()))
         } else {
             Ok(thought.to_string())
         }

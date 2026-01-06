@@ -70,9 +70,11 @@ async fn test_basic_performance() -> std::result::Result<(), Box<dyn std::error:
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let perf_agent = BasicAgent::new(perf_agent_config, Arc::new(llm));
+    let perf_agent = BasicAgent::new(perf_agent_config, Arc::new(llm))?;
 
     println!("      ✓ 性能测试Agent创建成功");
 
@@ -183,9 +185,11 @@ async fn test_concurrent_performance() -> std::result::Result<(), Box<dyn std::e
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let concurrent_agent = Arc::new(BasicAgent::new(concurrent_agent_config, Arc::new(llm)));
+    let concurrent_agent = Arc::new(BasicAgent::new(concurrent_agent_config, Arc::new(llm))?);
 
     // 测试用例 10.2.1: 并发请求性能测试
     println!("    🔀 测试并发请求性能");
@@ -309,6 +313,8 @@ async fn test_memory_optimization() -> std::result::Result<(), Box<dyn std::erro
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
     // 测试多个Agent实例的内存使用
@@ -324,7 +330,7 @@ async fn test_memory_optimization() -> std::result::Result<(), Box<dyn std::erro
             "https://dashscope.aliyuncs.com/compatible-mode/v1",
             QwenApiType::OpenAICompatible,
         );
-        let agent = BasicAgent::new(config, Arc::new(agent_llm));
+        let agent = BasicAgent::new(config, Arc::new(agent_llm))?;
         agents.push(agent);
     }
 
@@ -399,9 +405,11 @@ async fn test_streaming_performance() -> std::result::Result<(), Box<dyn std::er
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let streaming_agent = BasicAgent::new(streaming_agent_config, Arc::new(llm));
+    let streaming_agent = BasicAgent::new(streaming_agent_config, Arc::new(llm))?;
     let streaming_agent = streaming_agent.into_streaming();
 
     // 测试用例 10.4.1: 流式响应性能测试
@@ -519,9 +527,11 @@ async fn test_long_running_stability() -> std::result::Result<(), Box<dyn std::e
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let stability_agent = BasicAgent::new(stability_agent_config, Arc::new(llm));
+    let stability_agent = BasicAgent::new(stability_agent_config, Arc::new(llm))?;
 
     // 测试用例 10.5.1: 长时间运行稳定性测试
     println!("    ⏱️ 测试长时间运行稳定性");

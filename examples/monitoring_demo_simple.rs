@@ -3,15 +3,25 @@
 //! This example demonstrates the core monitoring and observability
 //! capabilities of Lumos.ai's enterprise monitoring system.
 
-use lumosai_core::telemetry::{
-    AgentMetrics, ExecutionContext, InMemoryMetricsCollector, MemoryMetrics, MetricValue,
-    MetricsCollector, TokenUsage, ToolMetrics,
-};
+// 注意：这个示例使用了不存在的监控 API，暂时注释掉
+// 如果需要监控功能，请使用 lumosai_telemetry 包或 lumosai_core::compat 模块
+/*
+use lumosai_core::compat::{AgentMetrics, ExecutionContext};
+use lumosai_telemetry::{MetricValue, MetricsCollector};
+use lumosai_core::tool::manager::ToolMetrics;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+*/
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    println!("⚠️  This example is temporarily disabled due to missing monitoring API types.");
+    println!("    The monitoring system is being refactored.");
+    println!("    Please use lumosai_telemetry package or check lumosai_core::compat module for available types.");
+    return Ok(());
+    
+    /*
     println!("🚀 Lumos.ai Enterprise Monitoring System Demo (Simplified)");
     println!("==========================================================\n");
 
@@ -227,4 +237,5 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
     println!("   enterprise monitoring solutions.");
 
     Ok(())
+    */
 }

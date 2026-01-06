@@ -1,8 +1,5 @@
 //! Integration tests for Milvus storage
 
-use std::collections::HashMap;
-use tokio_test;
-
 use lumosai_vector_core::{
     traits::VectorStorage,
     types::{
@@ -16,7 +13,16 @@ async fn create_test_storage() -> Option<MilvusStorage> {
     let config = MilvusConfig::new("http://localhost:19530").with_database("test_db");
 
     match MilvusStorage::new(config).await {
-        Ok(storage) => Some(storage),
+        Ok(storage) => {
+            if storage.health_check().await.is_ok() {
+                Some(storage)
+            } else {
+                println!(
+                    "⚠️  Skipping Milvus tests - health check failed on localhost:19530"
+                );
+                None
+            }
+        }
         Err(_) => {
             println!("⚠️  Skipping Milvus tests - Milvus not available on localhost:19530");
             None
@@ -70,7 +76,10 @@ async fn test_collection_operations() {
         // Test collection creation
         let index_config = IndexConfig::new(collection_name, 128)
             .with_metric(SimilarityMetric::Cosine)
-            .with_description("Test collection");
+            .with_option(
+                "description",
+                MetadataValue::String("Test collection".to_string()),
+            );
 
         assert!(storage.create_index(index_config).await.is_ok());
 
@@ -82,7 +91,7 @@ async fn test_collection_operations() {
         let collection_info = storage.describe_index(collection_name).await.unwrap();
         assert_eq!(collection_info.name, collection_name);
         assert_eq!(collection_info.dimension, 128);
-        assert_eq!(collection_info.document_count, 0);
+        assert_eq!(collection_info.vector_count, 0);
 
         // Test duplicate collection creation (should fail)
         let duplicate_config = IndexConfig::new(collection_name, 128);
@@ -203,14 +212,9 @@ async fn test_vector_search() {
 
         // Test basic search
         let query_vector = generate_test_embedding(32, 100);
-        let search_request = SearchRequest {
-            index_name: collection_name.to_string(),
-            vector: query_vector,
-            top_k: 3,
-            similarity_metric: Some(SimilarityMetric::Cosine),
-            filter: None,
-            include_metadata: true,
-        };
+        let search_request = SearchRequest::new(collection_name, query_vector)
+            .with_top_k(3)
+            .with_include_metadata(true);
 
         let response = storage.search(search_request).await.unwrap();
         assert!(response.results.len() <= 3);
@@ -269,14 +273,10 @@ async fn test_filtered_search() {
             MetadataValue::String("tech".to_string()),
         );
 
-        let filtered_search = SearchRequest {
-            index_name: collection_name.to_string(),
-            vector: generate_test_embedding(16, 1),
-            top_k: 10,
-            similarity_metric: Some(SimilarityMetric::Cosine),
-            filter: Some(filter),
-            include_metadata: true,
-        };
+        let filtered_search = SearchRequest::new(collection_name, generate_test_embedding(16, 1))
+            .with_top_k(10)
+            .with_filter(filter)
+            .with_include_metadata(true);
 
         // Note: Filtered search might fail depending on Milvus configuration
         let _result = storage.search(filtered_search).await;
@@ -369,14 +369,9 @@ async fn test_batch_operations() {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
         // Test batch search
-        let search_request = SearchRequest {
-            index_name: collection_name.to_string(),
-            vector: generate_test_embedding(8, 25),
-            top_k: 10,
-            similarity_metric: Some(SimilarityMetric::Cosine),
-            filter: None,
-            include_metadata: false,
-        };
+        let search_request = SearchRequest::new(collection_name, generate_test_embedding(8, 25))
+            .with_top_k(10)
+            .with_include_metadata(false);
 
         let response = storage.search(search_request).await.unwrap();
         assert!(response.results.len() <= 10);

@@ -6,12 +6,13 @@
 //! - `delegate_to()` - 委托操作符（类似 `<=`）
 
 use lumosai_core::agent::{create_basic_agent, delegate, Agent, AgentParallel, AgentPipeline};
+use lumosai_core::error::Result;
 use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
 use lumosai_core::llm::LlmProvider;
 use std::sync::Arc;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     println!("🚀 DSL 操作符演示\n");
     println!("注意：此示例使用 Mock LLM 提供者进行演示\n");
 
@@ -23,20 +24,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "researcher".to_string(),
         "You are a research assistant. Gather information on the given topic.".to_string(),
         Arc::clone(&llm_provider),
-    ));
+    )?);
 
     let analyzer: Arc<dyn Agent> = Arc::new(create_basic_agent(
         "analyzer".to_string(),
         "You are an analyst. Analyze the information provided and extract key insights."
             .to_string(),
         Arc::clone(&llm_provider),
-    ));
+    )?);
 
     let writer: Arc<dyn Agent> = Arc::new(create_basic_agent(
         "writer".to_string(),
         "You are a technical writer. Create a concise summary from the analysis.".to_string(),
         Arc::clone(&llm_provider),
-    ));
+    )?);
 
     // ========================================
     // 1. 管道操作符演示（类似 researcher |> analyzer |> writer）

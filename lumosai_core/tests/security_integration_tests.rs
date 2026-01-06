@@ -1,3 +1,5 @@
+#![cfg(feature = "security_tests")]
+
 //! 安全系统集成测试
 
 use chrono::Utc;

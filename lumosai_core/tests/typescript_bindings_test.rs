@@ -1,3 +1,5 @@
+#![cfg(feature = "bindings_tests")]
+
 use lumosai_core::bindings::{
     generate_bindings, BindingLanguage, TSAgentConfig, TSMemoryConfig, TSParameterSchema,
     TSPropertySchema, TSToolDefinition, TypeScriptBindings,

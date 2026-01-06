@@ -1,3 +1,5 @@
+#![cfg(feature = "mastra_integration_tests")]
+
 //! Comprehensive Mastra Integration Tests
 //!
 //! This test suite validates the complete Mastra functionality migration

@@ -68,9 +68,11 @@ async fn test_image_processing() -> std::result::Result<(), Box<dyn std::error::
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
-    let image_agent = BasicAgent::new(image_agent_config, Arc::new(llm));
+    let image_agent = BasicAgent::new(image_agent_config, Arc::new(llm))?;
 
     println!("      ✓ 图像处理Agent创建成功");
 
@@ -164,9 +166,11 @@ async fn test_audio_processing() -> std::result::Result<(), Box<dyn std::error::
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
-    let audio_agent = BasicAgent::new(audio_agent_config, Arc::new(llm));
+    let audio_agent = BasicAgent::new(audio_agent_config, Arc::new(llm))?;
 
     // 测试用例 9.2.1: 音频内容分析
     println!("    🎵 测试音频内容分析");
@@ -255,9 +259,11 @@ async fn test_multimodal_understanding() -> std::result::Result<(), Box<dyn std:
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
-    let multimodal_agent = BasicAgent::new(multimodal_agent_config, Arc::new(llm));
+    let multimodal_agent = BasicAgent::new(multimodal_agent_config, Arc::new(llm))?;
 
     // 测试用例 9.3.1: 多模态内容综合理解
     println!("    🔗 测试多模态内容综合理解");
@@ -349,9 +355,11 @@ async fn test_multimodal_generation() -> std::result::Result<(), Box<dyn std::er
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
-    let generation_agent = BasicAgent::new(generation_agent_config, Arc::new(llm));
+    let generation_agent = BasicAgent::new(generation_agent_config, Arc::new(llm))?;
 
     // 测试用例 9.4.1: 多模态内容生成
     println!("    🎨 测试多模态内容生成");
@@ -443,9 +451,11 @@ async fn test_cross_modal_conversion() -> std::result::Result<(), Box<dyn std::e
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
-    let conversion_agent = BasicAgent::new(conversion_agent_config, Arc::new(llm));
+    let conversion_agent = BasicAgent::new(conversion_agent_config, Arc::new(llm))?;
 
     // 测试用例 9.5.1: 跨模态转换
     println!("    🔄 测试跨模态转换");

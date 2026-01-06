@@ -1,4 +1,7 @@
 use lumosai_core::agent::{AgentConfig, BasicAgent};
+use lumosai_core::error::Result;
+use lumosai_core::llm::mock::MockLlmProvider;
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use lumosai_core::prelude::*;
 use lumosai_core::vector::MemoryVectorStorage;
 use lumosai_network::AgentNetwork;
@@ -17,7 +20,7 @@ impl TestUtils {
             instructions: "Test agent".to_string(),
             ..Default::default()
         };
-        Ok(BasicAgent::new(config, llm))
+        BasicAgent::new(config, llm)
     }
 
     /// 创建带自定义响应的测试Agent
@@ -31,7 +34,7 @@ impl TestUtils {
             instructions: "Test agent with custom responses".to_string(),
             ..Default::default()
         };
-        Ok(BasicAgent::new(config, llm))
+        BasicAgent::new(config, llm)
     }
 
     /// 创建测试用RAG系统
@@ -67,9 +70,11 @@ impl TestUtils {
         let config = AgentConfig {
             name: "real_test_agent".to_string(),
             instructions: "You are a test agent for validation".to_string(),
+            isolation_level: Default::default(),
+            tenant_id: None,
             ..Default::default()
         };
-        Ok(BasicAgent::new(config, llm))
+        BasicAgent::new(config, llm)
     }
 
     /// 创建性能测试环境

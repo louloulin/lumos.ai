@@ -13,6 +13,7 @@ use std::sync::Arc;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lumosai_core::llm::test_helpers::create_test_zhipu_provider;
 
     /// Test that validates Phase 1: Function Calling Modernization is complete
     #[tokio::test]
@@ -31,7 +32,7 @@ mod tests {
         };
 
         // Create agent
-        let agent = BasicAgent::new(config, Arc::new(llm));
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test that agent supports function calling
         assert!(
@@ -69,7 +70,7 @@ mod tests {
         };
 
         // Create agent
-        let agent = BasicAgent::new(config, Arc::new(llm));
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test streaming capability
         let messages = vec![lumosai_core::agent::message_utils::user_message(
@@ -106,7 +107,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, Arc::new(llm));
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test memory operations
         if let Some(memory) = agent.get_working_memory() {
@@ -144,7 +145,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, Arc::new(llm));
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test that telemetry components exist
         // Note: This is a basic validation that the structures exist
@@ -187,7 +188,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, Arc::new(llm));
+        let agent = BasicAgent::new(config, Arc::new(llm)).expect("Failed to create BasicAgent");
 
         // Test all capabilities together
         let messages = vec![lumosai_core::agent::message_utils::user_message(

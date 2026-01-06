@@ -90,6 +90,15 @@ use std::sync::Arc;
 // 导入统一内存系统
 pub mod unified;
 
+// 导入Repository-First存储策略
+pub mod repository_first;
+
+// 导入ENGRAM记忆类型系统
+pub mod engram;
+
+// 导入A-MemGuard安全框架
+pub mod amemguard;
+
 /// Configuration for semantic recall (memory retrieval)
 ///
 /// Semantic recall uses vector embeddings to find relevant past messages
@@ -225,7 +234,7 @@ impl Default for MemoryConfig {
     /// - `namespace`: None
     /// - `working_memory`: None
     /// - `semantic_recall`: None
-    /// - `last_messages`: None
+    /// - `last_messages`: Some(0)  // ⭐ 优化默认值：禁用历史消息提高性能
     /// - `query`: None
     fn default() -> Self {
         Self {
@@ -234,7 +243,7 @@ impl Default for MemoryConfig {
             enabled: true,
             working_memory: None,
             semantic_recall: None,
-            last_messages: None,
+            last_messages: Some(0), // ⭐ 优化：默认禁用历史消息提高性能
             query: None,
         }
     }
@@ -464,6 +473,214 @@ pub trait Memory: Send + Sync {
     fn as_thread_storage(&self) -> Option<Arc<dyn thread::MemoryThreadStorage>> {
         None // Default implementation returns None
     }
+
+    /// 创建新线程（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    /// 支持线程管理的 Memory 实现应该覆盖此方法。
+    async fn create_thread(
+        &self,
+        _params: thread::CreateThreadParams,
+    ) -> Result<thread::MemoryThread> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 获取线程信息（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn get_thread(
+        &self,
+        _thread_id: &str,
+        _resource_id: Option<&str>,
+    ) -> Result<Option<thread::MemoryThread>> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 更新线程（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn update_thread(
+        &self,
+        _thread_id: &str,
+        _params: thread::UpdateThreadParams,
+        _resource_id: Option<&str>,
+    ) -> Result<thread::MemoryThread> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 删除线程（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn delete_thread(&self, _thread_id: &str, _resource_id: Option<&str>) -> Result<()> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 列出资源的所有线程（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn list_threads(&self, _resource_id: &str) -> Result<Vec<thread::MemoryThread>> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 获取资源的所有线程（可选功能，list_threads 的别名）
+    ///
+    /// 这是 `list_threads` 的便捷方法，提供与计划中接口名称的一致性。
+    /// 默认实现委托给 `list_threads` 方法。
+    ///
+    /// # 参数
+    ///
+    /// * `resource_id` - 资源ID
+    ///
+    /// # 返回
+    ///
+    /// 该资源的所有线程列表
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::Memory;
+    ///
+    /// # async fn example(memory: &dyn Memory) -> lumosai_core::Result<()> {
+    /// let threads = memory.get_threads_by_resource("user-123").await?;
+    /// println!("Found {} threads for user", threads.len());
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn get_threads_by_resource(
+        &self,
+        resource_id: &str,
+    ) -> Result<Vec<thread::MemoryThread>> {
+        // 默认实现委托给 list_threads
+        self.list_threads(resource_id).await
+    }
+
+    /// 获取线程统计信息（可选功能）
+    ///
+    /// 默认实现返回错误，表示不支持线程管理。
+    async fn get_thread_stats(
+        &self,
+        _thread_id: &str,
+        _resource_id: Option<&str>,
+    ) -> Result<thread::ThreadStats> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Thread management is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 语义召回（可选功能）
+    ///
+    /// 执行语义搜索并返回相关消息，支持命名空间过滤。
+    /// 默认实现返回错误，表示不支持语义召回。
+    /// 支持语义召回的 Memory 实现应该覆盖此方法。
+    ///
+    /// # 参数
+    ///
+    /// * `query` - 搜索查询字符串
+    /// * `config` - 语义召回配置
+    /// * `namespace` - 可选的命名空间过滤
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::{Memory, SemanticRecallConfig};
+    ///
+    /// # async fn example(memory: &dyn Memory) -> lumosai_core::Result<()> {
+    /// let config = SemanticRecallConfig {
+    ///     top_k: 5,
+    ///     ..Default::default()
+    /// };
+    /// let results = memory.semantic_recall("AI", &config, Some("namespace".to_string())).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn semantic_recall(
+        &self,
+        _query: &str,
+        _config: &SemanticRecallConfig,
+        _namespace: Option<String>,
+    ) -> Result<Vec<Message>> {
+        Err(crate::error::Error::UnsupportedOperation(
+            "Semantic recall is not supported by this memory implementation".to_string(),
+        ))
+    }
+
+    /// 添加消息处理器（可选功能）
+    ///
+    /// 添加一个消息处理器到处理管线中。处理器会在消息存储或检索时自动应用。
+    /// 默认实现不做任何操作，表示不支持处理器。
+    /// 支持处理器的 Memory 实现应该覆盖此方法。
+    ///
+    /// # 参数
+    ///
+    /// * `processor` - 消息处理器实例
+    ///
+    /// # 注意
+    ///
+    /// 由于 trait 对象不能是 `&mut self`，这个方法使用内部可变性。
+    /// 如果实现需要可变性，可以使用 `Arc<RwLock<...>>` 或 `Arc<Mutex<...>>`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::{Memory, processor::MessageLimitProcessor};
+    /// use lumosai_core::logger::NoopLogger;
+    /// use std::sync::Arc;
+    ///
+    /// # async fn example(memory: &dyn Memory) -> lumosai_core::Result<()> {
+    /// let processor = Arc::new(MessageLimitProcessor::new(50, Arc::new(NoopLogger)));
+    /// memory.add_processor(processor).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn add_processor(&self, _processor: Arc<dyn processor::MemoryProcessor>) -> Result<()> {
+        // 默认实现不做任何操作
+        // 支持处理器的 Memory 实现应该覆盖此方法
+        Ok(())
+    }
+
+    /// 处理消息列表（可选功能）
+    ///
+    /// 使用已注册的处理器处理消息列表，返回处理后的消息。
+    /// 默认实现直接返回输入消息，不做任何处理。
+    /// 支持处理器的 Memory 实现应该覆盖此方法。
+    ///
+    /// # 参数
+    ///
+    /// * `messages` - 待处理的消息列表
+    ///
+    /// # 返回
+    ///
+    /// 处理后的消息列表
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use lumosai_core::memory::Memory;
+    /// use lumosai_core::llm::{Message, Role};
+    ///
+    /// # async fn example(memory: &dyn Memory) -> lumosai_core::Result<()> {
+    /// let messages = vec![
+    ///     Message::new(Role::User, "Hello".to_string(), None, None),
+    ///     Message::new(Role::Assistant, "Hi there!".to_string(), None, None),
+    /// ];
+    /// let processed = memory.process_messages(messages).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn process_messages(&self, messages: Vec<Message>) -> Result<Vec<Message>> {
+        // 默认实现直接返回输入消息，不做任何处理
+        Ok(messages)
+    }
 }
 
 // 模块声明
@@ -510,6 +727,33 @@ pub use working::{
 
 // 导出统一内存系统 - 这是新的推荐API
 pub use unified::{Memory as UnifiedMemory, MemoryType};
+
+// 导出Repository-First存储策略
+pub use repository_first::{
+    ConsistencyChecker, ConsistencyReport, InMemoryRepository, InMemoryVectorStore,
+    Repository, RepositoryFirstStorage, RepositoryFirstStorageImpl, RepositoryQuery,
+    RepositoryStats, SearchOptions, SearchResult, SemanticQuery, SortBy,
+    StorageQuery, StorageStats, StoredMessage, SyncManager, TimeRange,
+    VectorEntry, VectorStats, VectorStore, QueryType, Inconsistency, InconsistencyType
+};
+
+// 导出ENGRAM记忆类型系统
+pub use engram::{
+    CompressionAlgorithm, CompressionConfig, CompressionResult, ConsolidationConfig,
+    ConsolidationResult, EngramConfig, EngramMemoryManager, EngramMemorySystem,
+    Event, ForgetConfig, ForgetResult, MemoryContent, MemoryContext, MemoryEntry as EngramMemoryEntry,
+    MemoryQuery as EngramMemoryQuery, MemorySortBy, MemoryStats as EngramMemoryStats,
+    MemoryType as EngramMemoryType, SkillDefinition
+};
+
+// 导出A-MemGuard安全框架
+pub use amemguard::{
+    AMemGuard, AMemGuardConfig, AMemGuardSecurity, AnomalyDetector, AnomalyReport, AnomalyType,
+    AuditLogger, AuditLogLevel, AutoRecoveryPolicy, ConsensusVerifier, ConsistencyReport as AMemGuardConsistencyReport,
+    InMemorySecureBackend, IsolationLevel, IsolationManager, IsolationReport, IsolationStatus,
+    Inconsistency as AMemGuardInconsistency, InconsistencyType as AMemGuardInconsistencyType,
+    SecureMemoryBackend, SecureMemoryEntry, SecurityAuditEvent, SecurityEventType, SecuritySeverity, SecurityStats
+};
 
 /// 添加兼容函数，用于创建基本工作内存
 #[inline]

@@ -7,7 +7,6 @@
 //! - Azure AI Agent Orchestration (2025)
 //! - LangGraph State Graphs
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -63,16 +62,12 @@ impl HandoffRule {
     /// 检查是否满足移交条件
     pub fn matches(&self, content: &str, agent_capabilities: &[String]) -> bool {
         match &self.condition {
-            HandoffCondition::Keyword(keywords) => {
-                keywords.iter().any(|kw| content.contains(kw))
-            }
+            HandoffCondition::Keyword(keywords) => keywords.iter().any(|kw| content.contains(kw)),
             HandoffCondition::ContentLength { min, max } => {
                 let len = content.len();
                 len >= *min && len <= *max
             }
-            HandoffCondition::Capability(cap) => {
-                agent_capabilities.contains(cap)
-            }
+            HandoffCondition::Capability(cap) => agent_capabilities.contains(cap),
             HandoffCondition::Custom(_) => {
                 // 自定义条件需要 LLM 判断，这里简化为 true
                 true
@@ -155,7 +150,11 @@ impl HandoffExecutor {
         let mut handoff_count = 0;
 
         loop {
-            tracing::debug!("Current agent: {}, handoff count: {}", current_agent_id, handoff_count);
+            tracing::debug!(
+                "Current agent: {}, handoff count: {}",
+                current_agent_id,
+                handoff_count
+            );
 
             // 检查是否达到最大移交次数
             if handoff_count >= self.max_handoffs {
@@ -164,9 +163,9 @@ impl HandoffExecutor {
             }
 
             // 获取当前 Agent
-            let current_agent = agents.get(&current_agent_id).ok_or_else(|| {
-                Error::NotFound(format!("Agent {} not found", current_agent_id))
-            })?;
+            let current_agent = agents
+                .get(&current_agent_id)
+                .ok_or_else(|| Error::NotFound(format!("Agent {} not found", current_agent_id)))?;
 
             // 执行当前 Agent
             let response = current_agent.generate_simple(&current_message).await?;
@@ -287,4 +286,3 @@ mod tests {
         assert_eq!(rule.priority, 8);
     }
 }
-

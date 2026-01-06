@@ -1,3 +1,5 @@
+#![cfg(feature = "enhanced_features_tests")]
+
 //! Integration tests for enhanced features (debugging, logging, marketplace)
 //!
 //! This test suite validates the implementation of debugging tools, logging system, and marketplace

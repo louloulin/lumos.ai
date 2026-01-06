@@ -96,6 +96,10 @@ pub enum Error {
     #[error("Invalid input error: {0}")]
     InvalidInput(String),
 
+    /// Invalid argument errors
+    #[error("Invalid argument: {0}")]
+    InvalidArgument(String),
+
     /// Configuration errors
     #[error("Configuration error: {0}")]
     Configuration(String),

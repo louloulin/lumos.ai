@@ -142,10 +142,10 @@ impl AgentInstance {
     /// ```
     pub fn with_tool_names(self, tool_names: &[&str]) -> Result<Self> {
         use crate::agent::tool_resolver::resolve_tool_names;
-        
+
         // 解析工具名称到工具实例
         let tools = resolve_tool_names(tool_names)?;
-        
+
         // 使用现有的 with_tools 方法
         self.with_tools(tools)
     }
@@ -179,7 +179,7 @@ impl AgentInstance {
             .name(&name)
             .instructions(&instructions)
             .model(model)
-            .memory(memory)
+            .with_basic_memory()
             .enable_smart_defaults()
             .build()?;
 
@@ -196,10 +196,10 @@ impl AgentInstance {
     /// ```
     pub fn with_memory_type(self, storage_type: &str) -> Result<Self> {
         use crate::agent::memory_resolver::resolve_memory_storage;
-        
+
         // 解析存储类型名称到内存实例
         let memory = resolve_memory_storage(storage_type)?;
-        
+
         // 使用现有的 with_memory 方法
         self.with_memory(memory)
     }

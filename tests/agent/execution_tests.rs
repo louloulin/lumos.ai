@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 use tokio::time::timeout;
 use lumosai_core::prelude::*;
 use lumosai_core::agent::BasicAgent;
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use crate::common::{TestUtils, TestAssertions, TestDataSets};
 
 /// Agent执行和响应测试

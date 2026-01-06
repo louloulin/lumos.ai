@@ -1,7 +1,6 @@
 //! Tests for WebSocket streaming functionality
 
 use futures::StreamExt;
-use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
 use lumosai_core::agent::message_utils::user_message;
@@ -10,7 +9,7 @@ use lumosai_core::agent::{
     AgentConfig, AgentEvent, BasicAgent, IntoWebSocketStreaming, StreamingConfig, WebSocketConfig,
     WebSocketMessage,
 };
-use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use lumosai_core::llm::LlmOptions;
 use lumosai_core::memory::WorkingMemoryConfig;
 
@@ -144,7 +143,7 @@ async fn test_websocket_streaming_agent_creation() {
     };
 
     let llm = create_test_zhipu_provider_arc();
-    let agent = BasicAgent::new(agent_config, llm);
+    let agent = BasicAgent::new(agent_config, llm).expect("Failed to create BasicAgent");
 
     let ws_agent = agent.into_websocket_streaming(streaming_config, websocket_config);
 
@@ -184,7 +183,7 @@ async fn test_websocket_streaming_execution() {
     };
 
     let llm = create_test_zhipu_provider_arc();
-    let agent = BasicAgent::new(agent_config, llm);
+    let agent = BasicAgent::new(agent_config, llm).expect("Failed to create BasicAgent");
 
     let ws_agent = agent.into_websocket_streaming(streaming_config, websocket_config);
 
@@ -382,7 +381,7 @@ async fn test_heartbeat_monitoring() {
     };
 
     let llm = create_test_zhipu_provider_arc();
-    let agent = BasicAgent::new(agent_config, llm);
+    let agent = BasicAgent::new(agent_config, llm).expect("Failed to create BasicAgent");
 
     let ws_agent = agent.into_websocket_streaming(streaming_config, config);
 

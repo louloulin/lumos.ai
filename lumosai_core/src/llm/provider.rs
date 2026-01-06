@@ -156,6 +156,42 @@ pub trait LlmProvider: Send + Sync {
     /// ```
     fn name(&self) -> &str;
 
+    /// Checks if the LLM provider is healthy and available
+    ///
+    /// This method performs a lightweight health check to determine if the provider
+    /// is currently available and responsive. The default implementation performs
+    /// a simple generation test with a minimal prompt.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the provider is healthy and available, `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lumosai_core::llm::LlmProvider;
+    ///
+    /// # async fn example(provider: &dyn LlmProvider) -> lumosai_core::Result<()> {
+    /// if provider.is_healthy().await {
+    ///     println!("Provider {} is available", provider.name());
+    /// } else {
+    ///     println!("Provider {} is unavailable", provider.name());
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    async fn is_healthy(&self) -> bool {
+        // Default implementation: try a minimal generation request
+        let options = LlmOptions::default()
+            .with_max_tokens(1)
+            .with_temperature(0.0);
+
+        match self.generate("test", &options).await {
+            Ok(_) => true,
+            Err(_) => false,
+        }
+    }
+
     /// Generates text from a simple prompt
     ///
     /// This is the simplest way to generate text, suitable for single-turn
@@ -530,9 +566,8 @@ pub trait LlmProvider: Send + Sync {
         let _ = schema;
         let response = self.generate_with_messages(messages, options).await?;
         // Try to parse as JSON, but this is not guaranteed to match the schema
-        serde_json::from_str(&response).unwrap_or_else(|_| {
-            serde_json::json!({ "content": response })
-        })
+        Ok(serde_json::from_str(&response)
+            .unwrap_or_else(|_| serde_json::json!({ "content": response })))
     }
 }
 

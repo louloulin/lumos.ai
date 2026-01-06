@@ -6,7 +6,7 @@
 //! - 记忆内容管理
 //! - 记忆检索和总结
 
-use lumosai_core::agent::{AgentBuilder, AgentTrait};
+use lumosai_core::agent::{Agent, AgentBuilder};
 use lumosai_core::llm::{Message, MockLlmProvider, Role};
 use lumosai_core::memory::{
     working::{create_working_memory, WorkingMemoryConfig},

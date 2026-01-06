@@ -10,19 +10,18 @@
 
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
-use serde_json::{json, Value};
-use std::sync::Arc;
+use serde_json::Value;
 
-use super::executor::BasicAgent;
 use super::trait_def::{Agent, AgentStructuredOutput};
-use super::types::{AgentGenerateOptions, RuntimeContext};
+use super::types::AgentGenerateOptions;
+use super::BasicAgent;
 use crate::error::{Error, Result};
 use crate::llm::{LlmOptions, LlmProvider, Message, Role};
 
 /// Implementation of structured output for BasicAgent
 #[async_trait]
 impl AgentStructuredOutput for BasicAgent {
-    async fn generate_structured<T: DeserializeOwned + Send + 'static>(
+    async fn generate_structured<T: DeserializeOwned + Send + 'static + schemars::JsonSchema>(
         &self,
         messages: &[Message],
         options: &AgentGenerateOptions,
@@ -33,17 +32,19 @@ impl AgentStructuredOutput for BasicAgent {
             .map_err(|e| Error::Agent(format!("Failed to serialize schema: {}", e)))?;
 
         // 2. Check if LLM supports native structured output
-        if self.llm.supports_structured_output() {
+        if self.supports_structured_output() {
             // Use native structured output API
             let llm_options = LlmOptions {
-                temperature: options.temperature,
-                max_tokens: options.max_tokens,
-                stop: options.stop.clone(),
+                temperature: options.llm_options.temperature,
+                max_tokens: options.llm_options.max_tokens,
+                stop: options.llm_options.stop.clone(),
                 model: None,
+                stream: false,
+                extra: serde_json::Map::new(),
             };
 
             let response_value = self
-                .llm
+                .llm()
                 .generate_structured(messages, &schema_value, &llm_options)
                 .await
                 .map_err(|e| {
@@ -156,7 +157,9 @@ impl BasicAgent {
     /// 便捷方法：生成简单的结构化输出
     ///
     /// 使用单个消息生成结构化输出
-    pub async fn generate_structured_simple<T: DeserializeOwned + Send + 'static>(
+    pub async fn generate_structured_simple<
+        T: DeserializeOwned + Send + 'static + schemars::JsonSchema,
+    >(
         &self,
         prompt: &str,
     ) -> Result<T> {
@@ -172,7 +175,9 @@ impl BasicAgent {
     }
 
     /// 便捷方法：使用自定义 schema 生成结构化输出
-    pub async fn generate_with_schema<T: DeserializeOwned + Send + 'static>(
+    pub async fn generate_with_schema<
+        T: DeserializeOwned + Send + 'static + schemars::JsonSchema,
+    >(
         &self,
         prompt: &str,
         schema: Value,
@@ -211,8 +216,8 @@ impl StructuredOutputExt for crate::agent::AgentBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::{Deserialize, Serialize};
     use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
     struct TaskBreakdown {
@@ -257,7 +262,7 @@ Hope this helps!"#;
         // Test that schemars can generate schema from Rust type
         let schema = schemars::schema_for!(TaskBreakdown);
         let schema_value = serde_json::to_value(&schema.schema).unwrap();
-        
+
         // Verify schema has expected structure
         assert!(schema_value.get("type").is_some());
         assert_eq!(schema_value["type"], "object");
@@ -268,10 +273,9 @@ Hope this helps!"#;
     fn test_simple_struct_schema() {
         let schema = schemars::schema_for!(SimpleStruct);
         let schema_value = serde_json::to_value(&schema.schema).unwrap();
-        
+
         assert_eq!(schema_value["type"], "object");
         assert!(schema_value["properties"].get("name").is_some());
         assert!(schema_value["properties"].get("age").is_some());
     }
 }
-

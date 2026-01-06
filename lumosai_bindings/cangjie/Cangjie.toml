@@ -1,0 +1,24 @@
+[package]
+name = "lumosai-cangjie"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lumos.ai Team <team@lumosai.dev>"]
+description = "Cangjie bindings for Lumos.ai - High-performance AI Agent framework"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/louloulin/lumos.ai"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai_bindings"
+
+[dependencies]
+lumosai_core = { path = "../../lumosai_core" }
+
+[lib]
+name = "lumosai_cangjie"
+path = "src/lib.cj"
+
+[[bin]]
+name = "lumosai_cangjie_demo"
+path = "examples/demo.cj"
+
+
+

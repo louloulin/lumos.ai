@@ -14,9 +14,12 @@
 //!
 //! ## Quick Start
 //!
-//! ```rust
-//! use lumosai_vector_lancedb::{LanceDbStorage, LanceDbConfig};
-//! use lumosai_vector_core::traits::VectorStorage;
+//! ```rust,no_run
+//! use lumosai_vector_lancedb::{LanceDbConfig, LanceDbStorage};
+//! use lumosai_vector_core::{
+//!     traits::VectorStorage,
+//!     Document, IndexConfig, SimilarityMetric,
+//! };
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -112,7 +115,7 @@ impl LanceDbClient {
     /// Drop a table
     pub async fn drop_table(&self, name: &str) -> LanceDbResult<()> {
         self.db
-            .drop_table(name)
+            .drop_table(name, &[])
             .await
             .map_err(|e| LanceDbError::Database(e.to_string()))?;
         Ok(())

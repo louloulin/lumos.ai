@@ -6,7 +6,7 @@
 //! - 代理间协作
 //! - 条件执行和错误处理
 
-use lumosai_core::agent::{trait_def::Agent, AgentBuilder, AgentTrait};
+use lumosai_core::agent::{trait_def::Agent as AgentTrait, AgentBuilder};
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 use tokio;

@@ -68,9 +68,11 @@ async fn test_agent_creation_configuration() -> std::result::Result<(), Box<dyn 
         metadata: None,
         max_tool_calls: Some(10),
         tool_timeout: Some(30),
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
 
     println!("      ✓ Agent配置创建成功");
     println!("      ✓ Agent实例化成功");
@@ -118,6 +120,8 @@ async fn test_agent_creation_configuration() -> std::result::Result<(), Box<dyn 
             metadata: None,
             max_tool_calls: Some(10),
             tool_timeout: Some(30),
+            tenant_id: None,
+            isolation_level: None,
         };
 
         let llm_clone = QwenProvider::new_with_api_type(
@@ -127,7 +131,7 @@ async fn test_agent_creation_configuration() -> std::result::Result<(), Box<dyn 
             QwenApiType::OpenAICompatible,
         );
 
-        let agent = BasicAgent::new(config, Arc::new(llm_clone));
+        let agent = BasicAgent::new(config, Arc::new(llm_clone))?;
 
         println!("      ✓ 创建Agent: {} ({})", name, desc);
         agents.push(agent);
@@ -166,9 +170,11 @@ async fn test_agent_execution() -> std::result::Result<(), Box<dyn std::error::E
         metadata: None,
         max_tool_calls: Some(10),
         tool_timeout: Some(30),
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
 
     // 测试用例 2.2.1: 单轮对话执行
     println!("    💬 测试单轮对话执行");
@@ -339,9 +345,11 @@ async fn test_agent_tool_usage() -> std::result::Result<(), Box<dyn std::error::
         metadata: None,
         max_tool_calls: Some(10),
         tool_timeout: Some(30),
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
 
     // 测试用例 2.3.1: 基础工具调用
     println!("    🔧 测试基础工具调用");
@@ -439,9 +447,11 @@ async fn test_agent_memory_management() -> std::result::Result<(), Box<dyn std::
         metadata: None,
         max_tool_calls: Some(10),
         tool_timeout: Some(30),
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let agent = BasicAgent::new(agent_config, Arc::new(llm));
+    let agent = BasicAgent::new(agent_config, Arc::new(llm))?;
 
     // 测试用例 2.4.1: 短期记忆测试
     println!("    🧠 测试短期记忆");

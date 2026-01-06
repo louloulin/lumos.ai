@@ -3,8 +3,13 @@
 //! This module provides bindings for different programming languages,
 //! enabling developers to use Lumos.ai from their preferred language.
 
+pub mod cangjie;
 pub mod typescript;
 
+pub use cangjie::{
+    CangjieAgent, CangjieIntegration, CangjieMemoryService, CangjieTool,
+    CangjieIntegrationStats,
+};
 pub use typescript::{
     TSAgentConfig, TSAgentResponse, TSMemoryConfig, TSParameterSchema, TSPropertySchema,
     TSToolCall, TSToolDefinition, TSUsageStats, TypeScriptBindings,
@@ -17,6 +22,7 @@ pub enum BindingLanguage {
     Python,
     Go,
     Java,
+    Cangjie,
 }
 
 impl BindingLanguage {
@@ -27,6 +33,7 @@ impl BindingLanguage {
             BindingLanguage::Python => "py",
             BindingLanguage::Go => "go",
             BindingLanguage::Java => "java",
+            BindingLanguage::Cangjie => "cj",
         }
     }
 
@@ -37,6 +44,7 @@ impl BindingLanguage {
             BindingLanguage::Python => "pip",
             BindingLanguage::Go => "go",
             BindingLanguage::Java => "maven",
+            BindingLanguage::Cangjie => "cjpm", // Cangjie package manager
         }
     }
 }

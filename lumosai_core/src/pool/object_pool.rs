@@ -263,6 +263,15 @@ impl<T: Poolable + 'static> ObjectPool<T> {
 
         Ok(())
     }
+
+    /// 手动添加空闲对象到池中
+    ///
+    /// 此方法允许外部对象直接归还到池中，复用完整的对象验证和归还逻辑。
+    pub async fn add_idle_object(&self, obj: T) -> Result<()> {
+        // ✅ 完整实现：复用 release 方法逻辑
+        self.inner.release(obj).await;
+        Ok(())
+    }
 }
 
 impl<T: Poolable> Clone for ObjectPool<T> {

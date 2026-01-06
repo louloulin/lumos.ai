@@ -1,52 +1,149 @@
 //! Agent module for LLM-based agents
+//!
+//! 重构后的模块化架构，按功能分类组织：
+//!
+//! ## 核心模块 (Core Modules)
+//! - trait_def, traits: Agent trait定义和组合traits
+//! - types, config: 类型定义和配置
+//! - builder: Agent构建器
+//! - refactored: BasicAgent模块化实现
+//!
+//! ## 执行模块 (Execution Modules)
+//! - orchestration: Agent编排引擎
+//! - chain: 链式调用
+//! - dag_orchestration: DAG工作流编排
+//! - operators: Agent操作符
+//! - concurrent_tool_executor: 并发工具执行器
+//! - tool_resolver: 工具解析
+//! - performance: 性能监控
+//! - error_handling: 错误处理
+//! - session: 会话管理
+//!
+//! ## 通信模块 (Communication Modules)
+//! - communication: Agent间通信
+//! - streaming: 流式输出
+//! - structured_output: 结构化输出
+//! - websocket: WebSocket通信
+//! - events: 事件处理
+//!
+//! ## 多Agent模块 (Multi-Agent Modules)
+//! - collaboration: 基础协作
+//! - debate: 辩论模式
+//! - group_chat: 群体聊天
+//! - handoff: 工作交接
+//! - magentic: 磁性协作
+//! - maker_checker: Maker-Checker模式
+//! - reflection: 自省能力
+//!
+//! ## 工作流模块 (Workflow Modules)
+//! - sop_environment, sop_simple, sop_types: SOP标准操作程序
+//! - simplified_api: 简化API
+//! - rag_integration: RAG集成
+//!
+//! ## 配置模块 (Configuration Modules)
+//! - config_validator: 配置验证
+//! - dynamic_config: 动态配置
+//! - convenience: 便利功能
+//! - api_consistency: API一致性检查
+//! - feature_completion: 功能完成检查
+//!
+//! ## 工具模块 (Utility Modules)
+//! - memory_resolver: 内存解析
+//! - message_utils: 消息处理工具
+//! - model_resolver: 模型解析
+//! - runtime_context: 运行时上下文
+//! - state_management: 状态管理
+//!
+//! ## 集成模块 (Integration Modules)
+//! - mastra_compat: Mastra兼容性
+//! - evaluation: 评估功能
+//!
+//! ## 测试模块 (Test Modules)
+//! - enhanced_integration_test: 集成测试
 
-pub mod api_consistency;
-pub mod builder;
-pub mod structured_output;
-pub mod rag_integration;
-pub mod chain;
-pub mod collaboration;
-pub mod communication;
+// ================================
+// 核心模块 (Core Modules)
+// ================================
+pub mod trait_def;
+pub mod traits;
+pub mod types;
 pub mod config;
-pub mod config_validator;
-pub mod convenience;
-pub mod dag_orchestration;
-pub mod dynamic_config;
-pub mod enhanced_integration_test;
-pub mod evaluation;
-pub mod events;
-pub mod executor;
-pub mod feature_completion;
-pub mod mastra_compat;
-pub mod message_utils;
-pub mod model_resolver;
-pub mod operators; // 新增：Agent 操作符支持
+pub mod builder;
+pub mod refactored;
+
+// ================================
+// 执行模块 (Execution Modules)
+// ================================
 pub mod orchestration;
+pub mod chain;
+pub mod dag_orchestration;
+pub mod operators;
+pub mod concurrent_tool_executor;
+pub mod tool_resolver;
 pub mod performance;
-pub mod runtime_context;
+pub mod error_handling;
 pub mod session;
-pub mod state_management; // 新增：Agent状态管理
-pub mod simplified_api;
+
+// ================================
+// 通信模块 (Communication Modules)
+// ================================
+pub mod communication;
+pub mod streaming;
+pub mod structured_output;
+pub mod websocket;
+pub mod events;
+
+// ================================
+// 多Agent模块 (Multi-Agent Modules)
+// ================================
+pub mod collaboration;
+pub mod debate;
+pub mod group_chat;
+pub mod handoff;
+pub mod magentic;
+pub mod maker_checker;
+pub mod reflection;
+
+// ================================
+// 工作流模块 (Workflow Modules)
+// ================================
 pub mod sop_environment;
 pub mod sop_simple;
 pub mod sop_types;
-pub mod streaming;
-pub mod trait_def;
-pub mod tool_resolver;
+pub mod simplified_api;
+pub mod rag_integration;
+
+// ================================
+// 配置模块 (Configuration Modules)
+// ================================
+pub mod config_validator;
+pub mod dynamic_config;
+pub mod convenience;
+pub mod api_consistency;
+pub mod feature_completion;
+
+// ================================
+// 工具模块 (Utility Modules)
+// ================================
 pub mod memory_resolver;
-pub mod types;
-pub mod websocket;
+pub mod message_utils;
+pub mod model_resolver;
+pub mod runtime_context;
+pub mod state_management;
 
-// 高级协作模式（2025 研究成果）
-pub mod group_chat;
-pub mod handoff;
-pub mod reflection;
-pub mod magentic;
-pub mod debate;
-pub mod maker_checker;
+// ================================
+// 集成模块 (Integration Modules)
+// ================================
+pub mod mastra_compat;
+pub mod evaluation;
 
-// 暂时移除模块化Agent组件（有编译错误）
-// pub mod modular;
+// ================================
+// 测试模块 (Test Modules)
+// ================================
+pub mod enhanced_integration_test;
+
+// Re-export key modules for easy access
+pub use refactored::{AgentCore, AgentExecutor, AgentGenerator, BasicAgent};
 
 #[cfg(feature = "demos")]
 pub mod enhanced_streaming_demo;
@@ -78,15 +175,27 @@ mod week1_agent_tests;
 mod real_api_tests;
 
 pub use config::{AgentConfig, AgentGenerateOptions};
-pub use executor::BasicAgent;
-pub use message_utils::{assistant_message, system_message, tool_message, user_message};
+// BasicAgent 现在从 refactored 模块导出（已在上面通过 refactored 模块导出）
+pub use message_utils::{
+    assistant_message, count_messages_by_role, extract_text_content, filter_messages_by_role,
+    format_messages, format_role, message_with_metadata, message_with_name, system_message,
+    tool_message, user_message,
+};
 pub use runtime_context::{create_context_manager, ContextManager, RuntimeContext, ToolCallRecord};
 pub use trait_def::{Agent, AgentStructuredOutput};
+// Export new composition-based traits (P0 implementation)
+pub use traits::{CoreAgent, FullAgent, MemoryAgent, StreamingAgentTrait, ToolAgent, ThreadManagementAgent};
+
+// Legacy Agent adapter for backward compatibility (P0 implementation)
+mod legacy_adapter;
+
+// Export legacy adapter
+pub use legacy_adapter::LegacyAgentAdapter;
 
 // Re-export builder
 pub use builder::AgentBuilder;
-pub use structured_output::StructuredOutputExt;
 pub use rag_integration::{RagAgent, RagConfig, RagIntegrationExt};
+pub use structured_output::StructuredOutputExt;
 
 // Re-export streaming types
 pub use streaming::{AgentEvent, IntoStreaming, MemoryOperation, StreamingAgent, StreamingConfig};
@@ -142,6 +251,24 @@ pub use orchestration::{
     CollaborationTask, OrchestrationPattern, RetryConfig, VotingStrategy,
 };
 
+// Re-export error handling
+pub use error_handling::{
+    AgentErrorType, BackoffStrategy, DefaultErrorRecovery, ErrorContext, ErrorRecovery,
+    RecoveryAction, RetryExecutor, RetryStrategy,
+};
+
+// Re-export config validator
+pub use config_validator::{ConfigValidator, ValidationReport};
+
+// Re-export API consistency
+pub use api_consistency::{
+    ApiConsistencyChecker, ApiSpecChecker, ApiStandardizer, ConsistencyCheckResult,
+    ConsistencyIssue,
+};
+
+// Re-export concurrent tool executor
+pub use concurrent_tool_executor::{ConcurrentToolExecutor, ConcurrentToolExecutorConfig};
+
 // Re-export DAG orchestration
 pub use dag_orchestration::{AgentChain, AgentDagOrchestrator, AgentDagOrchestratorBuilder};
 
@@ -156,15 +283,21 @@ pub use communication::{
     AgentCommunicationManager, AgentMessage, AgentMessageType, CommunicationConfig,
 };
 
+// Re-export performance monitoring
+pub use performance::{
+    PerformanceAnalyzer, PerformanceMetrics, PerformanceMonitor, PerformanceRecommendation,
+    RequestTimer,
+};
+
 // Re-export advanced collaboration patterns (2025 research)
+pub use debate::{DebateExecutor, DebatePosition, DebateResult, DebateRound};
 pub use group_chat::{ChatMessage, ChatThread, GroupChatExecutor};
 pub use handoff::{HandoffCondition, HandoffExecutor, HandoffRecord, HandoffRule};
-pub use reflection::{ReflectionExecutor, ReflectionIteration, ReflectionStats};
 pub use magentic::{MagenticExecutor, MagenticTask, TaskLedger, TaskState};
-pub use debate::{DebateExecutor, DebatePosition, DebateResult, DebateRound};
 pub use maker_checker::{
     CheckResult, CheckStatus, MakerCheckerExecutor, MakerCheckerIteration, MakerCheckerStats,
 };
+pub use reflection::{ReflectionExecutor, ReflectionIteration, ReflectionStats};
 
 // 暂时移除模块化代理组件的重新导出
 // pub use modular::{
@@ -180,8 +313,8 @@ pub fn create_basic_agent(
     name: impl Into<String>,
     instructions: impl Into<String>,
     llm: std::sync::Arc<dyn crate::llm::LlmProvider>,
-) -> BasicAgent {
-    let _config = AgentConfig {
+) -> crate::error::Result<BasicAgent> {
+    let config = AgentConfig {
         name: name.into(),
         instructions: instructions.into(),
         memory_config: None,
@@ -198,7 +331,7 @@ pub fn create_basic_agent(
         isolation_level: None,
     };
 
-    BasicAgent::new(_config, llm)
+    BasicAgent::new(config, llm)
 }
 
 /// Create an agent with minimal configuration (quick start)
@@ -531,7 +664,8 @@ mod tests {
             "TestAgent".to_string(),
             "You are a test agent.".to_string(),
             mock_llm,
-        );
+        )
+        .unwrap();
         agent.add_tool(Box::new(echo_tool)).unwrap();
 
         // Generate a response

@@ -337,4 +337,215 @@ mod tests {
         assert!(!report.errors.is_empty());
         assert!(!report.warnings.is_empty());
     }
+
+    #[test]
+    fn test_empty_name() {
+        let validator = ConfigValidator::new();
+        let config = json!({
+            "name": "",
+            "model": "gpt-4"
+        });
+
+        let result = validator.validate_json(&config);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Agent name cannot be empty"));
+    }
+
+    #[test]
+    fn test_name_too_long() {
+        let validator = ConfigValidator::new();
+        let long_name = "a".repeat(101);
+        let config = json!({
+            "name": long_name,
+            "model": "gpt-4"
+        });
+
+        let result = validator.validate_json(&config);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Agent name too long"));
+    }
+
+    #[test]
+    fn test_invalid_max_tokens() {
+        let validator = ConfigValidator::new();
+        let config = json!({
+            "name": "test-agent",
+            "model": "gpt-4",
+            "max_tokens": 0  // invalid: must be > 0
+        });
+
+        let result = validator.validate_json(&config);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Max tokens must be between 1 and 100000"));
+    }
+
+    #[test]
+    fn test_max_tokens_too_large() {
+        let validator = ConfigValidator::new();
+        let config = json!({
+            "name": "test-agent",
+            "model": "gpt-4",
+            "max_tokens": 200000  // invalid: > 100000
+        });
+
+        let result = validator.validate_json(&config);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Max tokens must be between 1 and 100000"));
+    }
+
+    #[test]
+    fn test_unsupported_model() {
+        let validator = ConfigValidator::new();
+        let config = json!({
+            "name": "test-agent",
+            "model": "unsupported-model"
+        });
+
+        let result = validator.validate_json(&config);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Unsupported model"));
+    }
+
+    #[test]
+    fn test_valid_models() {
+        let validator = ConfigValidator::new();
+        let valid_models = vec![
+            "gpt-4",
+            "claude-3",
+            "qwen-turbo",
+            "gemini-pro",
+            "llama-2",
+            "mistral-7b",
+            "yi-6b",
+        ];
+
+        for model in valid_models {
+            let config = json!({
+                "name": "test-agent",
+                "model": model
+            });
+            assert!(
+                validator.validate_json(&config).is_ok(),
+                "Model {} should be valid",
+                model
+            );
+        }
+    }
+
+    #[test]
+    fn test_custom_rule() {
+        let mut validator = ConfigValidator::new();
+        validator.add_rule(
+            "custom_field",
+            Box::new(|value: &Value| {
+                if let Some(s) = value.as_str() {
+                    if s.len() < 5 {
+                        return Err(Error::Validation {
+                            field: "custom_field".to_string(),
+                            message: "Custom field must be at least 5 characters".to_string(),
+                        });
+                    }
+                    Ok(())
+                } else {
+                    Err(Error::Validation {
+                        field: "custom_field".to_string(),
+                        message: "Custom field must be a string".to_string(),
+                    })
+                }
+            }),
+        );
+
+        // Test valid custom field
+        let config = json!({
+            "name": "test-agent",
+            "model": "gpt-4",
+            "custom_field": "valid_value"
+        });
+        assert!(validator.validate_json(&config).is_ok());
+
+        // Test invalid custom field
+        let config = json!({
+            "name": "test-agent",
+            "model": "gpt-4",
+            "custom_field": "abc"  // too short
+        });
+        let result = validator.validate_json(&config);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Custom field must be at least 5 characters"));
+    }
+
+    #[test]
+    fn test_validation_report_summary() {
+        let validator = ConfigValidator::new();
+        let config = json!({
+            "name": "test-agent",
+            "model": "gpt-4",
+            "temperature": 0.7
+        });
+
+        let report = validator.validate_with_report(&config);
+        assert!(report.is_valid());
+        let summary = report.summary();
+        assert!(summary.contains("Validation Report"));
+        assert!(summary.contains("errors"));
+        assert!(summary.contains("warnings"));
+        assert!(summary.contains("successes"));
+    }
+
+    #[test]
+    fn test_temperature_boundary_values() {
+        let validator = ConfigValidator::new();
+
+        // Test minimum valid temperature
+        let config = json!({
+            "name": "test-agent",
+            "model": "gpt-4",
+            "temperature": 0.0
+        });
+        assert!(validator.validate_json(&config).is_ok());
+
+        // Test maximum valid temperature
+        let config = json!({
+            "name": "test-agent",
+            "model": "gpt-4",
+            "temperature": 2.0
+        });
+        assert!(validator.validate_json(&config).is_ok());
+
+        // Test invalid temperature (too low)
+        let config = json!({
+            "name": "test-agent",
+            "model": "gpt-4",
+            "temperature": -0.1
+        });
+        let result = validator.validate_json(&config);
+        assert!(result.is_err());
+
+        // Test invalid temperature (too high)
+        let config = json!({
+            "name": "test-agent",
+            "model": "gpt-4",
+            "temperature": 2.1
+        });
+        let result = validator.validate_json(&config);
+        assert!(result.is_err());
+    }
 }

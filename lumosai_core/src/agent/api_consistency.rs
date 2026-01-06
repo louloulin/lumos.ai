@@ -415,4 +415,197 @@ impl ApiStandardizer {
             .collect::<Vec<_>>()
             .join(" ")
     }
+
+    /// 标准化方法命名（检查是否符合规范）
+    pub fn validate_method_name(method_name: &str) -> bool {
+        // 检查命名规范：
+        // 1. 应该使用 snake_case
+        // 2. 应该以动词开头（get_, set_, create_, execute_, etc.）
+        // 3. 不应该包含下划线前缀（私有方法）
+
+        if method_name.starts_with('_') {
+            return false; // 私有方法，跳过检查
+        }
+
+        // 检查 snake_case
+        if method_name.contains("::") {
+            return true; // 路径，跳过
+        }
+
+        // 检查是否以标准动词开头
+        let standard_prefixes = [
+            "get_",
+            "set_",
+            "create_",
+            "execute_",
+            "generate_",
+            "stream_",
+            "add_",
+            "remove_",
+            "update_",
+            "delete_",
+            "find_",
+            "search_",
+            "check_",
+            "validate_",
+            "parse_",
+            "format_",
+            "build_",
+            "resolve_",
+        ];
+
+        standard_prefixes
+            .iter()
+            .any(|prefix| method_name.starts_with(prefix))
+            || method_name == "new" // 允许 new() 构造函数
+    }
+
+    /// 标准化参数顺序
+    ///
+    /// 标准顺序：
+    /// 1. 必需参数（按重要性排序）
+    /// 2. 可选参数（options/context）
+    /// 3. 回调函数（callbacks）
+    pub fn validate_parameter_order(required_params: &[&str], optional_params: &[&str]) -> bool {
+        // 简单检查：确保必需参数在可选参数之前
+        // 实际实现中可以通过反射获取参数列表
+        true // 占位实现
+    }
+
+    /// 生成 API 规范文档
+    pub fn generate_api_documentation<T: Agent>(agent: &T) -> String {
+        let mut doc = String::new();
+
+        doc.push_str("# Agent API Documentation\n\n");
+        doc.push_str(&format!("## Agent: {}\n\n", agent.get_name()));
+        doc.push_str(&format!(
+            "**Instructions**: {}\n\n",
+            agent.get_instructions()
+        ));
+
+        // 工具列表
+        let tools = agent.get_tools();
+        if !tools.is_empty() {
+            doc.push_str("## Tools\n\n");
+            for (tool_name, _tool) in tools {
+                doc.push_str(&format!("- {}\n", tool_name));
+            }
+            doc.push_str("\n");
+        }
+
+        // 状态信息
+        doc.push_str("## Status\n\n");
+        doc.push_str(&format!("**Current Status**: {:?}\n\n", agent.get_status()));
+
+        doc
+    }
+}
+
+/// API 规范检查器
+pub struct ApiSpecChecker;
+
+impl ApiSpecChecker {
+    /// 检查方法命名规范
+    pub fn check_naming_conventions(method_names: &[String]) -> Vec<ConsistencyIssue> {
+        let mut issues = Vec::new();
+
+        for method_name in method_names {
+            if !ApiStandardizer::validate_method_name(method_name) {
+                issues.push(ConsistencyIssue {
+                    category: "Naming Convention".to_string(),
+                    severity: "medium".to_string(),
+                    description: format!(
+                        "Method '{}' doesn't follow naming conventions",
+                        method_name
+                    ),
+                    location: method_name.clone(),
+                    suggestion:
+                        "Use snake_case with standard verb prefixes (get_, set_, create_, etc.)"
+                            .to_string(),
+                });
+            }
+        }
+
+        issues
+    }
+
+    /// 检查参数一致性
+    pub fn check_parameter_consistency(
+        method_name: &str,
+        param_count: usize,
+        has_options: bool,
+    ) -> Option<ConsistencyIssue> {
+        // 检查常见方法是否遵循标准参数模式
+        if method_name.starts_with("generate") && !has_options {
+            Some(ConsistencyIssue {
+                category: "Parameter Consistency".to_string(),
+                severity: "low".to_string(),
+                description: format!("Method '{}' should accept options parameter", method_name),
+                location: method_name.to_string(),
+                suggestion: "Add AgentGenerateOptions parameter for consistency".to_string(),
+            })
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_standardize_response() {
+        assert_eq!(ApiStandardizer::standardize_response("Hello"), "Hello.");
+        assert_eq!(ApiStandardizer::standardize_response("Hello!"), "Hello!");
+        assert_eq!(
+            ApiStandardizer::standardize_response(""),
+            "I apologize, but I couldn't generate a response. Please try again."
+        );
+    }
+
+    #[test]
+    fn test_standardize_error_message() {
+        assert_eq!(
+            ApiStandardizer::standardize_error_message("Something went wrong"),
+            "Error: Something went wrong"
+        );
+        assert_eq!(
+            ApiStandardizer::standardize_error_message("Error: Already formatted"),
+            "Error: Already formatted"
+        );
+    }
+
+    #[test]
+    fn test_standardize_agent_name() {
+        assert_eq!(
+            ApiStandardizer::standardize_agent_name("my agent"),
+            "My Agent"
+        );
+        assert_eq!(ApiStandardizer::standardize_agent_name(""), "Unnamed Agent");
+    }
+
+    #[test]
+    fn test_validate_method_name() {
+        assert!(ApiStandardizer::validate_method_name("get_name"));
+        assert!(ApiStandardizer::validate_method_name("set_instructions"));
+        assert!(ApiStandardizer::validate_method_name("create_agent"));
+        assert!(ApiStandardizer::validate_method_name("execute_tool"));
+        assert!(ApiStandardizer::validate_method_name("new"));
+        assert!(!ApiStandardizer::validate_method_name("_private_method"));
+        assert!(!ApiStandardizer::validate_method_name("invalidMethod"));
+    }
+
+    #[test]
+    fn test_check_naming_conventions() {
+        let methods = vec![
+            "get_name".to_string(),
+            "invalidMethod".to_string(),
+            "set_instructions".to_string(),
+        ];
+
+        let issues = ApiSpecChecker::check_naming_conventions(&methods);
+        assert_eq!(issues.len(), 1);
+        assert!(issues[0].description.contains("invalidMethod"));
+    }
 }

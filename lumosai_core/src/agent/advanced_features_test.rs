@@ -228,17 +228,13 @@ mod tests {
         let mock_llm1 = Arc::new(MockLlmProvider::new(vec!["Agent 1 response".to_string()]));
         let mock_llm2 = Arc::new(MockLlmProvider::new(vec!["Agent 2 response".to_string()]));
 
-        let agent1 = Arc::new(create_basic_agent(
-            "agent_001",
-            "You are agent 1",
-            mock_llm1,
-        )) as Arc<dyn Agent>;
+        let agent1 =
+            Arc::new(create_basic_agent("agent_001", "You are agent 1", mock_llm1).unwrap())
+                as Arc<dyn Agent>;
 
-        let agent2 = Arc::new(create_basic_agent(
-            "agent_002",
-            "You are agent 2",
-            mock_llm2,
-        )) as Arc<dyn Agent>;
+        let agent2 =
+            Arc::new(create_basic_agent("agent_002", "You are agent 2", mock_llm2).unwrap())
+                as Arc<dyn Agent>;
 
         // 创建协作任务
         let task = CollaborationTask {
@@ -313,17 +309,15 @@ mod tests {
             "Parallel Agent 2 response".to_string()
         ]));
 
-        let agent1 = Arc::new(create_basic_agent(
-            "parallel_agent_001",
-            "You are parallel agent 1",
-            mock_llm1,
-        )) as Arc<dyn Agent>;
+        let agent1 = Arc::new(
+            create_basic_agent("parallel_agent_001", "You are parallel agent 1", mock_llm1)
+                .unwrap(),
+        ) as Arc<dyn Agent>;
 
-        let agent2 = Arc::new(create_basic_agent(
-            "parallel_agent_002",
-            "You are parallel agent 2",
-            mock_llm2,
-        )) as Arc<dyn Agent>;
+        let agent2 = Arc::new(
+            create_basic_agent("parallel_agent_002", "You are parallel agent 2", mock_llm2)
+                .unwrap(),
+        ) as Arc<dyn Agent>;
 
         // 创建并行协作任务
         let task = CollaborationTask {

@@ -288,37 +288,22 @@ impl<T: Agent> StreamingAgent<T> {
             .unwrap_or_default();
 
         Ok(Box::pin(async_stream::stream! {
-            // Stream initial LLM generation directly here instead of calling self.stream_llm_generation
+            // ✅ 真实流式：直接转发LLM流，不缓冲不延迟
             match llm.generate_stream(&prompt, &llm_options).await {
                 Ok(mut llm_stream) => {
                     let mut accumulated_response = String::new();
-                    let mut text_buffer = String::new();
 
                     while let Some(chunk_result) = llm_stream.next().await {
                         match chunk_result {
                             Ok(chunk) => {
-                                accumulated_response.push_str(&chunk);
-                                text_buffer.push_str(&chunk);
+                                if !chunk.is_empty() {
+                                    accumulated_response.push_str(&chunk);
 
-                                // Emit text deltas based on buffer size configuration
-                                while text_buffer.len() >= text_buffer_size {
-                                    let delta = text_buffer.chars()
-                                        .take(text_buffer_size)
-                                        .collect::<String>();
-
-                                    text_buffer = text_buffer.chars()
-                                        .skip(text_buffer_size)
-                                        .collect();
-
+                                    // 立即发送每个chunk，真实流式
                                     yield Ok(AgentEvent::TextDelta {
-                                        delta,
+                                        delta: chunk,
                                         step_id: Some(step_id.clone()),
                                     });
-
-                                    // Optional delay for demonstration
-                                    if let Some(delay_ms) = text_delta_delay_ms {
-                                        tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                    }
                                 }
                             },
                             Err(e) => {
@@ -326,14 +311,6 @@ impl<T: Agent> StreamingAgent<T> {
                                 return;
                             }
                         }
-                    }
-
-                    // Emit any remaining text in buffer
-                    if !text_buffer.is_empty() {
-                        yield Ok(AgentEvent::TextDelta {
-                            delta: text_buffer,
-                            step_id: Some(step_id.clone()),
-                        });
                     }
 
                     // Parse and execute function calls from accumulated_response
@@ -416,52 +393,135 @@ impl<T: Agent> StreamingAgent<T> {
         >,
         Box<dyn std::error::Error + Send + Sync>,
     > {
+        use crate::llm::Role;
+        use tracing::info;
+
         let step_id = Uuid::new_v4().to_string();
-        let messages = messages.to_vec();
-        let options = options.clone();
+        let mut messages_vec = messages.to_vec();
+        let options_clone = options.clone();
+
+        // ⭐⭐⭐ 核心修复：在streaming之前检索memory
+        info!("🧠 [STREAMING] Checking memory before LLM call");
+        if let Some(memory) = self.base_agent.get_memory() {
+            // 提取用户最后一条消息作为query
+            let user_query = messages_vec
+                .iter()
+                .rev()
+                .find(|m| matches!(m.role, Role::User))
+                .map(|m| m.content.clone());
+
+            if let Some(ref query) = user_query {
+                info!(
+                    "   🔍 Semantic search query: '{}' (length: {} chars)",
+                    query,
+                    query.len()
+                );
+            } else {
+                info!("   ℹ️  No user query found, using history mode");
+            }
+
+            let memory_config = crate::memory::MemoryConfig {
+                store_id: None,
+                namespace: options_clone.thread_id.clone(),
+                enabled: true,
+                working_memory: None,
+                semantic_recall: None,
+                last_messages: Some(5),
+                query: user_query.clone(), // ⭐ 传递query进行语义搜索
+            };
+
+            match memory.retrieve(&memory_config).await {
+                Ok(historical) if !historical.is_empty() => {
+                    info!(
+                        "   ✅ Retrieved {} memories from memory backend",
+                        historical.len()
+                    );
+
+                    // 创建一个memory context提示，让LLM知道这些是相关记忆
+                    let memory_context = Message {
+                        role: Role::System,
+                        content: format!(
+                            "[MEMORY CONTEXT]\nThe following {} message(s) are semantically relevant memories from past conversations. Use them to provide contextual and personalized responses:\n",
+                            historical.len()
+                        ),
+                        metadata: None,
+                        name: None,
+                    };
+
+                    for (idx, msg) in historical.iter().enumerate() {
+                        // ⭐ 安全截断：按字符数避免UTF-8边界错误
+                        let preview = if msg.content.chars().count() > 80 {
+                            format!("{}...", msg.content.chars().take(80).collect::<String>())
+                        } else {
+                            msg.content.clone()
+                        };
+                        info!("      {}. [{:?}] {}", idx + 1, msg.role, preview);
+                    }
+
+                    // 插入记忆：System提示 -> 历史记忆 -> 当前消息
+                    let mut final_messages = vec![memory_context];
+                    final_messages.extend(historical);
+                    final_messages.extend(messages_vec);
+                    messages_vec = final_messages;
+
+                    info!(
+                        "   📝 Total messages after memory injection: {}",
+                        messages_vec.len()
+                    );
+                    info!("   🎯 Memory context injected to guide LLM");
+                }
+                Ok(_) => {
+                    info!("   ℹ️  No historical memories found - responding without context");
+                }
+                Err(e) => {
+                    info!(
+                        "   ⚠️  Memory retrieve failed: {} - continuing without memory",
+                        e
+                    );
+                }
+            }
+        } else {
+            info!("   ℹ️  No memory backend configured");
+        }
 
         // Clone all necessary data to make the stream 'static
         let llm = self.base_agent.get_llm();
         let text_buffer_size = self.config.text_buffer_size;
         let text_delta_delay_ms = self.config.text_delta_delay_ms;
-        let llm_options = options.llm_options.clone();
-        let prompt = messages
-            .last()
-            .map(|msg| msg.content.clone())
-            .unwrap_or_default();
+        let llm_options = options_clone.llm_options.clone();
+
+        // ⭐ 修复：使用完整messages构建prompt，而不是只用最后一条
+        let formatted_messages = self
+            .base_agent
+            .format_messages(&messages_vec, &options_clone);
+        info!(
+            "   📤 Calling LLM with {} formatted messages",
+            formatted_messages.len()
+        );
+
+        let prompt = formatted_messages
+            .iter()
+            .map(|msg| format!("{:?}: {}", msg.role, msg.content))
+            .collect::<Vec<_>>()
+            .join("\n\n");
 
         Ok(Box::pin(async_stream::stream! {
-            // Stream LLM generation directly here instead of calling self.stream_llm_generation
+            // ✅ 真实流式：直接转发LLM流，不缓冲不延迟
             match llm.generate_stream(&prompt, &llm_options).await {
                 Ok(mut llm_stream) => {
                     let mut accumulated_response = String::new();
-                    let mut text_buffer = String::new();
 
                     while let Some(chunk_result) = llm_stream.next().await {
                         match chunk_result {
                             Ok(chunk) => {
-                                accumulated_response.push_str(&chunk);
-                                text_buffer.push_str(&chunk);
+                                if !chunk.is_empty() {
+                                    accumulated_response.push_str(&chunk);
 
-                                // Emit text deltas based on buffer size configuration
-                                while text_buffer.len() >= text_buffer_size {
-                                    let delta = text_buffer.chars()
-                                        .take(text_buffer_size)
-                                        .collect::<String>();
-
-                                    text_buffer = text_buffer.chars()
-                                        .skip(text_buffer_size)
-                                        .collect();
-
+                                    // 立即发送每个chunk，真实流式
                                     yield Ok(AgentEvent::TextDelta {
-                                        delta,
+                                        delta: chunk,
                                         step_id: Some(step_id.clone()),
                                     });
-
-                                    // Optional delay for demonstration
-                                    if let Some(delay_ms) = text_delta_delay_ms {
-                                        tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                    }
                                 }
                             },
                             Err(e) => {
@@ -469,14 +529,6 @@ impl<T: Agent> StreamingAgent<T> {
                                 return;
                             }
                         }
-                    }
-
-                    // Emit any remaining text in buffer
-                    if !text_buffer.is_empty() {
-                        yield Ok(AgentEvent::TextDelta {
-                            delta: text_buffer,
-                            step_id: Some(step_id.clone()),
-                        });
                     }
 
                     yield Ok(AgentEvent::GenerationComplete {
@@ -534,7 +586,7 @@ mod tests {
         };
 
         let llm = create_test_zhipu_provider_arc();
-        let agent = BasicAgent::new(agent_config, llm);
+        let agent = BasicAgent::new(agent_config, llm).unwrap();
 
         let streaming_agent = agent.into_streaming();
         assert_eq!(streaming_agent.config.text_buffer_size, 1);
@@ -566,7 +618,7 @@ mod tests {
         };
 
         let llm = create_test_zhipu_provider_arc();
-        let agent = BasicAgent::new(agent_config, llm);
+        let agent = BasicAgent::new(agent_config, llm).unwrap();
 
         let streaming_agent = agent.into_streaming_with_config(config);
         assert_eq!(streaming_agent.config.text_buffer_size, 5);

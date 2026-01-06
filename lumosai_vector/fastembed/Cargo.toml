@@ -19,7 +19,7 @@ async-trait = "0.1.77"
 tokio = { version = "1.35", features = ["full"] }
 
 # FastEmbed dependencies
-fastembed = "4.9.1"
+fastembed = "5.2.0"  # 升级到最新版本与agentmem一致
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

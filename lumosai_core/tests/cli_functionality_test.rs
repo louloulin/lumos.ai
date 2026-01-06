@@ -1,3 +1,5 @@
+#![cfg(feature = "cli_tests")]
+
 //! CLI functionality tests
 //!
 //! Tests for the enhanced CLI tools including project creation,

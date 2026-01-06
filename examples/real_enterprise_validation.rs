@@ -67,9 +67,11 @@ async fn test_monitoring_and_logging() -> std::result::Result<(), Box<dyn std::e
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let monitoring_agent = BasicAgent::new(monitoring_agent_config, Arc::new(llm));
+    let monitoring_agent = BasicAgent::new(monitoring_agent_config, Arc::new(llm))?;
 
     // 验证日志输出
     println!("      🔍 验证Agent执行日志");
@@ -130,9 +132,11 @@ async fn test_security_features() -> std::result::Result<(), Box<dyn std::error:
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let security_agent = BasicAgent::new(security_agent_config, Arc::new(llm));
+    let security_agent = BasicAgent::new(security_agent_config, Arc::new(llm))?;
 
     // 测试安全输入处理
     println!("      🛡️ 测试安全输入处理");
@@ -232,6 +236,8 @@ async fn test_multi_tenant_support() -> std::result::Result<(), Box<dyn std::err
             metadata: None,
             max_tool_calls: None,
             tool_timeout: None,
+            tenant_id: Some(tenant_id.to_string()),
+            isolation_level: Some("strict".to_string()),
         };
 
         let tenant_llm = QwenProvider::new_with_api_type(
@@ -241,7 +247,7 @@ async fn test_multi_tenant_support() -> std::result::Result<(), Box<dyn std::err
             QwenApiType::OpenAICompatible,
         );
 
-        let tenant_agent = BasicAgent::new(tenant_config, Arc::new(tenant_llm));
+        let tenant_agent = BasicAgent::new(tenant_config, Arc::new(tenant_llm))?;
         tenant_agents.push((tenant_id, tenant_agent));
     }
 
@@ -321,9 +327,11 @@ async fn test_configuration_management() -> std::result::Result<(), Box<dyn std:
             metadata: None,
             max_tool_calls: None,
             tool_timeout: None,
+            tenant_id: None,
+            isolation_level: None,
         };
 
-        let config_agent = BasicAgent::new(config_agent_config, Arc::new(llm));
+        let config_agent = BasicAgent::new(config_agent_config, Arc::new(llm))?;
 
         let messages = vec![Message {
             role: Role::User,
@@ -385,9 +393,11 @@ async fn test_enterprise_integration() -> std::result::Result<(), Box<dyn std::e
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        tenant_id: None,
+        isolation_level: None,
     };
 
-    let integration_agent = BasicAgent::new(integration_agent_config, Arc::new(llm));
+    let integration_agent = BasicAgent::new(integration_agent_config, Arc::new(llm))?;
 
     // 测试企业级场景
     let enterprise_scenarios = vec![

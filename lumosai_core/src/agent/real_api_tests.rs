@@ -11,9 +11,9 @@
 mod tests {
     use crate::agent::builder::AgentBuilder;
     use crate::agent::config::AgentConfig;
-    use crate::agent::executor::BasicAgent;
     use crate::agent::trait_def::{Agent, AgentStatus};
     use crate::agent::types::AgentGenerateOptions;
+    use crate::agent::BasicAgent;
     use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     use crate::llm::{LlmOptions, Message, Role};
     use crate::tool::{FunctionTool, ParameterSchema, SchemaFormat, Tool, ToolSchema};
@@ -57,7 +57,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert_eq!(agent.get_name(), "test_agent");
         assert_eq!(agent.get_instructions(), "You are a helpful assistant.");
         // AgentStatus has Ready variant in trait_def.rs
@@ -85,7 +85,7 @@ mod tests {
     async fn test_agent_status_transitions() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // Initial status should be Ready
         assert_eq!(agent.get_status(), AgentStatus::Ready);
@@ -95,7 +95,7 @@ mod tests {
     async fn test_agent_instructions_update() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let mut agent = BasicAgent::new(config, llm);
+        let mut agent = BasicAgent::new(config, llm).unwrap();
 
         let new_instructions = "Updated instructions for testing";
         agent.set_instructions(new_instructions.to_string());
@@ -113,7 +113,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert_eq!(agent.get_name(), "model_agent");
     }
 
@@ -127,7 +127,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert_eq!(agent.get_name(), "memory_agent");
     }
 
@@ -135,7 +135,7 @@ mod tests {
     async fn test_agent_llm_provider_access() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm.clone());
+        let agent = BasicAgent::new(config, llm.clone()).unwrap();
 
         let agent_llm = agent.get_llm();
         assert_eq!(agent_llm.name(), "zhipu");
@@ -145,7 +145,7 @@ mod tests {
     async fn test_agent_memory_check() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         // Default agent should not have memory
         assert!(!agent.has_own_memory());
@@ -156,7 +156,7 @@ mod tests {
     async fn test_agent_tools_empty_by_default() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         let tools = agent.get_tools();
         assert_eq!(tools.len(), 0);
@@ -305,7 +305,7 @@ mod tests {
     async fn test_agent_tool_not_found() {
         let llm = create_test_zhipu_provider_arc();
         let config = AgentConfig::default();
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
 
         assert!(agent.get_tool("nonexistent").is_none());
     }
@@ -349,7 +349,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert_eq!(agent.get_name(), "valid_agent_name_123");
     }
 
@@ -362,7 +362,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert!(!agent.get_instructions().is_empty());
     }
 
@@ -430,7 +430,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert_eq!(agent.get_name(), "metadata_agent");
     }
 
@@ -447,7 +447,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert_eq!(agent.get_name(), "context_agent");
     }
 
@@ -473,7 +473,7 @@ mod tests {
             ..Default::default()
         };
 
-        let agent = BasicAgent::new(config, llm);
+        let agent = BasicAgent::new(config, llm).unwrap();
         assert_eq!(agent.get_name(), "function_agent");
     }
 }

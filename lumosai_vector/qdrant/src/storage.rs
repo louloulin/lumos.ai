@@ -172,7 +172,7 @@ impl VectorStorage for QdrantVectorStorage {
             name: index_name.to_string(),
             dimension: 384, // Default dimension, should be configurable
             metric: SimilarityMetric::Cosine,
-            vector_count: result.vectors_count.unwrap_or(0) as usize,
+            vector_count: result.points_count.unwrap_or(0) as usize,
             size_bytes: 0, // Qdrant doesn't provide this directly
             created_at: None,
             updated_at: None,

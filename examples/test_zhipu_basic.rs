@@ -3,6 +3,7 @@
 //! 测试 LumosAI 与智谱 AI (glm-4-plus-flash) 的集成
 
 use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role, ZhipuProvider};
+use lumosai_core::llm::types::Temperature;
 use std::env;
 use std::time::Instant;
 
@@ -41,7 +42,7 @@ async fn test_basic_connection(provider: &ZhipuProvider) -> Result<(), Box<dyn s
 
     // 使用更简单的选项
     let mut options = LlmOptions::default();
-    options.temperature = Some(0.7);
+    options.temperature = Some(Temperature::new(0.7));
     options.max_tokens = Some(100);
 
     let start_time = Instant::now();

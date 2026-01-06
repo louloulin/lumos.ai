@@ -1,3 +1,5 @@
+#![cfg(feature = "prelude_tests")]
+
 //! Integration tests for the simplified prelude API (plan6.md Phase 1)
 //!
 //! These tests verify that the Rig-inspired simplified API works correctly

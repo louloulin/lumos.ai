@@ -7,7 +7,6 @@
 //! - Azure AI Agent Orchestration Patterns (2025)
 //! - Consensus-LLM (2025)
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -16,7 +15,6 @@ use tokio::sync::RwLock;
 use super::communication::AgentCommunicationManager;
 use super::Agent;
 use crate::error::{Error, Result};
-use crate::llm::{Message, Role};
 
 /// Group Chat 消息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,7 +113,10 @@ impl GroupChatExecutor {
 
     /// 执行 Group Chat
     pub async fn execute(&self, initial_message: &str) -> Result<String> {
-        println!("  🟢 [GroupChatExecutor] Starting with {} max rounds", self.max_rounds);
+        println!(
+            "  🟢 [GroupChatExecutor] Starting with {} max rounds",
+            self.max_rounds
+        );
         tracing::info!("Starting Group Chat with {} max rounds", self.max_rounds);
 
         let mut thread = ChatThread::new(self.max_rounds);
@@ -135,12 +136,23 @@ impl GroupChatExecutor {
 
         // 执行多轮对话
         while !thread.is_finished() {
-            println!("  🟡 [GroupChatExecutor] Round {}/{}", thread.current_round + 1, self.max_rounds);
-            tracing::debug!("Group Chat round {}/{}", thread.current_round + 1, self.max_rounds);
+            println!(
+                "  🟡 [GroupChatExecutor] Round {}/{}",
+                thread.current_round + 1,
+                self.max_rounds
+            );
+            tracing::debug!(
+                "Group Chat round {}/{}",
+                thread.current_round + 1,
+                self.max_rounds
+            );
 
             // 每个 Agent 依次发言
             for (agent_id, agent) in agents.iter() {
-                println!("    🔹 [GroupChatExecutor] Agent {} is generating response...", agent_id);
+                println!(
+                    "    🔹 [GroupChatExecutor] Agent {} is generating response...",
+                    agent_id
+                );
 
                 // 构建上下文消息
                 let context = thread.get_summary();
@@ -153,22 +165,29 @@ impl GroupChatExecutor {
                 match agent.generate_simple(&prompt).await {
                     Ok(response) => {
                         thread.add_message(agent_id.clone(), response.clone());
-                        println!("    ✅ [GroupChatExecutor] Agent {} responded (length: {})", agent_id, response.len());
+                        println!(
+                            "    ✅ [GroupChatExecutor] Agent {} responded (length: {})",
+                            agent_id,
+                            response.len()
+                        );
                         tracing::debug!("Agent {} responded: {}", agent_id, response);
                     }
                     Err(e) => {
-                        println!("    ❌ [GroupChatExecutor] Agent {} failed: {}", agent_id, e);
-                        tracing::warn!("Agent {} failed to respond: {}", agent_id, e);
-                        thread.add_message(
-                            agent_id.clone(),
-                            format!("[Error: {}]", e),
+                        println!(
+                            "    ❌ [GroupChatExecutor] Agent {} failed: {}",
+                            agent_id, e
                         );
+                        tracing::warn!("Agent {} failed to respond: {}", agent_id, e);
+                        thread.add_message(agent_id.clone(), format!("[Error: {}]", e));
                     }
                 }
             }
 
             thread.next_round();
-            println!("  🟡 [GroupChatExecutor] Round {} completed", thread.current_round);
+            println!(
+                "  🟡 [GroupChatExecutor] Round {} completed",
+                thread.current_round
+            );
         }
 
         println!("  ✅ [GroupChatExecutor] All rounds completed, generating summary");
@@ -178,7 +197,11 @@ impl GroupChatExecutor {
     }
 
     /// 执行带共识检测的 Group Chat
-    pub async fn execute_with_consensus(&self, initial_message: &str, consensus_threshold: f32) -> Result<String> {
+    pub async fn execute_with_consensus(
+        &self,
+        initial_message: &str,
+        consensus_threshold: f32,
+    ) -> Result<String> {
         tracing::info!(
             "Starting Group Chat with consensus detection (threshold: {})",
             consensus_threshold
@@ -198,7 +221,11 @@ impl GroupChatExecutor {
 
         // 执行多轮对话，直到达成共识或达到最大轮次
         while !thread.is_finished() {
-            tracing::debug!("Group Chat round {}/{}", thread.current_round + 1, self.max_rounds);
+            tracing::debug!(
+                "Group Chat round {}/{}",
+                thread.current_round + 1,
+                self.max_rounds
+            );
 
             let mut round_responses = Vec::new();
 
@@ -240,7 +267,8 @@ impl GroupChatExecutor {
         }
 
         // 简化实现：检查响应长度的相似度
-        let avg_len = responses.iter().map(|r| r.len()).sum::<usize>() as f32 / responses.len() as f32;
+        let avg_len =
+            responses.iter().map(|r| r.len()).sum::<usize>() as f32 / responses.len() as f32;
         let variance = responses
             .iter()
             .map(|r| {
@@ -283,7 +311,9 @@ mod tests {
 
         let executor = GroupChatExecutor {
             agents: Arc::new(RwLock::new(HashMap::new())),
-            communication: Arc::new(AgentCommunicationManager::new(CommunicationConfig::default())),
+            communication: Arc::new(AgentCommunicationManager::new(
+                CommunicationConfig::default(),
+            )),
             max_rounds: 10,
         };
 
@@ -304,4 +334,3 @@ mod tests {
         assert!(!executor.check_consensus(&different_responses, 0.8));
     }
 }
-

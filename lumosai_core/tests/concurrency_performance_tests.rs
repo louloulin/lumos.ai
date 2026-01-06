@@ -29,7 +29,7 @@ fn create_test_agent(name: &str) -> BasicAgent {
         ..Default::default()
     };
     let llm = Arc::new(MockLlmProvider::new(vec!["Response".to_string()]));
-    BasicAgent::new(config, llm)
+    BasicAgent::new(config, llm).expect("Failed to create BasicAgent")
 }
 
 fn create_test_step(id: &str) -> BasicStep {
@@ -252,7 +252,7 @@ async fn test_agent_concurrent_operations() {
             tokio::spawn(async move {
                 // 模拟 Agent 操作
                 tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
-                agent_clone.name().map(|s| s.to_string())
+                agent_clone.get_name().to_string()
             })
         })
         .collect::<Vec<_>>();

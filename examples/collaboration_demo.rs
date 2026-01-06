@@ -4,6 +4,7 @@
 
 use lumosai_core::agent::collaboration::{AgentRole, AgentTask, CollaborationMode, Crew};
 use lumosai_core::agent::simplified_api::Agent;
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use std::collections::HashMap;
 use std::sync::Arc;
 

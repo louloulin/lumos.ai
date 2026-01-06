@@ -74,6 +74,11 @@ pub fn baidu(api_key: String, secret_key: String, model: Option<String>) -> Baid
     BaiduProvider::new(api_key, secret_key, model)
 }
 
+/// 创建华为 MaaS provider
+pub fn huawei_maas(api_key: String, model: Option<String>) -> HuaweiMaasProvider {
+    HuaweiMaasProvider::new(api_key, model)
+}
+
 /// 从环境变量创建providers的便利函数
 
 /// 从环境变量创建OpenAI provider
@@ -169,6 +174,12 @@ pub fn baidu_from_env() -> Result<BaiduProvider> {
     Ok(baidu(api_key, secret_key, None))
 }
 
+/// 从环境变量创建华为 MaaS provider
+/// 需要环境变量: MAAS_API_KEY 或 HUAWEI_MAAS_API_KEY
+pub fn huawei_maas_from_env() -> Result<HuaweiMaasProvider> {
+    HuaweiMaasProvider::from_env()
+}
+
 /// 智能provider选择器
 /// 根据环境变量自动选择可用的provider
 pub fn auto_provider() -> Result<Box<dyn LlmProvider>> {
@@ -190,6 +201,11 @@ pub fn auto_provider() -> Result<Box<dyn LlmProvider>> {
     }
 
     if let Ok(provider) = zhipu_from_env() {
+        return Ok(Box::new(provider));
+    }
+
+    // 华为 MaaS 支持
+    if let Ok(provider) = huawei_maas_from_env() {
         return Ok(Box::new(provider));
     }
 

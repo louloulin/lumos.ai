@@ -536,4 +536,5 @@ pub use enhanced::{EnhancedWorkflow, StepExecutor, StepFlowEntry, StepType, Work
 pub use execution_engine::{DefaultExecutionEngine, ExecutionEngine, ExecutionMetrics};
 pub use step::{BasicStep, StepBuilder, StepConfig};
 pub use types::{RetryConfig, Step, StepContext, StepStatus, WorkflowRunResult, WorkflowState};
+pub use workflow::WorkflowBuilder;
 pub use workflow::{resume_workflow, Workflow as WorkflowImpl, WorkflowInstance};

@@ -204,7 +204,9 @@ impl EnhancedMemory {
         };
 
         // Add default processor
-        memory.add_processor(Arc::new(ImportanceProcessor::new(llm)));
+        // Note: ImportanceProcessor implements enhanced::MemoryProcessor, not processor::MemoryProcessor
+        // This is a different trait for enhanced memory entries, not messages
+        // memory.add_processor(Arc::new(ImportanceProcessor::new(llm)));
 
         memory
     }

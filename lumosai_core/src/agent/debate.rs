@@ -6,12 +6,11 @@
 //! - Multi-Agent Debate Strategies (2025)
 //! - Debating with More Persuasive LLMs (2024)
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use super::Agent;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// 辩论立场
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -85,8 +84,14 @@ impl DebateExecutor {
     pub async fn execute(&mut self, topic: &str) -> Result<String> {
         tracing::info!("Starting debate on topic: {}", topic);
 
-        let mut proposer_context = format!("You are debating in favor of: {}\nPresent your opening argument.", topic);
-        let mut opposer_context = format!("You are debating against: {}\nPresent your opening argument.", topic);
+        let mut proposer_context = format!(
+            "You are debating in favor of: {}\nPresent your opening argument.",
+            topic
+        );
+        let mut opposer_context = format!(
+            "You are debating against: {}\nPresent your opening argument.",
+            topic
+        );
 
         // 执行多轮辩论
         for round in 0..self.max_rounds {
@@ -202,14 +207,12 @@ mod tests {
             opposer: create_test_agent("opposer"),
             judge: create_test_agent("judge"),
             max_rounds: 3,
-            rounds: vec![
-                DebateRound {
-                    round: 1,
-                    proposer_argument: "Arg 1".to_string(),
-                    opposer_argument: "Counter 1".to_string(),
-                    timestamp: 0,
-                },
-            ],
+            rounds: vec![DebateRound {
+                round: 1,
+                proposer_argument: "Arg 1".to_string(),
+                opposer_argument: "Counter 1".to_string(),
+                timestamp: 0,
+            }],
         };
 
         let judgment = "WINNER: Proposer\nREASONING: Better arguments";
@@ -244,4 +247,3 @@ mod tests {
         assert_eq!(executor.get_rounds().len(), 0);
     }
 }
-

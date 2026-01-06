@@ -20,12 +20,12 @@ use std::io::{self, Write};
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 中国LLM提供商示例");
-    println!("=".repeat(50));
+    println!("{}", "=".repeat(50));
 
     // 测试智谱AI
     if let Ok(zhipu) = providers::zhipu_from_env() {
         println!("\n📱 测试智谱AI (GLM)");
-        println!("-".repeat(30));
+        println!("{}", "-".repeat(30));
 
         test_basic_generation(&zhipu, "智谱AI").await?;
         test_conversation(&zhipu, "智谱AI").await?;
@@ -38,7 +38,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // 测试百度ERNIE
     if let Ok(baidu) = providers::baidu_from_env() {
         println!("\n🔵 测试百度ERNIE");
-        println!("-".repeat(30));
+        println!("{}", "-".repeat(30));
 
         test_basic_generation(&baidu, "百度ERNIE").await?;
         test_conversation(&baidu, "百度ERNIE").await?;
@@ -50,7 +50,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     // 演示自动provider选择
     println!("\n🤖 自动Provider选择");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     match providers::auto_provider() {
         Ok(provider) => {
@@ -230,44 +230,6 @@ async fn test_function_calling(
         }
         Err(e) => {
             println!("❌ 函数调用错误: {}", e);
-        }
-    }
-
-    Ok(())
-}
-
-/// 演示流式生成 (如果支持)
-#[allow(dead_code)]
-async fn test_streaming(
-    provider: &dyn LlmProvider,
-    name: &str,
-) -> std::result::Result<(), Box<dyn std::error::Error>> {
-    println!("🌊 流式生成测试 ({})", name);
-
-    let options = LlmOptions::default()
-        .with_temperature(0.7)
-        .with_max_tokens(100);
-
-    let prompt = "请讲一个关于人工智能的小故事";
-
-    match provider.generate_stream(prompt, &options).await {
-        Ok(mut stream) => {
-            use futures::StreamExt;
-
-            print!("✅ 流式响应: ");
-            while let Some(chunk) = stream.next().await {
-                match chunk {
-                    Ok(text) => print!("{}", text),
-                    Err(e) => {
-                        println!("\n❌ 流式错误: {}", e);
-                        break;
-                    }
-                }
-            }
-            println!(); // 换行
-        }
-        Err(e) => {
-            println!("❌ 流式生成错误: {}", e);
         }
     }
 

@@ -1,8 +1,9 @@
 use lumosai_core::agent::config::AgentConfig;
-use lumosai_core::agent::executor::BasicAgent;
+use lumosai_core::agent::BasicAgent;
 use lumosai_core::agent::trait_def::Agent;
+use lumosai_core::error::Result;
 use lumosai_core::llm::test_helpers::{create_test_zhipu_provider, create_test_zhipu_provider_arc};
-use lumosai_core::llm::{mock::Message, Role};
+use lumosai_core::llm::{Message, Role};
 use lumosai_core::tool::builtin::CalculatorTool;
 use serde_json::json;
 use std::sync::Arc;
@@ -11,16 +12,18 @@ use tokio::time::timeout;
 
 /// 测试错误处理修复 - 验证不再有panic风险
 #[tokio::test]
-async fn test_error_handling_fixes() {
+async fn test_error_handling_fixes() -> Result<()> {
     let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "test_agent".to_string(),
         instructions: "你是一个测试助手".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm)?;
 
     // 测试时间戳获取不会panic
     let messages = vec![Message {
@@ -34,20 +37,23 @@ async fn test_error_handling_fixes() {
     let options = Default::default();
     let result = agent.generate(&messages, &options).await;
     assert!(result.is_ok(), "Agent生成应该成功，不应该panic");
+    Ok(())
 }
 
 /// 测试流式处理改进 - 验证智能分块
 #[tokio::test]
-async fn test_streaming_improvements() {
+async fn test_streaming_improvements() -> Result<()> {
     let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "streaming_test_agent".to_string(),
         instructions: "你是一个流式测试助手".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm)?;
 
     let messages = vec![Message {
         role: Role::User,
@@ -84,20 +90,23 @@ async fn test_streaming_improvements() {
             assert!(!chunk.is_empty(), "流式块不应为空");
         }
     }
+    Ok(())
 }
 
 /// 测试内存管理改进 - 验证优雅降级
 #[tokio::test]
-async fn test_memory_management_improvements() {
+async fn test_memory_management_improvements() -> Result<()> {
     let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "memory_test_agent".to_string(),
         instructions: "你是一个内存测试助手".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm)?;
 
     // 测试未初始化内存的优雅处理
     let get_result = agent.get_memory_value("test_key").await;
@@ -120,21 +129,24 @@ async fn test_memory_management_improvements() {
             "错误消息应该说明内存未启用"
         );
     }
+    Ok(())
 }
 
 /// 测试工具调用解析改进 - 验证健壮性
 #[tokio::test]
-async fn test_tool_parsing_improvements() {
+async fn test_tool_parsing_improvements() -> Result<()> {
     let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "tool_test_agent".to_string(),
         instructions: "你是一个工具测试助手".to_string(),
         enable_function_calling: Some(false), // 禁用函数调用以测试传统工具解析
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm)?;
 
     // 添加计算器工具
     agent
@@ -183,20 +195,23 @@ async fn test_tool_parsing_improvements() {
             );
         }
     }
+    Ok(())
 }
 
 /// 测试并发安全改进 - 验证无死锁
 #[tokio::test]
-async fn test_concurrency_safety() {
+async fn test_concurrency_safety() -> Result<()> {
     let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "concurrent_test_agent".to_string(),
         instructions: "你是一个并发测试助手".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = Arc::new(BasicAgent::new(config, llm));
+    let agent = Arc::new(BasicAgent::new(config, llm)?);
 
     let messages = vec![Message {
         role: Role::User,
@@ -236,20 +251,23 @@ async fn test_concurrency_safety() {
         "至少应该有3个任务成功，实际成功: {}",
         success_count
     );
+    Ok(())
 }
 
 /// 测试超时处理 - 验证不会无限等待
 #[tokio::test]
-async fn test_timeout_handling() {
+async fn test_timeout_handling() -> Result<()> {
     let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "timeout_test_agent".to_string(),
         instructions: "你是一个超时测试助手".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm)?;
 
     let messages = vec![Message {
         role: Role::User,
@@ -267,20 +285,23 @@ async fn test_timeout_handling() {
     if let Ok(generate_result) = timeout_result {
         assert!(generate_result.is_ok(), "生成操作应该成功");
     }
+    Ok(())
 }
 
 /// 测试错误恢复 - 验证从错误状态恢复
 #[tokio::test]
-async fn test_error_recovery() {
+async fn test_error_recovery() -> Result<()> {
     let llm = create_test_zhipu_provider_arc();
 
     let config = AgentConfig {
         name: "recovery_test_agent".to_string(),
         instructions: "你是一个恢复测试助手".to_string(),
+        isolation_level: None,
+        tenant_id: None,
         ..Default::default()
     };
 
-    let agent = BasicAgent::new(config, llm);
+    let agent = BasicAgent::new(config, llm)?;
 
     let messages = vec![Message {
         role: Role::User,
@@ -305,4 +326,5 @@ async fn test_error_recovery() {
     let final_options = Default::default();
     let final_result = agent.generate(&messages, &final_options).await;
     assert!(final_result.is_ok(), "最终操作应该成功，表明Agent已恢复");
+    Ok(())
 }

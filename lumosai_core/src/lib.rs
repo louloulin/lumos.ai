@@ -16,12 +16,16 @@
 pub mod agent;
 pub mod cache; // 新增：缓存系统
 pub mod config;
+pub mod contextfs; // 新增：ContextFS文件系统抽象
 pub mod error;
+pub mod evaluation; // ✅ Phase 1: Week 3-4 评估框架
 pub mod llm;
 pub mod logger;
 pub mod memory;
+pub mod orchestration; // ✅ Phase 2: Week 5-7 Multi-Agent 编排
 pub mod pool; // 新增：资源池系统
 pub mod prelude;
+pub mod reasoning; // ✅ Phase 2: Week 8-10 推理系统 (ReAct/CoT)
 pub mod telemetry;
 pub mod tool;
 pub mod workflow;
@@ -47,6 +51,7 @@ pub use config::*;
 pub use error::{Error, Result};
 pub use llm::{AnthropicProvider, MockLlmProvider, OpenAiProvider, QwenProvider};
 pub use llm::{LlmOptions, LlmProvider, Message, Role};
+pub use logger::Logger;
 pub use memory::{Memory, WorkingMemory, WorkingMemoryContent};
 pub use tool::Tool;
 

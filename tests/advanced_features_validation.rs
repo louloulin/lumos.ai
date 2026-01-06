@@ -7,7 +7,7 @@ use lumosai_core::agent::{
     trait_def::{Agent, AgentStatus},
     BasicAgent,
 };
-use lumosai_core::error::Error;
+use lumosai_core::error::{Error, Result};
 use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role};
 use lumosai_core::tool::{FunctionTool, ParameterSchema, ToolSchema};
 use serde_json::json;
@@ -36,7 +36,7 @@ impl LlmProvider for MockLlmProvider {
         "mock-llm"
     }
 
-    async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String, Error> {
+    async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> std::result::Result<String, Error> {
         let mut index = self.current_index.lock().unwrap();
         let response = self
             .responses
@@ -51,7 +51,7 @@ impl LlmProvider for MockLlmProvider {
         &self,
         _messages: &[Message],
         _options: &LlmOptions,
-    ) -> Result<String, Error> {
+    ) -> std::result::Result<String, Error> {
         let mut index = self.current_index.lock().unwrap();
         let response = self
             .responses
@@ -66,15 +66,15 @@ impl LlmProvider for MockLlmProvider {
         &'a self,
         _prompt: &'a str,
         _options: &'a LlmOptions,
-    ) -> Result<futures::stream::BoxStream<'a, Result<String, Error>>, Error> {
+    ) -> std::result::Result<futures::stream::BoxStream<'a, std::result::Result<String, Error>>, Error> {
         use futures::stream::{self, StreamExt};
         let response = self.generate(_prompt, _options).await?;
-        let chunks: Vec<Result<String, Error>> =
+        let chunks: Vec<std::result::Result<String, Error>> =
             response.chars().map(|c| Ok(c.to_string())).collect();
         Ok(stream::iter(chunks).boxed())
     }
 
-    async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>, Error> {
+    async fn get_embedding(&self, _text: &str) -> std::result::Result<Vec<f32>, Error> {
         Ok(vec![0.1, 0.2, 0.3, 0.4, 0.5])
     }
 }
@@ -127,7 +127,7 @@ async fn test_performance_monitoring() {
 
 /// 测试API一致性检查
 #[tokio::test]
-async fn test_api_consistency_check() {
+async fn test_api_consistency_check() -> Result<()> {
     // 创建一个测试Agent
     let config = AgentConfig {
         name: "TestAgent".to_string(),
@@ -145,6 +145,8 @@ async fn test_api_consistency_check() {
         ])),
         max_tool_calls: Some(5),
         tool_timeout: Some(30),
+        isolation_level: None,
+        tenant_id: None,
     };
 
     let llm = Arc::new(MockLlmProvider::new(vec![
@@ -153,7 +155,7 @@ async fn test_api_consistency_check() {
         "Here's the information you requested.".to_string(),
     ]));
 
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Agent creation failed");
 
     // 添加一个测试工具
     let echo_tool = create_echo_tool();
@@ -182,11 +184,12 @@ async fn test_api_consistency_check() {
         !has_critical_issues,
         "Should not have critical consistency issues"
     );
+    Ok(())
 }
 
 /// 测试功能完整性检查
 #[tokio::test]
-async fn test_feature_completeness_check() {
+async fn test_feature_completeness_check() -> Result<()> {
     // 创建一个功能丰富的测试Agent
     let config = AgentConfig {
         name: "FeatureRichAgent".to_string(),
@@ -203,7 +206,9 @@ async fn test_feature_completeness_check() {
             ("capabilities".to_string(), "advanced".to_string()),
         ])),
         max_tool_calls: Some(10),
-        tool_timeout: Some(60),
+        tool_timeout: Some(30),
+        isolation_level: None,
+        tenant_id: None,
     };
 
     let llm = Arc::new(MockLlmProvider::new(vec![
@@ -214,7 +219,7 @@ async fn test_feature_completeness_check() {
         "I can help you with various tasks using my available tools.".to_string(),
     ]));
 
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Agent creation failed");
 
     // 添加多个工具来提高功能完整性
     agent.add_tool(Box::new(create_echo_tool())).unwrap();
@@ -236,9 +241,9 @@ async fn test_feature_completeness_check() {
         !result.recommendations.is_empty(),
         "Should provide improvement recommendations"
     );
-
+    
     println!("Feature Completeness Result: {:?}", result);
-
+    
     // 检查核心功能是否被识别
     let has_basic_generation = result
         .implemented_features
@@ -248,11 +253,13 @@ async fn test_feature_completeness_check() {
         has_basic_generation,
         "Should recognize basic generation capability"
     );
+    
+    Ok(())
 }
 
 /// 测试Agent状态管理
 #[tokio::test]
-async fn test_agent_status_management() {
+async fn test_agent_status_management() -> Result<()> {
     let config = AgentConfig {
         name: "StatusTestAgent".to_string(),
         instructions: "Test agent for status management.".to_string(),
@@ -266,13 +273,15 @@ async fn test_agent_status_management() {
         metadata: None,
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
     let llm = Arc::new(MockLlmProvider::new(vec![
         "Agent is ready to work.".to_string()
     ]));
 
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Agent creation failed");
 
     // 测试默认状态
     let initial_status = agent.get_status();
@@ -297,11 +306,12 @@ async fn test_agent_status_management() {
     agent.reset().await.unwrap();
     let reset_status = agent.get_status();
     assert_eq!(reset_status, AgentStatus::Ready);
+    Ok(())
 }
 
 /// 测试Agent健康检查
 #[tokio::test]
-async fn test_agent_health_check() {
+async fn test_agent_health_check() -> Result<()> {
     let config = AgentConfig {
         name: "HealthTestAgent".to_string(),
         instructions: "Test agent for health monitoring.".to_string(),
@@ -318,13 +328,15 @@ async fn test_agent_health_check() {
         )])),
         max_tool_calls: None,
         tool_timeout: None,
+        isolation_level: None,
+        tenant_id: None,
     };
 
     let llm = Arc::new(MockLlmProvider::new(vec![
         "Health check response.".to_string()
     ]));
 
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Agent creation failed");
     agent.add_tool(Box::new(create_echo_tool())).unwrap();
 
     // 执行健康检查
@@ -343,11 +355,12 @@ async fn test_agent_health_check() {
     );
 
     println!("Health check result: {:?}", health);
+    Ok(())
 }
 
 /// 综合集成测试
 #[tokio::test]
-async fn test_comprehensive_integration() {
+async fn test_comprehensive_integration() -> Result<()> {
     // 创建性能监控器
     let monitor = PerformanceMonitor::new();
 
@@ -367,7 +380,9 @@ async fn test_comprehensive_integration() {
             ("environment".to_string(), "test".to_string()),
         ])),
         max_tool_calls: Some(15),
-        tool_timeout: Some(120),
+        tool_timeout: Some(30),
+        isolation_level: None,
+        tenant_id: None,
     };
 
     let llm = Arc::new(MockLlmProvider::new(vec![
@@ -376,7 +391,7 @@ async fn test_comprehensive_integration() {
         "Here's the comprehensive result you requested.".to_string(),
     ]));
 
-    let mut agent = BasicAgent::new(config, llm);
+    let mut agent = BasicAgent::new(config, llm).expect("Agent creation failed");
 
     // 添加多种工具
     agent.add_tool(Box::new(create_echo_tool())).unwrap();
@@ -424,6 +439,7 @@ async fn test_comprehensive_integration() {
     println!("Consistency Score: {:.2}", consistency.score);
     println!("Completeness Score: {:.2}", completeness.overall_score);
     println!("Performance: {:?}", metrics);
+    Ok(())
 }
 
 // Helper functions to create test tools

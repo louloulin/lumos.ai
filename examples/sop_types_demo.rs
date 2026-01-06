@@ -82,23 +82,41 @@ fn main() -> Result<()> {
     let actions = vec![
         (AgentAction::NoOp, "无操作"),
         (
-            AgentAction::SendMessage(SopMessage::broadcast("test", "agent1", json!({}))),
+            AgentAction::Send {
+                msg_type: "test".to_string(),
+                receiver: None,
+                content: json!({}),
+            },
             "发送消息",
         ),
         (
-            AgentAction::RequestInfo("需要更多信息".to_string()),
+            AgentAction::Reply {
+                content: "需要更多信息".to_string(),
+            },
             "请求信息",
         ),
         (
-            AgentAction::Delegate("task1".to_string(), "agent2".to_string()),
+            AgentAction::delegate(
+                "agent2",
+                "task1",
+                json!({}),
+            ),
             "委托任务",
         ),
         (
-            AgentAction::Complete(json!({"result": "success"})),
+            AgentAction::finish(json!({"result": "success"})),
             "完成任务",
         ),
-        (AgentAction::Wait(5), "等待"),
-        (AgentAction::Error("发生错误".to_string()), "错误"),
+        (
+            AgentAction::wait("等待5秒"),
+            "等待",
+        ),
+        (
+            AgentAction::Reply {
+                content: "发生错误".to_string(),
+            },
+            "错误",
+        ),
     ];
 
     for (action, desc) in actions {

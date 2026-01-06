@@ -6,6 +6,7 @@ use lumosai_core::agent::{
     AgentBuilder, BasicAgent, SimpleSopEnvironment, SopExecutionMode, SopMessage,
 };
 use lumosai_core::error::Result;
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use serde_json::json;
 use std::sync::Arc;
 

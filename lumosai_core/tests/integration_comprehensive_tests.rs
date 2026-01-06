@@ -41,13 +41,7 @@ fn create_test_agent(name: &str, instructions: &str) -> BasicAgent {
         ..Default::default()
     };
     let llm = create_mock_llm();
-    BasicAgent::new(config, llm)
-}
-
-/// Get agent name helper
-fn get_agent_name(agent: &BasicAgent) -> &str {
-    // BasicAgent doesn't expose name() method, use config
-    "test_agent"
+    BasicAgent::new(config, llm).expect("Failed to create test agent")
 }
 
 /// Create a test message
@@ -246,8 +240,8 @@ async fn test_multi_agent_basic_collaboration() {
     let _task = "Solve problem together";
 
     // Both agents should be created successfully
-    assert_eq!(agent1.name(), Some("agent1"));
-    assert_eq!(agent2.name(), Some("agent2"));
+    assert_eq!(agent1.get_name(), "agent1");
+    assert_eq!(agent2.get_name(), "agent2");
 }
 
 #[tokio::test]
@@ -652,7 +646,7 @@ async fn test_enterprise_multi_tenancy() {
     let tenant2_agent = create_test_agent("tenant2_agent", "Tenant 2 agent");
 
     // Verify isolation
-    assert_ne!(tenant1_agent.name(), tenant2_agent.name());
+    assert_ne!(tenant1_agent.get_name(), tenant2_agent.get_name());
 }
 
 #[tokio::test]
@@ -741,7 +735,7 @@ async fn test_enterprise_load_balancing() {
 
     // Round-robin selection
     let selected_index = 0 % agents.len();
-    assert_eq!(agents[selected_index].name(), Some("agent1"));
+    assert_eq!(agents[selected_index].get_name(), "agent1");
 }
 
 #[tokio::test]
@@ -758,7 +752,7 @@ async fn test_enterprise_failover() {
         panic!("No agents available");
     };
 
-    assert_eq!(active_agent.name(), Some("secondary"));
+    assert_eq!(active_agent.get_name(), "secondary");
 }
 
 #[tokio::test]

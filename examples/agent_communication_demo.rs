@@ -7,6 +7,7 @@ use lumosai_core::agent::communication::{
     AgentStatus, CommunicationConfig, MessagePriority, RoutingStrategy, SessionMetadata,
     SessionType,
 };
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -16,8 +17,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Agent通信系统演示");
     println!("==================");
 
-    // 创建Mock LLM提供商
-    let llm = create_test_zhipu_provider_arc();
+    // 创建Mock LLM提供商（虽然在这个示例中未使用，但保留以保持完整性）
+    let _llm = create_test_zhipu_provider_arc();
 
     // 创建通信配置
     let config = CommunicationConfig {
@@ -179,7 +180,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let session_message = AgentMessage::new(
         "orchestrator".to_string(),
         vec![],
-        AgentMessageType::SessionMessage,
+        AgentMessageType::SessionManagement,
         "让我们开始头脑风暴，讨论项目的技术架构方案".to_string(),
     )
     .with_session_id(session_id.clone())
@@ -239,7 +240,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let topic_message = AgentMessage::new(
             "orchestrator".to_string(),
             vec![],
-            AgentMessageType::TopicMessage,
+            AgentMessageType::Notification,
             content.to_string(),
         )
         .with_topic(topic.to_string())
@@ -293,7 +294,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
 
-    let message_history = comm_manager.get_message_history(history_filters).await;
+    let message_history = comm_manager.get_message_history_with_filters(history_filters).await;
     println!("\n📜 消息历史 (最近5条来自orchestrator的消息):");
     for (i, msg) in message_history.iter().enumerate() {
         println!(
@@ -316,7 +317,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  - 总Agent数: {}", final_stats.total_agents);
     println!("  - 活跃Agent数: {}", final_stats.active_agents);
     println!("  - 总会话数: {}", final_stats.total_sessions);
-    println!("  - 平均投递时间: {}ms", final_stats.average_delivery_time);
+    println!("  - 平均投递时间: {}ms", final_stats.avg_response_time);
 
     // 队列状态
     let queue_status = comm_manager.get_queue_status().await;
@@ -338,7 +339,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🧹 清理工作...");
 
     // 注销所有Agent
-    for (agent_id, _, _, _) in agents_data {
+    let agent_ids = vec!["orchestrator", "developer", "analyzer"];
+    for agent_id in agent_ids {
         if let Err(e) = comm_manager.unregister_agent(agent_id).await {
             eprintln!("❌ 注销Agent {} 失败: {:?}", agent_id, e);
         } else {

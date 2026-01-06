@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     println!("🚀 LanceDB Vector Search Example");
-    println!("=" * 50);
+    println!("{}", "=".repeat(50));
 
     // 1. Setup storage and index
     println!("\n📦 Setting up LanceDB storage...");
@@ -29,7 +29,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let index_config = IndexConfig::new("search_documents", 384)
         .with_metric(SimilarityMetric::Cosine)
-        .with_description("Vector search example index");
+        .with_option(
+            "description",
+            MetadataValue::String("Vector search example index".to_string()),
+        );
 
     storage.create_index(index_config).await?;
     println!("✅ Storage and index created");
@@ -55,14 +58,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for metric in metrics {
         println!("\n📊 Using {:?} similarity:", metric);
 
-        let search_request = SearchRequest {
-            index_name: "search_documents".to_string(),
-            vector: query_vector.clone(),
-            top_k: 5,
-            similarity_metric: Some(metric),
-            filter: None,
-            include_metadata: true,
-        };
+        let search_request = SearchRequest::new("search_documents", query_vector.clone())
+            .with_top_k(5)
+            .with_include_metadata(true)
+            .with_option(
+                "metric",
+                MetadataValue::String(format!("{:?}", metric)),
+            );
 
         let start_time = Instant::now();
         let response = storage.search(search_request).await?;
@@ -103,14 +105,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
     ]);
 
-    let filtered_search = SearchRequest {
-        index_name: "search_documents".to_string(),
-        vector: query_vector.clone(),
-        top_k: 10,
-        similarity_metric: Some(SimilarityMetric::Cosine),
-        filter: Some(tech_high_priority),
-        include_metadata: true,
-    };
+    let filtered_search = SearchRequest::new("search_documents", query_vector.clone())
+        .with_top_k(10)
+        .with_filter(tech_high_priority)
+        .with_include_metadata(true);
 
     let response = storage.search(filtered_search).await?;
     println!("   Found {} results", response.results.len());
@@ -128,14 +126,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
     ]);
 
-    let complex_search = SearchRequest {
-        index_name: "search_documents".to_string(),
-        vector: query_vector.clone(),
-        top_k: 10,
-        similarity_metric: Some(SimilarityMetric::Cosine),
-        filter: Some(complex_filter),
-        include_metadata: true,
-    };
+    let complex_search = SearchRequest::new("search_documents", query_vector.clone())
+        .with_top_k(10)
+        .with_filter(complex_filter)
+        .with_include_metadata(true);
 
     let response = storage.search(complex_search).await?;
     println!("   Found {} results", response.results.len());
@@ -159,25 +153,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         FilterCondition::Contains("content".to_string(), "learning".to_string()),
     ]);
 
-    let keyword_search = SearchRequest {
-        index_name: "search_documents".to_string(),
-        vector: query_vector.clone(),
-        top_k: 10,
-        similarity_metric: Some(SimilarityMetric::Cosine),
-        filter: Some(keyword_filter),
-        include_metadata: true,
-    };
+    let keyword_search = SearchRequest::new("search_documents", query_vector.clone())
+        .with_top_k(10)
+        .with_filter(keyword_filter)
+        .with_include_metadata(true);
 
     let response = storage.search(keyword_search).await?;
     println!("   Found {} results", response.results.len());
     for result in &response.results {
-        if let Some(doc) = &result.document {
-            let content_preview = doc
-                .content
-                .as_deref()
-                .map(|c| if c.len() > 50 { &c[..50] } else { c })
-                .unwrap_or("No content");
-            println!("   - {}: \"{}...\"", result.id, content_preview);
+        if let Some(content) = &result.content {
+            let preview = if content.len() > 50 {
+                &content[..50]
+            } else {
+                content.as_str()
+            };
+            println!("   - {}: \"{}...\"", result.id, preview);
         }
     }
 
@@ -190,14 +180,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let unfiltered_start = Instant::now();
     for i in 0..num_queries {
         let query = generate_sample_embedding(384, i as u64);
-        let search_request = SearchRequest {
-            index_name: "search_documents".to_string(),
-            vector: query,
-            top_k: 10,
-            similarity_metric: Some(SimilarityMetric::Cosine),
-            filter: None,
-            include_metadata: false,
-        };
+        let search_request = SearchRequest::new("search_documents", query)
+            .with_top_k(10)
+            .with_include_metadata(false);
         storage.search(search_request).await?;
     }
     let unfiltered_time = unfiltered_start.elapsed();
@@ -214,14 +199,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let filtered_start = Instant::now();
     for i in 0..num_queries {
         let query = generate_sample_embedding(384, i as u64);
-        let search_request = SearchRequest {
-            index_name: "search_documents".to_string(),
-            vector: query,
-            top_k: 10,
-            similarity_metric: Some(SimilarityMetric::Cosine),
-            filter: Some(filter.clone()),
-            include_metadata: false,
-        };
+        let search_request = SearchRequest::new("search_documents", query)
+            .with_top_k(10)
+            .with_filter(filter.clone())
+            .with_include_metadata(false);
         storage.search(search_request).await?;
     }
     let filtered_time = filtered_start.elapsed();
@@ -245,14 +226,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n📊 Search Result Analysis");
 
     let analysis_query = generate_technology_embedding();
-    let analysis_search = SearchRequest {
-        index_name: "search_documents".to_string(),
-        vector: analysis_query,
-        top_k: 20, // Get all documents
-        similarity_metric: Some(SimilarityMetric::Cosine),
-        filter: None,
-        include_metadata: true,
-    };
+    let analysis_search = SearchRequest::new("search_documents", analysis_query)
+        .with_top_k(20) // Get all documents
+        .with_include_metadata(true);
 
     let response = storage.search(analysis_search).await?;
 

@@ -18,7 +18,7 @@ lumosai-vector-lancedb = { path = "lancedb", optional = true }
 lumosai-vector-milvus = { path = "milvus", optional = true }
 
 [features]
-default = ["memory"]
+default = []  # 禁用默认features避免不必要的依赖
 memory = ["lumosai-vector-memory"]
 qdrant = ["lumosai-vector-qdrant"]
 weaviate = ["lumosai-vector-weaviate"]
@@ -29,4 +29,4 @@ all = ["memory", "qdrant", "weaviate", "fastembed", "lancedb", "milvus"]
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }
-tokio-test.workspace = true
+tokio-test = "0.4"

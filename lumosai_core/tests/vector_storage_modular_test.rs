@@ -1,4 +1,4 @@
-use lumosai_core::prelude::*;
+use lumosai_core::{prelude::*, vector::filter::FilterCondition};
 use serde_json::json;
 use std::collections::HashMap;
 
@@ -44,7 +44,10 @@ async fn test_memory_vector_storage_convenience() {
     assert!(results[0].score > 0.9); // Should be very similar to the first vector
 
     // Test with filter
-    let filter = FilterCondition::Eq("type".to_string(), json!("B"));
+    let filter = FilterCondition::Eq {
+        field_name: "type".to_string(),
+        value: json!("B"),
+    };
     let filtered_results = storage
         .query("test_index", vec![0.0, 1.0, 0.0], 1, Some(filter), false)
         .await
@@ -255,7 +258,10 @@ async fn test_complex_filters() {
         .expect("Failed to insert vectors");
 
     // Test simple equality filter
-    let eq_filter = FilterCondition::Eq("category".to_string(), json!("A"));
+    let eq_filter = FilterCondition::Eq {
+        field_name: "category".to_string(),
+        value: json!("A"),
+    };
     let eq_results = storage
         .query("filter_test", vec![1.0, 0.0], 10, Some(eq_filter), false)
         .await
@@ -264,7 +270,10 @@ async fn test_complex_filters() {
     assert_eq!(eq_results.len(), 2); // Should find 2 category A items
 
     // Test range filter
-    let gt_filter = FilterCondition::Gt("score".to_string(), json!(10));
+    let gt_filter = FilterCondition::Gt {
+        field_name: "score".to_string(),
+        value: json!(10),
+    };
     let gt_results = storage
         .query("filter_test", vec![1.0, 0.0], 10, Some(gt_filter), false)
         .await
@@ -274,8 +283,23 @@ async fn test_complex_filters() {
 
     // Test AND filter
     let and_filter = FilterCondition::And(vec![
-        FilterCondition::Eq("category".to_string(), json!("A")),
-        FilterCondition::Eq("active".to_string(), json!(true)),
+        FilterCondition::Eq {
+            field_name: "category".to_string(),
+            value: json!("A"),
+        },
+        FilterCondition::Eq {
+            field_name: "active".to_string(),
+            value: json!(true),
+        },
+    let and_filter = FilterCondition::And(vec![
+        FilterCondition::Eq {
+            field_name: "category".to_string(),
+            value: json!("A"),
+        },
+        FilterCondition::Eq {
+            field_name: "active".to_string(),
+            value: json!(true),
+        },
     ]);
 
     let and_results = storage
@@ -287,8 +311,14 @@ async fn test_complex_filters() {
 
     // Test OR filter
     let or_filter = FilterCondition::Or(vec![
-        FilterCondition::Eq("category".to_string(), json!("B")),
-        FilterCondition::Eq("category".to_string(), json!("C")),
+        FilterCondition::Eq {
+            field_name: "category".to_string(),
+            value: json!("B"),
+        },
+        FilterCondition::Eq {
+            field_name: "category".to_string(),
+            value: json!("C"),
+        },
     ]);
 
     let or_results = storage

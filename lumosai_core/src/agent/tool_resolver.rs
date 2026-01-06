@@ -5,14 +5,12 @@
 //! manually creating tool instances.
 
 use crate::error::{Error, Result};
-use crate::tool::Tool;
 use crate::tool::builtin::{
-    CalculatorTool, FileManagerTool, WebSearchTool,
-    create_calculator_tool, create_http_request_tool, create_web_scraper_tool,
-    create_file_reader_tool, create_file_writer_tool,
-    create_json_parser_tool, create_csv_parser_tool,
-    create_datetime_tool, create_uuid_generator_tool,
+    create_calculator_tool, create_csv_parser_tool, create_datetime_tool, create_file_reader_tool,
+    create_file_writer_tool, create_http_request_tool, create_json_parser_tool,
+    create_uuid_generator_tool, create_web_scraper_tool, FileManagerTool, WebSearchTool,
 };
+use crate::tool::Tool;
 
 /// Resolve a tool name to a tool instance
 ///
@@ -83,10 +81,7 @@ pub fn resolve_tool_name(name: &str) -> Result<Box<dyn Tool>> {
 /// let tools = resolve_tool_names(&["web_search", "calculator"])?;
 /// ```
 pub fn resolve_tool_names(names: &[&str]) -> Result<Vec<Box<dyn Tool>>> {
-    names
-        .iter()
-        .map(|name| resolve_tool_name(name))
-        .collect()
+    names.iter().map(|name| resolve_tool_name(name)).collect()
 }
 
 /// Get list of available tool names
@@ -118,15 +113,15 @@ mod tests {
         assert!(resolve_tool_name("calculator").is_ok());
         assert!(resolve_tool_name("web_search").is_ok());
         assert!(resolve_tool_name("file_manager").is_ok());
-        
+
         // Test case insensitive
         assert!(resolve_tool_name("Calculator").is_ok());
         assert!(resolve_tool_name("WEB_SEARCH").is_ok());
-        
+
         // Test aliases
         assert!(resolve_tool_name("calc").is_ok());
         assert!(resolve_tool_name("http").is_ok());
-        
+
         // Test invalid tool name
         assert!(resolve_tool_name("unknown_tool").is_err());
     }
@@ -135,7 +130,7 @@ mod tests {
     fn test_resolve_tool_names() {
         let tools = resolve_tool_names(&["calculator", "web_search"]).unwrap();
         assert_eq!(tools.len(), 2);
-        
+
         // Test with invalid tool name
         assert!(resolve_tool_names(&["calculator", "unknown"]).is_err());
     }
@@ -148,4 +143,3 @@ mod tests {
         assert!(names.contains(&"web_search"));
     }
 }
-

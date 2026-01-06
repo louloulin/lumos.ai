@@ -3,6 +3,7 @@ use std::time::Duration;
 use tokio::time::timeout;
 use lumosai_core::prelude::*;
 use lumosai_core::agent::{BasicAgent, AgentConfig, AgentBuilder};
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 use lumosai_core::memory::MemoryManager;
 use crate::common::{TestUtils, TestAssertions};
 

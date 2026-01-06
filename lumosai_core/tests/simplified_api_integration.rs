@@ -3,15 +3,16 @@
 //! These tests verify that the new simplified API works correctly and provides
 //! the expected developer experience improvements.
 
+use lumosai_core::agent::simplified_api::Agent as SimplifiedAgent;
 use lumosai_core::agent::trait_def::Agent as AgentTrait;
-use lumosai_core::agent::{data_agent, file_agent, web_agent, Agent};
-use std::sync::Arc;
+use lumosai_core::agent::{data_agent, file_agent, web_agent, AgentBuilder};
+use lumosai_core::llm::test_helpers::create_test_zhipu_provider_arc;
 
 #[tokio::test]
 async fn test_quick_agent_creation() {
     let llm = create_test_zhipu_provider_arc();
 
-    let agent = Agent::quick("test_agent", "You are a test assistant")
+    let agent = SimplifiedAgent::quick("test_agent", "You are a test assistant")
         .model(llm)
         .build()
         .expect("Failed to create quick agent");
@@ -24,7 +25,7 @@ async fn test_quick_agent_creation() {
 async fn test_builder_pattern_agent() {
     let llm = create_test_zhipu_provider_arc();
 
-    let agent = Agent::builder()
+    let agent = SimplifiedAgent::builder()
         .name("builder_agent")
         .instructions("You are a builder test assistant")
         .model(llm)
@@ -138,7 +139,7 @@ async fn test_data_agent_with_tools() {
 async fn test_smart_defaults_applied() {
     let llm = create_test_zhipu_provider_arc();
 
-    let agent = Agent::quick("smart_test", "You are a smart assistant")
+    let agent = SimplifiedAgent::quick("smart_test", "You are a smart assistant")
         .model(llm)
         .build()
         .expect("Failed to create smart agent");
@@ -154,7 +155,7 @@ async fn test_smart_defaults_applied() {
 async fn test_agent_interaction() {
     let llm = create_test_zhipu_provider_arc();
 
-    let agent = Agent::quick("interaction_test", "You are a helpful assistant")
+    let agent = SimplifiedAgent::quick("interaction_test", "You are a helpful assistant")
         .model(llm)
         .build()
         .expect("Failed to create agent");
@@ -189,7 +190,8 @@ async fn test_backward_compatibility() {
         "old_style".to_string(),
         "You are an old-style agent".to_string(),
         llm.clone(),
-    );
+    )
+    .expect("Failed to create old-style agent");
 
     assert_eq!(old_agent.get_name(), "old_style");
     assert_eq!(old_agent.get_instructions(), "You are an old-style agent");
@@ -211,13 +213,13 @@ async fn test_api_simplicity_comparison() {
     let llm = create_test_zhipu_provider_arc();
 
     // New simplified API - should be very concise
-    let simple_agent = Agent::quick("simple", "You are simple")
+    let simple_agent = SimplifiedAgent::quick("simple", "You are simple")
         .model(llm.clone())
         .build()
         .expect("Failed to create simple agent");
 
     // Verify it works the same as more verbose creation
-    let verbose_agent = Agent::builder()
+    let verbose_agent = SimplifiedAgent::builder()
         .name("simple")
         .instructions("You are simple")
         .model(llm)
@@ -240,7 +242,7 @@ async fn test_performance_no_regression() {
     let start = std::time::Instant::now();
 
     for i in 0..100 {
-        let _agent = Agent::quick(&format!("perf_test_{}", i), "You are fast")
+        let _agent = SimplifiedAgent::quick(&format!("perf_test_{}", i), "You are fast")
             .model(llm.clone())
             .build()
             .expect("Failed to create performance test agent");
@@ -259,7 +261,7 @@ async fn test_performance_no_regression() {
 #[tokio::test]
 async fn test_error_handling_improvements() {
     // Test that error messages are helpful
-    let result = Agent::quick("test", "instructions").build(); // Missing model - should give helpful error
+    let result = SimplifiedAgent::quick("test", "instructions").build(); // Missing model - should give helpful error
 
     assert!(result.is_err(), "Should fail without model");
 

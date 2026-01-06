@@ -145,19 +145,36 @@ pub fn agent_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     let agent_fn_name = format_ident!("create_{}", struct_name.to_string().to_lowercase());
 
     let expanded = quote! {
-        pub fn #agent_fn_name(llm_provider: std::sync::Arc<dyn lumosai_core::llm::LlmProvider>) -> impl lumosai_core::agent::Agent {
-            let config = lumosai_core::agent::AgentConfig {
+        pub fn #agent_fn_name(llm_provider: std::sync::Arc<dyn lumosai_core::llm::LlmProvider>) -> lumosai_core::agent::BasicAgent {
+            use lumosai_core::agent::{AgentBuilder, AgentConfig};
+
+            let config = AgentConfig {
                 name: #agent_name.to_string(),
                 instructions: #instructions.to_string(),
+                model: None,
+                temperature: None,
+                max_tokens: None,
+                tools: vec![],
+                enable_function_calling: Some(true),
+                timeout: None,
                 memory_config: None,
+                working_memory: None,
+                voice_config: None,
+                telemetry: None,
+                tenant_id: None,
+                isolation_level: None,
+                context: None,
+                metadata: None,
+                max_tool_calls: None,
+                tool_timeout: None,
             };
 
-            let mut agent = lumosai_core::agent::create_basic_agent(config, llm_provider);
-
-            // Add tools
-            #(agent.add_tool(#tools).expect("Failed to add tool to agent");)*
-
-            agent
+            AgentBuilder::new()
+                .config(config)
+                .llm(llm_provider)
+                #( .tool(#tools) )*
+                .build()
+                .expect("Failed to create agent")
         }
     };
 

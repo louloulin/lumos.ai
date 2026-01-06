@@ -3,9 +3,8 @@
 //! This example shows how to use the new Mastra-like API for creating agents
 //! with minimal boilerplate while maintaining Rust's performance advantages.
 
-use lumosai_core::agent::{data_agent, file_agent, web_agent, Agent};
+use lumosai_core::agent::{data_agent, file_agent, quick, web_agent, Agent, AgentBuilder};
 use lumosai_core::llm::MockLlmProvider;
-use lumosai_core::Agent as AgentTrait;
 use std::sync::Arc;
 use tokio;
 
@@ -27,7 +26,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("---------------------------");
 
     // Example 1: Quick agent creation with minimal configuration
-    let quick_agent = Agent::quick("assistant", "You are a helpful assistant")
+    let quick_agent = quick("assistant", "You are a helpful assistant")
         .model(llm.clone())
         .build()?;
 
@@ -132,7 +131,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("--------------------------");
 
     // Example 7: Demonstrate smart defaults
-    let smart_agent = Agent::quick("smart_agent", "You are a smart assistant")
+    let smart_agent = quick("smart_agent", "You are a smart assistant")
         .model(llm.clone())
         .build()?;
 

@@ -305,6 +305,32 @@ impl LlmProvider for ZhipuProvider {
         // Convert messages to 智谱AI format
         let api_messages = self.convert_messages(messages);
 
+        // 🔍 打印完整的prompt内容（所有消息合并）
+        use tracing::info;
+        info!("📋 === 完整Prompt内容（所有消息） ===");
+        let total_chars: usize = api_messages
+            .iter()
+            .map(|m| {
+                m.get("content")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .len()
+            })
+            .sum();
+        info!("   总字符数: {}", total_chars);
+
+        // 合并所有消息内容
+        let full_prompt: String = api_messages
+            .iter()
+            .map(|m| {
+                let role = m.get("role").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let content = m.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                format!("[{}] {}\n", role, content)
+            })
+            .collect();
+        info!("{}", full_prompt);
+        info!("📋 === Prompt内容结束 ===");
+
         // Build request body with required parameters for Zhipu AI
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
@@ -621,69 +647,109 @@ impl ZhipuProvider {
         &self,
         response: reqwest::Response,
     ) -> Result<impl futures::Stream<Item = Result<String>>> {
+        use futures::stream::StreamExt;
+
         let byte_stream = response.bytes_stream();
 
-        Ok(byte_stream
-            .map_err(|e| Error::Llm(format!("HTTP stream error: {e}")))
-            .map(|chunk_result| {
-                chunk_result.and_then(|chunk| {
-                    // Convert bytes to string
-                    let text = String::from_utf8(chunk.to_vec())
-                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {e}")))?;
+        // ✅ 使用buffer处理跨chunk的SSE数据
+        let stream = futures::stream::unfold(
+            (byte_stream, String::new()),
+            |(mut byte_stream, mut buffer)| async move {
+                loop {
+                    match byte_stream.next().await {
+                        Some(Ok(chunk)) => {
+                            // 解码并追加到buffer
+                            let text = match String::from_utf8(chunk.to_vec()) {
+                                Ok(t) => t,
+                                Err(e) => {
+                                    return Some((
+                                        Err(Error::Llm(format!("UTF-8 decode error: {e}"))),
+                                        (byte_stream, buffer),
+                                    ))
+                                }
+                            };
 
-                    // Split by lines and process each line
-                    let mut results = Vec::new();
-                    for line in text.lines() {
-                        // Skip empty lines and comments
-                        if line.trim().is_empty() || line.starts_with(':') {
-                            continue;
-                        }
+                            buffer.push_str(&text);
 
-                        // Parse SSE format: "data: {...}"
-                        if let Some(data) = line.strip_prefix("data: ") {
-                            // Handle end of stream
-                            if data.trim() == "[DONE]" {
-                                break;
-                            }
+                            // 处理buffer中的完整行
+                            let lines: Vec<&str> = buffer.lines().collect();
 
-                            // Parse JSON response
-                            match serde_json::from_str::<ZhipuStreamResponse>(data) {
-                                Ok(stream_response) => {
-                                    if let Some(choice) = stream_response.choices.first() {
-                                        // Try content first, then reasoning_content (for glm-4.6+)
-                                        let content_to_use = choice
-                                            .delta
-                                            .content
-                                            .as_ref()
-                                            .or(choice.delta.reasoning_content.as_ref());
+                            // 检查最后一行是否完整（以\n结尾）
+                            let has_trailing_newline = buffer.ends_with('\n');
 
-                                        if let Some(content) = content_to_use {
-                                            if !content.is_empty() {
-                                                results.push(content.clone());
+                            let (complete_lines, remaining) = if has_trailing_newline {
+                                (lines.as_slice(), "")
+                            } else if lines.len() > 0 {
+                                // 保留最后一行（可能不完整）
+                                (&lines[..lines.len() - 1], lines[lines.len() - 1])
+                            } else {
+                                // 没有完整行，继续读取
+                                continue;
+                            };
+
+                            // 处理完整的行
+                            let mut results = Vec::new();
+                            for line in complete_lines {
+                                let line = line.trim();
+                                if line.is_empty() || line.starts_with(':') {
+                                    continue;
+                                }
+
+                                if let Some(data) = line.strip_prefix("data: ") {
+                                    if data.trim() == "[DONE]" {
+                                        return None; // 流结束
+                                    }
+
+                                    match serde_json::from_str::<ZhipuStreamResponse>(data) {
+                                        Ok(stream_response) => {
+                                            if let Some(choice) = stream_response.choices.first() {
+                                                let content_to_use = choice
+                                                    .delta
+                                                    .content
+                                                    .as_ref()
+                                                    .or(choice.delta.reasoning_content.as_ref());
+
+                                                if let Some(content) = content_to_use {
+                                                    if !content.is_empty() {
+                                                        results.push(content.clone());
+                                                    }
+                                                }
                                             }
+                                        }
+                                        Err(e) => {
+                                            eprintln!("⚠️  JSON parse error (non-critical): {} | Data: {}", e, data);
+                                            // 非关键错误，继续处理
                                         }
                                     }
                                 }
-                                Err(e) => {
-                                    return Err(Error::Llm(format!(
-                                        "Failed to parse 智谱AI streaming response: {e}"
-                                    )));
-                                }
                             }
+
+                            // 更新buffer为剩余内容
+                            buffer = remaining.to_string();
+
+                            // 如果有结果，返回
+                            if !results.is_empty() {
+                                let joined = results.join("");
+                                return Some((Ok(joined), (byte_stream, buffer)));
+                            }
+                            // 否则继续循环读取下一个chunk
+                        }
+                        Some(Err(e)) => {
+                            return Some((
+                                Err(Error::Llm(format!("HTTP stream error: {e}"))),
+                                (byte_stream, buffer),
+                            ));
+                        }
+                        None => {
+                            // 流结束
+                            return None;
                         }
                     }
-
-                    // Join all content from this chunk
-                    Ok(results.join(""))
-                })
-            })
-            .filter_map(|result| async move {
-                match result {
-                    Ok(content) if !content.is_empty() => Some(Ok(content)),
-                    Ok(_) => None, // Skip empty content
-                    Err(e) => Some(Err(e)),
                 }
-            }))
+            },
+        );
+
+        Ok(stream)
     }
 }
 

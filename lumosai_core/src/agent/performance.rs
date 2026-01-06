@@ -388,3 +388,225 @@ impl PerformanceAnalyzer {
         recommendations
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread;
+    use std::time::Duration;
+
+    #[test]
+    fn test_performance_monitor_creation() {
+        let monitor = PerformanceMonitor::new();
+        let metrics = monitor.get_metrics().unwrap();
+
+        assert_eq!(metrics.total_requests, 0);
+        assert_eq!(metrics.successful_requests, 0);
+        assert_eq!(metrics.failed_requests, 0);
+        assert_eq!(metrics.current_concurrency, 0);
+        assert_eq!(metrics.max_concurrency, 0);
+    }
+
+    #[test]
+    fn test_request_timer_success() {
+        let monitor = PerformanceMonitor::new();
+        let timer = monitor.start_request();
+
+        // 模拟一些工作
+        thread::sleep(Duration::from_millis(10));
+
+        timer.finish_success();
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert_eq!(metrics.total_requests, 1);
+        assert_eq!(metrics.successful_requests, 1);
+        assert_eq!(metrics.failed_requests, 0);
+        assert_eq!(metrics.current_concurrency, 0);
+        assert!(metrics.avg_response_time > 0.0);
+    }
+
+    #[test]
+    fn test_request_timer_error() {
+        let monitor = PerformanceMonitor::new();
+        let timer = monitor.start_request();
+
+        thread::sleep(Duration::from_millis(10));
+
+        timer.finish_error();
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert_eq!(metrics.total_requests, 1);
+        assert_eq!(metrics.successful_requests, 0);
+        assert_eq!(metrics.failed_requests, 1);
+        assert_eq!(metrics.current_concurrency, 0);
+    }
+
+    #[test]
+    fn test_concurrent_requests() {
+        let monitor = PerformanceMonitor::new();
+
+        // 启动多个并发请求
+        let timer1 = monitor.start_request();
+        let timer2 = monitor.start_request();
+        let timer3 = monitor.start_request();
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert_eq!(metrics.current_concurrency, 3);
+        assert_eq!(metrics.max_concurrency, 3);
+
+        timer1.finish_success();
+        timer2.finish_success();
+        timer3.finish_success();
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert_eq!(metrics.current_concurrency, 0);
+        assert_eq!(metrics.max_concurrency, 3);
+        assert_eq!(metrics.total_requests, 3);
+    }
+
+    #[test]
+    fn test_reset_metrics() {
+        let monitor = PerformanceMonitor::new();
+
+        let timer = monitor.start_request();
+        thread::sleep(Duration::from_millis(10));
+        timer.finish_success();
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert_eq!(metrics.total_requests, 1);
+
+        monitor.reset_metrics().unwrap();
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert_eq!(metrics.total_requests, 0);
+        assert_eq!(metrics.successful_requests, 0);
+        assert_eq!(metrics.failed_requests, 0);
+    }
+
+    #[test]
+    fn test_update_memory_usage() {
+        let monitor = PerformanceMonitor::new();
+
+        monitor.update_memory_usage(1024 * 1024 * 512).unwrap(); // 512MB
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert_eq!(metrics.memory_usage, 1024 * 1024 * 512);
+    }
+
+    #[test]
+    fn test_update_cpu_usage() {
+        let monitor = PerformanceMonitor::new();
+
+        monitor.update_cpu_usage(75.5).unwrap();
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert_eq!(metrics.cpu_usage, 75.5);
+    }
+
+    #[test]
+    fn test_update_cache_hit_rate() {
+        let monitor = PerformanceMonitor::new();
+
+        monitor.update_cache_hit_rate(85.0).unwrap();
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert_eq!(metrics.cache_hit_rate, 85.0);
+    }
+
+    #[test]
+    fn test_performance_analyzer_high_response_time() {
+        let mut metrics = PerformanceMetrics::default();
+        metrics.avg_response_time = 6000.0; // 6秒，应该触发高严重性建议
+
+        let recommendations = PerformanceAnalyzer::analyze(&metrics);
+
+        assert!(!recommendations.is_empty());
+        let response_time_rec = recommendations
+            .iter()
+            .find(|r| r.category == "Response Time")
+            .unwrap();
+        assert_eq!(response_time_rec.severity, "high");
+    }
+
+    #[test]
+    fn test_performance_analyzer_high_error_rate() {
+        let mut metrics = PerformanceMetrics::default();
+        metrics.total_requests = 100;
+        metrics.failed_requests = 15; // 15% 错误率，应该触发中等严重性建议
+
+        let recommendations = PerformanceAnalyzer::analyze(&metrics);
+
+        assert!(!recommendations.is_empty());
+        let error_rate_rec = recommendations
+            .iter()
+            .find(|r| r.category == "Error Rate")
+            .unwrap();
+        assert_eq!(error_rate_rec.severity, "critical");
+    }
+
+    #[test]
+    fn test_performance_analyzer_high_memory_usage() {
+        let mut metrics = PerformanceMetrics::default();
+        metrics.memory_usage = 2_000_000_000; // 2GB，应该触发高严重性建议
+
+        let recommendations = PerformanceAnalyzer::analyze(&metrics);
+
+        assert!(!recommendations.is_empty());
+        let memory_rec = recommendations
+            .iter()
+            .find(|r| r.category == "Memory Usage")
+            .unwrap();
+        assert_eq!(memory_rec.severity, "high");
+    }
+
+    #[test]
+    fn test_performance_analyzer_low_cache_hit_rate() {
+        let mut metrics = PerformanceMetrics::default();
+        metrics.total_requests = 200;
+        metrics.cache_hit_rate = 30.0; // 30% 缓存命中率，应该触发中等严重性建议
+
+        let recommendations = PerformanceAnalyzer::analyze(&metrics);
+
+        assert!(!recommendations.is_empty());
+        let cache_rec = recommendations
+            .iter()
+            .find(|r| r.category == "Cache Performance")
+            .unwrap();
+        assert_eq!(cache_rec.severity, "medium");
+    }
+
+    #[test]
+    fn test_performance_analyzer_good_metrics() {
+        let mut metrics = PerformanceMetrics::default();
+        metrics.avg_response_time = 500.0; // 500ms，正常
+        metrics.total_requests = 100;
+        metrics.failed_requests = 1; // 1% 错误率，正常
+        metrics.memory_usage = 100_000_000; // 100MB，正常
+        metrics.cache_hit_rate = 80.0; // 80% 缓存命中率，正常
+
+        let recommendations = PerformanceAnalyzer::analyze(&metrics);
+
+        // 所有指标都正常，不应该有建议
+        assert!(recommendations.is_empty());
+    }
+
+    #[test]
+    fn test_min_max_response_time_tracking() {
+        let monitor = PerformanceMonitor::new();
+
+        // 第一个请求：10ms
+        let timer1 = monitor.start_request();
+        thread::sleep(Duration::from_millis(10));
+        timer1.finish_success();
+
+        // 第二个请求：50ms
+        let timer2 = monitor.start_request();
+        thread::sleep(Duration::from_millis(50));
+        timer2.finish_success();
+
+        let metrics = monitor.get_metrics().unwrap();
+        assert!(metrics.min_response_time >= 10.0);
+        assert!(metrics.max_response_time >= 50.0);
+        assert!(metrics.min_response_time < metrics.max_response_time);
+    }
+}

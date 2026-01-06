@@ -7,12 +7,11 @@
 //! - AutoGen Reflection
 //! - Self-Refine (2023)
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use super::Agent;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// Reflection 迭代记录
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,7 +72,11 @@ impl ReflectionExecutor {
         let mut best_score = 0.0;
 
         for iteration in 0..self.max_iterations {
-            tracing::debug!("Reflection iteration {}/{}", iteration + 1, self.max_iterations);
+            tracing::debug!(
+                "Reflection iteration {}/{}",
+                iteration + 1,
+                self.max_iterations
+            );
 
             // 1. Generator 生成内容
             let generated_content = self.generator.generate_simple(&current_prompt).await?;
@@ -213,8 +216,8 @@ impl ReflectionExecutor {
 
         let total_iterations = self.history.len();
         let final_score = self.history.last().unwrap().quality_score;
-        let avg_score = self.history.iter().map(|h| h.quality_score).sum::<f32>()
-            / total_iterations as f32;
+        let avg_score =
+            self.history.iter().map(|h| h.quality_score).sum::<f32>() / total_iterations as f32;
         let best_score = self
             .history
             .iter()
@@ -234,4 +237,3 @@ impl ReflectionExecutor {
 
 // 测试已移除 - 需要真实的 Agent 实现才能进行完整测试
 // 可以在集成测试中使用 BasicAgent 进行测试
-

@@ -6,7 +6,7 @@
 //! - 智能检索
 //! - RAG Agent 集成
 
-use lumosai_core::agent::{AgentBuilder, AgentTrait};
+use lumosai_core::agent::{Agent, AgentBuilder};
 use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::rag::{BasicRagPipeline, ChunkConfig, DocumentSource, RagPipeline};
 use lumosai_core::vector::{MemoryVectorStorage, VectorStorage};

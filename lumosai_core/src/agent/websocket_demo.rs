@@ -65,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     let llm = Arc::new(MockLlmProvider::new(mock_responses));
-    let agent = BasicAgent::new(agent_config, llm);
+    let agent = BasicAgent::new(agent_config, llm)?;
 
     // Create WebSocket streaming agent
     let ws_agent = agent.into_websocket_streaming(streaming_config, websocket_config);
@@ -340,7 +340,7 @@ mod tests {
         };
 
         let llm = create_test_zhipu_provider_arc();
-        let agent = BasicAgent::new(agent_config, llm);
+        let agent = BasicAgent::new(agent_config, llm).unwrap();
 
         let ws_agent = agent.into_websocket_streaming(streaming_config, websocket_config);
 

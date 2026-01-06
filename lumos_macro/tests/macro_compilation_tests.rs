@@ -4,7 +4,10 @@
 // 主要测试宏展开的正确性，而不是运行时行为
 
 use lumos_macro::agent;
-use lumosai_core::agent::Agent;
+use lumosai_core::{
+    agent::Agent,
+    llm::{mock::MockLlmProvider, test_helpers::create_test_zhipu_provider},
+};
 
 /// 测试 1: agent! 宏 - 基础用法
 #[test]

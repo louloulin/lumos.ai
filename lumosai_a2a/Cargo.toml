@@ -1,0 +1,67 @@
+[package]
+name = "lumosai-a2a"
+version = "0.1.0"
+edition = "2021"
+authors = ["LumosAI Team"]
+description = "Google A2A (Agent-to-Agent) Protocol implementation for LumosAI"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/lumos-ai/lumosai"
+keywords = ["a2a", "agent", "protocol", "multi-agent", "task-delegation"]
+categories = ["development-tools", "network-programming"]
+
+[dependencies]
+# Core dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+serde_yaml = { version = "0.9", optional = true }
+tokio = { version = "1.40", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+url = "2.5"
+reqwest = { version = "0.11", features = ["json", "stream"], optional = true }
+thiserror = "1.0"
+tracing = { version = "0.1", optional = true }
+base64 = "0.22"
+
+# HTTP server dependencies
+axum = { version = "0.7", features = ["json", "multipart"], optional = true }
+tower = { version = "0.4", optional = true }
+tower-http = { version = "0.5", features = ["cors", "trace"], optional = true }
+
+# Authentication and security
+jsonwebtoken = { version = "9.0", optional = true }
+rustls = { version = "0.23", optional = true }
+
+# Async utilities
+futures = "0.3"
+async-trait = "0.1"
+async-stream = "0.3"
+# Additional utilities for SSE
+pin-project = "1.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.12"
+
+[features]
+default = ["client", "config"]
+client = ["reqwest"]
+server = ["axum", "tower", "tower-http"]
+auth = ["jsonwebtoken", "rustls"]
+config = ["serde_yaml"]
+logging = ["tracing"]
+full = ["client", "server", "auth", "config", "logging"]
+
+[[bin]]
+name = "a2a-server"
+path = "src/bin/a2a_server.rs"
+required-features = ["server"]
+
+[[example]]
+name = "basic_client"
+path = "examples/basic_client.rs"
+required-features = ["client"]
+
+[[example]]
+name = "agent_card_builder"
+path = "examples/agent_card_builder.rs"

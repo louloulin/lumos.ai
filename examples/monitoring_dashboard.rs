@@ -12,7 +12,18 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::{interval, sleep};
 
-use lumosai_core::telemetry::*;
+use lumosai_core::telemetry::{
+    analyzer::{PerformanceAnalyzer, TimeRange},
+    alert::{
+        AlertEngineConfig, AlertRule, AlertSeverity, AlertCondition, AutomationConfig,
+        AutomationActionType, EscalationConfig, SmartAlertEngine, DefaultAutomationExecutor,
+        AutomationAction, AutomationExecutor,
+    },
+    collector::{MetricsCollector, ToolMetrics, MemoryMetrics, AgentPerformance, ResourceUsage, MetricsSummary},
+    monitor::{PerformanceMonitorConfig, PerformanceThresholds, PredictionConfig, AutoOptimizationConfig, OptimizationStrategy, EnterprisePerformanceMonitor},
+    otel::{OtelSpan, OtelMetric, AttributeValue, DataPointValue, SpanKind, SpanStatus, HttpOtlpExporter, DataPoint},
+};
+use lumosai_core::compat::AgentMetrics;
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -109,7 +120,7 @@ impl MonitoringSystem {
             name: "响应时间严重告警".to_string(),
             description: "当平均响应时间超过2秒时触发严重告警".to_string(),
             condition: AlertCondition::ResponseTime {
-                threshold_ms: 2000,
+                threshold_ms: 2000.0,
                 window_minutes: 2,
                 percentile: 95.0,
             },
@@ -142,7 +153,7 @@ impl MonitoringSystem {
             condition: AlertCondition::ErrorRate {
                 threshold_percent: 3.0,
                 window_minutes: 5,
-                min_requests: 10,
+                min_requests: Some(10),
             },
             severity: AlertSeverity::Warning,
             enabled: true,
@@ -493,6 +504,7 @@ fn create_alert_engine_config() -> AlertEngineConfig {
         max_concurrent_alerts: 50,
         deduplication_window_seconds: 60,
         auto_recovery_check_seconds: 10,
+        automation_actions: HashMap::new(),
         escalation_config: EscalationConfig {
             enabled: true,
             escalation_time_minutes: 2, // 快速升级用于演示
@@ -505,6 +517,7 @@ fn create_alert_engine_config() -> AlertEngineConfig {
         },
         automation_config: AutomationConfig {
             enabled: true,
+            max_concurrent_actions: 10,
             actions: automation_actions,
             action_timeout_seconds: 30,
         },
@@ -514,6 +527,10 @@ fn create_alert_engine_config() -> AlertEngineConfig {
 /// 创建性能监控配置
 fn create_performance_monitor_config() -> PerformanceMonitorConfig {
     PerformanceMonitorConfig {
+        monitor_interval_seconds: 3,
+        metrics_retention_hours: 1,
+        sampling_rate: 1.0,
+        enable_detailed_monitoring: true,
         monitoring_interval_seconds: 3, // 更频繁的监控用于演示
         data_retention_hours: 1,        // 短期保留用于演示
         thresholds: PerformanceThresholds {
@@ -558,6 +575,7 @@ fn create_automation_config() -> AutomationConfig {
 
     AutomationConfig {
         enabled: true,
+        max_concurrent_actions: 10,
         actions,
         action_timeout_seconds: 60,
     }
@@ -585,15 +603,15 @@ fn create_sample_span(operation_name: &str, duration_ms: u64) -> OtelSpan {
     );
 
     OtelSpan {
+        name: operation_name.to_string(),
         trace_id: format!("trace-{}", uuid::Uuid::new_v4()),
         span_id: format!("span-{}", uuid::Uuid::new_v4()),
         parent_span_id: None,
-        name: operation_name.to_string(),
-        kind: SpanKind::Internal,
         start_time_ns: (now - duration_ms) * 1_000_000,
         end_time_ns: now * 1_000_000,
-        status: SpanStatus::Ok,
         attributes,
+        kind: SpanKind::Internal,
+        status: SpanStatus::Ok,
         events: vec![],
     }
 }
@@ -773,7 +791,7 @@ impl PerformanceAnalyzer for DemoPerformanceAnalyzer {
         &self,
         metrics: &[AgentMetrics],
         time_range: TimeRange,
-    ) -> std::result::Result<PerformanceAnalysis, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> std::result::Result<lumosai_core::telemetry::analyzer::PerformanceAnalysis, Box<dyn std::error::Error + Send + Sync>> {
         let score = if metrics.is_empty() {
             50.0
         } else {
@@ -794,12 +812,12 @@ impl PerformanceAnalyzer for DemoPerformanceAnalyzer {
             .unwrap()
             .as_millis() as u64;
 
-        Ok(PerformanceAnalysis {
+        Ok(lumosai_core::telemetry::analyzer::PerformanceAnalysis {
             overall_score: score,
             bottlenecks: vec![],
             anomalies: vec![],
             recommendations: vec![],
-            trend: PerformanceTrend::Stable { variance: 0.1 },
+            trend: lumosai_core::telemetry::analyzer::PerformanceTrend::Stable { variance: 0.1 },
             predictions: vec![],
             time_range,
             timestamp: now,
@@ -809,7 +827,7 @@ impl PerformanceAnalyzer for DemoPerformanceAnalyzer {
     async fn detect_anomalies(
         &self,
         _metrics: &[AgentMetrics],
-    ) -> Result<
+    ) -> std::result::Result<
         Vec<lumosai_core::telemetry::analyzer::PerformanceAnomaly>,
         Box<dyn std::error::Error + Send + Sync>,
     > {
@@ -819,7 +837,7 @@ impl PerformanceAnalyzer for DemoPerformanceAnalyzer {
     async fn identify_bottlenecks(
         &self,
         _metrics: &[AgentMetrics],
-    ) -> Result<
+    ) -> std::result::Result<
         Vec<lumosai_core::telemetry::analyzer::PerformanceBottleneck>,
         Box<dyn std::error::Error + Send + Sync>,
     > {
@@ -828,15 +846,15 @@ impl PerformanceAnalyzer for DemoPerformanceAnalyzer {
 
     async fn generate_recommendations(
         &self,
-        _analysis: &PerformanceAnalysis,
-    ) -> Result<Vec<OptimizationRecommendation>, Box<dyn std::error::Error + Send + Sync>> {
+        _analysis: &lumosai_core::telemetry::analyzer::PerformanceAnalysis,
+    ) -> std::result::Result<Vec<lumosai_core::telemetry::analyzer::OptimizationRecommendation>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(vec![])
     }
 
     async fn predict_trends(
         &self,
         _metrics: &[AgentMetrics],
-    ) -> Result<Vec<PerformancePrediction>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> std::result::Result<Vec<lumosai_core::telemetry::analyzer::PerformancePrediction>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(vec![])
     }
 }

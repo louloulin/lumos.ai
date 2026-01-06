@@ -63,7 +63,7 @@ async fn test_zhipu_provider() -> std::result::Result<(), Box<dyn std::error::Er
     // 创建测试选项
     let options = LlmOptions {
         model: None,
-        temperature: Some(0.7),
+        temperature: Some(0.7.into()),
         max_tokens: Some(100),
         stop: None,
         stream: false,
@@ -115,7 +115,7 @@ async fn test_baidu_provider() -> std::result::Result<(), Box<dyn std::error::Er
 
     let options = LlmOptions {
         model: None,
-        temperature: Some(0.8),
+        temperature: Some(0.8.into()),
         max_tokens: Some(200),
         stop: None,
         stream: false,

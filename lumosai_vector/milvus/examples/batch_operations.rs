@@ -209,15 +209,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for query_idx in 0..filtered_queries {
         let query_vector = generate_sample_embedding(vector_dimension, query_idx as u64);
 
-        let search_request = SearchRequest {
-            index_name: "batch_documents".to_string(),
-            query: SearchQuery::Vector(query_vector),
-            top_k: 5,
-            filter: Some(filter.clone()),
-            include_metadata: true,
-            include_vectors: false,
-            options: std::collections::HashMap::new(),
-        };
+        let search_request = SearchRequest::new("batch_documents", query_vector)
+            .with_top_k(5)
+            .with_filter(filter.clone())
+            .with_include_metadata(true)
+            .with_include_vectors(false);
 
         match storage.search(search_request).await {
             Ok(search_response) => {

@@ -260,7 +260,7 @@ pub struct ToolResult {
 }
 
 /// Status of a tool execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ToolResultStatus {
     /// Tool executed successfully

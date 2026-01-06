@@ -181,15 +181,18 @@ mod anthropic;
 pub mod baidu;
 pub mod claude;
 pub mod cohere;
+pub mod cost_monitor;
 mod deepseek;
 pub mod function_calling;
 pub mod gemini;
+pub mod huawei_maas;
 pub mod mock;
 pub mod ollama;
 pub mod openai;
 pub mod provider;
 pub mod providers;
 mod qwen;
+pub mod router;
 pub mod test_helpers;
 #[cfg(test)]
 mod tests;
@@ -208,16 +211,19 @@ pub use anthropic::AnthropicProvider;
 pub use baidu::BaiduProvider;
 pub use claude::ClaudeProvider;
 pub use cohere::CohereProvider;
+pub use cost_monitor::{CostMonitor, CostRecord, CostStats, ProviderCostStats};
 pub use deepseek::DeepSeekProvider;
 pub use function_calling::{
     utils, FunctionCall, FunctionCallResult, FunctionDefinition, ToolChoice,
 };
 pub use gemini::GeminiProvider;
+pub use huawei_maas::HuaweiMaasProvider;
 pub use mock::MockLlmProvider;
 pub use ollama::OllamaProvider;
 pub use openai::OpenAiProvider;
 pub use provider::LlmProvider;
 pub use qwen::{QwenApiType, QwenProvider};
+pub use router::{LlmRouter, ProviderStats, RoutingStrategy};
 pub use together::TogetherProvider;
 pub use types::{LlmOptions, Message, Role};
 pub use zhipu::ZhipuProvider;

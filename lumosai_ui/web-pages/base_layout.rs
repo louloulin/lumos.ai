@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
-use web_assets::files::COLLAPSE_SVG;
 use dioxus::prelude::*;
+use web_assets::files::COLLAPSE_SVG;
 
 // Remember: owned props must implement PartialEq!
 #[derive(Props, Clone, PartialEq)]

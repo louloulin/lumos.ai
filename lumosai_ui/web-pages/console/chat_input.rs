@@ -13,9 +13,9 @@
 */
 
 #![allow(non_snake_case)]
+use crate::types::Rbac;
 use dioxus::prelude::*;
 use web_assets::files::*;
-use crate::types::Rbac;
 
 /// 聊天输入组件
 #[component]
@@ -253,18 +253,15 @@ fn FileUploadArea(
 
 /// 语音录制组件
 #[component]
-fn VoiceRecorder(
-    is_recording: bool,
-    on_stop: EventHandler<String>,
-) -> Element {
+fn VoiceRecorder(is_recording: bool, on_stop: EventHandler<String>) -> Element {
     rsx! {
         div {
             class: "flex items-center space-x-3 p-3 bg-error/10 border border-error/20 rounded-lg",
-            
+
             div {
                 class: "animate-pulse rounded-full h-3 w-3 bg-error"
             }
-            
+
             div {
                 class: "flex-1",
                 p {
@@ -276,7 +273,7 @@ fn VoiceRecorder(
                     "点击停止按钮结束录音"
                 }
             }
-            
+
             button {
                 class: "btn btn-error btn-sm",
                 onclick: move |_| {

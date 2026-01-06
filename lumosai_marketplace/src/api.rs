@@ -4,19 +4,19 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
-    routing::{get, post, put, delete},
+    routing::{delete, get, post, put},
     Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::marketplace::ToolMarketplace;
-use crate::models::{ToolPackage, ToolCategory};
-use crate::search::SearchQuery;
-use crate::discovery::UserContext;
 use crate::analytics::{UserInfo, UserType};
+use crate::discovery::UserContext;
 use crate::error::{MarketplaceError, Result};
+use crate::marketplace::ToolMarketplace;
+use crate::models::{ToolCategory, ToolPackage};
+use crate::search::SearchQuery;
 
 /// API响应包装器
 #[derive(Debug, Serialize)]
@@ -34,7 +34,7 @@ impl<T> ApiResponse<T> {
             error: None,
         }
     }
-    
+
     pub fn error(message: String) -> Self {
         Self {
             success: false,
@@ -81,24 +81,22 @@ pub fn create_routes(marketplace: Arc<ToolMarketplace>) -> Router {
         .route("/recent", get(get_recent))
         .route("/recommendations", get(get_recommendations))
         .route("/packages/:id/similar", get(get_similar))
-        
         // 分类
         .route("/categories", get(get_categories))
-        .route("/categories/:category/packages", get(get_packages_by_category))
-        
+        .route(
+            "/categories/:category/packages",
+            get(get_packages_by_category),
+        )
         // 评分和下载
         .route("/packages/:id/rate", post(rate_package))
         .route("/packages/:id/download", post(download_package))
-        
         // 统计
         .route("/statistics", get(get_statistics))
         .route("/packages/:id/statistics", get(get_package_statistics))
-        
         // 管理（需要认证）
         .route("/packages", post(create_package))
         .route("/packages/:id", put(update_package))
         .route("/packages/:id", delete(delete_package))
-        
         .with_state(marketplace)
 }
 
@@ -109,7 +107,8 @@ async fn search_packages(
 ) -> Result<Json<ApiResponse<Vec<crate::discovery::SearchResult>>>, StatusCode> {
     let query = SearchQuery {
         text: params.q.unwrap_or_default(),
-        categories: params.category
+        categories: params
+            .category
             .and_then(|c| parse_category(&c))
             .map(|c| vec![c])
             .unwrap_or_default(),
@@ -120,7 +119,7 @@ async fn search_packages(
         offset: params.offset.unwrap_or(0),
         ..Default::default()
     };
-    
+
     match marketplace.advanced_search(&query).await {
         Ok(results) => Ok(Json(ApiResponse::success(results))),
         Err(e) => {
@@ -152,7 +151,7 @@ async fn list_packages(
 ) -> Result<Json<ApiResponse<Vec<ToolPackage>>>, StatusCode> {
     let offset = params.offset.unwrap_or(0);
     let limit = params.limit.unwrap_or(20).min(100); // 限制最大值
-    
+
     match marketplace.list_packages(offset, limit).await {
         Ok(packages) => Ok(Json(ApiResponse::success(packages))),
         Err(e) => {
@@ -169,7 +168,7 @@ async fn get_trending(
 ) -> Result<Json<ApiResponse<Vec<crate::discovery::SearchResult>>>, StatusCode> {
     let category = params.category.and_then(|c| parse_category(&c));
     let limit = params.limit.unwrap_or(20);
-    
+
     match marketplace.get_trending(category, limit).await {
         Ok(results) => Ok(Json(ApiResponse::success(results))),
         Err(e) => {
@@ -185,7 +184,7 @@ async fn get_recent(
     Query(params): Query<SearchParams>,
 ) -> Result<Json<ApiResponse<Vec<crate::discovery::SearchResult>>>, StatusCode> {
     let limit = params.limit.unwrap_or(20);
-    
+
     match marketplace.get_recent(limit).await {
         Ok(results) => Ok(Json(ApiResponse::success(results))),
         Err(e) => {
@@ -201,7 +200,7 @@ async fn get_recommendations(
 ) -> Result<Json<ApiResponse<Vec<crate::discovery::SearchResult>>>, StatusCode> {
     // 简化实现，使用默认用户上下文
     let user_context = UserContext::default();
-    
+
     match marketplace.get_recommendations(&user_context).await {
         Ok(results) => Ok(Json(ApiResponse::success(results))),
         Err(e) => {
@@ -218,7 +217,7 @@ async fn get_similar(
     Query(params): Query<SearchParams>,
 ) -> Result<Json<ApiResponse<Vec<crate::discovery::SearchResult>>>, StatusCode> {
     let limit = params.limit.unwrap_or(10);
-    
+
     match marketplace.get_similar(id, limit).await {
         Ok(results) => Ok(Json(ApiResponse::success(results))),
         Err(e) => {
@@ -231,18 +230,58 @@ async fn get_similar(
 /// 获取所有分类
 async fn get_categories() -> Json<ApiResponse<Vec<CategoryInfo>>> {
     let categories = vec![
-        CategoryInfo { name: "Web".to_string(), display_name: "网络工具".to_string(), emoji: "🌐".to_string() },
-        CategoryInfo { name: "File".to_string(), display_name: "文件操作".to_string(), emoji: "📁".to_string() },
-        CategoryInfo { name: "Data".to_string(), display_name: "数据处理".to_string(), emoji: "📊".to_string() },
-        CategoryInfo { name: "AI".to_string(), display_name: "AI相关".to_string(), emoji: "🤖".to_string() },
-        CategoryInfo { name: "System".to_string(), display_name: "系统工具".to_string(), emoji: "⚙️".to_string() },
-        CategoryInfo { name: "Math".to_string(), display_name: "数学计算".to_string(), emoji: "🔢".to_string() },
-        CategoryInfo { name: "Crypto".to_string(), display_name: "加密工具".to_string(), emoji: "🔐".to_string() },
-        CategoryInfo { name: "Database".to_string(), display_name: "数据库".to_string(), emoji: "🗄️".to_string() },
-        CategoryInfo { name: "API".to_string(), display_name: "API工具".to_string(), emoji: "🔌".to_string() },
-        CategoryInfo { name: "Utility".to_string(), display_name: "实用工具".to_string(), emoji: "🛠️".to_string() },
+        CategoryInfo {
+            name: "Web".to_string(),
+            display_name: "网络工具".to_string(),
+            emoji: "🌐".to_string(),
+        },
+        CategoryInfo {
+            name: "File".to_string(),
+            display_name: "文件操作".to_string(),
+            emoji: "📁".to_string(),
+        },
+        CategoryInfo {
+            name: "Data".to_string(),
+            display_name: "数据处理".to_string(),
+            emoji: "📊".to_string(),
+        },
+        CategoryInfo {
+            name: "AI".to_string(),
+            display_name: "AI相关".to_string(),
+            emoji: "🤖".to_string(),
+        },
+        CategoryInfo {
+            name: "System".to_string(),
+            display_name: "系统工具".to_string(),
+            emoji: "⚙️".to_string(),
+        },
+        CategoryInfo {
+            name: "Math".to_string(),
+            display_name: "数学计算".to_string(),
+            emoji: "🔢".to_string(),
+        },
+        CategoryInfo {
+            name: "Crypto".to_string(),
+            display_name: "加密工具".to_string(),
+            emoji: "🔐".to_string(),
+        },
+        CategoryInfo {
+            name: "Database".to_string(),
+            display_name: "数据库".to_string(),
+            emoji: "🗄️".to_string(),
+        },
+        CategoryInfo {
+            name: "API".to_string(),
+            display_name: "API工具".to_string(),
+            emoji: "🔌".to_string(),
+        },
+        CategoryInfo {
+            name: "Utility".to_string(),
+            display_name: "实用工具".to_string(),
+            emoji: "🛠️".to_string(),
+        },
     ];
-    
+
     Json(ApiResponse::success(categories))
 }
 
@@ -262,7 +301,7 @@ async fn get_packages_by_category(
         Some(cat) => cat,
         None => return Err(StatusCode::BAD_REQUEST),
     };
-    
+
     match marketplace.get_by_category(&category).await {
         Ok(packages) => Ok(Json(ApiResponse::success(packages))),
         Err(e) => {
@@ -285,8 +324,11 @@ async fn rate_package(
         ip_address: None,
         user_agent: None,
     };
-    
-    match marketplace.rate_package(id, request.rating, &user_info).await {
+
+    match marketplace
+        .rate_package(id, request.rating, &user_info)
+        .await
+    {
         Ok(()) => Ok(Json(ApiResponse::success(()))),
         Err(e) => {
             tracing::error!("评分失败: {}", e);
@@ -307,7 +349,7 @@ async fn download_package(
         ip_address: None,
         user_agent: None,
     };
-    
+
     match marketplace.download_package(id, &user_info).await {
         Ok(download_url) => Ok(Json(ApiResponse::success(download_url))),
         Err(e) => {
@@ -349,8 +391,12 @@ async fn create_package(
     State(_marketplace): State<Arc<ToolMarketplace>>,
     Json(_package): Json<ToolPackage>,
 ) -> Result<Json<ApiResponse<()>>, StatusCode> {
-    // TODO: 实现工具包创建逻辑
-    // 需要认证和权限验证
+    // Package creation implementation roadmap:
+    // 1. Authentication: JWT verification, API key validation, rate limiting
+    // 2. Input validation: schema validation, duplicate detection, metadata verification
+    // 3. File processing: archive upload, virus scanning, size limits, format validation
+    // 4. Database operations: transaction creation, atomic commits, rollback handling
+    // 5. Notification system: success emails, webhook calls, indexing updates
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 
@@ -360,8 +406,12 @@ async fn update_package(
     Path(_id): Path<Uuid>,
     Json(_package): Json<ToolPackage>,
 ) -> Result<Json<ApiResponse<()>>, StatusCode> {
-    // TODO: 实现工具包更新逻辑
-    // 需要认证和权限验证
+    // Package update implementation roadmap:
+    // 1. Authorization: ownership verification, admin privilege check, edit_history_validation
+    // 2. Version management: semantic versioning, changelog requirement, compatibility_check
+    // 3. Dependency analysis: downstream_impact_assessment, breaking_change_detection
+    // 4. Rollback capability: backup_creation, revert_window, transaction_safety
+    // 5. Communication pipeline: subscriber_notifications, documentation_updates
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 
@@ -370,8 +420,12 @@ async fn delete_package(
     State(_marketplace): State<Arc<ToolMarketplace>>,
     Path(_id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<()>>, StatusCode> {
-    // TODO: 实现工具包删除逻辑
-    // 需要认证和权限验证
+    // Package deletion implementation roadmap:
+    // 1. Security checks: ownership_confirmation, admin_override, dependency_verification
+    // 2. Impact analysis: downloaders_notification, downstream_projects_warning
+    // 3. Soft deletion: grace_period, recovery_option, audit_trail_preservation
+    // 4. Hard deletion: scheduled_cleanup, storage_optimization, index_removal
+    // 5. Compliance: data_retention_policy, legal_requirements, archival_procedures
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 
@@ -396,7 +450,7 @@ fn parse_category(category_str: &str) -> Option<ToolCategory> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_parse_category() {
         assert_eq!(parse_category("web"), Some(ToolCategory::Web));
@@ -404,14 +458,14 @@ mod tests {
         assert_eq!(parse_category("WEB"), Some(ToolCategory::Web));
         assert_eq!(parse_category("invalid"), None);
     }
-    
+
     #[test]
     fn test_api_response() {
         let success_response = ApiResponse::success("test data");
         assert!(success_response.success);
         assert_eq!(success_response.data, Some("test data"));
         assert!(success_response.error.is_none());
-        
+
         let error_response: ApiResponse<String> = ApiResponse::error("test error".to_string());
         assert!(!error_response.success);
         assert!(error_response.data.is_none());

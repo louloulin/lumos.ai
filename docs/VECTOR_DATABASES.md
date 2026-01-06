@@ -1,4 +1,6 @@
-# 真实向量数据库集成指南
+> ℹ️ 统一入口迁移提示：向量专题的规范入口如下：教程请访问 [tutorials/vector-databases.md](./tutorials/vector-databases.md)，参考请访问 [vector_api_reference.md](./vector_api_reference.md)。本页保留为补充与历史说明。参阅 [CONTENT_MAP.md](./CONTENT_MAP.md)。
+
+ # 真实向量数据库集成指南
 
 Lumos支持多种真实的向量数据库，包括Qdrant、Weaviate和PostgreSQL（带pgvector扩展）。本指南将帮助您快速集成和使用这些向量数据库。
 

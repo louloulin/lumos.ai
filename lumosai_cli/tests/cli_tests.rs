@@ -5,8 +5,8 @@ use tempfile::TempDir;
 #[test]
 fn test_cli_structure() {
     // 测试CLI结构是否正确定义
-    use lumosai_cli::Cli;
     use clap::Parser;
+    use lumosai_cli::Cli;
 
     // 验证CLI可以解析基本的help命令
     let result = Cli::try_parse_from(&["lumos", "--help"]);
@@ -25,14 +25,16 @@ fn test_cli_version() {
 #[test]
 fn test_create_args_parsing() {
     // 测试create命令的参数解析
-    use lumosai_cli::{Cli, Commands};
     use clap::Parser;
+    use lumosai_cli::{Cli, Commands};
 
     let result = Cli::try_parse_from(&[
         "lumos",
         "create",
-        "--name", "test-project",
-        "--llm", "openai"
+        "--name",
+        "test-project",
+        "--llm",
+        "openai",
     ]);
 
     assert!(result.is_ok());
@@ -50,15 +52,10 @@ fn test_create_args_parsing() {
 #[test]
 fn test_ui_args_parsing() {
     // 测试UI命令的参数解析
-    use lumosai_cli::{Cli, Commands};
     use clap::Parser;
+    use lumosai_cli::{Cli, Commands};
 
-    let result = Cli::try_parse_from(&[
-        "lumos",
-        "ui",
-        "--port", "8080",
-        "--dev"
-    ]);
+    let result = Cli::try_parse_from(&["lumos", "ui", "--port", "8080", "--dev"]);
 
     assert!(result.is_ok());
     let cli = result.unwrap();
@@ -89,7 +86,12 @@ fn test_template_list() {
 
     assert!(output.status.success());
     // 检查UI命令是否存在
-    assert!(stdout.contains("ui") || stderr.contains("ui") || stdout.contains("端口") || stderr.contains("端口"));
+    assert!(
+        stdout.contains("ui")
+            || stderr.contains("ui")
+            || stdout.contains("端口")
+            || stderr.contains("端口")
+    );
 }
 
 #[test]
@@ -98,24 +100,28 @@ fn test_init_project() {
     // 创建临时目录作为测试环境
     let temp_dir = TempDir::new().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();
-    
+
     // 执行初始化命令
     let output = Command::new("cargo")
         .args([
-            "run", "--",
+            "run",
+            "--",
             "init",
-            "--name", "test_project",
-            "--template", "agent",
-            "--output", &temp_path.join("test_project").to_string_lossy(),
+            "--name",
+            "test_project",
+            "--template",
+            "agent",
+            "--output",
+            &temp_path.join("test_project").to_string_lossy(),
         ])
         .output()
         .expect("Failed to execute command");
-        
+
     let stdout = String::from_utf8_lossy(&output.stdout);
-    
+
     assert!(output.status.success());
     assert!(stdout.contains("项目已创建"));
-    
+
     // 验证文件是否创建
     let project_dir = temp_path.join("test_project");
     assert!(project_dir.exists());

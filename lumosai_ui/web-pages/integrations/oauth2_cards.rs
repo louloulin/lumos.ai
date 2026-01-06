@@ -1,11 +1,11 @@
 #![allow(non_snake_case)]
 use crate::assistants::visibility::VisLabel;
 use crate::routes;
-use crate::ConfirmModal;
-use web_assets::files::menu_delete_svg;
-use daisy_rsx::*;
 use crate::types::Oauth2Connection;
+use crate::ConfirmModal;
+use daisy_rsx::*;
 use dioxus::prelude::*;
+use web_assets::files::menu_delete_svg;
 
 pub fn Oauth2Cards(
     team_id: i32,

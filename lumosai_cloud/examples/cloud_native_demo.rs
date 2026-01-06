@@ -1,5 +1,5 @@
 //! 云原生部署演示
-//! 
+//!
 //! 展示Lumos.ai云原生部署的完整功能
 
 use lumosai_cloud::*;
@@ -8,45 +8,45 @@ use std::collections::HashMap;
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("☁️  Lumos.ai 云原生部署演示");
-    println!("=" .repeat(50));
-    
+    println!("=".repeat(50));
+
     // 演示部署配置创建
     demo_deployment_config().await?;
-    
+
     // 演示Docker部署
     demo_docker_deployment().await?;
-    
+
     // 演示Kubernetes部署
     demo_kubernetes_deployment().await?;
-    
+
     // 演示云平台部署
     demo_cloud_deployment().await?;
-    
+
     // 演示监控和扩容
     demo_monitoring_and_scaling().await?;
-    
+
     println!("\n🎉 云原生部署演示完成！");
     println!("\n📚 支持的部署方式:");
     println!("  🐳 Docker: 容器化部署");
     println!("  ☸️  Kubernetes: 集群编排");
     println!("  ☁️  AWS/Azure/GCP: 云平台部署");
     println!("  🌐 边缘计算: 边缘设备部署");
-    
+
     Ok(())
 }
 
 /// 演示部署配置创建
 async fn demo_deployment_config() -> Result<()> {
     println!("\n⚙️  演示：部署配置创建");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     let configs = vec![
         ("单实例部署", create_standalone_config()),
         ("集群部署", create_cluster_config()),
         ("微服务部署", create_microservices_config()),
         ("边缘部署", create_edge_config()),
     ];
-    
+
     for (name, config) in configs {
         println!("📋 配置类型: {}", name);
         println!("   名称: {}", config.name);
@@ -55,45 +55,52 @@ async fn demo_deployment_config() -> Result<()> {
         println!("   副本数: {}", config.agent_config.replicas);
         println!("   CPU请求: {}", config.resources.cpu_request);
         println!("   内存请求: {}", config.resources.memory_request);
-        
+
         if config.autoscaling.enabled {
-            println!("   自动扩容: {}~{} 副本", 
-                    config.autoscaling.min_replicas, 
-                    config.autoscaling.max_replicas);
+            println!(
+                "   自动扩容: {}~{} 副本",
+                config.autoscaling.min_replicas, config.autoscaling.max_replicas
+            );
         }
-        
+
         println!("   工具数量: {}", config.agent_config.tools.len());
         println!("   模型数量: {}", config.agent_config.models.len());
         println!();
     }
-    
+
     Ok(())
 }
 
 /// 演示Docker部署
 async fn demo_docker_deployment() -> Result<()> {
     println!("\n🐳 演示：Docker部署");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     // 创建Docker管理器
     match docker::DockerManager::new().await {
         Ok(docker_manager) => {
             println!("✅ Docker连接成功");
-            
+
             // 创建部署配置
             let config = create_docker_config();
             println!("📦 部署配置:");
-            println!("   镜像: {}:{}", config.agent_config.image, config.agent_config.tag);
+            println!(
+                "   镜像: {}:{}",
+                config.agent_config.image, config.agent_config.tag
+            );
             println!("   端口: {:?}", config.networking.ports);
-            
+
             // 模拟部署（实际部署需要真实的Docker环境）
             println!("🚀 开始部署...");
-            println!("   1. 拉取镜像: {}:{}", config.agent_config.image, config.agent_config.tag);
+            println!(
+                "   1. 拉取镜像: {}:{}",
+                config.agent_config.image, config.agent_config.tag
+            );
             println!("   2. 创建容器: {}", config.name);
             println!("   3. 配置网络和存储");
             println!("   4. 启动容器");
             println!("✅ Docker部署完成");
-            
+
             // 显示部署结果
             println!("📊 部署结果:");
             println!("   容器ID: container_12345");
@@ -105,27 +112,27 @@ async fn demo_docker_deployment() -> Result<()> {
             println!("💡 请确保Docker守护进程正在运行");
         }
     }
-    
+
     Ok(())
 }
 
 /// 演示Kubernetes部署
 async fn demo_kubernetes_deployment() -> Result<()> {
     println!("\n☸️  演示：Kubernetes部署");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     // 创建Kubernetes管理器
     match kubernetes::KubernetesManager::new(Some("lumos-system".to_string())).await {
         Ok(k8s_manager) => {
             println!("✅ Kubernetes连接成功");
-            
+
             // 创建部署配置
             let config = create_kubernetes_config();
             println!("📦 部署配置:");
             println!("   命名空间: lumos-system");
             println!("   副本数: {}", config.agent_config.replicas);
             println!("   服务类型: {:?}", config.networking.service_type);
-            
+
             // 模拟部署
             println!("🚀 开始部署...");
             println!("   1. 创建LumosAgent CRD");
@@ -134,7 +141,7 @@ async fn demo_kubernetes_deployment() -> Result<()> {
             println!("   4. 配置Ingress（如果需要）");
             println!("   5. 等待Pod就绪");
             println!("✅ Kubernetes部署完成");
-            
+
             // 显示部署结果
             println!("📊 部署结果:");
             println!("   Deployment: {}", config.name);
@@ -147,26 +154,26 @@ async fn demo_kubernetes_deployment() -> Result<()> {
             println!("💡 请确保kubeconfig配置正确且集群可访问");
         }
     }
-    
+
     Ok(())
 }
 
 /// 演示云平台部署
 async fn demo_cloud_deployment() -> Result<()> {
     println!("\n☁️  演示：云平台部署");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     let cloud_platforms = vec![
         ("AWS", "us-west-2", "EKS集群部署"),
         ("Azure", "West US 2", "AKS集群部署"),
         ("GCP", "us-central1", "GKE集群部署"),
     ];
-    
+
     for (platform, region, description) in cloud_platforms {
         println!("🌐 云平台: {}", platform);
         println!("   区域: {}", region);
         println!("   描述: {}", description);
-        
+
         // 模拟云平台部署
         println!("   🚀 开始部署...");
         println!("      1. 验证云平台凭证");
@@ -175,7 +182,7 @@ async fn demo_cloud_deployment() -> Result<()> {
         println!("      4. 配置负载均衡器");
         println!("      5. 设置监控和日志");
         println!("   ✅ {}部署完成", platform);
-        
+
         // 显示部署信息
         println!("   📊 部署信息:");
         println!("      集群: lumos-{}-cluster", platform.to_lowercase());
@@ -184,15 +191,15 @@ async fn demo_cloud_deployment() -> Result<()> {
         println!("      监控: 已启用");
         println!();
     }
-    
+
     Ok(())
 }
 
 /// 演示监控和扩容
 async fn demo_monitoring_and_scaling() -> Result<()> {
     println!("\n📊 演示：监控和自动扩容");
-    println!("-" .repeat(30));
-    
+    println!("-".repeat(30));
+
     // 模拟监控指标
     let metrics = vec![
         ("CPU使用率", 75.5, "%"),
@@ -201,19 +208,19 @@ async fn demo_monitoring_and_scaling() -> Result<()> {
         ("错误率", 0.1, "%"),
         ("吞吐量", 1250.0, "req/s"),
     ];
-    
+
     println!("📈 当前监控指标:");
     for (metric, value, unit) in metrics {
         println!("   {}: {:.1}{}", metric, value, unit);
     }
-    
+
     // 模拟自动扩容决策
     println!("\n🔄 自动扩容决策:");
     println!("   当前副本数: 3");
     println!("   目标CPU使用率: 70%");
     println!("   当前CPU使用率: 75.5%");
     println!("   决策: 扩容到 4 个副本");
-    
+
     // 模拟扩容过程
     println!("\n⚡ 执行扩容:");
     println!("   1. 计算目标副本数");
@@ -222,14 +229,14 @@ async fn demo_monitoring_and_scaling() -> Result<()> {
     println!("   4. 健康检查通过");
     println!("   5. 更新负载均衡器配置");
     println!("   ✅ 扩容完成");
-    
+
     // 显示扩容后状态
     println!("\n📊 扩容后状态:");
     println!("   副本数: 3 → 4");
     println!("   CPU使用率: 75.5% → 65.2%");
     println!("   响应时间: 150ms → 120ms");
     println!("   可用性: 99.9%");
-    
+
     Ok(())
 }
 
@@ -414,14 +421,12 @@ fn create_basic_agent_config(replicas: u32) -> AgentDeploymentConfig {
                 enabled: true,
             },
         ],
-        models: vec![
-            ModelConfig {
-                name: "deepseek-chat".to_string(),
-                provider: "deepseek".to_string(),
-                api_config: HashMap::new(),
-                parameters: HashMap::new(),
-            },
-        ],
+        models: vec![ModelConfig {
+            name: "deepseek-chat".to_string(),
+            provider: "deepseek".to_string(),
+            api_config: HashMap::new(),
+            parameters: HashMap::new(),
+        }],
     }
 }
 
@@ -441,14 +446,12 @@ fn create_basic_resource_config() -> ResourceConfig {
 fn create_basic_network_config() -> NetworkConfig {
     NetworkConfig {
         service_type: ServiceType::ClusterIP,
-        ports: vec![
-            PortConfig {
-                name: "http".to_string(),
-                port: 8080,
-                target_port: 8080,
-                protocol: "TCP".to_string(),
-            },
-        ],
+        ports: vec![PortConfig {
+            name: "http".to_string(),
+            port: 8080,
+            target_port: 8080,
+            protocol: "TCP".to_string(),
+        }],
         load_balancer: None,
         ingress: None,
     }

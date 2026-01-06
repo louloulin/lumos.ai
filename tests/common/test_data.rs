@@ -17,7 +17,7 @@ impl TestDataSets {
             edge_cases: Self::get_edge_cases(),
         }
     }
-    
+
     fn get_small_documents() -> Vec<&'static str> {
         vec![
             "Python is a high-level programming language.",
@@ -30,7 +30,7 @@ impl TestDataSets {
             "Cloud computing provides on-demand computing resources.",
         ]
     }
-    
+
     fn generate_large_documents() -> Vec<String> {
         vec![
             "Large document content ".repeat(1000),
@@ -38,42 +38,51 @@ impl TestDataSets {
             "Third large document for testing purposes ".repeat(1200),
         ]
     }
-    
+
     fn load_multilingual_data() -> HashMap<String, Vec<&'static str>> {
         let mut data = HashMap::new();
-        
-        data.insert("chinese".to_string(), vec![
-            "人工智能是计算机科学的一个分支。",
-            "机器学习是人工智能的一个子领域。",
-            "深度学习使用多层神经网络。",
-            "自然语言处理处理文本分析。",
-        ]);
-        
-        data.insert("english".to_string(), vec![
-            "Artificial intelligence is a branch of computer science.",
-            "Machine learning is a subfield of artificial intelligence.",
-            "Deep learning uses multi-layer neural networks.",
-            "Natural language processing handles text analysis.",
-        ]);
-        
-        data.insert("japanese".to_string(), vec![
-            "人工知能はコンピュータサイエンスの一分野です。",
-            "機械学習は人工知能のサブフィールドです。",
-            "ディープラーニングは多層ニューラルネットワークを使用します。",
-        ]);
-        
+
+        data.insert(
+            "chinese".to_string(),
+            vec![
+                "人工智能是计算机科学的一个分支。",
+                "机器学习是人工智能的一个子领域。",
+                "深度学习使用多层神经网络。",
+                "自然语言处理处理文本分析。",
+            ],
+        );
+
+        data.insert(
+            "english".to_string(),
+            vec![
+                "Artificial intelligence is a branch of computer science.",
+                "Machine learning is a subfield of artificial intelligence.",
+                "Deep learning uses multi-layer neural networks.",
+                "Natural language processing handles text analysis.",
+            ],
+        );
+
+        data.insert(
+            "japanese".to_string(),
+            vec![
+                "人工知能はコンピュータサイエンスの一分野です。",
+                "機械学習は人工知能のサブフィールドです。",
+                "ディープラーニングは多層ニューラルネットワークを使用します。",
+            ],
+        );
+
         data
     }
-    
+
     fn get_edge_cases() -> Vec<&'static str> {
         vec![
-            "", // 空文档
-            "a", // 单字符
-            "🚀🎯🔥", // 特殊字符
-            "   ", // 空白字符
-            "\n\n\n", // 换行符
-            "A".repeat(10000).leak(), // 超长文档
-            "Mixed 中文 English 日本語 content", // 混合语言
+            "",                                             // 空文档
+            "a",                                            // 单字符
+            "🚀🎯🔥",                                       // 特殊字符
+            "   ",                                          // 空白字符
+            "\n\n\n",                                       // 换行符
+            "A".repeat(10000).leak(),                       // 超长文档
+            "Mixed 中文 English 日本語 content",            // 混合语言
             "Special chars: @#$%^&*()_+-=[]{}|;':\",./<>?", // 特殊符号
         ]
     }
@@ -96,7 +105,7 @@ impl TestQueries {
             ("cloud computing", vec![7]),
         ]
     }
-    
+
     /// 获取中文查询集
     pub fn get_chinese_queries() -> Vec<(&'static str, Vec<usize>)> {
         vec![
@@ -106,7 +115,7 @@ impl TestQueries {
             ("文本分析", vec![3]),
         ]
     }
-    
+
     /// 获取复杂查询集
     pub fn get_complex_queries() -> Vec<&'static str> {
         vec![
@@ -126,28 +135,39 @@ impl PerformanceTestData {
     /// 获取不同大小的文档集合
     pub fn get_document_sets() -> HashMap<String, Vec<String>> {
         let mut sets = HashMap::new();
-        
+
         // 小文档集 (100个文档，每个100字符)
-        sets.insert("small".to_string(), 
-            (0..100).map(|i| format!("Small document {} content ", i).repeat(10)).collect()
+        sets.insert(
+            "small".to_string(),
+            (0..100)
+                .map(|i| format!("Small document {} content ", i).repeat(10))
+                .collect(),
         );
-        
+
         // 中等文档集 (50个文档，每个1000字符)
-        sets.insert("medium".to_string(),
-            (0..50).map(|i| format!("Medium document {} content ", i).repeat(100)).collect()
+        sets.insert(
+            "medium".to_string(),
+            (0..50)
+                .map(|i| format!("Medium document {} content ", i).repeat(100))
+                .collect(),
         );
-        
+
         // 大文档集 (10个文档，每个10000字符)
-        sets.insert("large".to_string(),
-            (0..10).map(|i| format!("Large document {} content ", i).repeat(1000)).collect()
+        sets.insert(
+            "large".to_string(),
+            (0..10)
+                .map(|i| format!("Large document {} content ", i).repeat(1000))
+                .collect(),
         );
-        
+
         sets
     }
-    
+
     /// 获取并发测试查询
     pub fn get_concurrent_queries() -> Vec<String> {
-        (0..100).map(|i| format!("Concurrent query number {}", i)).collect()
+        (0..100)
+            .map(|i| format!("Concurrent query number {}", i))
+            .collect()
     }
 }
 
@@ -158,13 +178,13 @@ impl ErrorTestData {
     /// 获取无效输入数据
     pub fn get_invalid_inputs() -> Vec<String> {
         vec![
-            "".to_string(), // 空输入
+            "".to_string(),   // 空输入
             "\0".to_string(), // 空字符
-            "�".to_string(), // 无效UTF-8
+            "�".to_string(),  // 无效UTF-8
             "x".repeat(1000), // 大输入（减小大小避免内存问题）
         ]
     }
-    
+
     /// 获取边界条件数据
     pub fn get_boundary_conditions() -> Vec<(String, String)> {
         vec![

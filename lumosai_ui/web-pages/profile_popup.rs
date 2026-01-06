@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
-use web_assets::files::{button_select_svg, profile_svg};
 use daisy_rsx::*;
 use dioxus::prelude::*;
+use web_assets::files::{button_select_svg, profile_svg};
 
 #[component]
 pub fn ProfilePopup(email: String, first_name: String, last_name: String, team_id: i32) -> Element {

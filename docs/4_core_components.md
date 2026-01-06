@@ -1,6 +1,6 @@
 # 4. 核心组件
 
-本章节详细介绍Lumos-X的核心组件实现，包括Rust核心库、JavaScript客户端库、服务器端和用户界面四大部分。
+本章节详细介绍LumosAI的核心组件实现，包括Rust核心库、JavaScript客户端库、服务器端和用户界面四大部分。
 
 ## 4.1 lumos_core (Rust核心库)
 
@@ -34,7 +34,7 @@ lumos_core/
 
 ### 4.1.2 Agent模块
 
-Agent模块是Lumos-X的核心，负责Agent的创建、配置和执行：
+Agent模块是LumosAI的核心，负责Agent的创建、配置和执行：
 
 #### 主要组件
 

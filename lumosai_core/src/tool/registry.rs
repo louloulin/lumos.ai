@@ -1,16 +1,17 @@
 //! Tool registration and discovery mechanism
-//! 
+//!
 //! Provides dynamic tool registration, discovery and management functionality, similar to Mastra's tool system
 
+use crate::compat::Component;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use serde::{Serialize, Deserialize};
-use serde_json::Value;
 
+use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::Result;
+// use crate::compat::{Component, Logger};
 use crate::tool::{Tool, ToolSchema};
-use crate::base::{BaseComponent, ComponentConfig, Base};
-use crate::logger::{Component, Logger};
 
 /// Tool category
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -95,42 +96,62 @@ impl ToolRegistry {
     /// Register tool
     pub fn register_tool(&self, tool: Arc<dyn Tool>, metadata: ToolMetadata) -> Result<()> {
         let tool_name = metadata.name.clone();
-        
+
         // Check if tool already exists
         {
-            let tools = self.tools.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+            let tools = self.tools.read().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire read lock".to_string())
+            })?;
             if tools.contains_key(&tool_name) {
-                return Err(crate::error::Error::Internal(format!("Tool '{}' is already registered", tool_name)));
+                return Err(crate::error::Error::Internal(format!(
+                    "Tool '{tool_name}' is already registered"
+                )));
             }
         }
 
         // Register tool
         {
-            let mut tools = self.tools.write().map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+            let mut tools = self.tools.write().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire write lock".to_string())
+            })?;
             tools.insert(tool_name.clone(), tool);
         }
 
         // Store metadata
         {
-            let mut metadata_map = self.metadata.write().map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+            let mut metadata_map = self.metadata.write().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire write lock".to_string())
+            })?;
             metadata_map.insert(tool_name.clone(), metadata.clone());
         }
 
         // Update category index
         {
-            let mut category_index = self.category_index.write().map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
-            category_index.entry(metadata.category.clone()).or_insert_with(Vec::new).push(tool_name.clone());
+            let mut category_index = self.category_index.write().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire write lock".to_string())
+            })?;
+            category_index
+                .entry(metadata.category.clone())
+                .or_insert_with(Vec::new)
+                .push(tool_name.clone());
         }
 
         // Update tag index
         {
-            let mut tag_index = self.tag_index.write().map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+            let mut tag_index = self.tag_index.write().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire write lock".to_string())
+            })?;
             for tag in &metadata.tags {
-                tag_index.entry(tag.clone()).or_insert_with(Vec::new).push(tool_name.clone());
+                tag_index
+                    .entry(tag.clone())
+                    .or_insert_with(Vec::new)
+                    .push(tool_name.clone());
             }
         }
 
-        self.base.logger().info(&format!("Tool '{}' registered successfully", tool_name), None);
+        let _ = self.base
+            .logger()
+            .info(&format!("Tool '{tool_name}' registered successfully"));
         Ok(())
     }
 
@@ -138,27 +159,37 @@ impl ToolRegistry {
     pub fn unregister_tool(&self, tool_name: &str) -> Result<()> {
         // Get metadata
         let metadata = {
-            let metadata_map = self.metadata.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+            let metadata_map = self.metadata.read().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire read lock".to_string())
+            })?;
             metadata_map.get(tool_name).cloned()
         };
 
-        let metadata = metadata.ok_or_else(|| crate::error::Error::Internal(format!("Tool '{}' not found", tool_name)))?;
+        let metadata = metadata.ok_or_else(|| {
+            crate::error::Error::Internal(format!("Tool '{tool_name}' not found"))
+        })?;
 
         // Remove tool
         {
-            let mut tools = self.tools.write().map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+            let mut tools = self.tools.write().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire write lock".to_string())
+            })?;
             tools.remove(tool_name);
         }
 
         // Remove metadata
         {
-            let mut metadata_map = self.metadata.write().map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+            let mut metadata_map = self.metadata.write().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire write lock".to_string())
+            })?;
             metadata_map.remove(tool_name);
         }
 
         // Update category index
         {
-            let mut category_index = self.category_index.write().map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+            let mut category_index = self.category_index.write().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire write lock".to_string())
+            })?;
             if let Some(tools_in_category) = category_index.get_mut(&metadata.category) {
                 tools_in_category.retain(|name| name != tool_name);
                 if tools_in_category.is_empty() {
@@ -169,7 +200,9 @@ impl ToolRegistry {
 
         // Update tag index
         {
-            let mut tag_index = self.tag_index.write().map_err(|_| crate::error::Error::Internal("Failed to acquire write lock".to_string()))?;
+            let mut tag_index = self.tag_index.write().map_err(|_| {
+                crate::error::Error::Internal("Failed to acquire write lock".to_string())
+            })?;
             for tag in &metadata.tags {
                 if let Some(tools_with_tag) = tag_index.get_mut(tag) {
                     tools_with_tag.retain(|name| name != tool_name);
@@ -180,74 +213,102 @@ impl ToolRegistry {
             }
         }
 
-        self.base.logger().info(&format!("Tool '{}' unregistered successfully", tool_name), None);
+        let _ = self.base
+            .logger()
+            .info(&format!("Tool '{tool_name}' unregistered successfully"));
         Ok(())
     }
 
     /// Get tool
     pub fn get_tool(&self, tool_name: &str) -> Result<Option<Arc<dyn Tool>>> {
-        let tools = self.tools.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let tools = self.tools.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(tools.get(tool_name).cloned())
     }
 
     /// Get all tool names
     pub fn list_tools(&self) -> Result<Vec<String>> {
-        let tools = self.tools.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let tools = self.tools.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(tools.keys().cloned().collect())
     }
 
     /// Find tools by category
     pub fn find_tools_by_category(&self, category: &ToolCategory) -> Result<Vec<String>> {
-        let category_index = self.category_index.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let category_index = self.category_index.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(category_index.get(category).cloned().unwrap_or_default())
     }
 
     /// Find tools by tag
     pub fn find_tools_by_tag(&self, tag: &str) -> Result<Vec<String>> {
-        let tag_index = self.tag_index.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let tag_index = self.tag_index.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(tag_index.get(tag).cloned().unwrap_or_default())
     }
 
     /// Search tools
     pub fn search_tools(&self, query: &str) -> Result<Vec<String>> {
-        let metadata_map = self.metadata.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let metadata_map = self.metadata.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         let query_lower = query.to_lowercase();
-        
+
         let mut results = Vec::new();
         for (tool_name, metadata) in metadata_map.iter() {
-            if metadata.name.to_lowercase().contains(&query_lower) ||
-               metadata.description.to_lowercase().contains(&query_lower) ||
-               metadata.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower)) {
+            if metadata.name.to_lowercase().contains(&query_lower)
+                || metadata.description.to_lowercase().contains(&query_lower)
+                || metadata
+                    .tags
+                    .iter()
+                    .any(|tag| tag.to_lowercase().contains(&query_lower))
+            {
                 results.push(tool_name.clone());
             }
         }
-        
+
         Ok(results)
     }
 
     /// Get tool metadata
     pub fn get_metadata(&self, tool_name: &str) -> Result<Option<ToolMetadata>> {
-        let metadata_map = self.metadata.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let metadata_map = self.metadata.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(metadata_map.get(tool_name).cloned())
     }
 
     /// Get all categories
     pub fn list_categories(&self) -> Result<Vec<ToolCategory>> {
-        let category_index = self.category_index.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let category_index = self.category_index.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(category_index.keys().cloned().collect())
     }
 
     /// Get all tags
     pub fn list_tags(&self) -> Result<Vec<String>> {
-        let tag_index = self.tag_index.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let tag_index = self.tag_index.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
         Ok(tag_index.keys().cloned().collect())
     }
 
     /// Get tool statistics
     pub fn get_stats(&self) -> Result<ToolRegistryStats> {
-        let tools = self.tools.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
-        let category_index = self.category_index.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
-        let tag_index = self.tag_index.read().map_err(|_| crate::error::Error::Internal("Failed to acquire read lock".to_string()))?;
+        let tools = self.tools.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
+        let category_index = self.category_index.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
+        let tag_index = self.tag_index.read().map_err(|_| {
+            crate::error::Error::Internal("Failed to acquire read lock".to_string())
+        })?;
 
         Ok(ToolRegistryStats {
             total_tools: tools.len(),

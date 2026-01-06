@@ -1,6 +1,6 @@
 [package]
 name = "lumos_macro"
-version = "0.1.4"
+version = "0.2.0"
 edition = "2021"
 description = "Procedural macros for the Lumosai agent framework"
 authors = ["Lumosai Team <team@lumosai.dev>"]
@@ -23,4 +23,7 @@ nom = "7.1"
 serde_json = "1.0"
 
 [dev-dependencies]
-trybuild = "1.0" 
+trybuild = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+lumosai_core = { path = "../lumosai_core" }
+serde_json = "1.0"

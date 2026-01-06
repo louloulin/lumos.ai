@@ -1,9 +1,9 @@
 use clap::Args;
-use std::path::PathBuf;
-use std::env;
 use colored::Colorize;
+use std::env;
+use std::path::PathBuf;
 
-use crate::error::{CliResult, CliError};
+use crate::error::{CliError, CliResult};
 use crate::server::ui_server;
 
 /// 运行Lumosai交互式测试环境
@@ -12,19 +12,19 @@ pub struct PlaygroundOptions {
     /// 项目目录
     #[arg(long)]
     project_dir: Option<PathBuf>,
-    
+
     /// 测试环境端口
     #[arg(long, default_value = "4000")]
     port: u16,
-    
+
     /// 要测试的代理ID
     #[arg(long)]
     agent: Option<String>,
-    
+
     /// 不保存测试历史
     #[arg(long)]
     no_save_history: bool,
-    
+
     /// 自定义API URL
     #[arg(long)]
     api_url: Option<String>,
@@ -59,23 +59,32 @@ pub async fn run(options: PlaygroundOptions) -> CliResult<()> {
     }
 
     println!("{}", "启动 Lumosai 交互式测试环境...".bright_blue());
-    println!("{}", format!("项目目录: {}", project_dir.display()).bright_blue());
+    println!(
+        "{}",
+        format!("项目目录: {}", project_dir.display()).bright_blue()
+    );
     println!("{}", format!("端口: {}", options.port).bright_blue());
-    
+
     if let Some(agent) = &options.agent {
         println!("{}", format!("代理ID: {}", agent).bright_blue());
     }
-    
-    println!("{}", format!("保存历史: {}", !options.no_save_history).bright_blue());
-    
+
+    println!(
+        "{}",
+        format!("保存历史: {}", !options.no_save_history).bright_blue()
+    );
+
     if let Some(api_url) = &options.api_url {
         println!("{}", format!("API URL: {}", api_url).bright_blue());
     }
 
     // 查找Playground UI目录
     let playground_dir = ui_server::find_playground_dir()?;
-    
-    println!("{}", format!("Playground UI目录: {}", playground_dir.display()).bright_blue());
+
+    println!(
+        "{}",
+        format!("Playground UI目录: {}", playground_dir.display()).bright_blue()
+    );
 
     // 启动Playground服务器
     ui_server::start_playground(
@@ -85,7 +94,8 @@ pub async fn run(options: PlaygroundOptions) -> CliResult<()> {
         !options.no_save_history,
         options.api_url,
         project_dir,
-    ).await?;
+    )
+    .await?;
 
     Ok(())
 }
@@ -108,13 +118,13 @@ mod tests {
     fn test_invalid_directory() {
         use tokio::runtime::Runtime;
         let rt = Runtime::new().unwrap();
-        
+
         let invalid_dir = temp_dir().join("invalid_dir_that_doesnt_exist_12345");
         let options = PlaygroundOptions {
             project_dir: Some(invalid_dir),
             ..PlaygroundOptions::default()
         };
-        
+
         let result = rt.block_on(run(options));
         assert!(result.is_err());
     }
@@ -128,10 +138,10 @@ mod tests {
             no_save_history: true,
             api_url: Some("http://localhost:8000".to_string()),
         };
-        
+
         assert_eq!(options.port, 5000);
         assert_eq!(options.agent, Some("test-agent".to_string()));
         assert_eq!(options.no_save_history, true);
         assert_eq!(options.api_url, Some("http://localhost:8000".to_string()));
     }
-} 
+}

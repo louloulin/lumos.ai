@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
+use crate::types::{ModelWithPrompt, Rbac};
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, ModelWithPrompt};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(
     team_id: i32,

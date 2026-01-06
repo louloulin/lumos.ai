@@ -1,16 +1,16 @@
 //! Agent会话持久化系统
-//! 
+//!
 //! 提供Agent会话的持久化存储、恢复和管理功能，支持多种存储后端。
 
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 
+use crate::error::{Error, Result};
 use crate::llm::Message;
-use crate::error::{Result, Error};
 
 /// 会话状态枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -102,22 +102,26 @@ pub enum ToolCallStatus {
 pub trait SessionStorage: Send + Sync {
     /// 保存会话数据
     async fn save_session(&self, session: &SessionData) -> Result<()>;
-    
+
     /// 加载会话数据
     async fn load_session(&self, session_id: &str) -> Result<Option<SessionData>>;
-    
+
     /// 删除会话
     async fn delete_session(&self, session_id: &str) -> Result<()>;
-    
+
     /// 列出用户的会话
-    async fn list_user_sessions(&self, user_id: &str, limit: Option<usize>) -> Result<Vec<SessionMetadata>>;
-    
+    async fn list_user_sessions(
+        &self,
+        user_id: &str,
+        limit: Option<usize>,
+    ) -> Result<Vec<SessionMetadata>>;
+
     /// 搜索会话
     async fn search_sessions(&self, query: &SessionQuery) -> Result<Vec<SessionMetadata>>;
-    
+
     /// 更新会话状态
     async fn update_session_state(&self, session_id: &str, state: SessionState) -> Result<()>;
-    
+
     /// 清理过期会话
     async fn cleanup_expired_sessions(&self, before: DateTime<Utc>) -> Result<usize>;
 }
@@ -169,66 +173,68 @@ impl SessionStorage for MemorySessionStorage {
         sessions.insert(session.metadata.session_id.clone(), session.clone());
         Ok(())
     }
-    
+
     async fn load_session(&self, session_id: &str) -> Result<Option<SessionData>> {
         let sessions = self.sessions.read().await;
         Ok(sessions.get(session_id).cloned())
     }
-    
+
     async fn delete_session(&self, session_id: &str) -> Result<()> {
         let mut sessions = self.sessions.write().await;
         sessions.remove(session_id);
         Ok(())
     }
-    
-    async fn list_user_sessions(&self, user_id: &str, limit: Option<usize>) -> Result<Vec<SessionMetadata>> {
+
+    async fn list_user_sessions(
+        &self,
+        user_id: &str,
+        limit: Option<usize>,
+    ) -> Result<Vec<SessionMetadata>> {
         let sessions = self.sessions.read().await;
         let mut user_sessions: Vec<SessionMetadata> = sessions
             .values()
-            .filter(|session| {
-                session.metadata.user_id.as_ref() == Some(&user_id.to_string())
-            })
+            .filter(|session| session.metadata.user_id.as_ref() == Some(&user_id.to_string()))
             .map(|session| session.metadata.clone())
             .collect();
-        
+
         // 按更新时间倒序排列
         user_sessions.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-        
+
         if let Some(limit) = limit {
             user_sessions.truncate(limit);
         }
-        
+
         Ok(user_sessions)
     }
-    
+
     async fn search_sessions(&self, query: &SessionQuery) -> Result<Vec<SessionMetadata>> {
         let sessions = self.sessions.read().await;
         let mut results: Vec<SessionMetadata> = sessions
             .values()
             .filter(|session| {
                 let metadata = &session.metadata;
-                
+
                 // 用户ID过滤
                 if let Some(ref user_id) = query.user_id {
                     if metadata.user_id.as_ref() != Some(user_id) {
                         return false;
                     }
                 }
-                
+
                 // Agent名称过滤
                 if let Some(ref agent_name) = query.agent_name {
                     if &metadata.agent_name != agent_name {
                         return false;
                     }
                 }
-                
+
                 // 状态过滤
                 if let Some(ref state) = query.state {
                     if &metadata.state != state {
                         return false;
                     }
                 }
-                
+
                 // 标签过滤
                 if !query.tags.is_empty() {
                     let has_all_tags = query.tags.iter().all(|tag| metadata.tags.contains(tag));
@@ -236,28 +242,28 @@ impl SessionStorage for MemorySessionStorage {
                         return false;
                     }
                 }
-                
+
                 // 时间范围过滤
                 if let Some(after) = query.created_after {
                     if metadata.created_at < after {
                         return false;
                     }
                 }
-                
+
                 if let Some(before) = query.created_before {
                     if metadata.created_at > before {
                         return false;
                     }
                 }
-                
+
                 true
             })
             .map(|session| session.metadata.clone())
             .collect();
-        
+
         // 按更新时间倒序排列
         results.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-        
+
         // 应用偏移量和限制
         if let Some(offset) = query.offset {
             if offset < results.len() {
@@ -266,14 +272,14 @@ impl SessionStorage for MemorySessionStorage {
                 results.clear();
             }
         }
-        
+
         if let Some(limit) = query.limit {
             results.truncate(limit);
         }
-        
+
         Ok(results)
     }
-    
+
     async fn update_session_state(&self, session_id: &str, state: SessionState) -> Result<()> {
         let mut sessions = self.sessions.write().await;
         if let Some(session) = sessions.get_mut(session_id) {
@@ -281,19 +287,18 @@ impl SessionStorage for MemorySessionStorage {
             session.metadata.updated_at = Utc::now();
             Ok(())
         } else {
-            Err(Error::NotFound(format!("Session not found: {}", session_id)))
+            Err(Error::NotFound(format!("Session not found: {session_id}")))
         }
     }
-    
+
     async fn cleanup_expired_sessions(&self, before: DateTime<Utc>) -> Result<usize> {
         let mut sessions = self.sessions.write().await;
         let initial_count = sessions.len();
-        
+
         sessions.retain(|_, session| {
-            session.metadata.updated_at >= before || 
-            session.metadata.state != SessionState::Expired
+            session.metadata.updated_at >= before || session.metadata.state != SessionState::Expired
         });
-        
+
         Ok(initial_count - sessions.len())
     }
 }
@@ -312,13 +317,13 @@ impl SessionManager {
             default_expiry: chrono::Duration::hours(24), // 默认24小时过期
         }
     }
-    
+
     /// 设置默认过期时间
     pub fn with_expiry(mut self, expiry: chrono::Duration) -> Self {
         self.default_expiry = expiry;
         self
     }
-    
+
     /// 创建新会话
     pub async fn create_session(
         &self,
@@ -339,28 +344,28 @@ impl SessionManager {
             tags: Vec::new(),
             properties: HashMap::new(),
         };
-        
+
         let session = SessionData {
             metadata,
             messages: Vec::new(),
             context: HashMap::new(),
             tool_calls: Vec::new(),
         };
-        
+
         self.storage.save_session(&session).await?;
         Ok(session)
     }
-    
+
     /// 获取会话
     pub async fn get_session(&self, session_id: &str) -> Result<Option<SessionData>> {
         self.storage.load_session(session_id).await
     }
-    
+
     /// 更新会话
     pub async fn update_session(&self, session: &SessionData) -> Result<()> {
         self.storage.save_session(session).await
     }
-    
+
     /// 添加消息到会话
     pub async fn add_message(&self, session_id: &str, message: Message) -> Result<()> {
         if let Some(mut session) = self.get_session(session_id).await? {
@@ -371,7 +376,7 @@ impl SessionManager {
         }
         Ok(())
     }
-    
+
     /// 添加工具调用记录
     pub async fn add_tool_call(&self, session_id: &str, tool_call: ToolCallHistory) -> Result<()> {
         if let Some(mut session) = self.get_session(session_id).await? {
@@ -381,7 +386,7 @@ impl SessionManager {
         }
         Ok(())
     }
-    
+
     /// 设置会话标题
     pub async fn set_session_title(&self, session_id: &str, title: String) -> Result<()> {
         if let Some(mut session) = self.get_session(session_id).await? {
@@ -391,7 +396,7 @@ impl SessionManager {
         }
         Ok(())
     }
-    
+
     /// 清理过期会话
     pub async fn cleanup_expired(&self) -> Result<usize> {
         let cutoff = Utc::now() - self.default_expiry;

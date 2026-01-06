@@ -1,13 +1,13 @@
 //! Python工具绑定
-//! 
+//!
 //! 为Python提供Lumos.ai工具的绑定支持
 
+use crate::core::{CrossLangTool, ToolMetadata};
+use crate::python::PyTool;
+use lumosai_core::tools;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use std::sync::Arc;
-use lumosai_core::tools;
-use crate::core::{CrossLangTool, ToolMetadata};
-use crate::python::PyTool;
 
 /// 注册所有工具到Python模块
 pub fn register_tools(module: &PyModule) -> PyResult<()> {
@@ -15,33 +15,33 @@ pub fn register_tools(module: &PyModule) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(web_search, module)?)?;
     module.add_function(wrap_pyfunction!(http_request, module)?)?;
     module.add_function(wrap_pyfunction!(url_extractor, module)?)?;
-    
+
     // 文件工具
     module.add_function(wrap_pyfunction!(file_reader, module)?)?;
     module.add_function(wrap_pyfunction!(file_writer, module)?)?;
     module.add_function(wrap_pyfunction!(directory_scanner, module)?)?;
-    
+
     // 数据处理工具
     module.add_function(wrap_pyfunction!(json_processor, module)?)?;
     module.add_function(wrap_pyfunction!(csv_processor, module)?)?;
     module.add_function(wrap_pyfunction!(xml_processor, module)?)?;
-    
+
     // 计算工具
     module.add_function(wrap_pyfunction!(calculator, module)?)?;
     module.add_function(wrap_pyfunction!(math_evaluator, module)?)?;
-    
+
     // 系统工具
     module.add_function(wrap_pyfunction!(shell_executor, module)?)?;
     module.add_function(wrap_pyfunction!(environment_reader, module)?)?;
-    
+
     // 网络工具
     module.add_function(wrap_pyfunction!(ping_tool, module)?)?;
     module.add_function(wrap_pyfunction!(dns_resolver, module)?)?;
-    
+
     // 时间工具
     module.add_function(wrap_pyfunction!(datetime_formatter, module)?)?;
     module.add_function(wrap_pyfunction!(timezone_converter, module)?)?;
-    
+
     Ok(())
 }
 
@@ -71,7 +71,7 @@ pub fn web_search() -> PyResult<PyTool> {
         tool_type: "web".to_string(),
         is_async: true,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -112,7 +112,7 @@ pub fn http_request() -> PyResult<PyTool> {
         tool_type: "web".to_string(),
         is_async: true,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -139,7 +139,7 @@ pub fn url_extractor() -> PyResult<PyTool> {
         tool_type: "text".to_string(),
         is_async: false,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -171,7 +171,7 @@ pub fn file_reader() -> PyResult<PyTool> {
         tool_type: "file".to_string(),
         is_async: true,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -207,7 +207,7 @@ pub fn file_writer() -> PyResult<PyTool> {
         tool_type: "file".to_string(),
         is_async: true,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -243,7 +243,7 @@ pub fn directory_scanner() -> PyResult<PyTool> {
         tool_type: "file".to_string(),
         is_async: true,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -275,7 +275,7 @@ pub fn json_processor() -> PyResult<PyTool> {
         tool_type: "data".to_string(),
         is_async: false,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -312,7 +312,7 @@ pub fn csv_processor() -> PyResult<PyTool> {
         tool_type: "data".to_string(),
         is_async: false,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -348,7 +348,7 @@ pub fn xml_processor() -> PyResult<PyTool> {
         tool_type: "data".to_string(),
         is_async: false,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -375,7 +375,7 @@ pub fn calculator() -> PyResult<PyTool> {
         tool_type: "math".to_string(),
         is_async: false,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -406,7 +406,7 @@ pub fn math_evaluator() -> PyResult<PyTool> {
         tool_type: "math".to_string(),
         is_async: false,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -442,7 +442,7 @@ pub fn shell_executor() -> PyResult<PyTool> {
         tool_type: "system".to_string(),
         is_async: true,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -469,7 +469,7 @@ pub fn environment_reader() -> PyResult<PyTool> {
         tool_type: "system".to_string(),
         is_async: false,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -501,7 +501,7 @@ pub fn ping_tool() -> PyResult<PyTool> {
         tool_type: "network".to_string(),
         is_async: true,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -534,7 +534,7 @@ pub fn dns_resolver() -> PyResult<PyTool> {
         tool_type: "network".to_string(),
         is_async: true,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -566,7 +566,7 @@ pub fn datetime_formatter() -> PyResult<PyTool> {
         tool_type: "time".to_string(),
         is_async: false,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })
@@ -601,7 +601,7 @@ pub fn timezone_converter() -> PyResult<PyTool> {
         tool_type: "time".to_string(),
         is_async: false,
     };
-    
+
     Ok(PyTool {
         inner: CrossLangTool::new(tool, metadata),
     })

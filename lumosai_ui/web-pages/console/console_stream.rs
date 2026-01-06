@@ -1,11 +1,11 @@
 #![allow(non_snake_case)]
 use crate::routes;
 
-use web_assets::files::*;
-use daisy_rsx::*;
-use crate::types::{Rbac, ChatRole};
-use dioxus::prelude::*;
 use crate::types::ToolCall;
+use crate::types::{ChatRole, Rbac};
+use daisy_rsx::*;
+use dioxus::prelude::*;
+use web_assets::files::*;
 
 use super::{ChatWithChunks, PendingChatState};
 
@@ -185,13 +185,8 @@ fn FunctionCallTimeline(name: String, chat_id: i64, team_id: i32, pending: bool)
                 image_src: if pending { spinner_svg.name } else { tools_svg.name }
             }
             TimeLineBody {
-                Label {
-                    "Function Call:"
-                    strong {
-                        class: "ml-2",
-                        "{name}"
-                    }
-                }
+                span { "Function Call:" }
+                strong { class: "ml-2", "{name}" }
             }
         }
     }

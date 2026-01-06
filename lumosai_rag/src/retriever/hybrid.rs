@@ -1,18 +1,18 @@
 //! Hybrid retrieval combining vector similarity and keyword search
-//! 
+//!
 //! This module implements hybrid search strategies that combine:
 //! - Vector similarity search for semantic matching
 //! - Keyword/BM25 search for exact term matching
 //! - Re-ranking algorithms for optimal result ordering
 
 use async_trait::async_trait;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::{
-    types::{Document, RetrievalRequest, RetrievalResult, RetrievalOptions},
-    retriever::Retriever,
     error::Result,
+    retriever::Retriever,
+    types::{Document, RetrievalOptions, RetrievalRequest, RetrievalResult},
 };
 
 /// Configuration for hybrid search
@@ -81,7 +81,11 @@ impl HybridRetriever {
         vector_retriever: Box<dyn Retriever>,
         keyword_retriever: Box<dyn KeywordRetriever>,
     ) -> Self {
-        Self::new(vector_retriever, keyword_retriever, HybridSearchConfig::default())
+        Self::new(
+            vector_retriever,
+            keyword_retriever,
+            HybridSearchConfig::default(),
+        )
     }
 
     /// Update configuration
@@ -124,10 +128,7 @@ impl HybridRetriever {
         // Add vector search scores
         for scored_doc in vector_results {
             let doc_id = scored_doc.document.id.clone();
-            combined_scores.insert(
-                doc_id.clone(),
-                scored_doc.score * self.config.vector_weight,
-            );
+            combined_scores.insert(doc_id.clone(), scored_doc.score * self.config.vector_weight);
             documents.insert(doc_id, scored_doc.document);
         }
 
@@ -157,7 +158,11 @@ impl HybridRetriever {
             })
             .collect();
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         Ok(results)
     }
 
@@ -206,7 +211,11 @@ impl HybridRetriever {
             })
             .collect();
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         Ok(results)
     }
 
@@ -256,7 +265,11 @@ impl HybridRetriever {
             })
             .collect();
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         Ok(results)
     }
 
@@ -307,7 +320,11 @@ impl HybridRetriever {
             })
             .collect();
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         Ok(results)
     }
 
@@ -362,10 +379,14 @@ impl Retriever for HybridRetriever {
 
         // Combine and re-rank results
         let combined_results = self.combine_results(
-            vector_result.documents.into_iter().map(|doc| ScoredDocument {
-                document: doc.document,
-                score: doc.score,
-            }).collect(),
+            vector_result
+                .documents
+                .into_iter()
+                .map(|doc| ScoredDocument {
+                    document: doc.document,
+                    score: doc.score,
+                })
+                .collect(),
             keyword_results,
         )?;
 
@@ -406,7 +427,7 @@ pub struct ScoredDocument {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Document, RetrievalRequest, RetrievalOptions};
+    use crate::types::{Document, RetrievalOptions, RetrievalRequest};
     use async_trait::async_trait;
 
     // Mock vector retriever for testing

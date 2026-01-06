@@ -5,10 +5,10 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::{Error, Result};
-use super::provider::{LlmProvider, FunctionCallingResponse};
+use super::function_calling::{FunctionCall, FunctionDefinition, ToolChoice};
+use super::provider::{FunctionCallingResponse, LlmProvider};
 use super::types::{LlmOptions, Message, Role};
-use super::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
+use crate::{Error, Result};
 
 /// 智谱AI API response structures
 #[derive(Debug, Deserialize)]
@@ -46,6 +46,7 @@ struct ZhipuStreamChoice {
 struct ZhipuStreamDelta {
     role: Option<String>,
     content: Option<String>,
+    reasoning_content: Option<String>, // For glm-4.6+ models
     #[serde(default)]
     tool_calls: Vec<ZhipuToolCall>,
 }
@@ -126,7 +127,7 @@ impl ZhipuProvider {
         Self {
             api_key,
             client: reqwest::Client::new(),
-            model: model.unwrap_or_else(|| "glm-4".to_string()),
+            model: model.unwrap_or_else(|| "glm-4-plus".to_string()),
             base_url: "https://open.bigmodel.cn/api/paas/v4".to_string(),
         }
     }
@@ -146,7 +147,7 @@ impl ZhipuProvider {
         Self {
             api_key,
             client: reqwest::Client::new(),
-            model: model.unwrap_or_else(|| "glm-4".to_string()),
+            model: model.unwrap_or_else(|| "glm-4-plus".to_string()),
             base_url,
         }
     }
@@ -217,122 +218,172 @@ impl LlmProvider for ZhipuProvider {
 
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
-        
-        // Build request body
+
+        // Build request body with required parameters for Zhipu AI
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": messages,
         });
 
-        // Add optional parameters
+        // Add optional parameters with defaults
         if let Some(temperature) = options.temperature {
-            body["temperature"] = serde_json::json!(temperature);
+            // 智谱AI只接受 0.0, 0.5, 1.0 三个温度值
+            // 将其他值映射到最接近的有效值
+            let temp_value = temperature.value();
+            let normalized_temp = if temp_value < 0.25 {
+                0.0
+            } else if temp_value < 0.75 {
+                0.5
+            } else {
+                1.0
+            };
+            body["temperature"] = serde_json::json!(normalized_temp);
         }
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
         }
 
-        // Check for top_p in extra parameters
+        // Add top_p parameter if provided
         if let Some(top_p) = options.extra.get("top_p") {
             body["top_p"] = top_p.clone();
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {}", e)))?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "智谱AI API returned error status {}: {}",
-                status, text
+                "智谱AI API returned error status {status}: {text}"
             )));
         }
-        
+
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {}", e)))?;
-            
+            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {e}")))?;
+
         // Extract generated text
-        let content = response["choices"][0]["message"]["content"]
-            .as_str()
-            .ok_or_else(|| Error::Llm("Invalid response format from 智谱AI".to_string()))?;
-            
-        Ok(content.to_string())
+        // glm-4.6+ models may return reasoning_content instead of content
+        let message = &response["choices"][0]["message"];
+        let content = message["content"].as_str().unwrap_or("");
+
+        // If content is empty, try reasoning_content (for glm-4.6+)
+        let final_content = if content.is_empty() {
+            message["reasoning_content"].as_str().unwrap_or("")
+        } else {
+            content
+        };
+
+        if final_content.is_empty() {
+            return Err(Error::Llm("智谱AI returned empty response".to_string()));
+        }
+
+        Ok(final_content.to_string())
     }
-    
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
-        
+
         // Convert messages to 智谱AI format
         let api_messages = self.convert_messages(messages);
-        
-        // Build request body
+
+        // Build request body with required parameters for Zhipu AI
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": api_messages,
         });
-        
-        // Add optional parameters
+
+        // Add optional parameters with defaults
         if let Some(temperature) = options.temperature {
-            body["temperature"] = serde_json::json!(temperature);
+            // 智谱AI只接受 0.0, 0.5, 1.0 三个温度值
+            // 将其他值映射到最接近的有效值
+            let temp_value = temperature.value();
+            let normalized_temp = if temp_value < 0.25 {
+                0.0
+            } else if temp_value < 0.75 {
+                0.5
+            } else {
+                1.0
+            };
+            body["temperature"] = serde_json::json!(normalized_temp);
         }
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
         }
 
-        // Check for top_p in extra parameters
+        // Add top_p parameter if provided
         if let Some(top_p) = options.extra.get("top_p") {
             body["top_p"] = top_p.clone();
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {}", e)))?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "智谱AI API returned error status {}: {}",
-                status, text
+                "智谱AI API returned error status {status}: {text}"
             )));
         }
-        
+
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {}", e)))?;
-            
+            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {e}")))?;
+
         // Extract generated text
-        let content = response["choices"][0]["message"]["content"]
-            .as_str()
-            .ok_or_else(|| Error::Llm("Invalid response format from 智谱AI".to_string()))?;
-            
-        Ok(content.to_string())
+        // glm-4.6+ models may return reasoning_content instead of content
+        let message = &response["choices"][0]["message"];
+        let content = message["content"].as_str().unwrap_or("");
+
+        // If content is empty, try reasoning_content (for glm-4.6+)
+        let final_content = if content.is_empty() {
+            message["reasoning_content"].as_str().unwrap_or("")
+        } else {
+            content
+        };
+
+        if final_content.is_empty() {
+            return Err(Error::Llm("智谱AI returned empty response".to_string()));
+        }
+
+        Ok(final_content.to_string())
     }
 
     async fn generate_stream<'a>(
         &'a self,
         prompt: &'a str,
-        options: &'a LlmOptions
+        options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // Convert prompt to messages format
         let messages = vec![serde_json::json!({
@@ -343,43 +394,55 @@ impl LlmProvider for ZhipuProvider {
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
 
-        // Build request body with streaming enabled
+        // Build request body with streaming enabled and required parameters
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": messages,
             "stream": true,
         });
 
-        // Add optional parameters
+        // Add optional parameters with defaults
         if let Some(temperature) = options.temperature {
-            body["temperature"] = serde_json::json!(temperature);
+            // 智谱AI只接受 0.0, 0.5, 1.0 三个温度值
+            // 将其他值映射到最接近的有效值
+            let temp_value = temperature.value();
+            let normalized_temp = if temp_value < 0.25 {
+                0.0
+            } else if temp_value < 0.75 {
+                0.5
+            } else {
+                1.0
+            };
+            body["temperature"] = serde_json::json!(normalized_temp);
         }
 
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
         }
 
-        // Check for top_p in extra parameters
+        // Add top_p parameter if provided
         if let Some(top_p) = options.extra.get("top_p") {
             body["top_p"] = top_p.clone();
         }
 
         // Send request
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI streaming request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI streaming request failed: {e}")))?;
 
         let status = response.status();
         if !status.is_success() {
-            let error_text = response.text().await
+            let error_text = response
+                .text()
+                .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(Error::Llm(format!(
-                "智谱AI streaming API returned error status {}: {}",
-                status, error_text
+                "智谱AI streaming API returned error status {status}: {error_text}"
             )));
         }
 
@@ -396,30 +459,34 @@ impl LlmProvider for ZhipuProvider {
             "input": text,
         });
 
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI embedding request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI embedding request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI embedding response: {}", e)))?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI embedding response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "智谱AI embedding API returned error status {}: {}",
-                status, text
+                "智谱AI embedding API returned error status {status}: {text}"
             )));
         }
 
         let response: ZhipuEmbeddingResponse = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI embedding response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI embedding response: {e}")))?;
 
         if response.data.is_empty() {
-            return Err(Error::Llm("No embedding data in 智谱AI response".to_string()));
+            return Err(Error::Llm(
+                "No embedding data in 智谱AI response".to_string(),
+            ));
         }
 
         Ok(response.data[0].embedding.clone())
@@ -442,16 +509,19 @@ impl LlmProvider for ZhipuProvider {
         let api_messages = self.convert_messages(messages);
 
         // Convert function definitions to 智谱AI tools format
-        let tools: Vec<Value> = functions.iter().map(|func| {
-            serde_json::json!({
-                "type": "function",
-                "function": {
-                    "name": func.name,
-                    "description": func.description,
-                    "parameters": func.parameters
-                }
+        let tools: Vec<Value> = functions
+            .iter()
+            .map(|func| {
+                serde_json::json!({
+                    "type": "function",
+                    "function": {
+                        "name": func.name,
+                        "description": func.description,
+                        "parameters": func.parameters
+                    }
+                })
             })
-        }).collect();
+            .collect();
 
         // Convert tool choice
         let tool_choice_value = match tool_choice {
@@ -478,7 +548,9 @@ impl LlmProvider for ZhipuProvider {
 
         // Add other options
         if let Some(temperature) = options.temperature {
-            body["temperature"] = serde_json::json!(temperature);
+            // 使用 Temperature 类型的精确值
+            let temp_value = temperature.value();
+            body["temperature"] = serde_json::json!(temp_value);
         }
         if let Some(max_tokens) = options.max_tokens {
             body["max_tokens"] = serde_json::json!(max_tokens);
@@ -488,28 +560,30 @@ impl LlmProvider for ZhipuProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("智谱AI API request failed: {e}")))?;
 
         let status = res.status();
-        let response_text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {}", e)))?;
+        let response_text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 智谱AI response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "智谱AI API returned error status {}: {}",
-                status, response_text
+                "智谱AI API returned error status {status}: {response_text}"
             )));
         }
 
         // Parse response
         let response: ZhipuResponse = serde_json::from_str(&response_text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 智谱AI response: {e}")))?;
 
         if response.choices.is_empty() {
             return Err(Error::Llm("No choices in 智谱AI response".to_string()));
@@ -519,7 +593,8 @@ impl LlmProvider for ZhipuProvider {
         let message = &choice.message;
 
         // Convert function calls
-        let function_calls: Vec<FunctionCall> = message.tool_calls
+        let function_calls: Vec<FunctionCall> = message
+            .tool_calls
             .iter()
             .filter(|tc| tc.call_type == "function")
             .map(|tc| FunctionCall {
@@ -532,7 +607,10 @@ impl LlmProvider for ZhipuProvider {
         Ok(FunctionCallingResponse {
             content: message.content.clone(),
             function_calls,
-            finish_reason: choice.finish_reason.clone().unwrap_or_else(|| "stop".to_string()),
+            finish_reason: choice
+                .finish_reason
+                .clone()
+                .unwrap_or_else(|| "stop".to_string()),
         })
     }
 }
@@ -546,12 +624,12 @@ impl ZhipuProvider {
         let byte_stream = response.bytes_stream();
 
         Ok(byte_stream
-            .map_err(|e| Error::Llm(format!("HTTP stream error: {}", e)))
+            .map_err(|e| Error::Llm(format!("HTTP stream error: {e}")))
             .map(|chunk_result| {
                 chunk_result.and_then(|chunk| {
                     // Convert bytes to string
                     let text = String::from_utf8(chunk.to_vec())
-                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {}", e)))?;
+                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {e}")))?;
 
                     // Split by lines and process each line
                     let mut results = Vec::new();
@@ -572,7 +650,14 @@ impl ZhipuProvider {
                             match serde_json::from_str::<ZhipuStreamResponse>(data) {
                                 Ok(stream_response) => {
                                     if let Some(choice) = stream_response.choices.first() {
-                                        if let Some(content) = &choice.delta.content {
+                                        // Try content first, then reasoning_content (for glm-4.6+)
+                                        let content_to_use = choice
+                                            .delta
+                                            .content
+                                            .as_ref()
+                                            .or(choice.delta.reasoning_content.as_ref());
+
+                                        if let Some(content) = content_to_use {
                                             if !content.is_empty() {
                                                 results.push(content.clone());
                                             }
@@ -581,7 +666,7 @@ impl ZhipuProvider {
                                 }
                                 Err(e) => {
                                     return Err(Error::Llm(format!(
-                                        "Failed to parse 智谱AI streaming response: {}", e
+                                        "Failed to parse 智谱AI streaming response: {e}"
                                     )));
                                 }
                             }
@@ -608,15 +693,16 @@ mod tests {
 
     #[test]
     fn test_zhipu_provider_creation() {
-        let provider = ZhipuProvider::new("test-key".to_string(), None);
-        assert_eq!(provider.model, "glm-4");
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
+        assert_eq!(provider.model, "glm-4-plus");
         assert_eq!(provider.base_url, "https://open.bigmodel.cn/api/paas/v4");
     }
 
     #[test]
     fn test_zhipu_provider_with_custom_model() {
-        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
-        assert_eq!(provider.model, "glm-4-plus");
+        let provider =
+            ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus-plus".to_string()));
+        assert_eq!(provider.model, "glm-4-plus-plus");
     }
 
     #[test]
@@ -624,20 +710,20 @@ mod tests {
         let provider = ZhipuProvider::with_base_url(
             "test-key".to_string(),
             "https://custom.api.example.com".to_string(),
-            None
+            None,
         );
         assert_eq!(provider.base_url, "https://custom.api.example.com");
     }
 
     #[test]
     fn test_supports_function_calling() {
-        let provider = ZhipuProvider::new("test-key".to_string(), None);
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
         assert!(provider.supports_function_calling());
     }
 
     #[test]
     fn test_provider_name() {
-        let provider = ZhipuProvider::new("test-key".to_string(), None);
+        let provider = ZhipuProvider::new("test-key".to_string(), Some("glm-4-plus".to_string()));
         assert_eq!(provider.name(), "zhipu");
     }
 }

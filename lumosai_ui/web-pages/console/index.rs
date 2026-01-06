@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use crate::app_layout::SideBar;
 use crate::console::model_popup::ModelPopup;
-use crate::types::{Rbac, Capability, Prompt, SinglePrompt, BionicToolDefinition};
+use crate::types::{BionicToolDefinition, Capability, Prompt, Rbac, SinglePrompt};
 use dioxus::prelude::*;
 
 pub fn new_conversation(

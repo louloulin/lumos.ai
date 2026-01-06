@@ -28,13 +28,13 @@ async fn main() -> Result<()> {
 
     // 1. 基础布局示例
     demo_basic_layout().await?;
-    
+
     // 2. AI 组件示例
     demo_ai_components().await?;
-    
+
     // 3. 交互组件示例
     demo_interactive_components().await?;
-    
+
     // 4. 完整应用示例
     demo_full_application().await?;
 
@@ -55,7 +55,7 @@ async fn demo_basic_layout() -> Result<()> {
             stylesheets: vec!["/styles/app.css".to_string()],
             js_href: "/js/app.js",
             section_class: "p-6 bg-base-100",
-            
+
             // 页面头部
             header: rsx! {
                 div {
@@ -77,7 +77,7 @@ async fn demo_basic_layout() -> Result<()> {
                     }
                 }
             },
-            
+
             // 侧边栏
             sidebar: rsx! {
                 nav {
@@ -102,7 +102,7 @@ async fn demo_basic_layout() -> Result<()> {
                     }
                 }
             },
-            
+
             // 侧边栏头部
             sidebar_header: rsx! {
                 div {
@@ -120,7 +120,7 @@ async fn demo_basic_layout() -> Result<()> {
                     }
                 }
             },
-            
+
             // 侧边栏底部
             sidebar_footer: rsx! {
                 div {
@@ -133,11 +133,11 @@ async fn demo_basic_layout() -> Result<()> {
                     }
                 }
             },
-            
+
             // 主要内容
             div {
                 class: "space-y-6",
-                
+
                 // 欢迎卡片
                 Card {
                     class: "bg-gradient-to-r from-primary to-secondary text-primary-content",
@@ -153,11 +153,11 @@ async fn demo_basic_layout() -> Result<()> {
                         }
                     }
                 }
-                
+
                 // 快速操作
                 div {
                     class: "grid grid-cols-1 md:grid-cols-3 gap-6",
-                    
+
                     Card {
                         class: "hover:shadow-lg transition-shadow",
                         div {
@@ -181,7 +181,7 @@ async fn demo_basic_layout() -> Result<()> {
                             }
                         }
                     }
-                    
+
                     Card {
                         class: "hover:shadow-lg transition-shadow",
                         div {
@@ -205,7 +205,7 @@ async fn demo_basic_layout() -> Result<()> {
                             }
                         }
                     }
-                    
+
                     Card {
                         class: "hover:shadow-lg transition-shadow",
                         div {
@@ -237,7 +237,7 @@ async fn demo_basic_layout() -> Result<()> {
     // 渲染页面
     let html = render(page);
     println!("✅ 基础布局 HTML 生成成功 ({} 字符)", html.len());
-    
+
     Ok(())
 }
 
@@ -245,7 +245,7 @@ async fn demo_basic_layout() -> Result<()> {
 async fn demo_ai_components() -> Result<()> {
     println!("\n🤖 2. AI 组件示例");
     println!("------------------");
-    
+
     // 这里可以展示 AI 专用组件的使用
     println!("✅ AI 组件包括:");
     println!("   - 聊天控制台 (Console)");
@@ -253,7 +253,7 @@ async fn demo_ai_components() -> Result<()> {
     println!("   - 工作流编辑器 (Workflows)");
     println!("   - 数据集管理 (Datasets)");
     println!("   - 模型配置 (Models)");
-    
+
     Ok(())
 }
 
@@ -261,14 +261,14 @@ async fn demo_ai_components() -> Result<()> {
 async fn demo_interactive_components() -> Result<()> {
     println!("\n🎯 3. 交互组件示例");
     println!("--------------------");
-    
+
     println!("✅ 交互组件包括:");
     println!("   - 模态框 (Modal)");
     println!("   - 表单组件 (Forms)");
     println!("   - 通知系统 (Snackbar)");
     println!("   - 确认对话框 (ConfirmModal)");
     println!("   - 文件上传 (FileUpload)");
-    
+
     Ok(())
 }
 
@@ -276,14 +276,14 @@ async fn demo_interactive_components() -> Result<()> {
 async fn demo_full_application() -> Result<()> {
     println!("\n🚀 4. 完整应用示例");
     println!("--------------------");
-    
+
     println!("✅ 完整应用特性:");
     println!("   - 响应式设计 (移动端适配)");
     println!("   - 深色/浅色主题");
     println!("   - 无障碍设计 (WCAG 兼容)");
     println!("   - 实时交互 (WebSocket 支持)");
     println!("   - 模块化架构 (按需加载)");
-    
+
     Ok(())
 }
 

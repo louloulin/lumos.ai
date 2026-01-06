@@ -1,0 +1,61 @@
+# Docker 构建忽略文件
+# 减少构建上下文大小，加快构建速度
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# 构建产物
+target/
+**/*.rs.bk
+**/*.pdb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 文档
+*.md
+!README.md
+docs/
+
+# 测试和示例
+tests/
+examples/
+benches/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# 临时文件
+tmp/
+*.log
+*.tmp
+
+# Node modules（如果有前端）
+node_modules/
+packages/
+
+# 环境变量
+.env
+.env.local
+.env.*
+
+# 其他
+scripts/
+*.sh
+

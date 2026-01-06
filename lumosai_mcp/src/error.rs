@@ -1,7 +1,7 @@
-use thiserror::Error;
-use std::io;
 use reqwest::Error as ReqwestError;
 use serde_json::Error as SerdeError;
+use std::io;
+use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
 pub enum MCPError {
@@ -72,4 +72,4 @@ impl From<io::Error> for MCPError {
     }
 }
 
-pub type Result<T> = std::result::Result<T, MCPError>; 
+pub type Result<T> = std::result::Result<T, MCPError>;

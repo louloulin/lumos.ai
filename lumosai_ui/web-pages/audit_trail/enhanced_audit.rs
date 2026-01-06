@@ -13,9 +13,9 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
 use crate::types::Rbac;
+use dioxus::prelude::*;
 
 // 临时类型定义
 #[derive(Clone, Debug, PartialEq)]
@@ -56,10 +56,7 @@ pub struct SecurityAlert {
 
 /// 增强审计日志页面
 #[component]
-pub fn EnhancedAuditPage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn EnhancedAuditPage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟数据
     let audit_trails = vec![
         AuditTrail {
@@ -333,12 +330,9 @@ fn AuditStatsOverview(stats: AuditStats) -> Element {
 
 /// 安全告警区块组件
 #[component]
-fn SecurityAlertsSection(
-    alerts: Vec<SecurityAlert>,
-    rbac: Rbac,
-) -> Element {
+fn SecurityAlertsSection(alerts: Vec<SecurityAlert>, rbac: Rbac) -> Element {
     let unresolved_alerts: Vec<_> = alerts.iter().filter(|a| !a.is_resolved).collect();
-    
+
     rsx! {
         div {
             class: "card bg-base-100 shadow-lg border-l-4 border-warning",
@@ -383,56 +377,53 @@ fn SecurityAlertsSection(
 #[component]
 fn SecurityAlertItem(alert: SecurityAlert) -> Element {
     rsx! {
-        div {
-            class: "flex items-start justify-between p-3 bg-base-200 rounded-lg",
             div {
-                class: "flex-1",
+                class: "flex items-start justify-between p-3 bg-base-200 rounded-lg",
                 div {
-                    class: "flex items-center gap-2 mb-1",
+                    class: "flex-1",
                     div {
-                        class: match alert.severity.as_str() {
-                            "HIGH" => "badge badge-error badge-sm",
-                            "MEDIUM" => "badge badge-warning badge-sm",
-                            _ => "badge badge-info badge-sm"
-                        },
-                        "{alert.severity}"
+                        class: "flex items-center gap-2 mb-1",
+                        div {
+                            class: match alert.severity.as_str() {
+                                "HIGH" => "badge badge-error badge-sm",
+                                "MEDIUM" => "badge badge-warning badge-sm",
+                                _ => "badge badge-info badge-sm"
+                            },
+                            "{alert.severity}"
+                        }
+                        span {
+                            class: "text-sm font-medium",
+    {alert.alert_type.replace("_", " ")}
+                        }
                     }
-                    span {
-                        class: "text-sm font-medium",
-{alert.alert_type.replace("_", " ")}
+                    p {
+                        class: "text-sm text-base-content/70 mb-1",
+                        "{alert.description}"
                     }
-                }
-                p {
-                    class: "text-sm text-base-content/70 mb-1",
-                    "{alert.description}"
+                    div {
+                        class: "flex items-center gap-4 text-xs text-base-content/60",
+                        span { "User: {alert.user_email}" }
+                        span { "Time: {alert.created_at}" }
+                    }
                 }
                 div {
-                    class: "flex items-center gap-4 text-xs text-base-content/60",
-                    span { "User: {alert.user_email}" }
-                    span { "Time: {alert.created_at}" }
-                }
-            }
-            div {
-                class: "flex gap-2",
-                button {
-                    class: "btn btn-ghost btn-xs",
-                    "View"
-                }
-                button {
-                    class: "btn btn-success btn-xs",
-                    "Resolve"
+                    class: "flex gap-2",
+                    button {
+                        class: "btn btn-ghost btn-xs",
+                        "View"
+                    }
+                    button {
+                        class: "btn btn-success btn-xs",
+                        "Resolve"
+                    }
                 }
             }
         }
-    }
 }
 
 /// 审计日志表格组件
 #[component]
-fn AuditTrailTable(
-    audit_trails: Vec<AuditTrail>,
-    rbac: Rbac,
-) -> Element {
+fn AuditTrailTable(audit_trails: Vec<AuditTrail>, rbac: Rbac) -> Element {
     rsx! {
         div {
             class: "card bg-base-100 shadow-lg",
@@ -482,91 +473,88 @@ fn AuditTrailTable(
 
 /// 审计日志行组件
 #[component]
-fn AuditTrailRow(
-    audit: AuditTrail,
-    rbac: Rbac,
-) -> Element {
+fn AuditTrailRow(audit: AuditTrail, rbac: Rbac) -> Element {
     rsx! {
-        tr {
-            td {
-                div {
-                    class: "text-sm",
-                    "{audit.created_at}"
-                }
-            }
-            td {
-                div {
-                    if let Some(name) = &audit.user_name {
-                        div {
-                            class: "font-medium",
-                            "{name}"
-                        }
-                        div {
-                            class: "text-xs text-base-content/60",
-                            "{audit.user_email}"
-                        }
-                    } else {
-                        div {
-                            class: "font-medium",
-                            "{audit.user_email}"
-                        }
-                    }
-                }
-            }
-            td {
-                div {
-                    class: "font-mono text-sm",
-{audit.action.replace("_", " ")}
-                }
-            }
-            td {
-                div {
-                    if let Some(resource_name) = &audit.resource_name {
-                        div {
-                            class: "font-medium",
-                            "{resource_name}"
-                        }
-                        div {
-                            class: "text-xs text-base-content/60",
-                            "{audit.resource_type}"
-                        }
-                    } else {
-                        div {
-                            class: "text-sm",
-                            "{audit.resource_type}"
-                        }
-                    }
-                }
-            }
-            td {
-                div {
-                    class: "font-mono text-sm",
-                    "{audit.ip_address}"
-                }
-            }
-            td {
-                div {
-                    class: match audit.severity.as_str() {
-                        "HIGH" => "badge badge-error",
-                        "WARNING" => "badge badge-warning",
-                        "INFO" => "badge badge-info",
-                        _ => "badge badge-neutral"
-                    },
-                    "{audit.severity}"
-                }
-            }
-            if rbac.can_view_audit_trail() {
+            tr {
                 td {
-                    class: "text-right",
-                    button {
-                        class: "btn btn-ghost btn-xs",
-                        title: "View Details",
-                        "👁️"
+                    div {
+                        class: "text-sm",
+                        "{audit.created_at}"
+                    }
+                }
+                td {
+                    div {
+                        if let Some(name) = &audit.user_name {
+                            div {
+                                class: "font-medium",
+                                "{name}"
+                            }
+                            div {
+                                class: "text-xs text-base-content/60",
+                                "{audit.user_email}"
+                            }
+                        } else {
+                            div {
+                                class: "font-medium",
+                                "{audit.user_email}"
+                            }
+                        }
+                    }
+                }
+                td {
+                    div {
+                        class: "font-mono text-sm",
+    {audit.action.replace("_", " ")}
+                    }
+                }
+                td {
+                    div {
+                        if let Some(resource_name) = &audit.resource_name {
+                            div {
+                                class: "font-medium",
+                                "{resource_name}"
+                            }
+                            div {
+                                class: "text-xs text-base-content/60",
+                                "{audit.resource_type}"
+                            }
+                        } else {
+                            div {
+                                class: "text-sm",
+                                "{audit.resource_type}"
+                            }
+                        }
+                    }
+                }
+                td {
+                    div {
+                        class: "font-mono text-sm",
+                        "{audit.ip_address}"
+                    }
+                }
+                td {
+                    div {
+                        class: match audit.severity.as_str() {
+                            "HIGH" => "badge badge-error",
+                            "WARNING" => "badge badge-warning",
+                            "INFO" => "badge badge-info",
+                            _ => "badge badge-neutral"
+                        },
+                        "{audit.severity}"
+                    }
+                }
+                if rbac.can_view_audit_trail() {
+                    td {
+                        class: "text-right",
+                        button {
+                            class: "btn btn-ghost btn-xs",
+                            title: "View Details",
+                            "👁️"
+                        }
                     }
                 }
             }
         }
-    }
 }
 
 /// 审计指南组件
@@ -583,7 +571,7 @@ fn AuditGuide() -> Element {
                 }
                 div {
                     class: "grid grid-cols-1 md:grid-cols-3 gap-6",
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -597,7 +585,7 @@ fn AuditGuide() -> Element {
                             li { "• Data access and exports" }
                         }
                     }
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -611,7 +599,7 @@ fn AuditGuide() -> Element {
                             li { "• Suspicious activities" }
                         }
                     }
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",

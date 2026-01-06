@@ -124,32 +124,32 @@ pub fn EnhancedAssistants(
                 // 工具栏
                 div {
                     class: "bg-base-100 rounded-lg shadow-sm border border-base-300 p-4",
-                    
+
                     div {
                         class: "flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4",
-                        
+
                         // 左侧：操作按钮
                         div {
                             class: "flex flex-wrap gap-2",
-                            
+
                             button {
                                 class: "btn btn-ghost btn-sm gap-2",
                                 span { "📋" }
                                 "模板"
                             }
-                            
+
                             button {
                                 class: "btn btn-ghost btn-sm gap-2",
                                 span { "📥" }
                                 "导入"
                             }
-                            
+
                             button {
                                 class: "btn btn-ghost btn-sm gap-2",
                                 span { "📤" }
                                 "导出"
                             }
-                            
+
                             if !selected_assistants.is_empty() {
                                 div {
                                     class: "divider divider-horizontal"
@@ -162,11 +162,11 @@ pub fn EnhancedAssistants(
                                 }
                             }
                         }
-                        
+
                         // 右侧：搜索和过滤
                         div {
                             class: "flex flex-wrap gap-2 items-center",
-                            
+
                             // 分类过滤
                             select {
                                 class: "select select-bordered select-sm",
@@ -199,7 +199,7 @@ pub fn EnhancedAssistants(
                                     value: search_query.clone()
                                 }
                             }
-                            
+
                             // 视图切换
                             div {
                                 class: "btn-group",
@@ -294,7 +294,7 @@ fn AssistantStatsPanel(
     rsx! {
         div {
             class: "stats stats-horizontal shadow-sm bg-base-100 border border-base-300 w-full",
-            
+
             div {
                 class: "stat",
                 div {
@@ -317,7 +317,7 @@ fn AssistantStatsPanel(
                     "已创建的AI助手"
                 }
             }
-            
+
             div {
                 class: "stat",
                 div {
@@ -340,7 +340,7 @@ fn AssistantStatsPanel(
                     "可供团队使用"
                 }
             }
-            
+
             div {
                 class: "stat",
                 div {
@@ -363,7 +363,7 @@ fn AssistantStatsPanel(
                     "仅个人使用"
                 }
             }
-            
+
             div {
                 class: "stat",
                 div {

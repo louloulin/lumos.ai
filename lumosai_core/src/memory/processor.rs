@@ -1,12 +1,15 @@
 //! Memory processors for filtering and transforming messages
 
-use std::sync::Arc;
+use crate::compat::Component;
+use crate::logger::Logger;
+use crate::telemetry::TelemetrySink;
 use async_trait::async_trait;
+use std::sync::Arc;
 
 use crate::base::Base;
 use crate::llm::Message;
-use crate::logger::{Component, Logger};
-use crate::telemetry::TelemetrySink;
+// use crate::compat::{Component, Logger};
+// use crate::compat::TelemetrySink;
 use crate::Result;
 
 /// Options for memory processors
@@ -28,7 +31,11 @@ pub trait MemoryProcessor: Base + Send + Sync {
     /// @param messages The messages to process
     /// @param options Processing options
     /// @returns The processed messages
-    async fn process(&self, messages: Vec<Message>, options: &MemoryProcessorOptions) -> Result<Vec<Message>>;
+    async fn process(
+        &self,
+        messages: Vec<Message>,
+        options: &MemoryProcessorOptions,
+    ) -> Result<Vec<Message>>;
 
     /// Get the name of this processor for debugging
     fn processor_name(&self) -> &str {
@@ -83,22 +90,26 @@ impl Base for MessageLimitProcessor {
 
 #[async_trait]
 impl MemoryProcessor for MessageLimitProcessor {
-    async fn process(&self, messages: Vec<Message>, _options: &MemoryProcessorOptions) -> Result<Vec<Message>> {
+    async fn process(
+        &self,
+        messages: Vec<Message>,
+        _options: &MemoryProcessorOptions,
+    ) -> Result<Vec<Message>> {
         if messages.len() <= self.max_messages {
             return Ok(messages);
         }
-        
+
         // Keep the most recent messages
         let start_index = messages.len() - self.max_messages;
         let limited_messages = messages[start_index..].to_vec();
-        
+
         self.logger.debug(&format!(
             "Limited messages from {} to {} (max: {})",
             messages.len(),
             limited_messages.len(),
             self.max_messages
-        ), None);
-        
+        ));
+
         Ok(limited_messages)
     }
 
@@ -154,20 +165,24 @@ impl Base for RoleFilterProcessor {
 
 #[async_trait]
 impl MemoryProcessor for RoleFilterProcessor {
-    async fn process(&self, messages: Vec<Message>, _options: &MemoryProcessorOptions) -> Result<Vec<Message>> {
+    async fn process(
+        &self,
+        messages: Vec<Message>,
+        _options: &MemoryProcessorOptions,
+    ) -> Result<Vec<Message>> {
         let original_count = messages.len();
         let filtered_messages: Vec<Message> = messages
             .into_iter()
             .filter(|msg| self.allowed_roles.contains(&msg.role))
             .collect();
-        
+
         self.logger.debug(&format!(
             "Filtered messages from {} to {} (allowed roles: {:?})",
             original_count,
             filtered_messages.len(),
             self.allowed_roles
-        ), None);
-        
+        ));
+
         Ok(filtered_messages)
     }
 
@@ -218,11 +233,15 @@ impl Base for DeduplicationProcessor {
 
 #[async_trait]
 impl MemoryProcessor for DeduplicationProcessor {
-    async fn process(&self, messages: Vec<Message>, _options: &MemoryProcessorOptions) -> Result<Vec<Message>> {
+    async fn process(
+        &self,
+        messages: Vec<Message>,
+        _options: &MemoryProcessorOptions,
+    ) -> Result<Vec<Message>> {
         let original_count = messages.len();
         let mut seen_contents = std::collections::HashSet::new();
         let mut deduplicated_messages = Vec::new();
-        
+
         for message in messages {
             let role_str = match message.role {
                 crate::llm::Role::System => "system",
@@ -237,13 +256,13 @@ impl MemoryProcessor for DeduplicationProcessor {
                 deduplicated_messages.push(message);
             }
         }
-        
+
         self.logger.debug(&format!(
             "Deduplicated messages from {} to {}",
             original_count,
             deduplicated_messages.len()
-        ), None);
-        
+        ));
+
         Ok(deduplicated_messages)
     }
 
@@ -265,7 +284,7 @@ impl CompositeProcessor {
     pub fn new(processors: Vec<Box<dyn MemoryProcessor>>, logger: Arc<dyn Logger>) -> Self {
         Self { processors, logger }
     }
-    
+
     /// Add a processor to the chain
     pub fn add_processor(&mut self, processor: Box<dyn MemoryProcessor>) {
         self.processors.push(processor);
@@ -300,7 +319,11 @@ impl Base for CompositeProcessor {
 
 #[async_trait]
 impl MemoryProcessor for CompositeProcessor {
-    async fn process(&self, mut messages: Vec<Message>, options: &MemoryProcessorOptions) -> Result<Vec<Message>> {
+    async fn process(
+        &self,
+        mut messages: Vec<Message>,
+        options: &MemoryProcessorOptions,
+    ) -> Result<Vec<Message>> {
         for processor in &self.processors {
             messages = processor.process(messages, options).await?;
         }
@@ -318,6 +341,6 @@ pub fn create_default_processor_chain(logger: Arc<dyn Logger>) -> CompositeProce
         Box::new(DeduplicationProcessor::new(logger.clone())),
         Box::new(MessageLimitProcessor::new(50, logger.clone())),
     ];
-    
+
     CompositeProcessor::new(processors, logger)
 }

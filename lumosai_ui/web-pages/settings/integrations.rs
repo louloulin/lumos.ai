@@ -12,9 +12,9 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
 use crate::types::Rbac;
+use dioxus::prelude::*;
 
 // 临时类型定义
 #[derive(Clone, Debug, PartialEq)]
@@ -40,10 +40,7 @@ pub struct IntegrationCategory {
 
 /// 集成管理页面
 #[component]
-pub fn IntegrationsPage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn IntegrationsPage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟数据
     let integration_categories = vec![
         IntegrationCategory {
@@ -194,16 +191,19 @@ pub fn IntegrationsPage(
 /// 集成概览组件
 #[component]
 fn IntegrationsOverview(integration_categories: Vec<IntegrationCategory>) -> Element {
-    let total_integrations: usize = integration_categories.iter()
+    let total_integrations: usize = integration_categories
+        .iter()
         .map(|cat| cat.integrations.len())
         .sum();
-    
-    let enabled_integrations: usize = integration_categories.iter()
+
+    let enabled_integrations: usize = integration_categories
+        .iter()
         .flat_map(|cat| &cat.integrations)
         .filter(|int| int.is_enabled)
         .count();
-    
-    let total_usage: i64 = integration_categories.iter()
+
+    let total_usage: i64 = integration_categories
+        .iter()
         .flat_map(|cat| &cat.integrations)
         .map(|int| int.usage_count)
         .sum();
@@ -304,10 +304,7 @@ fn IntegrationsOverview(integration_categories: Vec<IntegrationCategory>) -> Ele
 
 /// 集成分类区块组件
 #[component]
-fn IntegrationCategorySection(
-    category: IntegrationCategory,
-    rbac: Rbac,
-) -> Element {
+fn IntegrationCategorySection(category: IntegrationCategory, rbac: Rbac) -> Element {
     rsx! {
         div {
             class: "card bg-base-100 shadow-lg",
@@ -340,10 +337,7 @@ fn IntegrationCategorySection(
 
 /// 集成卡片组件
 #[component]
-fn IntegrationCard(
-    integration: Integration,
-    rbac: Rbac,
-) -> Element {
+fn IntegrationCard(integration: Integration, rbac: Rbac) -> Element {
     rsx! {
         div {
             class: if integration.is_enabled {
@@ -353,7 +347,7 @@ fn IntegrationCard(
             },
             div {
                 class: "card-body p-4",
-                
+
                 // 头部
                 div {
                     class: "flex items-start justify-between mb-3",
@@ -388,13 +382,13 @@ fn IntegrationCard(
                         }
                     }
                 }
-                
+
                 // 描述
                 p {
                     class: "text-sm text-base-content/70 mb-4 line-clamp-2",
                     "{integration.description}"
                 }
-                
+
                 // 统计信息
                 if integration.is_enabled {
                     div {
@@ -413,7 +407,7 @@ fn IntegrationCard(
                         }
                     }
                 }
-                
+
                 // 操作按钮
                 div {
                     class: "flex justify-between items-center",
@@ -429,7 +423,7 @@ fn IntegrationCard(
                             "Enable"
                         }
                     }
-                    
+
                     if rbac.can_manage_integrations() {
                         div {
                             class: "dropdown dropdown-end",
@@ -493,7 +487,7 @@ fn IntegrationGuide() -> Element {
                 }
                 div {
                     class: "grid grid-cols-1 md:grid-cols-2 gap-6",
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -507,7 +501,7 @@ fn IntegrationGuide() -> Element {
                             li { "• Test the connection" }
                         }
                     }
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",

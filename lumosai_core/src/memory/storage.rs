@@ -1,5 +1,5 @@
 //! In-memory storage implementation for Memory Threads
-//! 
+//!
 //! This module provides a simple in-memory storage implementation for testing
 //! and development purposes. For production use, implement MemoryThreadStorage
 //! with a persistent storage backend.
@@ -13,7 +13,7 @@ use crate::llm::Message;
 use crate::Result;
 use crate::error::LumosError;
 use super::thread::{
-    MemoryThread, MemoryThreadStorage, GetMessagesParams, MessageFilter, 
+    MemoryThread, MemoryThreadStorage, GetMessagesParams, MessageFilter,
     MessageOperationResult, ThreadStats
 };
 
@@ -77,7 +77,8 @@ impl InMemoryThreadStorage {
             }
         }
 
-        // TODO: Check metadata filter when Message supports metadata
+        // Note: Metadata filter will be implemented when Message struct supports metadata fields
+        // Future enhancement: Add metadata: HashMap<String, Value> field to Message struct
 
         true
     }
@@ -87,7 +88,7 @@ impl InMemoryThreadStorage {
 impl MemoryThreadStorage for InMemoryThreadStorage {
     async fn create_thread(&self, thread: &MemoryThread) -> Result<MemoryThread> {
         let mut threads = self.threads.write().unwrap();
-        
+
         if threads.contains_key(&thread.id) {
             return Err(LumosError::InvalidOperation(format!(
                 "Thread with ID {} already exists",
@@ -96,10 +97,10 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
         }
 
         threads.insert(thread.id.clone(), thread.clone());
-        
+
         // Initialize empty message list for this thread
         self.messages.write().unwrap().insert(thread.id.clone(), Vec::new());
-        
+
         Ok(thread.clone())
     }
 
@@ -110,7 +111,7 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
 
     async fn update_thread(&self, thread: &MemoryThread) -> Result<MemoryThread> {
         let mut threads = self.threads.write().unwrap();
-        
+
         if !threads.contains_key(&thread.id) {
             return Err(LumosError::NotFound(format!(
                 "Thread with ID {} not found",
@@ -125,7 +126,7 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
     async fn delete_thread(&self, thread_id: &str) -> Result<()> {
         let mut threads = self.threads.write().unwrap();
         let mut messages = self.messages.write().unwrap();
-        
+
         if threads.remove(thread_id).is_none() {
             return Err(LumosError::NotFound(format!(
                 "Thread with ID {} not found",
@@ -182,7 +183,7 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
 
     async fn get_messages(&self, thread_id: &str, params: &GetMessagesParams) -> Result<Vec<Message>> {
         let messages = self.messages.read().unwrap();
-        
+
         let thread_messages = match messages.get(thread_id) {
             Some(msgs) => msgs,
             None => return Ok(Vec::new()),
@@ -212,7 +213,12 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
             filtered_messages.truncate(limit);
         }
 
-        // TODO: Handle cursor-based pagination
+        // Cursor-based pagination implementation note:
+        // To support cursor-based pagination, we need:
+        // 1. Add cursor field to GetMessagesParams (Option<String>)
+        // 2. Use message_id or stored_at as cursor
+        // 3. Implement binary search for cursor positioning in large datasets
+        // 4. Return pagination metadata (has_next_page, next_cursor)
 
         Ok(filtered_messages
             .into_iter()
@@ -222,7 +228,7 @@ impl MemoryThreadStorage for InMemoryThreadStorage {
 
     async fn delete_messages(&self, thread_id: &str, message_ids: &[String]) -> Result<MessageOperationResult> {
         let mut messages = self.messages.write().unwrap();
-        
+
         let thread_messages = match messages.get_mut(thread_id) {
             Some(msgs) => msgs,
             None => {
@@ -325,7 +331,7 @@ mod tests {
     #[tokio::test]
     async fn test_thread_creation_and_retrieval() {
         let storage = InMemoryThreadStorage::new();
-        
+
         let thread = MemoryThread::new(super::super::thread::CreateThreadParams {
             id: Some("test-thread".to_string()),
             title: "Test Thread".to_string(),
@@ -351,10 +357,10 @@ mod tests {
     #[tokio::test]
     async fn test_message_operations() {
         let storage = InMemoryThreadStorage::new();
-        
+
         let thread = MemoryThread::new(super::super::thread::CreateThreadParams {
             id: Some("test-thread".to_string()),
-            title: "Test Thread".to_string()),
+            title: "Test Thread".to_string(),
             agent_id: None,
             resource_id: None,
             metadata: None,
@@ -381,7 +387,7 @@ mod tests {
     #[tokio::test]
     async fn test_message_filtering() {
         let storage = InMemoryThreadStorage::new();
-        
+
         let thread = MemoryThread::new(super::super::thread::CreateThreadParams {
             id: Some("test-thread".to_string()),
             title: "Test Thread".to_string(),
@@ -416,7 +422,7 @@ mod tests {
     #[tokio::test]
     async fn test_thread_stats() {
         let storage = InMemoryThreadStorage::new();
-        
+
         let thread = MemoryThread::new(super::super::thread::CreateThreadParams {
             id: Some("test-thread".to_string()),
             title: "Test Thread".to_string(),
@@ -442,7 +448,7 @@ mod tests {
     #[tokio::test]
     async fn test_search_messages() {
         let storage = InMemoryThreadStorage::new();
-        
+
         let thread = MemoryThread::new(super::super::thread::CreateThreadParams {
             id: Some("test-thread".to_string()),
             title: "Test Thread".to_string(),

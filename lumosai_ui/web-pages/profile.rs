@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
-use web_assets::files::avatar_svg;
-use daisy_rsx::*;
 use crate::types::{Rbac, User};
+use daisy_rsx::*;
 use dioxus::prelude::*;
+use web_assets::files::avatar_svg;
 
 #[component]
 fn Page(

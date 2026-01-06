@@ -36,18 +36,18 @@ impl InferenceEngine {
     pub async fn new(config: InferenceConfig) -> Result<Self> {
         Ok(Self { config })
     }
-    
+
     pub async fn infer(&self, model: &str, input: InferenceInput) -> Result<InferenceOutput> {
         let start_time = std::time::Instant::now();
-        
+
         // 简化的推理实现
         let result = serde_json::json!({
             "prediction": "sample_result",
             "scores": [0.8, 0.15, 0.05]
         });
-        
+
         let processing_time = start_time.elapsed();
-        
+
         Ok(InferenceOutput {
             result,
             confidence: 0.8,

@@ -2,7 +2,7 @@
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1},
-    character::complete::{char, multispace0, alpha1, alphanumeric1},
+    character::complete::{alpha1, alphanumeric1, char, multispace0},
     combinator::{map, recognize},
     multi::{many0, separated_list0},
     sequence::{delimited, pair},
@@ -53,10 +53,7 @@ pub struct ParameterDef {
 fn identifier(input: &str) -> IResult<&str, &str> {
     recognize(pair(
         alt((tag("_"), alpha1)),
-        many0(alt((
-            alphanumeric1,
-            tag("_"),
-        ))),
+        many0(alt((alphanumeric1, tag("_")))),
     ))(input)
 }
 
@@ -72,9 +69,8 @@ fn string_literal(input: &str) -> IResult<&str, String> {
 /// 解析表达式（简化版本，支持函数调用）
 fn expression(input: &str) -> IResult<&str, String> {
     // 解析到逗号、右括号或结束为止
-    let (input, expr) = take_while1(|c: char| {
-        c != ',' && c != '}' && c != ']' && c != '\n'
-    })(input)?;
+    let (input, expr) =
+        take_while1(|c: char| c != ',' && c != '}' && c != ']' && c != '\n')(input)?;
     Ok((input, expr.trim().to_string()))
 }
 
@@ -123,7 +119,7 @@ fn object(input: &str) -> IResult<&str, HashMap<String, Value>> {
         ),
         char('}'),
     )(input)?;
-    
+
     let mut map = HashMap::new();
     for (key, value) in pairs {
         map.insert(key, value);
@@ -136,18 +132,20 @@ fn object(input: &str) -> IResult<&str, HashMap<String, Value>> {
 /// 解析agent!宏
 pub fn parse_agent_macro(input: &str) -> Result<AgentDef, String> {
     let result = delimited(multispace0, object, multispace0)(input);
-    
+
     match result {
         Ok((remaining, obj)) => {
             if !remaining.trim().is_empty() {
-                return Err(format!("Unexpected content after agent definition: {}", remaining));
+                return Err(format!(
+                    "Unexpected content after agent definition: {remaining}"
+                ));
             }
-            
+
             let name = extract_string(&obj, "name")?;
             let instructions = extract_string(&obj, "instructions")?;
             let provider = extract_expression(&obj, "provider")?;
             let tools = extract_tool_list(&obj, "tools")?;
-            
+
             Ok(AgentDef {
                 name,
                 instructions,
@@ -155,31 +153,33 @@ pub fn parse_agent_macro(input: &str) -> Result<AgentDef, String> {
                 tools,
             })
         }
-        Err(e) => Err(format!("Failed to parse agent macro: {:?}", e)),
+        Err(e) => Err(format!("Failed to parse agent macro: {e:?}")),
     }
 }
 
 /// 解析tool!宏
 pub fn parse_tool_macro(input: &str) -> Result<ToolDef, String> {
     let result = delimited(multispace0, object, multispace0)(input);
-    
+
     match result {
         Ok((remaining, obj)) => {
             if !remaining.trim().is_empty() {
-                return Err(format!("Unexpected content after tool definition: {}", remaining));
+                return Err(format!(
+                    "Unexpected content after tool definition: {remaining}"
+                ));
             }
-            
+
             let name = extract_string(&obj, "name")?;
             let description = extract_string(&obj, "description")?;
             let handler = extract_expression(&obj, "handler")?;
-            
+
             // 解析参数（如果存在）
             let parameters = if let Some(Value::Array(params)) = obj.get("parameters") {
                 parse_parameters(params)?
             } else {
                 Vec::new()
             };
-            
+
             Ok(ToolDef {
                 name,
                 description,
@@ -187,7 +187,7 @@ pub fn parse_tool_macro(input: &str) -> Result<ToolDef, String> {
                 handler,
             })
         }
-        Err(e) => Err(format!("Failed to parse tool macro: {:?}", e)),
+        Err(e) => Err(format!("Failed to parse tool macro: {e:?}")),
     }
 }
 
@@ -196,8 +196,8 @@ pub fn parse_tool_macro(input: &str) -> Result<ToolDef, String> {
 fn extract_string(obj: &HashMap<String, Value>, key: &str) -> Result<String, String> {
     match obj.get(key) {
         Some(Value::String(s)) => Ok(s.clone()),
-        Some(_) => Err(format!("Field '{}' must be a string", key)),
-        None => Err(format!("Missing required field '{}'", key)),
+        Some(_) => Err(format!("Field '{key}' must be a string")),
+        None => Err(format!("Missing required field '{key}'")),
     }
 }
 
@@ -205,8 +205,8 @@ fn extract_expression(obj: &HashMap<String, Value>, key: &str) -> Result<String,
     match obj.get(key) {
         Some(Value::Expression(e)) => Ok(e.clone()),
         Some(Value::Identifier(i)) => Ok(i.clone()),
-        Some(_) => Err(format!("Field '{}' must be an expression or identifier", key)),
-        None => Err(format!("Missing required field '{}'", key)),
+        Some(_) => Err(format!("Field '{key}' must be an expression or identifier")),
+        None => Err(format!("Missing required field '{key}'")),
     }
 }
 
@@ -222,27 +222,28 @@ fn extract_tool_list(obj: &HashMap<String, Value>, key: &str) -> Result<Vec<Stri
             }
             Ok(tools)
         }
-        Some(_) => Err(format!("Field '{}' must be an array", key)),
+        Some(_) => Err(format!("Field '{key}' must be an array")),
         None => Ok(Vec::new()), // 工具列表是可选的
     }
 }
 
 fn parse_parameters(params: &[Value]) -> Result<Vec<ParameterDef>, String> {
     let mut parameters = Vec::new();
-    
+
     for param in params {
         match param {
             Value::Object(param_obj) => {
                 let name = extract_string(param_obj, "name")?;
                 let param_type = extract_string(param_obj, "type")?;
                 let description = extract_string(param_obj, "description")?;
-                let required = param_obj.get("required")
+                let required = param_obj
+                    .get("required")
                     .map(|v| match v {
                         Value::Identifier(s) => s == "true",
                         _ => false,
                     })
                     .unwrap_or(true);
-                
+
                 parameters.push(ParameterDef {
                     name,
                     param_type,
@@ -253,7 +254,7 @@ fn parse_parameters(params: &[Value]) -> Result<Vec<ParameterDef>, String> {
             _ => return Err("Parameters must be objects".to_string()),
         }
     }
-    
+
     Ok(parameters)
 }
 
@@ -269,10 +270,10 @@ mod tests {
             provider: create_provider(),
             tools: [tool1, tool2]
         }"#;
-        
+
         let result = parse_agent_macro(input);
         assert!(result.is_ok());
-        
+
         let agent = result.unwrap();
         assert_eq!(agent.name, "test_agent");
         assert_eq!(agent.instructions, "Test instructions");
@@ -287,10 +288,10 @@ mod tests {
             description: "Test tool description",
             handler: handle_test
         }"#;
-        
+
         let result = parse_tool_macro(input);
         assert!(result.is_ok());
-        
+
         let tool = result.unwrap();
         assert_eq!(tool.name, "test_tool");
         assert_eq!(tool.description, "Test tool description");

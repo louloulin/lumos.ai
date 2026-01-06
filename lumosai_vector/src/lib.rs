@@ -101,8 +101,9 @@ pub use lumosai_vector_qdrant as qdrant;
 #[cfg(feature = "weaviate")]
 pub use lumosai_vector_weaviate as weaviate;
 
-#[cfg(feature = "postgres")]
-pub use lumosai_vector_postgres as postgres;
+// PostgreSQL feature temporarily disabled
+// #[cfg(feature = "postgres")]
+// pub use lumosai_vector_postgres as postgres;
 
 #[cfg(feature = "fastembed")]
 pub use lumosai_vector_fastembed as fastembed;
@@ -123,20 +124,21 @@ pub mod prelude {
     #[cfg(feature = "weaviate")]
     pub use crate::weaviate::WeaviateVectorStorage;
 
-    #[cfg(feature = "postgres")]
-    pub use crate::postgres::PostgresVectorStorage;
+    // PostgreSQL feature temporarily disabled
+    // #[cfg(feature = "postgres")]
+    // pub use crate::postgres::PostgresVectorStorage;
 }
 
 /// Utility functions for working with vector storage
 pub mod utils {
     use crate::prelude::*;
-    
+
     /// Create a memory storage instance with default configuration
     #[cfg(feature = "memory")]
     pub async fn create_memory_storage() -> Result<crate::memory::MemoryVectorStorage> {
         crate::memory::MemoryVectorStorage::new().await
     }
-    
+
     /// Create a Qdrant storage instance
     #[cfg(feature = "qdrant")]
     pub async fn create_qdrant_storage(url: &str) -> Result<crate::qdrant::QdrantVectorStorage> {
@@ -145,16 +147,20 @@ pub mod utils {
 
     /// Create a Weaviate storage instance
     #[cfg(feature = "weaviate")]
-    pub async fn create_weaviate_storage(url: &str) -> Result<crate::weaviate::WeaviateVectorStorage> {
+    pub async fn create_weaviate_storage(
+        url: &str,
+    ) -> Result<crate::weaviate::WeaviateVectorStorage> {
         crate::weaviate::WeaviateVectorStorage::new(url).await
     }
 
-    /// Create a PostgreSQL storage instance
-    #[cfg(feature = "postgres")]
-    pub async fn create_postgres_storage(database_url: &str) -> Result<crate::postgres::PostgresVectorStorage> {
-        crate::postgres::PostgresVectorStorage::new(database_url).await
-    }
-    
+    /// Create a PostgreSQL storage instance (temporarily disabled)
+    // #[cfg(feature = "postgres")]
+    // pub async fn create_postgres_storage(
+    //     database_url: &str,
+    // ) -> Result<crate::postgres::PostgresVectorStorage> {
+    //     crate::postgres::PostgresVectorStorage::new(database_url).await
+    // }
+
     /// Auto-detect and create the best available storage backend
     /// Returns a memory storage instance as the default implementation
     #[cfg(feature = "memory")]
@@ -165,19 +171,19 @@ pub mod utils {
     }
 
     /// Create the best available storage backend based on environment
-    #[cfg(any(feature = "memory", feature = "postgres"))]
+    #[cfg(feature = "memory")]
     pub async fn create_best_available_storage() -> Result<Box<dyn std::any::Any + Send + Sync>> {
         // Try different backends in order of preference
 
-        // Try PostgreSQL first if DATABASE_URL is set
-        #[cfg(feature = "postgres")]
-        {
-            if let Ok(database_url) = std::env::var("DATABASE_URL") {
-                if let Ok(storage) = create_postgres_storage(&database_url).await {
-                    return Ok(Box::new(storage));
-                }
-            }
-        }
+        // PostgreSQL feature temporarily disabled
+        // #[cfg(feature = "postgres")]
+        // {
+        //     if let Ok(database_url) = std::env::var("DATABASE_URL") {
+        //         if let Ok(storage) = create_postgres_storage(&database_url).await {
+        //             return Ok(Box::new(storage));
+        //         }
+        //     }
+        // }
 
         // Try Qdrant if QDRANT_URL is set
         #[cfg(feature = "qdrant")]
@@ -203,12 +209,14 @@ pub mod utils {
         #[cfg(feature = "memory")]
         {
             let storage = create_memory_storage().await?;
-            return Ok(Box::new(storage));
+            Ok(Box::new(storage))
         }
 
         #[cfg(not(feature = "memory"))]
         {
-            Err(VectorError::NotSupported("No storage backends available".to_string()))
+            Err(VectorError::NotSupported(
+                "No storage backends available".to_string(),
+            ))
         }
     }
 }
@@ -216,32 +224,30 @@ pub mod utils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_memory_storage_integration() {
         let storage = utils::create_memory_storage().await.unwrap();
-        
+
         // Create index
-        let config = IndexConfig::new("test", 3)
-            .with_metric(SimilarityMetric::Cosine);
+        let config = IndexConfig::new("test", 3).with_metric(SimilarityMetric::Cosine);
         storage.create_index(config).await.unwrap();
-        
+
         // Insert document
         let doc = Document::new("test1", "test content")
             .with_embedding(vec![1.0, 0.0, 0.0])
             .with_metadata("category", "test");
-        
+
         storage.upsert_documents("test", vec![doc]).await.unwrap();
-        
+
         // Search
-        let request = SearchRequest::new("test", vec![1.0, 0.0, 0.0])
-            .with_top_k(1);
+        let request = SearchRequest::new("test", vec![1.0, 0.0, 0.0]).with_top_k(1);
         let results = storage.search(request).await.unwrap();
-        
+
         assert_eq!(results.results.len(), 1);
         assert_eq!(results.results[0].id, "test1");
     }
-    
+
     #[tokio::test]
     #[cfg(feature = "memory")]
     async fn test_auto_storage_creation() {

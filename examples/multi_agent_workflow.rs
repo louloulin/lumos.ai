@@ -6,7 +6,7 @@
 //! - 代理间协作
 //! - 条件执行和错误处理
 
-use lumosai_core::agent::{AgentBuilder, trait_def::Agent};
+use lumosai_core::agent::{trait_def::Agent, AgentBuilder, AgentTrait};
 use lumosai_core::llm::MockLlmProvider;
 use std::sync::Arc;
 use tokio;
@@ -62,12 +62,16 @@ async fn demo_specialized_agents() -> std::result::Result<(), Box<dyn std::error
     println!("\n=== 代理功能测试 ===");
 
     // 测试研究员
-    let research_result = researcher.generate_simple("请研究 Rust 异步编程的最新发展").await?;
+    let research_result = researcher
+        .generate_simple("请研究 Rust 异步编程的最新发展")
+        .await?;
     println!("\n研究员输出:");
     println!("{}", research_result);
 
     // 测试写作代理
-    let writing_result = writer.generate_simple("基于研究结果，撰写一篇关于 Rust 异步编程的技术文章大纲").await?;
+    let writing_result = writer
+        .generate_simple("基于研究结果，撰写一篇关于 Rust 异步编程的技术文章大纲")
+        .await?;
     println!("\n写作代理输出:");
     println!("{}", writing_result);
 
@@ -163,8 +167,10 @@ async fn demo_complex_workflow() -> std::result::Result<(), Box<dyn std::error::
 
     // 步骤4: 内容撰写（依赖大纲和示例）
     println!("\n步骤4: 内容撰写");
-    let writing_prompt = format!("基于大纲和示例撰写完整文章：\n大纲：{}\n示例：{}",
-        outline_result, examples_result);
+    let writing_prompt = format!(
+        "基于大纲和示例撰写完整文章：\n大纲：{}\n示例：{}",
+        outline_result, examples_result
+    );
     let writing_result = writer.generate_simple(&writing_prompt).await?;
     println!("  状态: ✅ 成功");
 
@@ -212,7 +218,9 @@ async fn demo_conditional_workflow() -> std::result::Result<(), Box<dyn std::err
 
     // 主要任务（成功）
     println!("步骤1: 主要任务");
-    let primary_result = unreliable_agent.generate_simple("这是一个成功的任务").await?;
+    let primary_result = unreliable_agent
+        .generate_simple("这是一个成功的任务")
+        .await?;
     println!("  状态: ✅ 成功");
     println!("  输出: {}", primary_result);
 
@@ -267,7 +275,8 @@ async fn demo_conditional_workflow() -> std::result::Result<(), Box<dyn std::err
 // ============================================================================
 
 /// 创建研究员代理
-async fn create_researcher_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_researcher_agent(
+) -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "我已经完成了深入的技术研究。Rust 异步编程的最新发展包括：async/await 语法的稳定、Tokio 生态系统的成熟、以及新的异步特性如 async closures 的提案。".to_string(),
         "研究完成。我收集了相关的代码示例和最佳实践，包括错误处理模式、性能优化技巧和常见陷阱的避免方法。".to_string(),
@@ -285,7 +294,8 @@ async fn create_researcher_agent() -> std::result::Result<Arc<dyn Agent>, Box<dy
 }
 
 /// 创建写作代理
-async fn create_writer_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_writer_agent(
+) -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "我已经创建了详细的文章大纲：1. 引言 2. 异步编程基础 3. 高级特性 4. 最佳实践 5. 性能优化 6. 总结。每个部分都包含了具体的要点和示例。".to_string(),
         "文章撰写完成。我基于研究结果和大纲，撰写了一篇全面的技术文章，涵盖了 Rust 异步编程的核心概念、实用技巧和最佳实践。".to_string(),
@@ -305,7 +315,8 @@ async fn create_writer_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn st
 }
 
 /// 创建审查代理
-async fn create_reviewer_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_reviewer_agent(
+) -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "技术审查完成。文章的技术内容准确，代码示例正确，概念解释清晰。建议在性能部分添加更多的基准测试数据。".to_string(),
         "编辑审查完成。文章结构良好，语言流畅，逻辑清晰。已修正了几处语法错误和术语不一致的问题。".to_string(),
@@ -324,7 +335,8 @@ async fn create_reviewer_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn 
 }
 
 /// 创建发布代理
-async fn create_publisher_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_publisher_agent(
+) -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "发布准备完成。文章已格式化为适合博客发布的格式，添加了适当的标题层级、代码高亮和元数据。SEO 优化也已完成。".to_string(),
     ];
@@ -334,14 +346,17 @@ async fn create_publisher_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn
     Ok(Arc::new(
         AgentBuilder::new()
             .name("publisher")
-            .instructions("你负责最终发布内容，包括格式化、SEO优化和平台适配。请确保内容符合发布标准。")
+            .instructions(
+                "你负责最终发布内容，包括格式化、SEO优化和平台适配。请确保内容符合发布标准。",
+            )
             .model(llm_provider)
-            .build()?
+            .build()?,
     ))
 }
 
 /// 创建不可靠代理（用于演示错误处理）
-async fn create_unreliable_agent() -> std::result::Result<Arc<dyn Agent>, Box<dyn std::error::Error>> {
+async fn create_unreliable_agent(
+) -> std::result::Result<Arc<dyn AgentTrait>, Box<dyn std::error::Error>> {
     let responses = vec![
         "主要任务成功完成。这是一个高质量的输出结果。".to_string(),
         // 注意：这个代理会根据输入决定是否"失败"
@@ -352,9 +367,11 @@ async fn create_unreliable_agent() -> std::result::Result<Arc<dyn Agent>, Box<dy
     Ok(Arc::new(
         AgentBuilder::new()
             .name("unreliable_agent")
-            .instructions("你是一个可能失败的代理，用于演示错误处理。根据输入的 task_type 决定成功或失败。")
+            .instructions(
+                "你是一个可能失败的代理，用于演示错误处理。根据输入的 task_type 决定成功或失败。",
+            )
             .model(llm_provider)
-            .build()?
+            .build()?,
     ))
 }
 

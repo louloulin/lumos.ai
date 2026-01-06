@@ -6,13 +6,13 @@ use std::collections::HashMap;
 pub struct Document {
     /// Unique identifier for the document
     pub id: String,
-    
+
     /// The document content
     pub content: String,
-    
+
     /// The document metadata
     pub metadata: Metadata,
-    
+
     /// The embedding vector if available
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding: Option<Vec<f32>>,
@@ -24,11 +24,11 @@ pub struct Metadata {
     /// Arbitrary metadata fields
     #[serde(flatten)]
     pub fields: HashMap<String, serde_json::Value>,
-    
+
     /// Optional source information (e.g., file path, URL)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
-    
+
     /// Optional creation date
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -39,7 +39,7 @@ impl Metadata {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Add a field to the metadata
     pub fn add<K, V>(&mut self, key: K, value: V) -> &mut Self
     where
@@ -49,7 +49,7 @@ impl Metadata {
         self.fields.insert(key.into(), value.into());
         self
     }
-    
+
     /// Set the source of the document
     pub fn with_source<S: Into<String>>(mut self, source: S) -> Self {
         self.source = Some(source.into());
@@ -145,13 +145,13 @@ impl Default for ChunkingConfig {
 pub struct EmbeddingConfig {
     /// The provider for embeddings (e.g., OpenAI, local)
     pub provider: String,
-    
+
     /// The model name
     pub model: String,
-    
+
     /// Dimension of the embedding vectors
     pub dimensions: usize,
-    
+
     /// Additional provider-specific configuration
     #[serde(flatten)]
     pub extra_config: HashMap<String, serde_json::Value>,

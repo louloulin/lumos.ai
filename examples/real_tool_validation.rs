@@ -1,11 +1,11 @@
-use lumosai_core::agent::{BasicAgent, AgentConfig};
 use lumosai_core::agent::types::AgentGenerateOptions;
-use lumosai_core::Agent;
-use lumosai_core::llm::{QwenProvider, QwenApiType, Message, Role};
+use lumosai_core::agent::{AgentConfig, BasicAgent};
+use lumosai_core::llm::{Message, QwenApiType, QwenProvider, Role};
 use lumosai_core::tool::toolset::ToolDefinition;
-use std::time::Instant;
-use std::sync::Arc;
+use lumosai_core::Agent;
 use serde_json::json;
+use std::sync::Arc;
+use std::time::Instant;
 use tokio;
 
 /// 真实工具调用验证测试
@@ -18,23 +18,23 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("  - 模型: qwen3-30b-a3b");
     println!("  - API密钥: sk-bc977c4e31e542f1a34159cb42478198");
     println!("  - 基础URL: https://dashscope.aliyuncs.com/compatible-mode/v1");
-    
+
     // 3.1 基础工具定义测试
     println!("\n📋 3.1 基础工具定义测试");
     test_tool_definition().await?;
-    
+
     // 3.2 工具调用执行测试
     println!("\n📋 3.2 工具调用执行测试");
     test_tool_execution().await?;
-    
+
     // 3.3 复杂工具调用测试
     println!("\n📋 3.3 复杂工具调用测试");
     test_complex_tool_calls().await?;
-    
+
     // 3.4 工具错误处理测试
     println!("\n📋 3.4 工具错误处理测试");
     test_tool_error_handling().await?;
-    
+
     println!("\n✅ 工具调用验证测试完成！");
     Ok(())
 }
@@ -146,7 +146,7 @@ async fn test_tool_execution() -> std::result::Result<(), Box<dyn std::error::Er
         "sk-bc977c4e31e542f1a34159cb42478198",
         "qwen3-30b-a3b",
         "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        QwenApiType::OpenAICompatible
+        QwenApiType::OpenAICompatible,
     );
 
     let agent_config = AgentConfig {
@@ -165,49 +165,51 @@ async fn test_tool_execution() -> std::result::Result<(), Box<dyn std::error::Er
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));
-    
+
     // 测试用例 3.2.1: 单个工具调用
     println!("    🔧 测试单个工具调用");
-    
+
     let test_queries = vec![
         "请帮我计算 15 + 25 的结果",
         "现在几点了？",
         "请将文本 'Hello World' 转换为大写",
         "帮我计算 100 除以 5 的结果",
     ];
-    
+
     for (i, query) in test_queries.iter().enumerate() {
         let exec_start = Instant::now();
-        
+
         println!("      🔍 工具查询 {}: '{}'", i + 1, query);
-        
+
         let messages = vec![Message {
             role: Role::User,
             content: query.to_string(),
             metadata: None,
             name: None,
         }];
-        
+
         let options = AgentGenerateOptions::default();
-        
+
         let result = agent.generate(&messages, &options).await?;
         let response = result.response;
         let exec_duration = exec_start.elapsed();
-        
+
         println!("        ✅ 执行成功");
-        println!("        📝 响应: {}", 
-                 if response.chars().count() > 50 { 
-                     format!("{}...", response.chars().take(50).collect::<String>()) 
-                 } else { 
-                     response.clone() 
-                 });
+        println!(
+            "        📝 响应: {}",
+            if response.chars().count() > 50 {
+                format!("{}...", response.chars().take(50).collect::<String>())
+            } else {
+                response.clone()
+            }
+        );
         println!("        ⏱️ 执行时间: {:?}", exec_duration);
         println!("        📊 工具调用次数: {}", result.steps.len());
-        
+
         // 验证响应
         assert!(!response.is_empty(), "响应不能为空");
         assert!(exec_duration.as_secs() < 30, "执行时间应该小于30秒");
-        
+
         // 简单的内容相关性检查
         match i {
             0 => {
@@ -216,37 +218,41 @@ async fn test_tool_execution() -> std::result::Result<(), Box<dyn std::error::Er
                 } else {
                     println!("        ⚠️ 响应中未明确包含计算结果，但这可能是正常的");
                 }
-            },
+            }
             1 => {
-                if response.contains("时间") || response.contains("点") || response.contains(":") {
+                if response.contains("时间") || response.contains("点") || response.contains(":")
+                {
                     println!("        ✓ 时间查询相关内容验证通过");
                 } else {
                     println!("        ⚠️ 响应中未明确包含时间信息，但这可能是正常的");
                 }
-            },
+            }
             2 => {
-                if response.contains("HELLO") || response.contains("大写") || response.contains("转换") {
+                if response.contains("HELLO")
+                    || response.contains("大写")
+                    || response.contains("转换")
+                {
                     println!("        ✓ 文本转换相关内容验证通过");
                 } else {
                     println!("        ⚠️ 响应中未明确包含转换结果，但这可能是正常的");
                 }
-            },
+            }
             3 => {
                 if response.contains("20") || response.contains("100") || response.contains("5") {
                     println!("        ✓ 除法计算相关内容验证通过");
                 } else {
                     println!("        ⚠️ 响应中未明确包含计算结果，但这可能是正常的");
                 }
-            },
+            }
             _ => println!("        ✓ 响应内容验证通过"),
         }
-        
+
         println!("        ✓ 工具调用验证通过");
     }
-    
+
     let duration = start_time.elapsed();
     println!("  ✅ 工具调用执行测试完成! 耗时: {:?}", duration);
-    
+
     Ok(())
 }
 
@@ -259,7 +265,7 @@ async fn test_complex_tool_calls() -> std::result::Result<(), Box<dyn std::error
         "sk-bc977c4e31e542f1a34159cb42478198",
         "qwen3-30b-a3b",
         "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        QwenApiType::OpenAICompatible
+        QwenApiType::OpenAICompatible,
     );
 
     let agent_config = AgentConfig {
@@ -278,61 +284,66 @@ async fn test_complex_tool_calls() -> std::result::Result<(), Box<dyn std::error
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));
-    
+
     // 测试用例 3.3.1: 多步骤工具调用
     println!("    🔄 测试多步骤工具调用");
-    
+
     let complex_queries = vec![
         "请先计算 10 + 5 的结果，然后将结果乘以 2",
         "获取当前时间，然后将时间格式转换为大写",
         "计算 20 * 3 的结果，然后检查结果的字符长度",
     ];
-    
+
     for (i, query) in complex_queries.iter().enumerate() {
         let exec_start = Instant::now();
-        
+
         println!("      🔍 复杂查询 {}: '{}'", i + 1, query);
-        
+
         let messages = vec![Message {
             role: Role::User,
             content: query.to_string(),
             metadata: None,
             name: None,
         }];
-        
+
         let options = AgentGenerateOptions::default();
-        
+
         let result = agent.generate(&messages, &options).await?;
         let response = result.response;
         let exec_duration = exec_start.elapsed();
-        
+
         println!("        ✅ 执行成功");
-        println!("        📝 响应: {}", 
-                 if response.chars().count() > 80 { 
-                     format!("{}...", response.chars().take(80).collect::<String>()) 
-                 } else { 
-                     response.clone() 
-                 });
+        println!(
+            "        📝 响应: {}",
+            if response.chars().count() > 80 {
+                format!("{}...", response.chars().take(80).collect::<String>())
+            } else {
+                response.clone()
+            }
+        );
         println!("        ⏱️ 执行时间: {:?}", exec_duration);
         println!("        📊 执行步骤数: {}", result.steps.len());
-        
+
         // 验证响应
         assert!(!response.is_empty(), "响应不能为空");
-        assert!(exec_duration.as_secs() < 60, "复杂工具调用执行时间应该小于60秒");
-        
+        assert!(
+            exec_duration.as_secs() < 60,
+            "复杂工具调用执行时间应该小于60秒"
+        );
+
         // 验证多步骤执行
         if result.steps.len() > 1 {
             println!("        ✓ 多步骤工具调用验证通过");
         } else {
             println!("        ⚠️ 可能未执行多步骤工具调用，但这可能是正常的");
         }
-        
+
         println!("        ✓ 复杂工具调用验证通过");
     }
-    
+
     let duration = start_time.elapsed();
     println!("  ✅ 复杂工具调用测试完成! 耗时: {:?}", duration);
-    
+
     Ok(())
 }
 
@@ -345,7 +356,7 @@ async fn test_tool_error_handling() -> std::result::Result<(), Box<dyn std::erro
         "sk-bc977c4e31e542f1a34159cb42478198",
         "qwen3-30b-a3b",
         "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        QwenApiType::OpenAICompatible
+        QwenApiType::OpenAICompatible,
     );
 
     let agent_config = AgentConfig {
@@ -364,60 +375,67 @@ async fn test_tool_error_handling() -> std::result::Result<(), Box<dyn std::erro
     };
 
     let agent = BasicAgent::new(agent_config, Arc::new(llm));
-    
+
     // 测试用例 3.4.1: 错误场景处理
     println!("    ❌ 测试错误场景处理");
-    
+
     let error_queries = vec![
-        "请计算 10 除以 0",  // 除零错误
-        "请使用不存在的工具来完成任务",  // 工具不存在
-        "请计算 abc + def",  // 无效参数
+        "请计算 10 除以 0",             // 除零错误
+        "请使用不存在的工具来完成任务", // 工具不存在
+        "请计算 abc + def",             // 无效参数
     ];
-    
+
     for (i, query) in error_queries.iter().enumerate() {
         let exec_start = Instant::now();
-        
+
         println!("      🔍 错误查询 {}: '{}'", i + 1, query);
-        
+
         let messages = vec![Message {
             role: Role::User,
             content: query.to_string(),
             metadata: None,
             name: None,
         }];
-        
+
         let options = AgentGenerateOptions::default();
-        
+
         let result = agent.generate(&messages, &options).await?;
         let response = result.response;
         let exec_duration = exec_start.elapsed();
-        
+
         println!("        ✅ 执行成功");
-        println!("        📝 响应: {}", 
-                 if response.chars().count() > 80 { 
-                     format!("{}...", response.chars().take(80).collect::<String>()) 
-                 } else { 
-                     response.clone() 
-                 });
+        println!(
+            "        📝 响应: {}",
+            if response.chars().count() > 80 {
+                format!("{}...", response.chars().take(80).collect::<String>())
+            } else {
+                response.clone()
+            }
+        );
         println!("        ⏱️ 执行时间: {:?}", exec_duration);
-        
+
         // 验证错误处理
         assert!(!response.is_empty(), "响应不能为空");
         assert!(exec_duration.as_secs() < 30, "错误处理执行时间应该小于30秒");
-        
+
         // 检查是否包含错误处理相关内容
-        if response.contains("错误") || response.contains("无法") || response.contains("不能") || 
-           response.contains("error") || response.contains("invalid") || response.contains("cannot") {
+        if response.contains("错误")
+            || response.contains("无法")
+            || response.contains("不能")
+            || response.contains("error")
+            || response.contains("invalid")
+            || response.contains("cannot")
+        {
             println!("        ✓ 错误处理响应验证通过");
         } else {
             println!("        ⚠️ 响应中未明确包含错误处理信息，但这可能是正常的");
         }
-        
+
         println!("        ✓ 错误场景处理验证通过");
     }
-    
+
     let duration = start_time.elapsed();
     println!("  ✅ 工具错误处理测试完成! 耗时: {:?}", duration);
-    
+
     Ok(())
 }

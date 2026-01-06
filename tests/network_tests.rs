@@ -1,8 +1,8 @@
-use std::time::{Duration, Instant};
-use lumosai_network::{AgentNode, AgentNetwork, Message, MessageType, AgentId};
-use lumosai_network::types::AgentStatus;
 use lumosai_network::network::AgentConfig;
+use lumosai_network::types::AgentStatus;
+use lumosai_network::{AgentId, AgentNetwork, AgentNode, Message, MessageType};
 use serde_json::json;
+use std::time::{Duration, Instant};
 
 mod common;
 use common::TestAssertions;
@@ -44,9 +44,7 @@ async fn test_agent_node_message_handling() {
     let node = AgentNode::new(Some(AgentId::new()), config);
 
     // 添加消息处理器
-    node.add_message_handler(MessageType::Text, |_msg| {
-        Ok(vec![])
-    });
+    node.add_message_handler(MessageType::Text, |_msg| Ok(vec![]));
 
     // 验证节点可以处理消息
     assert_eq!(node.status().await, AgentStatus::Initialized);
@@ -62,7 +60,7 @@ async fn test_message_creation() {
         sender_id.clone(),
         vec![receiver_id.clone()],
         MessageType::Text,
-        json!({"content": "test message"})
+        json!({"content": "test message"}),
     );
 
     assert_eq!(message.sender, sender_id);
@@ -102,12 +100,14 @@ async fn test_concurrent_node_creation() {
     let start_time = Instant::now();
 
     // 并发创建多个节点
-    let tasks: Vec<_> = (0..5).map(|_i| {
-        tokio::spawn(async move {
-            let config = AgentConfig::default();
-            AgentNode::new(Some(AgentId::new()), config)
+    let tasks: Vec<_> = (0..5)
+        .map(|_i| {
+            tokio::spawn(async move {
+                let config = AgentConfig::default();
+                AgentNode::new(Some(AgentId::new()), config)
+            })
         })
-    }).collect();
+        .collect();
 
     let results = futures::future::join_all(tasks).await;
     let duration = start_time.elapsed();

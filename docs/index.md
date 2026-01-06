@@ -1,90 +1,102 @@
-# Lumosai 文档
+# LumosAI 文档索引
 
-欢迎使用Lumosai文档！Lumosai是一个用Rust实现的AI Agent框架，专注于性能、安全性和可扩展性。
+欢迎使用 LumosAI 文档！这里提供从入门到生产的完整资料，覆盖架构、开发、部署、RAG、宏与DSL、多代理工作流、测试与最佳实践等。所有链接均指向本仓库已存在的文档，确保可用。
 
-## 目录
+## 快速入口
 
-### 入门指南
+- `docs/QUICK_START.md` 快速开始
+- `docs/quick-start/installation.md` 安装指南（Quick Start 安装）
+- `docs/getting_started.md` 入门指南
 
-- [快速开始](./quickstart.md)
-- [安装指南](./installation.md)
-- [基本概念](./concepts.md)
+## 概览与架构
 
-### 核心功能
+- `docs/1_overview.md` 项目概览
+- `docs/2_architecture.md` 系统架构与设计
+- `docs/ARCHITECTURE.md` 架构图与结构说明（包含可视化示意）
+- `docs/3_tech_stack.md` 技术栈与依赖
+- `docs/4_core_components.md` 核心组件（Agent、Tool、Memory、LLM、RAG、Workflow 等）
 
-- [代理 (Agents)](./agents.md)
-- [工具 (Tools)](./tools.md)
-- [LLM适配器](./llm_adapters.md)
-- [内存系统](./memory.md)
-- [RAG (检索增强生成)](./rag.md)
-- [工作流引擎](./workflows.md)
-- [评估框架](./eval.md)
-- [MCP集成](./mcp.md)
+## 开发与参考
 
-### 宏与DSL
+- `docs/5_api_reference.md` API 参考
+- `docs/API_REFERENCE.md` API 参考（补充版）
+- `docs/USER_GUIDE.md` 用户使用指南
+- `docs/TOOL_USER_GUIDE.md` 工具使用指南
+- `docs/6_development_guide.md` 开发指南
+- `docs/7_deployment_guide.md` 部署指南
 
-- [过程宏概述](./macros.md)
-- [DSL宏详解](./dsl_macros.md)
-- [自定义宏扩展](./custom_macros.md)
+## RAG 与向量检索
 
-### 示例与教程
+- `docs/VECTOR_DATABASES.md` 向量数据库集成
+- `docs/vector_api_reference.md` 向量 API 参考
+- `docs/vector_database_optimization.md` 向量数据库优化指南
 
-- [构建问答代理](./tutorials/qa_agent.md)
-- [创建RAG应用](./tutorials/rag_app.md)
-- [实现多代理工作流](./tutorials/multi_agent_workflow.md)
-- [评估代理性能](./tutorials/agent_eval.md)
+## 宏与 DSL
 
-### API参考
+- `docs/dsl_macros.md` DSL 宏与用法
+- `docs/PARAMETER_MACRO_ANALYSIS.md` 参数宏分析
 
-- [lumosai_core API](./api/core.md)
-- [lumos_macro API](./api/macros.md)
+## 多代理与工作流
 
-### 高级主题
+- `docs/MULTI_AGENT_COLLABORATION_PATTERNS.md` 多代理协作模式
+- `docs/MULTI_AGENT_QUICK_REFERENCE.md` 多代理快速参考
+- `docs/MULTI_AGENT_IMPLEMENTATION_COMPLETE.md` 多代理实现完成报告
+- `docs/MULTI_AGENT_TESTING_ANALYSIS.md` 多代理测试分析
+- `docs/examples/README.md` 示例索引（包含 Chatbot、RAG、Workflow 等）
 
-- [性能优化](./advanced/performance.md)
-- [安全最佳实践](./advanced/security.md)
-- [可扩展架构](./advanced/scalability.md)
-- [与其他系统集成](./advanced/integration.md)
+## 测试与质量
 
-### 其他
+- `docs/testing/README.md` 测试指南
+- `docs/analysis/CARGO_TEST_ANALYSIS_SUMMARY.md` Cargo 测试分析摘要
+- `docs/analysis/COMPLETE_TEST_ANALYSIS_SUMMARY.md` 完整测试分析摘要
+- `docs/MULTI_AGENT_E2E_TESTS_COMPLETE.md` 多代理 E2E 测试完成
 
-- [常见问题解答](./faq.md)
-- [贡献指南](./contributing.md)
-- [版本历史](./changelog.md)
+## 最佳实践与性能
 
-## Lumosai框架架构
+- `docs/BEST_PRACTICES.md` 最佳实践总览
+- `docs/CHAIN_OPERATIONS_BEST_PRACTICES.md` Chain 操作最佳实践
+- `docs/PERFORMANCE_GUIDE.md` 性能指南
 
-Lumosai框架由以下主要组件组成：
+## 指南与教程
 
-```
-lumosai_core/           # 核心库
-├── agent/             # 代理抽象和实现
-├── tool/              # 工具抽象和实现
-├── llm/               # LLM适配器
-├── memory/            # 内存和状态管理
-├── rag/               # 检索增强生成
-├── eval/              # 评估框架
-├── workflow/          # 工作流引擎
-└── mcp/               # MCP客户端
+- `docs/guides/README.md` 深度指南导航（架构、开发、部署、安全、监控、集成）
+- `docs/tutorials/README.md` 教程导航
+- `docs/tutorials/09-architecture-deep-dive.md` 架构深度解析与完整用法指南（简化↔核心映射）
+- `docs/quick-start/README.md` Quick Start 文档页
 
-lumos_macro/            # 宏库
-├── tool_macro.rs      # 工具宏实现
-├── agent_macro.rs     # 代理宏实现
-├── llm_adapter_macro.rs # LLM适配器宏实现
-├── workflow.rs        # 工作流DSL
-├── rag.rs             # RAG管道DSL
-├── eval.rs            # 评估套件DSL
-└── mcp.rs             # MCP客户端DSL
-```
+## 更新、发布与历史
 
-## 系统要求
+- `docs/updates/` 更新日志与周报
+- `docs/releases/CHANGELOG.md` 版本变更记录
+- `docs/RELEASE_GUIDE.md` 发布与版本管理指南
+- `docs/releases/RELEASE_NOTES_v0.2.0.md` v0.2.0 发行说明
+- `docs/history/INDEX.md` 历史文档索引
 
+## 概览索引
+
+- `docs/overview/INDEX.md` 概览与路线图索引
+
+## 常见问题与贡献
+
+- `docs/8_faq.md` 常见问题
+- `docs/contributing/CONTRIBUTING.md` 贡献指南
+
+## 其他参考
+
+- `docs/FRAMEWORK_COMPARISON.md` 框架对比
+
+---
+
+### 架构图位置说明
+- 架构图与结构化示意位于 `docs/ARCHITECTURE.md`。
+- 系统架构的详细说明参见 `docs/2_architecture.md`，两者互相补充：前者用于可视化展示，后者用于技术设计与模块划分说明。
+
+### 系统要求
 - Rust 1.70+
 - Cargo
-- 支持的操作系统: Linux, macOS, Windows
+- 支持的操作系统: macOS、Linux、Windows
 
-## 相关资源
-
-- [GitHub仓库](https://github.com/yourusername/lumosai)
-- [Crates.io页面](https://crates.io/crates/lumosai_core)
-- [API文档](https://docs.rs/lumosai_core) 
+### 仓库与文档站点
+- GitHub 仓库: https://github.com/louloulin/lumos.ai
+- Crates.io: https://crates.io/crates/lumosai_core
+- API 文档: https://docs.rs/lumosai_core

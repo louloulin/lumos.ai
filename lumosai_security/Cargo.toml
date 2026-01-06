@@ -1,0 +1,37 @@
+[package]
+name = "lumosai_security"
+version = "0.2.0"
+edition = "2021"
+authors = ["Lumosai Team <team@lumosai.dev>"]
+description = "LumosAI 安全模块"
+license = "MIT"
+repository = "https://github.com/louloulin/lumos.ai.git"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai_security"
+keywords = ["ai", "security", "encryption", "audit"]
+categories = ["cryptography", "web-programming"]
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+
+# 加密
+aes-gcm = "0.10"
+chacha20poly1305 = "0.10"
+# 哈希
+sha2 = "0.10"
+# 随机数生成
+rand = "0.8"
+# 审计日志
+serde_yaml = "0.9"
+
+[features]
+default = []
+audit = []

@@ -1,5 +1,5 @@
 //! Workflow builder for creating workflows from configuration
-//! 
+//!
 //! This module provides a builder pattern for creating workflows,
 //! inspired by Mastra's design but optimized for Rust.
 
@@ -134,7 +134,7 @@ impl WorkflowBuilder {
 
         // Create the enhanced workflow
         let mut workflow = EnhancedWorkflow::new(id, name);
-        
+
         if let Some(description) = self.description {
             workflow.set_description(description);
         }
@@ -150,7 +150,7 @@ impl WorkflowBuilder {
     /// Create a workflow step from configuration
     fn create_workflow_step(&self, config: &WorkflowStepConfig, index: usize) -> Result<WorkflowStep> {
         let step_id = config.id.clone().unwrap_or_else(|| format!("step_{}", index));
-        
+
         // Determine step type based on configuration
         let step_type = if config.agent.is_some() {
             StepType::Agent
@@ -197,7 +197,7 @@ impl WorkflowBuilder {
             StepType::Agent => {
                 let agent_name = config.agent.as_ref()
                     .ok_or_else(|| Error::Configuration("Agent name is required for agent step".to_string()))?;
-                
+
                 let agent = self.agents.get(agent_name)
                     .ok_or_else(|| Error::Configuration(format!("Agent '{}' not found", agent_name)))?
                     .clone();
@@ -207,13 +207,13 @@ impl WorkflowBuilder {
             StepType::Tool => {
                 let tool_name = config.tool.as_ref()
                     .ok_or_else(|| Error::Configuration("Tool name is required for tool step".to_string()))?;
-                
+
                 Ok(Box::new(ToolStepExecutor::new(tool_name.clone())))
             },
             StepType::Workflow => {
                 let workflow_id = config.workflow.as_ref()
                     .ok_or_else(|| Error::Configuration("Workflow ID is required for workflow step".to_string()))?;
-                
+
                 Ok(Box::new(WorkflowStepExecutor::new(workflow_id.clone())))
             },
             StepType::Custom => {
@@ -245,7 +245,7 @@ impl StepExecutor for AgentStepExecutor {
     fn execute(&self, input: Value) -> Result<Value> {
         // Convert input to message and execute agent
         let message = input.as_str().unwrap_or("").to_string();
-        
+
         // For now, return a mock response
         // In a real implementation, this would call the agent
         Ok(serde_json::json!({

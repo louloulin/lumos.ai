@@ -94,7 +94,7 @@ fn create_deepseek_provider() -> Arc<DeepSeekLlmAdapter> {
 // 使用新的简化API创建Agent
 fn create_stock_agent() -> Result<impl lumosai_core::Agent, Error> {
     let llm = create_deepseek_provider();
-    
+
     // 创建工具
     let stock_price_tool = create_stock_price_tool()?;
 

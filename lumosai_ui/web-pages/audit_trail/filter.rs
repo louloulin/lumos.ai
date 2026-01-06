@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
-use daisy_rsx::*;
 use crate::types::Member;
+use daisy_rsx::*;
 use dioxus::prelude::*;
 
 pub static DRAW_TRIGGER: &str = "filter-audit-drawer";

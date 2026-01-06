@@ -1,28 +1,28 @@
-use lumosai_core::vector::{VectorStorage, SimilarityMetric};
 use lumosai_core::vector::memory::MemoryVectorStorage;
+use lumosai_core::vector::{SimilarityMetric, VectorStorage};
 use lumosai_vector::prelude::*;
 use serde_json::json;
-use std::time::Instant;
 use std::collections::HashMap;
+use std::time::Instant;
 
 /// 向量数据库系统全面验证测试
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 LumosAI 向量数据库系统验证测试");
     println!("========================================");
-    
+
     // 测试1: 内存向量存储验证
     println!("\n📋 测试1: 内存向量存储验证");
     test_memory_vector_storage().await?;
-    
+
     // 测试2: 向量搜索验证
     println!("\n📋 测试2: 向量搜索验证");
     test_vector_search().await?;
-    
+
     // 测试3: 向量性能基准测试
     println!("\n📋 测试3: 向量性能基准测试");
     test_vector_performance().await?;
-    
+
     println!("\n✅ 所有向量数据库系统验证测试完成！");
     Ok(())
 }
@@ -36,7 +36,9 @@ async fn test_memory_vector_storage() -> std::result::Result<(), Box<dyn std::er
     // 创建索引
     let index_name = "test_index";
     let start_time = Instant::now();
-    vector_storage.create_index(index_name, 5, Some(SimilarityMetric::Cosine)).await?;
+    vector_storage
+        .create_index(index_name, 5, Some(SimilarityMetric::Cosine))
+        .await?;
     let duration = start_time.elapsed();
 
     println!("✅ 索引创建成功! 耗时: {:?}", duration);
@@ -52,20 +54,42 @@ async fn test_memory_vector_storage() -> std::result::Result<(), Box<dyn std::er
 
     let test_ids = vec!["doc1", "doc2", "doc3", "doc4", "doc5"];
     let test_metadata: Vec<HashMap<String, serde_json::Value>> = vec![
-        [("title".to_string(), json!("文档1")), ("content".to_string(), json!("这是第一个测试文档"))].into(),
-        [("title".to_string(), json!("文档2")), ("content".to_string(), json!("这是第二个测试文档"))].into(),
-        [("title".to_string(), json!("文档3")), ("content".to_string(), json!("这是第三个测试文档"))].into(),
-        [("title".to_string(), json!("文档4")), ("content".to_string(), json!("这是第四个测试文档"))].into(),
-        [("title".to_string(), json!("文档5")), ("content".to_string(), json!("这是第五个测试文档"))].into(),
+        [
+            ("title".to_string(), json!("文档1")),
+            ("content".to_string(), json!("这是第一个测试文档")),
+        ]
+        .into(),
+        [
+            ("title".to_string(), json!("文档2")),
+            ("content".to_string(), json!("这是第二个测试文档")),
+        ]
+        .into(),
+        [
+            ("title".to_string(), json!("文档3")),
+            ("content".to_string(), json!("这是第三个测试文档")),
+        ]
+        .into(),
+        [
+            ("title".to_string(), json!("文档4")),
+            ("content".to_string(), json!("这是第四个测试文档")),
+        ]
+        .into(),
+        [
+            ("title".to_string(), json!("文档5")),
+            ("content".to_string(), json!("这是第五个测试文档")),
+        ]
+        .into(),
     ];
 
     let start_time = Instant::now();
-    let inserted_ids = vector_storage.upsert(
-        index_name,
-        test_vectors,
-        Some(test_ids.iter().map(|s| s.to_string()).collect()),
-        Some(test_metadata),
-    ).await?;
+    let inserted_ids = vector_storage
+        .upsert(
+            index_name,
+            test_vectors,
+            Some(test_ids.iter().map(|s| s.to_string()).collect()),
+            Some(test_metadata),
+        )
+        .await?;
     let duration = start_time.elapsed();
 
     println!("✅ 向量批量存储成功! 耗时: {:?}", duration);
@@ -91,7 +115,9 @@ async fn test_vector_search() -> std::result::Result<(), Box<dyn std::error::Err
     let index_name = "search_index";
 
     // 创建索引
-    vector_storage.create_index(index_name, 5, Some(SimilarityMetric::Cosine)).await?;
+    vector_storage
+        .create_index(index_name, 5, Some(SimilarityMetric::Cosine))
+        .await?;
 
     // 准备测试数据
     let test_vectors = vec![
@@ -104,20 +130,42 @@ async fn test_vector_search() -> std::result::Result<(), Box<dyn std::error::Err
 
     let test_ids = vec!["rust_doc", "ai_doc", "web_doc", "db_doc", "ml_doc"];
     let test_metadata: Vec<HashMap<String, serde_json::Value>> = vec![
-        [("topic".to_string(), json!("Rust编程")), ("category".to_string(), json!("programming"))].into(),
-        [("topic".to_string(), json!("人工智能")), ("category".to_string(), json!("ai"))].into(),
-        [("topic".to_string(), json!("Web开发")), ("category".to_string(), json!("web"))].into(),
-        [("topic".to_string(), json!("数据库")), ("category".to_string(), json!("database"))].into(),
-        [("topic".to_string(), json!("机器学习")), ("category".to_string(), json!("ml"))].into(),
+        [
+            ("topic".to_string(), json!("Rust编程")),
+            ("category".to_string(), json!("programming")),
+        ]
+        .into(),
+        [
+            ("topic".to_string(), json!("人工智能")),
+            ("category".to_string(), json!("ai")),
+        ]
+        .into(),
+        [
+            ("topic".to_string(), json!("Web开发")),
+            ("category".to_string(), json!("web")),
+        ]
+        .into(),
+        [
+            ("topic".to_string(), json!("数据库")),
+            ("category".to_string(), json!("database")),
+        ]
+        .into(),
+        [
+            ("topic".to_string(), json!("机器学习")),
+            ("category".to_string(), json!("ml")),
+        ]
+        .into(),
     ];
 
     // 插入测试数据
-    vector_storage.upsert(
-        index_name,
-        test_vectors,
-        Some(test_ids.iter().map(|s| s.to_string()).collect()),
-        Some(test_metadata),
-    ).await?;
+    vector_storage
+        .upsert(
+            index_name,
+            test_vectors,
+            Some(test_ids.iter().map(|s| s.to_string()).collect()),
+            Some(test_metadata),
+        )
+        .await?;
 
     println!("✅ 测试数据准备完成");
 
@@ -125,20 +173,21 @@ async fn test_vector_search() -> std::result::Result<(), Box<dyn std::error::Err
     let query_vector = vec![0.9, 0.8, 0.7, 0.5, 0.3];
 
     let start_time = Instant::now();
-    let search_results = vector_storage.query(
-        index_name,
-        query_vector,
-        3,
-        None,
-        true,
-    ).await?;
+    let search_results = vector_storage
+        .query(index_name, query_vector, 3, None, true)
+        .await?;
     let duration = start_time.elapsed();
 
     println!("✅ 向量搜索完成! 耗时: {:?}", duration);
     println!("📊 搜索结果数量: {}", search_results.len());
 
     for (i, result) in search_results.iter().enumerate() {
-        println!("📝 结果 {}: ID={}, 相似度={:.4}", i + 1, result.id, result.score);
+        println!(
+            "📝 结果 {}: ID={}, 相似度={:.4}",
+            i + 1,
+            result.id,
+            result.score
+        );
         if let Some(metadata) = &result.metadata {
             println!("   元数据: {:?}", metadata);
         }
@@ -162,7 +211,9 @@ async fn test_vector_performance() -> std::result::Result<(), Box<dyn std::error
 
         // 创建索引
         let start_time = Instant::now();
-        vector_storage.create_index(index_name, vector_dim, Some(SimilarityMetric::Cosine)).await?;
+        vector_storage
+            .create_index(index_name, vector_dim, Some(SimilarityMetric::Cosine))
+            .await?;
         let index_creation_time = start_time.elapsed();
         println!("📈 索引创建时间: {:?}", index_creation_time);
 
@@ -181,19 +232,20 @@ async fn test_vector_performance() -> std::result::Result<(), Box<dyn std::error
             .map(|i| {
                 [
                     ("id".to_string(), json!(i)),
-                    ("category".to_string(), json!(format!("category_{}", i % 10))),
-                ].into()
+                    (
+                        "category".to_string(),
+                        json!(format!("category_{}", i % 10)),
+                    ),
+                ]
+                .into()
             })
             .collect();
 
         // 批量存储性能测试
         let start_time = Instant::now();
-        let _inserted_ids = vector_storage.upsert(
-            index_name,
-            vectors,
-            Some(ids),
-            Some(metadata),
-        ).await?;
+        let _inserted_ids = vector_storage
+            .upsert(index_name, vectors, Some(ids), Some(metadata))
+            .await?;
         let store_total_time = start_time.elapsed();
 
         let avg_store_time = store_total_time / size as u32;
@@ -210,13 +262,9 @@ async fn test_vector_performance() -> std::result::Result<(), Box<dyn std::error
                 .collect();
 
             let start_time = Instant::now();
-            let _results = vector_storage.query(
-                index_name,
-                query_vector,
-                10,
-                None,
-                false,
-            ).await?;
+            let _results = vector_storage
+                .query(index_name, query_vector, 10, None, false)
+                .await?;
             search_total_time += start_time.elapsed();
         }
 

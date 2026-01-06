@@ -51,16 +51,16 @@
 #![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
 #![allow(unexpected_cfgs, unused_assignments)]
 
+use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use async_trait::async_trait;
 use uuid::Uuid;
 
 use lumosai_vector_core::prelude::*;
 
-mod storage;
 mod index;
+mod storage;
 mod utils;
 
 pub use storage::MemoryVectorStorage;
@@ -98,25 +98,25 @@ impl MemoryConfig {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Set initial capacity
     pub fn with_initial_capacity(mut self, capacity: usize) -> Self {
         self.initial_capacity = capacity;
         self
     }
-    
+
     /// Set maximum vectors per index
     pub fn with_max_vectors(mut self, max_vectors: usize) -> Self {
         self.max_vectors_per_index = Some(max_vectors);
         self
     }
-    
+
     /// Enable approximate search
     pub fn with_approximate_search(mut self, enable: bool) -> Self {
         self.enable_approximate = enable;
         self
     }
-    
+
     /// Set memory threshold
     pub fn with_memory_threshold(mut self, threshold_mb: usize) -> Self {
         self.memory_threshold_mb = Some(threshold_mb);

@@ -2,6 +2,9 @@
 
 pub mod friendly;
 
+#[cfg(test)]
+mod real_api_tests;
+
 use thiserror::Error;
 
 /// Result type for Lumosai operations
@@ -32,6 +35,22 @@ pub enum Error {
     /// Memory errors
     #[error("Memory error: {0}")]
     Memory(String),
+
+    /// Cache errors
+    #[error("Cache error: {0}")]
+    Cache(String),
+
+    /// Cache full error
+    #[error("Cache is full and LRU eviction is disabled")]
+    CacheFull,
+
+    /// Unsupported operation errors
+    #[error("Unsupported operation: {0}")]
+    UnsupportedOperation(String),
+
+    /// Cloud deployment errors
+    #[error("Cloud error: {0}")]
+    Cloud(String),
 
     /// Storage errors
     #[error("Storage error: {0}")]
@@ -76,47 +95,47 @@ pub enum Error {
     /// Invalid input errors
     #[error("Invalid input error: {0}")]
     InvalidInput(String),
-    
+
     /// Configuration errors
     #[error("Configuration error: {0}")]
     Configuration(String),
-    
+
     /// Internal errors
     #[error("Internal error: {0}")]
     Internal(String),
-    
+
     /// Unavailable resource errors
     #[error("Unavailable resource: {0}")]
     Unavailable(String),
-    
+
     /// Unsupported feature or operation
     #[error("Unsupported operation: {0}")]
     Unsupported(String),
-    
+
     /// Parsing errors
     #[error("Parsing error: {0}")]
     Parsing(String),
-    
+
     /// Constraint violations
     #[error("Constraint violation: {0}")]
     Constraint(String),
-    
+
     /// Schema errors
     #[error("Schema error: {0}")]
     SchemaError(String),
-    
+
     /// Validation errors
     #[error("Validation error: {0}")]
     ValidationError(String),
-    
+
     /// Invalid parameters
     #[error("Invalid parameters: {0}")]
     InvalidParams(String),
-    
+
     /// Access denied errors
     #[error("Access denied: {0}")]
     AccessDenied(String),
-    
+
     /// Invalid operation errors
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
@@ -129,9 +148,9 @@ pub enum Error {
     #[error("Network error: {0}")]
     Network(String),
 
-    /// Validation errors
+    /// Validation errors (simple)
     #[error("Validation error: {0}")]
-    Validation(String),
+    ValidationSimple(String),
 
     /// Serialization errors
     #[error("Serialization error: {0}")]
@@ -203,6 +222,14 @@ pub enum Error {
     /// Distributed system errors
     #[error("Distributed system error: {0}")]
     Distributed(String),
+
+    /// Lifecycle errors
+    #[error("Lifecycle error: {message}")]
+    Lifecycle { message: String },
+
+    /// Validation errors (structured)
+    #[error("Validation error in field '{field}': {message}")]
+    Validation { field: String, message: String },
 }
 
 impl From<&str> for Error {

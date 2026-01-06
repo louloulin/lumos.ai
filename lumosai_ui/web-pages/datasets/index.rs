@@ -1,11 +1,12 @@
 #![allow(non_snake_case)]
 use crate::app_layout::Layout;
 use crate::app_layout::SideBar;
+use crate::types::{Dataset, Model, Rbac};
+use crate::types::LabelRole;
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, Dataset, Model};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(
     rbac: Rbac,
@@ -83,11 +84,8 @@ pub fn page(
                                         }
                                         td {
                                             class: "max-sm:hidden",
-                                            Label {
-                                                label_role: LabelRole::Highlight,
-                                                "By Title"
-                                            }
-                                            }
+                                            span { class: crate::role_class(LabelRole::Highlight), "By Title" }
+                                        }
                                         td {
                                             class: "text-right",
                                             DropDown {

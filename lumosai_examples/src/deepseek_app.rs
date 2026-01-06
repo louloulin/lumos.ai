@@ -1,15 +1,15 @@
-use lumosai_core::{Result, Agent};
-use lumosai_core::llm::{DeepSeekProvider, Message, Role};
-use lumosai_core::agent::{create_basic_agent};
+use lumosai_core::agent::create_basic_agent;
 use lumosai_core::agent::types::AgentGenerateOptions;
-use lumosai_core::tool::{Tool, FunctionTool, ParameterSchema, ToolSchema};
+use lumosai_core::llm::{DeepSeekProvider, Message, Role};
+use lumosai_core::tool::{FunctionTool, ParameterSchema, Tool, ToolSchema};
+use lumosai_core::{Agent, Result};
 use serde_json::{json, Value};
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
 /// DeepSeek智能助手应用
-/// 
+///
 /// 这是一个完整的应用示例，展示如何使用DeepSeek构建一个功能丰富的AI助手
 /// 包含多个专业工具：代码分析、数学计算、文本处理、天气查询、任务管理等
 pub struct DeepSeekApp {
@@ -25,13 +25,13 @@ impl DeepSeekApp {
             api_key,
             Some("deepseek-chat".to_string()),
         ));
-        
+
         let mut agent = create_basic_agent(
             "DeepSeek智能助手".to_string(),
             "你是一个功能强大的AI助手，擅长代码分析、数学计算、文本处理、天气查询和任务管理。你可以使用多种专业工具来帮助用户解决各种问题。请用中文回答，并在适当时候调用相应的工具。".to_string(),
             provider
         );
-        
+
         // 添加所有工具
         agent.add_tool(create_code_analyzer())?;
         agent.add_tool(create_math_calculator())?;
@@ -39,14 +39,14 @@ impl DeepSeekApp {
         agent.add_tool(create_weather_service())?;
         agent.add_tool(create_task_manager())?;
         agent.add_tool(create_knowledge_base())?;
-        
+
         Ok(Self {
             agent: Box::new(agent),
             name: app_name,
             description,
         })
     }
-    
+
     /// 处理用户输入并返回响应
     pub async fn chat(&mut self, input: &str) -> Result<String> {
         let user_message = Message {
@@ -55,16 +55,19 @@ impl DeepSeekApp {
             metadata: None,
             name: None,
         };
-        
-        let result = self.agent.generate(&[user_message], &AgentGenerateOptions::default()).await?;
+
+        let result = self
+            .agent
+            .generate(&[user_message], &AgentGenerateOptions::default())
+            .await?;
         Ok(result.response)
     }
-    
+
     /// 获取应用信息
     pub fn info(&self) -> (String, String) {
         (self.name.clone(), self.description.clone())
     }
-    
+
     /// 获取可用工具列表
     pub fn available_tools(&self) -> Vec<&str> {
         vec![
@@ -73,7 +76,7 @@ impl DeepSeekApp {
             "文本处理器 - 文本分析、翻译和格式化",
             "天气服务 - 查询天气信息和预报",
             "任务管理器 - 创建、管理和跟踪任务",
-            "知识库 - 搜索和查询专业知识"
+            "知识库 - 搜索和查询专业知识",
         ]
     }
 }
@@ -98,41 +101,52 @@ fn create_code_analyzer() -> Box<dyn Tool> {
             default: None,
         },
     ]);
-    
+
     Box::new(FunctionTool::new(
         "code_analyzer".to_string(),
         "分析代码质量、复杂度和提供改进建议".to_string(),
         schema,
         |params| {
             let code = params.get("code").and_then(|v| v.as_str()).unwrap_or("");
-            let language = params.get("language").and_then(|v| v.as_str()).unwrap_or("");
-            
+            let language = params
+                .get("language")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+
             let lines = code.lines().count();
-            let complexity = if lines > 100 { "高" } else if lines > 50 { "中" } else { "低" };
-            let functions = code.matches("fn ").count() + code.matches("def ").count() + code.matches("function ").count();
-            
+            let complexity = if lines > 100 {
+                "高"
+            } else if lines > 50 {
+                "中"
+            } else {
+                "低"
+            };
+            let functions = code.matches("fn ").count()
+                + code.matches("def ").count()
+                + code.matches("function ").count();
+
             let suggestions = match language.to_lowercase().as_str() {
                 "rust" => vec![
                     "使用Result类型进行错误处理",
                     "考虑使用迭代器方法提高性能",
                     "添加文档注释和单元测试",
-                    "使用Clippy进行代码检查"
+                    "使用Clippy进行代码检查",
                 ],
                 "python" => vec![
                     "使用类型提示提高代码可读性",
                     "遵循PEP 8编码规范",
                     "使用虚拟环境管理依赖",
-                    "添加docstring文档"
+                    "添加docstring文档",
                 ],
                 "javascript" => vec![
                     "使用const/let替代var",
                     "考虑使用TypeScript",
                     "添加ESLint代码检查",
-                    "使用现代ES6+语法"
+                    "使用现代ES6+语法",
                 ],
-                _ => vec!["代码结构良好", "考虑添加注释和测试"]
+                _ => vec!["代码结构良好", "考虑添加注释和测试"],
             };
-            
+
             Ok(json!({
                 "language": language,
                 "lines_of_code": lines,
@@ -148,24 +162,25 @@ fn create_code_analyzer() -> Box<dyn Tool> {
 
 // 数学计算工具
 fn create_math_calculator() -> Box<dyn Tool> {
-    let schema = ToolSchema::new(vec![
-        ParameterSchema {
-            name: "expression".to_string(),
-            description: "数学表达式（支持基本运算、三角函数、对数等）".to_string(),
-            r#type: "string".to_string(),
-            required: true,
-            properties: None,
-            default: None,
-        },
-    ]);
-    
+    let schema = ToolSchema::new(vec![ParameterSchema {
+        name: "expression".to_string(),
+        description: "数学表达式（支持基本运算、三角函数、对数等）".to_string(),
+        r#type: "string".to_string(),
+        required: true,
+        properties: None,
+        default: None,
+    }]);
+
     Box::new(FunctionTool::new(
         "math_calculator".to_string(),
         "执行复杂的数学计算和函数运算".to_string(),
         schema,
         |params| {
-            let expression = params.get("expression").and_then(|v| v.as_str()).unwrap_or("");
-            
+            let expression = params
+                .get("expression")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+
             let result = match expression {
                 expr if expr.contains("sqrt(16)") => 4.0,
                 expr if expr.contains("2+3*4") => 14.0,
@@ -181,19 +196,23 @@ fn create_math_calculator() -> Box<dyn Tool> {
                         let b = &b[1..];
                         if let (Ok(a), Ok(b)) = (a.trim().parse::<f64>(), b.trim().parse::<f64>()) {
                             a + b
-                        } else { 0.0 }
+                        } else {
+                            0.0
+                        }
                     } else if let Some(pos) = expression.find('*') {
                         let (a, b) = expression.split_at(pos);
                         let b = &b[1..];
                         if let (Ok(a), Ok(b)) = (a.trim().parse::<f64>(), b.trim().parse::<f64>()) {
                             a * b
-                        } else { 0.0 }
+                        } else {
+                            0.0
+                        }
                     } else {
                         expression.parse::<f64>().unwrap_or(0.0)
                     }
                 }
             };
-            
+
             Ok(json!({
                 "expression": expression,
                 "result": result,
@@ -224,31 +243,46 @@ fn create_text_processor() -> Box<dyn Tool> {
             default: None,
         },
     ]);
-    
+
     Box::new(FunctionTool::new(
         "text_processor".to_string(),
         "文本分析、翻译、格式化和摘要生成".to_string(),
         schema,
         |params| {
             let text = params.get("text").and_then(|v| v.as_str()).unwrap_or("");
-            let operation = params.get("operation").and_then(|v| v.as_str()).unwrap_or("analyze");
-            
+            let operation = params
+                .get("operation")
+                .and_then(|v| v.as_str())
+                .unwrap_or("analyze");
+
             match operation {
                 "analyze" => {
                     let word_count = text.split_whitespace().count();
                     let char_count = text.chars().count();
-                    let sentence_count = text.matches('.').count() + text.matches('!').count() + text.matches('?').count();
-                    
-                    let positive_words = ["好", "棒", "优秀", "amazing", "great", "excellent", "wonderful"];
+                    let sentence_count = text.matches('.').count()
+                        + text.matches('!').count()
+                        + text.matches('?').count();
+
+                    let positive_words = [
+                        "好",
+                        "棒",
+                        "优秀",
+                        "amazing",
+                        "great",
+                        "excellent",
+                        "wonderful",
+                    ];
                     let negative_words = ["坏", "差", "糟糕", "bad", "terrible", "awful"];
-                    
-                    let positive_count = positive_words.iter()
+
+                    let positive_count = positive_words
+                        .iter()
                         .map(|word| text.to_lowercase().matches(word).count())
                         .sum::<usize>();
-                    let negative_count = negative_words.iter()
+                    let negative_count = negative_words
+                        .iter()
                         .map(|word| text.to_lowercase().matches(word).count())
                         .sum::<usize>();
-                    
+
                     let sentiment = if positive_count > negative_count {
                         "积极"
                     } else if negative_count > positive_count {
@@ -256,7 +290,7 @@ fn create_text_processor() -> Box<dyn Tool> {
                     } else {
                         "中性"
                     };
-                    
+
                     Ok(json!({
                         "operation": "analyze",
                         "word_count": word_count,
@@ -268,7 +302,7 @@ fn create_text_processor() -> Box<dyn Tool> {
                         "language": if text.chars().any(|c| c as u32 > 127) { "中文" } else { "英文" },
                         "processing_complete": true
                     }))
-                },
+                }
                 "translate" => {
                     // 简单的翻译模拟
                     let translated = if text.contains("hello") {
@@ -278,35 +312,36 @@ fn create_text_processor() -> Box<dyn Tool> {
                     } else {
                         format!("翻译：{}", text)
                     };
-                    
+
                     Ok(json!({
                         "operation": "translate",
                         "original": text,
                         "translated": translated,
                         "processing_complete": true
                     }))
-                },
+                }
                 "format" => {
-                    let formatted = text.lines()
+                    let formatted = text
+                        .lines()
                         .map(|line| line.trim())
                         .filter(|line| !line.is_empty())
                         .collect::<Vec<_>>()
                         .join("\n");
-                    
+
                     Ok(json!({
                         "operation": "format",
                         "original": text,
                         "formatted": formatted,
                         "processing_complete": true
                     }))
-                },
+                }
                 "summarize" => {
                     let summary = if text.len() > 100 {
                         format!("{}...", &text[..97])
                     } else {
                         text.to_string()
                     };
-                    
+
                     Ok(json!({
                         "operation": "summarize",
                         "original_length": text.len(),
@@ -314,11 +349,11 @@ fn create_text_processor() -> Box<dyn Tool> {
                         "compression_ratio": (summary.len() as f64 / text.len() as f64 * 100.0).round(),
                         "processing_complete": true
                     }))
-                },
+                }
                 _ => Ok(json!({
                     "error": "不支持的操作类型",
                     "supported_operations": ["analyze", "translate", "format", "summarize"]
-                }))
+                })),
             }
         },
     ))
@@ -344,7 +379,7 @@ fn create_weather_service() -> Box<dyn Tool> {
             default: Some(json!(1)),
         },
     ]);
-    
+
     Box::new(FunctionTool::new(
         "weather_service".to_string(),
         "查询天气信息和未来几天的天气预报".to_string(),
@@ -352,7 +387,7 @@ fn create_weather_service() -> Box<dyn Tool> {
         |params| {
             let city = params.get("city").and_then(|v| v.as_str()).unwrap_or("");
             let days = params.get("days").and_then(|v| v.as_i64()).unwrap_or(1);
-            
+
             // 模拟天气数据
             let weather_data = match city {
                 "北京" | "beijing" => json!({
@@ -405,9 +440,9 @@ fn create_weather_service() -> Box<dyn Tool> {
                         "low": 15 + day,
                         "condition": "晴朗"
                     })).collect::<Vec<_>>()
-                })
+                }),
             };
-            
+
             Ok(json!({
                 "weather_data": weather_data,
                 "query_time": "2024-03-15 14:30:00",
@@ -453,7 +488,10 @@ fn create_task_manager() -> Box<dyn Tool> {
         |params| {
             let action = params.get("action").and_then(|v| v.as_str()).unwrap_or("");
             let task = params.get("task").and_then(|v| v.as_str()).unwrap_or("");
-            let priority = params.get("priority").and_then(|v| v.as_str()).unwrap_or("medium");
+            let priority = params
+                .get("priority")
+                .and_then(|v| v.as_str())
+                .unwrap_or("medium");
 
             match action {
                 "create" => {
@@ -467,7 +505,7 @@ fn create_task_manager() -> Box<dyn Tool> {
                         "created_at": chrono::Utc::now().to_rfc3339(),
                         "success": true
                     }))
-                },
+                }
                 "list" => {
                     // 模拟任务列表
                     Ok(json!({
@@ -498,27 +536,23 @@ fn create_task_manager() -> Box<dyn Tool> {
                         "total": 3,
                         "success": true
                     }))
-                },
-                "complete" => {
-                    Ok(json!({
-                        "action": "complete",
-                        "task_id": task,
-                        "status": "completed",
-                        "completed_at": chrono::Utc::now().to_rfc3339(),
-                        "success": true
-                    }))
-                },
-                "delete" => {
-                    Ok(json!({
-                        "action": "delete",
-                        "task_id": task,
-                        "success": true
-                    }))
-                },
+                }
+                "complete" => Ok(json!({
+                    "action": "complete",
+                    "task_id": task,
+                    "status": "completed",
+                    "completed_at": chrono::Utc::now().to_rfc3339(),
+                    "success": true
+                })),
+                "delete" => Ok(json!({
+                    "action": "delete",
+                    "task_id": task,
+                    "success": true
+                })),
                 _ => Ok(json!({
                     "error": "不支持的操作类型",
                     "supported_actions": ["create", "list", "update", "delete", "complete"]
-                }))
+                })),
             }
         },
     ))
@@ -551,7 +585,10 @@ fn create_knowledge_base() -> Box<dyn Tool> {
         schema,
         |params| {
             let query = params.get("query").and_then(|v| v.as_str()).unwrap_or("");
-            let category = params.get("category").and_then(|v| v.as_str()).unwrap_or("general");
+            let category = params
+                .get("category")
+                .and_then(|v| v.as_str())
+                .unwrap_or("general");
 
             // 模拟知识库搜索
             let results = match query.to_lowercase().as_str() {
@@ -567,7 +604,7 @@ fn create_knowledge_base() -> Box<dyn Tool> {
                         "content": "Rust通过所有权系统实现内存安全，无需垃圾回收器。",
                         "category": "tech",
                         "relevance": 0.90
-                    })
+                    }),
                 ],
                 q if q.contains("ai") || q.contains("人工智能") => vec![
                     json!({
@@ -581,16 +618,14 @@ fn create_knowledge_base() -> Box<dyn Tool> {
                         "content": "机器学习是人工智能的核心技术，包括监督学习、无监督学习等。",
                         "category": "tech",
                         "relevance": 0.85
-                    })
+                    }),
                 ],
-                _ => vec![
-                    json!({
-                        "title": "通用知识条目",
-                        "content": format!("关于'{}'的相关信息正在整理中。", query),
-                        "category": category,
-                        "relevance": 0.60
-                    })
-                ]
+                _ => vec![json!({
+                    "title": "通用知识条目",
+                    "content": format!("关于'{}'的相关信息正在整理中。", query),
+                    "category": category,
+                    "relevance": 0.60
+                })],
             };
 
             Ok(json!({
@@ -661,7 +696,7 @@ async fn main() -> Result<()> {
         match app.chat(query).await {
             Ok(response) => {
                 println!("\n💬 DeepSeek: {}", response);
-            },
+            }
             Err(e) => {
                 println!("❌ 错误: {}", e);
             }

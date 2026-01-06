@@ -26,11 +26,11 @@ cargo run --bin lumosai-web-server --features fullstack
 */
 
 use dioxus::prelude::*;
-use web_pages::base_layout::BaseLayout;
-use web_pages::console::enhanced_console::{EnhancedAssistantConsole, SinglePrompt, Capability};
-use web_pages::types::{Rbac, Visibility};
 use web_pages::app_layout::SideBar;
+use web_pages::base_layout::BaseLayout;
+use web_pages::console::enhanced_console::{Capability, EnhancedAssistantConsole, SinglePrompt};
 use web_pages::console::PendingChatState;
+use web_pages::types::{Rbac, Visibility};
 
 #[cfg(feature = "fullstack")]
 use dioxus_fullstack::prelude::*;
@@ -40,13 +40,13 @@ use std::net::Ipv4Addr;
 // AI功能模块
 mod ai_client;
 #[cfg(any(feature = "server", feature = "fullstack"))]
-mod streaming;
-#[cfg(any(feature = "server", feature = "fullstack"))]
 mod api_server;
 mod database;
-mod tools;
 #[cfg(any(feature = "server", feature = "fullstack"))]
 mod file_handler;
+#[cfg(any(feature = "server", feature = "fullstack"))]
+mod streaming;
+mod tools;
 
 #[cfg(any(feature = "server", feature = "fullstack"))]
 use ai_client::AIClient;
@@ -76,7 +76,11 @@ fn main() {
         launch_fullstack();
     }
 
-    #[cfg(all(not(feature = "desktop"), not(feature = "fullstack"), not(feature = "server")))]
+    #[cfg(all(
+        not(feature = "desktop"),
+        not(feature = "fullstack"),
+        not(feature = "server")
+    ))]
     {
         println!("🌐 Launching LumosAI Web Application...");
         launch_web();
@@ -94,8 +98,7 @@ fn launch_fullstack() {
     println!("📱 Open http://localhost:8080 in your browser");
 
     // For fullstack mode, we use dioxus LaunchBuilder
-    dioxus::LaunchBuilder::new()
-        .launch(App);
+    dioxus::LaunchBuilder::new().launch(App);
 }
 
 #[cfg(all(not(feature = "desktop"), not(feature = "fullstack")))]
@@ -162,15 +165,16 @@ fn Dashboard() -> Element {
     rsx! {
         BaseLayout {
             title: "LumosAI Dashboard".to_string(),
-            fav_icon_src: "/favicon.svg".to_string(),
-            collapse_svg_src: "/icons/collapse.svg".to_string(),
+            fav_icon_src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'></svg>".to_string(),
+            collapse_svg_src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'></svg>".to_string(),
             stylesheets: vec![
+                "data:text/css,:root{--b1:0 0% 100%;--b2:0 0% 96%;--b3:0 0% 90%;--p:220 90% 56%;--pc:0 0% 100%;--s:180 90% 40%;--sc:0 0% 100%;--bc:220 15% 20%}".to_string(),
                 "https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/dist/tailwind.min.css".to_string(),
                 "https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css".to_string(),
                 "data:text/css,.sidebar{background-color:hsl(var(--b2));border-right:1px solid hsl(var(--b3))}.main-content{background-color:hsl(var(--b1));flex:1}.card{background-color:hsl(var(--b1));border:1px solid hsl(var(--b3));border-radius:0.5rem;box-shadow:0 1px 3px 0 rgba(0,0,0,0.1)}.card-header{border-bottom:1px solid hsl(var(--b3));padding:1rem;font-weight:600}.card-body{padding:1rem}.btn{padding:0.5rem 1rem;border-radius:0.375rem;font-weight:500;transition:all 0.2s;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem}.btn:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,0.1)}.btn-primary{background-color:hsl(var(--p));color:hsl(var(--pc))}.btn-primary:hover{background-color:hsl(var(--p)/0.9)}.btn-secondary{background-color:hsl(var(--s));color:hsl(var(--sc))}.btn-ghost{background-color:transparent;color:hsl(var(--bc))}.btn-ghost:hover{background-color:hsl(var(--b3))}.menu{padding:0.5rem}.menu li{margin-bottom:0.25rem}.menu li a{display:flex;align-items:center;padding:0.75rem 1rem;color:hsl(var(--bc));text-decoration:none;border-radius:0.375rem;transition:all 0.2s}.menu li a:hover{background-color:hsl(var(--b3));transform:translateX(4px)}.menu li a.active{background-color:hsl(var(--p));color:hsl(var(--pc));font-weight:600}.input,.textarea,.select{width:100%;padding:0.75rem;border:1px solid hsl(var(--b3));border-radius:0.375rem;background-color:hsl(var(--b1));color:hsl(var(--bc));transition:all 0.2s}.input:focus,.textarea:focus,.select:focus{outline:none;border-color:hsl(var(--p));box-shadow:0 0 0 3px hsl(var(--p)/0.1)}.textarea{resize:vertical;min-height:4rem}.chat-container{display:flex;flex-direction:column;height:100%}.chat-messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem}.chat-input{border-top:1px solid hsl(var(--b3));padding:1rem;background-color:hsl(var(--b1))}.message{display:flex;gap:0.75rem;max-width:80%}.message.user{flex-direction:row-reverse;margin-left:auto}.message-content{padding:0.75rem 1rem;border-radius:1rem;word-wrap:break-word}.message.user .message-content{background-color:hsl(var(--p));color:hsl(var(--pc));border-bottom-right-radius:0.25rem}.message.assistant .message-content{background-color:hsl(var(--b2));color:hsl(var(--bc));border-bottom-left-radius:0.25rem}.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;padding:1rem}.stat-card{background-color:hsl(var(--b1));border:1px solid hsl(var(--b3));border-radius:0.5rem;padding:1.5rem;transition:all 0.2s}.stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 16px rgba(0,0,0,0.1)}.stat-value{font-size:2rem;font-weight:bold;color:hsl(var(--bc));margin-bottom:0.5rem}.stat-title{font-size:0.875rem;color:hsl(var(--bc)/0.7);text-transform:uppercase;letter-spacing:0.05em}.loading{display:inline-block;width:1rem;height:1rem;border:2px solid hsl(var(--b3));border-radius:50%;border-top-color:hsl(var(--p));animation:spin 1s ease-in-out infinite}@keyframes spin{to{transform:rotate(360deg)}}@media (max-width:768px){.sidebar{position:fixed;top:0;left:0;bottom:0;width:16rem;transform:translateX(-100%);transition:transform 0.3s ease;z-index:50}.sidebar.open{transform:translateX(0)}.dashboard-grid{grid-template-columns:1fr}.message{max-width:95%}}".to_string(),
             ],
             section_class: "p-6 bg-base-100".to_string(),
-            js_href: "/app.js".to_string(),
+            js_href: "data:text/javascript,console.log('LumosAI UI')".to_string(),
 
             header: rsx! {
                 div {
@@ -344,7 +348,12 @@ fn DashboardContent() -> Element {
 }
 
 #[component]
-fn StatsCard(title: &'static str, value: &'static str, icon: &'static str, color: &'static str) -> Element {
+fn StatsCard(
+    title: &'static str,
+    value: &'static str,
+    icon: &'static str,
+    color: &'static str,
+) -> Element {
     let bg_color = match color {
         "blue" => "bg-blue-500",
         "green" => "bg-green-500",
@@ -376,7 +385,12 @@ fn StatsCard(title: &'static str, value: &'static str, icon: &'static str, color
 }
 
 #[component]
-fn ActivityItem(icon: &'static str, title: &'static str, description: &'static str, time: &'static str) -> Element {
+fn ActivityItem(
+    icon: &'static str,
+    title: &'static str,
+    description: &'static str,
+    time: &'static str,
+) -> Element {
     rsx! {
         div {
             class: "flex items-center space-x-3 p-3 hover:bg-base-200 rounded-lg transition-colors",
@@ -426,11 +440,9 @@ fn Console() -> Element {
         model_name: Some("gpt-4".to_string()),
     };
 
-    let capabilities = vec![
-        Capability {
-            name: "Text Generation".to_string(),
-        }
-    ];
+    let capabilities = vec![Capability {
+        name: "Text Generation".to_string(),
+    }];
 
     rsx! {
         div {
@@ -511,16 +523,12 @@ fn open_browser(url: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open")
-            .arg(url)
-            .spawn()?;
+        std::process::Command::new("open").arg(url).spawn()?;
     }
 
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open")
-            .arg(url)
-            .spawn()?;
+        std::process::Command::new("xdg-open").arg(url).spawn()?;
     }
 
     Ok(())

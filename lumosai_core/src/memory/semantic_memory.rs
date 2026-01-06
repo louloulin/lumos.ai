@@ -1,17 +1,19 @@
+use crate::compat::{Component, MemoryMetrics, MetricsCollector};
+use crate::logger::LogLevel;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use async_trait::async_trait;
 
 use crate::base::{Base, BaseComponent, ComponentConfig};
 use crate::error::{Error, Result};
-use crate::logger::{Component, LogLevel};
-use crate::memory::{SemanticRecallConfig, Memory};
-use crate::llm::{Message, LlmProvider, LlmOptions, Role};
+use crate::llm::{LlmOptions, LlmProvider, Message, Role};
+// use crate::compat::{Component, LogLevel};
+use crate::memory::{Memory, SemanticRecallConfig};
+// use crate::compat::metrics::{MemoryMetrics, MetricsCollector};
 use crate::vector::FilterCondition;
-use crate::telemetry::metrics::{MemoryMetrics, MetricsCollector};
 
 /// 语义记忆条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,7 +57,7 @@ pub struct SemanticMemory<P: LlmProvider, E: EmbeddingProvider> {
 pub trait EmbeddingProvider: Send + Sync {
     /// 生成文本嵌入向量
     async fn embed(&self, text: &str) -> Result<Vec<f32>>;
-    
+
     /// 计算两个向量的相似度 (0.0 - 1.0)
     fn similarity(&self, vec1: &[f32], vec2: &[f32]) -> f32;
 }
@@ -63,13 +65,16 @@ pub trait EmbeddingProvider: Send + Sync {
 impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
     /// 创建新的语义记忆
     pub fn new(config: SemanticRecallConfig, llm: Arc<P>, embedding_provider: Arc<E>) -> Self {
-        let template = config.template.clone().unwrap_or_else(|| DEFAULT_TEMPLATE.to_string());
+        let template = config
+            .template
+            .clone()
+            .unwrap_or_else(|| DEFAULT_TEMPLATE.to_string());
         let component_config = ComponentConfig {
             name: Some("SemanticMemory".to_string()),
             component: Component::Memory,
             log_level: Some(LogLevel::Info),
         };
-        
+
         Self {
             base: BaseComponent::new(component_config),
             config,
@@ -80,16 +85,24 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
             metrics_collector: None,
         }
     }
-    
+
     /// 创建带有指标收集器的语义记忆
-    pub fn with_metrics_collector(config: SemanticRecallConfig, llm: Arc<P>, embedding_provider: Arc<E>, metrics_collector: Arc<dyn MetricsCollector>) -> Self {
-        let template = config.template.clone().unwrap_or_else(|| DEFAULT_TEMPLATE.to_string());
+    pub fn with_metrics_collector(
+        config: SemanticRecallConfig,
+        llm: Arc<P>,
+        embedding_provider: Arc<E>,
+        metrics_collector: Arc<dyn MetricsCollector>,
+    ) -> Self {
+        let template = config
+            .template
+            .clone()
+            .unwrap_or_else(|| DEFAULT_TEMPLATE.to_string());
         let component_config = ComponentConfig {
             name: Some("SemanticMemory".to_string()),
             component: Component::Memory,
             log_level: Some(LogLevel::Info),
         };
-        
+
         Self {
             base: BaseComponent::new(component_config),
             config,
@@ -100,30 +113,34 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
             metrics_collector: Some(metrics_collector),
         }
     }
-    
+
     /// 添加条目到语义记忆
-    pub async fn add_entry(&self, content: String, metadata: Option<HashMap<String, Value>>) -> Result<SemanticMemoryEntry> {
+    pub async fn add_entry(
+        &self,
+        content: String,
+        metadata: Option<HashMap<String, Value>>,
+    ) -> Result<SemanticMemoryEntry> {
         let start_time = SystemTime::now();
         let data_size = content.len();
-        
+
         let result = async {
             let timestamp = current_timestamp();
             let id = generate_id();
-            
+
             // 生成摘要
             let summary = if self.config.generate_summaries {
                 Some(self.generate_summary(&content).await?)
             } else {
                 None
             };
-            
+
             // 生成嵌入向量
             let embedding = if self.config.use_embeddings {
                 Some(self.embedding_provider.embed(&content).await?)
             } else {
                 None
             };
-            
+
             let entry = SemanticMemoryEntry {
                 id: id.clone(),
                 content,
@@ -133,150 +150,222 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
                 relevance: None,
                 metadata: metadata.unwrap_or_default(),
             };
-            
-            let mut data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
-            
+
+            let mut data = self
+                .data
+                .lock()
+                .map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
+
             // 检查容量限制
             if let Some(max_capacity) = self.config.max_capacity {
                 if data.len() >= max_capacity {
                     data.remove(0); // 移除最旧的条目
                 }
             }
-            
+
             data.push(entry.clone());
             Ok(entry)
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
         let entry_id = result.as_ref().ok().map(|entry| entry.id.clone());
-        
-        self.record_memory_metrics("add", execution_time, success, entry_id, Some(data_size)).await;
+
+        self.record_memory_metrics("add", execution_time, success, entry_id, Some(data_size))
+            .await;
         result
     }
-    
+
     /// 获取所有条目
     pub async fn get_all_entries(&self) -> Result<Vec<SemanticMemoryEntry>> {
         let start_time = SystemTime::now();
-        
+
         let result = async {
-            let data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
+            let data = self
+                .data
+                .lock()
+                .map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
             Ok(data.clone())
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
-        let data_size = result.as_ref().ok()
+        let data_size = result
+            .as_ref()
+            .ok()
             .and_then(|entries| serde_json::to_string(entries).ok().map(|s| s.len()));
-        let entries_count = result.as_ref().ok().map(|entries| entries.len()).unwrap_or(0);
-        
-        self.record_memory_metrics("get_all", execution_time, success, Some(format!("entries_count:{}", entries_count)), data_size).await;
+        let entries_count = result
+            .as_ref()
+            .ok()
+            .map(|entries| entries.len())
+            .unwrap_or(0);
+
+        self.record_memory_metrics(
+            "get_all",
+            execution_time,
+            success,
+            Some(format!("entries_count:{entries_count}")),
+            data_size,
+        )
+        .await;
         result
     }
-    
+
     /// 获取指定ID的条目
     pub async fn get_entry(&self, id: &str) -> Result<Option<SemanticMemoryEntry>> {
         let start_time = SystemTime::now();
-        
+
         let result = async {
-            let data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
+            let data = self
+                .data
+                .lock()
+                .map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
             Ok(data.iter().find(|entry| entry.id == id).cloned())
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
-        let data_size = result.as_ref().ok()
+        let data_size = result
+            .as_ref()
+            .ok()
             .and_then(|opt| opt.as_ref())
             .and_then(|entry| serde_json::to_string(&entry.content).ok().map(|s| s.len()));
-        
-        self.record_memory_metrics("get", execution_time, success, Some(id.to_string()), data_size).await;
+
+        self.record_memory_metrics(
+            "get",
+            execution_time,
+            success,
+            Some(id.to_string()),
+            data_size,
+        )
+        .await;
         result
     }
-    
+
     /// 删除条目
     pub async fn delete_entry(&self, id: &str) -> Result<bool> {
         let start_time = SystemTime::now();
-        
+
         let result = async {
-            let mut data = self.data.lock().map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
+            let mut data = self
+                .data
+                .lock()
+                .map_err(|_| Error::Internal("Failed to lock memory data".to_string()))?;
             let initial_len = data.len();
             data.retain(|entry| entry.id != id);
             Ok(data.len() < initial_len)
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
-        
-        self.record_memory_metrics("delete", execution_time, success, Some(id.to_string()), None).await;
+
+        self.record_memory_metrics(
+            "delete",
+            execution_time,
+            success,
+            Some(id.to_string()),
+            None,
+        )
+        .await;
         result
     }
-    
+
     /// 基于语义搜索相关条目
-    pub async fn search(&self, query: &str, limit: Option<usize>) -> Result<Vec<SemanticMemoryEntry>> {
+    pub async fn search(
+        &self,
+        query: &str,
+        limit: Option<usize>,
+    ) -> Result<Vec<SemanticMemoryEntry>> {
         let start_time = SystemTime::now();
         let query_size = query.len();
-        
+
         let result = async {
             let limit = limit.unwrap_or_else(|| self.config.max_results.unwrap_or(5));
-            
+
             if !self.config.use_embeddings {
-                return Err(Error::Internal("Semantic search requires embeddings to be enabled".to_string()));
+                return Err(Error::Internal(
+                    "Semantic search requires embeddings to be enabled".to_string(),
+                ));
             }
-            
+
             let query_embedding = self.embedding_provider.embed(query).await?;
-            
+
             let mut entries = self.get_all_entries().await?;
-            
+
             // 计算相关性分数
             for entry in &mut entries {
                 if let Some(embedding) = &entry.embedding {
-                    entry.relevance = Some(self.embedding_provider.similarity(&query_embedding, embedding));
+                    entry.relevance = Some(
+                        self.embedding_provider
+                            .similarity(&query_embedding, embedding),
+                    );
                 } else {
                     entry.relevance = Some(0.0);
                 }
             }
-            
+
             // 按相关性排序
             entries.sort_by(|a, b| {
-                b.relevance.unwrap_or(0.0).partial_cmp(&a.relevance.unwrap_or(0.0)).unwrap_or(std::cmp::Ordering::Equal)
+                b.relevance
+                    .unwrap_or(0.0)
+                    .partial_cmp(&a.relevance.unwrap_or(0.0))
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
-            
+
             // 限制结果数量
             entries.truncate(limit);
-            
+
             // 过滤低相关性结果
             if let Some(threshold) = self.config.relevance_threshold {
                 entries.retain(|entry| entry.relevance.unwrap_or(0.0) >= threshold);
             }
-            
+
             Ok(entries)
-        }.await;
-        
+        }
+        .await;
+
         let execution_time = start_time.elapsed().unwrap_or_default().as_millis() as u64;
         let success = result.is_ok();
-        let results_count = result.as_ref().ok().map(|entries| entries.len()).unwrap_or(0);
-        
-        self.record_memory_metrics("search", execution_time, success, Some(format!("query_results:{}", results_count)), Some(query_size)).await;
+        let results_count = result
+            .as_ref()
+            .ok()
+            .map(|entries| entries.len())
+            .unwrap_or(0);
+
+        self.record_memory_metrics(
+            "search",
+            execution_time,
+            success,
+            Some(format!("query_results:{results_count}")),
+            Some(query_size),
+        )
+        .await;
         result
     }
-    
+
     /// 生成内容摘要
     async fn generate_summary(&self, content: &str) -> Result<String> {
-        let prompt = format!("Please summarize the following text in a concise manner:\n\n{}", content);
+        let prompt =
+            format!("Please summarize the following text in a concise manner:\n\n{content}");
         let options = LlmOptions::default();
         self.llm.generate(&prompt, &options).await
     }
-    
+
     /// 生成记忆检索结果
     pub async fn retrieve_relevant_memories(&self, query: &str) -> Result<String> {
         let entries = self.search(query, None).await?;
-        
+
         if entries.is_empty() {
             return Ok("No relevant memories found.".to_string());
         }
-        
+
         // 构建记忆内容
-        let memories_text = entries.iter()
+        let memories_text = entries
+            .iter()
             .enumerate()
             .map(|(i, entry)| {
                 let relevance = entry.relevance.unwrap_or(0.0) * 100.0;
@@ -285,22 +374,27 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
                 } else {
                     entry.content.clone()
                 };
-                
-                format!("Memory {}: {} (relevance: {:.1}%)", i + 1, content, relevance)
+
+                format!(
+                    "Memory {}: {} (relevance: {:.1}%)",
+                    i + 1,
+                    content,
+                    relevance
+                )
             })
             .collect::<Vec<_>>()
             .join("\n\n");
-        
+
         // 使用模板
         let formatted_result = format!("{}\n\n{}", self.template, memories_text);
-        
+
         Ok(formatted_result)
     }
-    
+
     /// 将记忆转换为消息列表
     pub async fn to_messages(&self, query: &str) -> Result<Vec<Message>> {
         let memories = self.retrieve_relevant_memories(query).await?;
-        
+
         Ok(vec![Message {
             role: Role::System,
             content: memories,
@@ -308,26 +402,35 @@ impl<P: LlmProvider, E: EmbeddingProvider> SemanticMemory<P, E> {
             metadata: None,
         }])
     }
-    
+
     /// 记录内存操作指标的辅助方法
-    async fn record_memory_metrics(&self, operation_type: &str, execution_time_ms: u64, success: bool, key: Option<String>, data_size_bytes: Option<usize>) {
+    async fn record_memory_metrics(
+        &self,
+        operation_type: &str,
+        execution_time_ms: u64,
+        success: bool,
+        key: Option<String>,
+        data_size_bytes: Option<usize>,
+    ) {
         if let Some(collector) = &self.metrics_collector {
             let metrics = MemoryMetrics {
-                operation_type: operation_type.to_string(),
+                operation: operation_type.to_string(),
                 execution_time_ms,
                 success,
-                key,
-                data_size_bytes,
-                timestamp: SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_millis() as u64,
+                operation_type: operation_type.to_string(),
+                key: key.unwrap_or_default(),
+                data_size_bytes: data_size_bytes.unwrap_or(0),
+                timestamp: SystemTime::now(),
+                total_entries: 0,
+                memory_usage: 0,
+                cache_hits: 0,
+                cache_misses: 0,
             };
-            
+
             if let Err(e) = collector.record_memory_operation(metrics).await {
                 // 记录日志但不影响主要操作
                 let logger = self.logger();
-                logger.error(&format!("Failed to record memory metrics: {}", e), None);
+                let _ = logger.error(&format!("Failed to record memory metrics: {e}"));
             }
         }
     }
@@ -337,23 +440,23 @@ impl<P: LlmProvider, E: EmbeddingProvider> Base for SemanticMemory<P, E> {
     fn name(&self) -> Option<&str> {
         self.base.name()
     }
-    
+
     fn component(&self) -> Component {
         self.base.component()
     }
-    
+
     fn logger(&self) -> Arc<dyn crate::logger::Logger> {
         self.base.logger()
     }
-    
+
     fn set_logger(&mut self, logger: Arc<dyn crate::logger::Logger>) {
         self.base.set_logger(logger);
     }
-    
+
     fn telemetry(&self) -> Option<Arc<dyn crate::telemetry::TelemetrySink>> {
         self.base.telemetry()
     }
-    
+
     fn set_telemetry(&mut self, telemetry: Arc<dyn crate::telemetry::TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
@@ -366,16 +469,17 @@ impl<P: LlmProvider + 'static, E: EmbeddingProvider + 'static> Memory for Semant
         if message.role == Role::User || message.role == Role::Assistant {
             let mut metadata = HashMap::new();
             metadata.insert("role".to_string(), Value::String(message.role.to_string()));
-            
+
             if let Some(name) = &message.name {
                 metadata.insert("name".to_string(), Value::String(name.clone()));
             }
-            
-            self.add_entry(message.content.clone(), Some(metadata)).await?;
+
+            self.add_entry(message.content.clone(), Some(metadata))
+                .await?;
         }
         Ok(())
     }
-    
+
     async fn retrieve(&self, config: &crate::memory::MemoryConfig) -> Result<Vec<Message>> {
         if let Some(query) = &config.query {
             self.to_messages(query).await
@@ -407,7 +511,7 @@ Based on the conversation history, here are some relevant memories that might be
 "#;
 
 /// 内存语义搜索接口
-/// 
+///
 /// 提供对历史消息记录的语义搜索功能
 
 /// 语义搜索选项
@@ -456,16 +560,25 @@ pub struct SemanticSearchResult {
 pub trait SemanticMemoryTrait: Send + Sync {
     /// 向内存中添加消息
     async fn add(&self, message: &Message) -> Result<()>;
-    
+
     /// 语义搜索相关消息
-    async fn search(&self, query: &str, options: &SemanticSearchOptions) -> Result<Vec<SemanticSearchResult>>;
-    
+    async fn search(
+        &self,
+        query: &str,
+        options: &SemanticSearchOptions,
+    ) -> Result<Vec<SemanticSearchResult>>;
+
     /// 检索最近的消息
     async fn get_recent(&self, limit: usize) -> Result<Vec<Message>>;
-    
+
     /// 获取指定消息的上下文
-    async fn get_context(&self, message_id: &str, before: usize, after: usize) -> Result<Vec<Message>>;
-    
+    async fn get_context(
+        &self,
+        message_id: &str,
+        before: usize,
+        after: usize,
+    ) -> Result<Vec<Message>>;
+
     /// 清空内存
     async fn clear(&self) -> Result<()>;
 }
@@ -480,8 +593,10 @@ pub fn create_semantic_memory(
             "vector" => {
                 let mem = crate::memory::semantic::SemanticMemory::new(config, llm)?;
                 Ok(Arc::new(SemanticMemoryAdapter::new(mem)))
-            },
-            _ => Err(Error::Configuration(format!("Unsupported memory store: {}", store_id))),
+            }
+            _ => Err(Error::Configuration(format!(
+                "Unsupported memory store: {store_id}"
+            ))),
         }
     } else {
         // 默认使用向量存储
@@ -506,8 +621,12 @@ impl SemanticMemoryTrait for SemanticMemoryAdapter {
     async fn add(&self, message: &Message) -> Result<()> {
         self.inner.store(message).await
     }
-    
-    async fn search(&self, _query: &str, options: &SemanticSearchOptions) -> Result<Vec<SemanticSearchResult>> {
+
+    async fn search(
+        &self,
+        _query: &str,
+        options: &SemanticSearchOptions,
+    ) -> Result<Vec<SemanticSearchResult>> {
         // 构建内存查询配置
         let config = crate::memory::MemoryConfig {
             enabled: true,
@@ -515,10 +634,9 @@ impl SemanticMemoryTrait for SemanticMemoryAdapter {
             semantic_recall: Some(crate::memory::SemanticRecallConfig {
                 top_k: options.limit,
                 message_range: if options.use_window {
-                    options.window_size.map(|(before, after)| crate::memory::MessageRange {
-                        before,
-                        after,
-                    })
+                    options
+                        .window_size
+                        .map(|(before, after)| crate::memory::MessageRange { before, after })
                 } else {
                     None
                 },
@@ -531,37 +649,43 @@ impl SemanticMemoryTrait for SemanticMemoryAdapter {
             }),
             ..Default::default()
         };
-        
+
         // 执行搜索
         let messages = self.inner.retrieve(&config).await?;
-        
+
         // 转换为结果
-        let results = messages.into_iter()
+        let results = messages
+            .into_iter()
             .map(|msg| SemanticSearchResult {
                 message: msg.clone(),
                 score: 1.0, // 目前简化，未获取实际分数
                 context: None,
             })
             .collect();
-        
+
         Ok(results)
     }
-    
+
     async fn get_recent(&self, limit: usize) -> Result<Vec<Message>> {
         let config = crate::memory::MemoryConfig {
             enabled: true,
             last_messages: Some(limit),
             ..Default::default()
         };
-        
+
         self.inner.retrieve(&config).await
     }
-    
-    async fn get_context(&self, _message_id: &str, _before: usize, _after: usize) -> Result<Vec<Message>> {
+
+    async fn get_context(
+        &self,
+        _message_id: &str,
+        _before: usize,
+        _after: usize,
+    ) -> Result<Vec<Message>> {
         // 暂未实现，目前返回空
         Ok(Vec::new())
     }
-    
+
     async fn clear(&self) -> Result<()> {
         // 暂未实现
         Ok(())
@@ -571,14 +695,14 @@ impl SemanticMemoryTrait for SemanticMemoryAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::{Role, MockLlmProvider};
+    use crate::llm::{MockLlmProvider, Role};
     use tokio::time::{timeout, Duration};
-    
+
     // 生成指定长度的测试向量
     fn create_test_vector(seed: f32, length: usize) -> Vec<f32> {
         (0..length).map(|i| seed + (i as f32 * 0.01)).collect()
     }
-    
+
     #[tokio::test]
     async fn test_semantic_memory_search() {
         // 创建配置
@@ -603,17 +727,17 @@ mod tests {
             last_messages: None,
             query: Some("语义搜索是什么".to_string()),
         };
-        
+
         // 创建Mock LLM - 提供足够的嵌入向量，维度为1536
         let mock_llm = Arc::new(MockLlmProvider::new_with_embeddings(vec![
             create_test_vector(0.1, 1536), // 第一条消息的嵌入
             create_test_vector(0.4, 1536), // 第二条消息的嵌入
             create_test_vector(0.7, 1536), // 查询的嵌入
         ]));
-        
+
         // 创建语义内存
         let semantic_memory = create_semantic_memory(&config, mock_llm).unwrap();
-        
+
         // 添加消息
         let message1 = Message {
             role: Role::User,
@@ -621,29 +745,33 @@ mod tests {
             metadata: None,
             name: None,
         };
-        
+
         let message2 = Message {
             role: Role::Assistant,
             content: "语义搜索是一种基于语义相似度的搜索方法，它能找到语义相关的内容".to_string(),
             metadata: None,
             name: None,
         };
-        
+
         // 使用超时机制执行异步操作
         let result = timeout(Duration::from_secs(5), async {
             semantic_memory.add(&message1).await.unwrap();
             semantic_memory.add(&message2).await.unwrap();
-            
+
             // 执行搜索
             let options = SemanticSearchOptions::default();
-            let results = semantic_memory.search("语义搜索是什么", &options).await.unwrap();
-            
+            let results = semantic_memory
+                .search("语义搜索是什么", &options)
+                .await
+                .unwrap();
+
             // 验证结果
             assert!(!results.is_empty());
             results
-        }).await;
-        
+        })
+        .await;
+
         // 确保测试在超时内完成
         assert!(result.is_ok(), "测试超时");
     }
-} 
+}

@@ -12,16 +12,12 @@
 */
 
 #![allow(non_snake_case)]
-use web_assets::files::BUTTON_SELECT_SVG;
 use dioxus::prelude::*;
+use web_assets::files::BUTTON_SELECT_SVG;
 
 /// 增强的模型选择弹窗
 #[component]
-pub fn ModelPopup(
-    team_id: i32,
-    current_model: String,
-    on_close: EventHandler<()>,
-) -> Element {
+pub fn ModelPopup(team_id: i32, current_model: String, on_close: EventHandler<()>) -> Element {
     // 简化实现，移除use_signal依赖
     let selected_model = current_model.clone();
     let show_details = false;
@@ -164,10 +160,7 @@ struct ModelInfo {
 
 /// 模型卡片组件
 #[component]
-fn ModelCard(
-    model: ModelInfo,
-    is_selected: bool,
-) -> Element {
+fn ModelCard(model: ModelInfo, is_selected: bool) -> Element {
     rsx! {
         div {
             class: if is_selected {
@@ -262,9 +255,7 @@ fn ModelCard(
 
 /// 模型详情组件
 #[component]
-fn ModelDetails(
-    model: ModelInfo,
-) -> Element {
+fn ModelDetails(model: ModelInfo) -> Element {
     rsx! {
         div {
             class: "alert alert-info mb-4",
@@ -366,7 +357,7 @@ fn get_metric_color(metric: &str) -> &'static str {
         "极高" | "快" => "text-success",
         "高" | "中等" => "text-warning",
         "低" | "慢" => "text-error",
-        _ => "text-base-content"
+        _ => "text-base-content",
     }
 }
 
@@ -376,6 +367,6 @@ fn get_cost_color(cost: &str) -> &'static str {
         "低" => "text-success",
         "中等" => "text-warning",
         "高" => "text-error",
-        _ => "text-base-content"
+        _ => "text-base-content",
     }
 }

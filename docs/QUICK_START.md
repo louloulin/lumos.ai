@@ -1,4 +1,7 @@
-# 🚀 LumosAI 快速开始指南
+> ℹ️ 统一入口迁移提示：本页面为历史/补充版。最新快速开始文档请访问 [quick-start/README.md](./quick-start/README.md)。参阅 [CONTENT_MAP.md](./CONTENT_MAP.md) 了解统一入口与迁移计划。
+
+ 
+ # 🚀 LumosAI 快速开始指南
 
 欢迎使用 LumosAI！这是一个功能强大的企业级 AI 框架，让您能够快速构建智能应用。
 

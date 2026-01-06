@@ -1,10 +1,7 @@
 //! Context window management implementations
 
+use crate::{error::Result, types::ScoredDocument};
 use async_trait::async_trait;
-use crate::{
-    types::ScoredDocument,
-    error::Result,
-};
 
 /// Trait for context window management strategies
 #[async_trait]
@@ -20,6 +17,12 @@ pub trait ContextWindow: Send + Sync {
 
 /// Fixed window implementation
 pub struct FixedWindow;
+
+impl Default for FixedWindow {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl FixedWindow {
     pub fn new() -> Self {
@@ -37,11 +40,11 @@ impl ContextWindow for FixedWindow {
     ) -> Result<Vec<ScoredDocument>> {
         // Simple truncation to max documents
         documents.truncate(max_documents);
-        
+
         // Apply token limit
         let mut total_tokens = 0;
         let mut result = Vec::new();
-        
+
         for doc in documents {
             let doc_tokens = estimate_tokens(&doc.document.content);
             if total_tokens + doc_tokens <= max_tokens {
@@ -51,7 +54,7 @@ impl ContextWindow for FixedWindow {
                 break;
             }
         }
-        
+
         Ok(result)
     }
 }
@@ -78,14 +81,14 @@ impl ContextWindow for SlidingWindow {
         if documents.len() <= max_documents {
             return Ok(documents);
         }
-        
+
         // Create sliding windows with overlap
         let mut result = Vec::new();
         let mut current_tokens = 0;
-        
+
         for (i, doc) in documents.iter().enumerate() {
             let doc_tokens = estimate_tokens(&doc.document.content);
-            
+
             // Check if we should start a new window
             if i > 0 && i % (max_documents - self.overlap) == 0 {
                 // Reset token count for new window
@@ -93,11 +96,12 @@ impl ContextWindow for SlidingWindow {
                 // Keep overlap documents
                 let overlap_start = result.len().saturating_sub(self.overlap);
                 result.truncate(overlap_start);
-                current_tokens = result.iter()
+                current_tokens = result
+                    .iter()
                     .map(|d: &ScoredDocument| estimate_tokens(&d.document.content))
                     .sum();
             }
-            
+
             if current_tokens + doc_tokens <= max_tokens {
                 current_tokens += doc_tokens;
                 result.push(doc.clone());
@@ -105,7 +109,7 @@ impl ContextWindow for SlidingWindow {
                 break;
             }
         }
-        
+
         Ok(result)
     }
 }
@@ -132,27 +136,27 @@ impl ContextWindow for AdaptiveWindow {
     ) -> Result<Vec<ScoredDocument>> {
         let mut result = Vec::new();
         let mut total_tokens = 0;
-        
+
         // Calculate average document quality
         let avg_score = if !documents.is_empty() {
             documents.iter().map(|d| d.score).sum::<f32>() / documents.len() as f32
         } else {
             0.0
         };
-        
+
         // Adaptive threshold based on quality
         let quality_threshold = avg_score * 0.8;
-        
+
         for doc in documents {
             let doc_tokens = estimate_tokens(&doc.document.content);
-            
+
             // Include high-quality documents even if they exceed normal limits
             let should_include = if doc.score >= quality_threshold {
                 result.len() < self.max_size && total_tokens + doc_tokens <= max_tokens * 2
             } else {
                 result.len() < max_documents && total_tokens + doc_tokens <= max_tokens
             };
-            
+
             if should_include {
                 total_tokens += doc_tokens;
                 result.push(doc);
@@ -160,7 +164,7 @@ impl ContextWindow for AdaptiveWindow {
                 break;
             }
         }
-        
+
         Ok(result)
     }
 }
@@ -187,23 +191,26 @@ impl ContextWindow for HierarchicalWindow {
         let mut result = Vec::new();
         let mut total_tokens = 0;
         let mut current_level = 0;
-        
+
         // Sort documents by score (highest first)
         let mut sorted_docs = documents;
-        sorted_docs.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
-        
-        for (_i, doc) in sorted_docs.iter().enumerate() {
+        sorted_docs.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        for doc in sorted_docs.iter() {
             // Move to next level if current level is full
-            while current_level < self.levels.len() && 
-                  result.len() >= self.levels[current_level] {
+            while current_level < self.levels.len() && result.len() >= self.levels[current_level] {
                 current_level += 1;
             }
-            
+
             // Stop if we've exceeded all levels
             if current_level >= self.levels.len() || result.len() >= max_documents {
                 break;
             }
-            
+
             let doc_tokens = estimate_tokens(&doc.document.content);
             if total_tokens + doc_tokens <= max_tokens {
                 total_tokens += doc_tokens;
@@ -212,7 +219,7 @@ impl ContextWindow for HierarchicalWindow {
                 break;
             }
         }
-        
+
         Ok(result)
     }
 }

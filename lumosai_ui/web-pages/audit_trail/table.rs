@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
-use daisy_rsx::*;
 use crate::types::AuditTrail;
+use crate::types::LabelRole;
+use daisy_rsx::*;
 use dioxus::prelude::*;
 
 #[component]
@@ -40,18 +41,11 @@ pub fn AuditTable(audits: Vec<AuditTrail>) -> Element {
                                 }
                                 td {
                                     class: "max-sm:hidden",
-                                    Label {
-                                        class: "mr-2",
-                                        label_role: LabelRole::Neutral,
-                                        {super::access_type_to_string(audit.access_type)}
-                                    }
+                                    span { class: "mr-2 {crate::role_class(LabelRole::Neutral)}", {super::access_type_to_string(audit.access_type)} }
                                 }
                                 td {
                                     class: "text-right",
-                                    Label {
-                                        label_role: LabelRole::Neutral,
-                                        {super::audit_action_to_string(audit.action)}
-                                    }
+                                    span { class: crate::role_class(LabelRole::Neutral), {super::audit_action_to_string(audit.action)} }
                                 }
                             }
                         }

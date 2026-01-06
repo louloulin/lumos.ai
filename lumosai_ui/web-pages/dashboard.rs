@@ -13,9 +13,9 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
 use crate::types::Rbac;
+use dioxus::prelude::*;
 
 // 临时类型定义
 #[derive(Clone, Debug, PartialEq)]
@@ -48,10 +48,7 @@ pub struct QuickAction {
 
 /// 主页仪表板页面
 #[component]
-pub fn DashboardPage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn DashboardPage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟数据
     let stats = DashboardStats {
         total_conversations: 156,
@@ -428,7 +425,7 @@ fn WelcomeGuide(rbac: Rbac) -> Element {
                 }
                 div {
                     class: "grid grid-cols-1 md:grid-cols-3 gap-6",
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -439,7 +436,7 @@ fn WelcomeGuide(rbac: Rbac) -> Element {
                             "Begin your AI journey by starting a conversation. Ask questions, get help, or explore ideas."
                         }
                     }
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -450,7 +447,7 @@ fn WelcomeGuide(rbac: Rbac) -> Element {
                             "Build custom AI assistants tailored to your specific needs and workflows."
                         }
                     }
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -462,7 +459,7 @@ fn WelcomeGuide(rbac: Rbac) -> Element {
                         }
                     }
                 }
-                
+
                 div {
                     class: "text-center mt-6",
                     button {

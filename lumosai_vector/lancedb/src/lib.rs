@@ -23,12 +23,12 @@
 //!     // Create LanceDB storage
 //!     let config = LanceDbConfig::new("./lance_data");
 //!     let storage = LanceDbStorage::new(config).await?;
-//!     
+//!
 //!     // Create an index
 //!     let index_config = IndexConfig::new("documents", 384)
 //!         .with_metric(SimilarityMetric::Cosine);
 //!     storage.create_index(index_config).await?;
-//!     
+//!
 //!     // Insert documents
 //!     let docs = vec![
 //!         Document::new("doc1", "Hello world")
@@ -36,7 +36,7 @@
 //!             .with_metadata("category", "greeting"),
 //!     ];
 //!     storage.upsert_documents("documents", docs).await?;
-//!     
+//!
 //!     Ok(())
 //! }
 //! ```
@@ -44,26 +44,26 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub mod storage;
 pub mod config;
-pub mod error;
 pub mod conversion;
+pub mod error;
 pub mod index;
+pub mod storage;
 
-pub use storage::LanceDbStorage;
 pub use config::{LanceDbConfig, LanceDbConfigBuilder};
 pub use error::{LanceDbError, LanceDbResult};
+pub use storage::LanceDbStorage;
 
 // Re-export core types for convenience
-pub use lumosai_vector_core::types::*;
 pub use lumosai_vector_core::traits::VectorStorage;
+pub use lumosai_vector_core::types::*;
 
 /// LanceDB client for managing connections and databases
 #[derive(Clone)]
 pub struct LanceDbClient {
     /// Database connection
     db: Arc<lancedb::Connection>,
-    
+
     /// Configuration
     config: LanceDbConfig,
 }
@@ -71,51 +71,59 @@ pub struct LanceDbClient {
 impl LanceDbClient {
     /// Create a new LanceDB client
     pub async fn new(config: LanceDbConfig) -> LanceDbResult<Self> {
-        let db = lancedb::connect(&config.uri).execute().await
+        let db = lancedb::connect(&config.uri)
+            .execute()
+            .await
             .map_err(|e| LanceDbError::Connection(e.to_string()))?;
-        
+
         Ok(Self {
             db: Arc::new(db),
             config,
         })
     }
-    
+
     /// Get the database connection
     pub fn connection(&self) -> Arc<lancedb::Connection> {
         self.db.clone()
     }
-    
+
     /// Get the configuration
     pub fn config(&self) -> &LanceDbConfig {
         &self.config
     }
-    
+
     /// List all tables in the database
     pub async fn list_tables(&self) -> LanceDbResult<Vec<String>> {
-        let tables = self.db.table_names().execute().await
+        let tables = self
+            .db
+            .table_names()
+            .execute()
+            .await
             .map_err(|e| LanceDbError::Database(e.to_string()))?;
         Ok(tables)
     }
-    
+
     /// Check if a table exists
     pub async fn table_exists(&self, name: &str) -> LanceDbResult<bool> {
         let tables = self.list_tables().await?;
         Ok(tables.contains(&name.to_string()))
     }
-    
+
     /// Drop a table
     pub async fn drop_table(&self, name: &str) -> LanceDbResult<()> {
-        self.db.drop_table(name).await
+        self.db
+            .drop_table(name)
+            .await
             .map_err(|e| LanceDbError::Database(e.to_string()))?;
         Ok(())
     }
-    
+
     /// Get database statistics
     pub async fn stats(&self) -> LanceDbResult<DatabaseStats> {
         let tables = self.list_tables().await?;
         let mut total_rows = 0;
         let total_size = 0;
-        
+
         for table_name in &tables {
             if let Ok(table) = self.db.open_table(table_name).execute().await {
                 if let Ok(count) = table.count_rows(None).await {
@@ -125,7 +133,7 @@ impl LanceDbClient {
                 // This would need to be calculated from file system or other means
             }
         }
-        
+
         Ok(DatabaseStats {
             table_count: tables.len(),
             total_rows,
@@ -136,8 +144,7 @@ impl LanceDbClient {
 }
 
 /// Database statistics
-#[derive(Debug, Clone)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DatabaseStats {
     /// Number of tables
     pub table_count: usize,
@@ -156,7 +163,9 @@ pub async fn create_lancedb_storage(uri: &str) -> LanceDbResult<LanceDbStorage> 
 }
 
 /// Create a new LanceDB storage instance with configuration
-pub async fn create_lancedb_storage_with_config(config: LanceDbConfig) -> LanceDbResult<LanceDbStorage> {
+pub async fn create_lancedb_storage_with_config(
+    config: LanceDbConfig,
+) -> LanceDbResult<LanceDbStorage> {
     LanceDbStorage::new(config).await
 }
 
@@ -169,35 +178,35 @@ pub mod utils {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-    
+
     #[tokio::test]
     async fn test_client_creation() {
         let temp_dir = TempDir::new().unwrap();
         let uri = format!("file://{}", temp_dir.path().display());
-        
+
         let config = LanceDbConfig::new(&uri);
         let client = LanceDbClient::new(config).await;
-        
+
         assert!(client.is_ok());
     }
-    
+
     #[tokio::test]
     async fn test_table_operations() {
         let temp_dir = TempDir::new().unwrap();
         let uri = format!("file://{}", temp_dir.path().display());
-        
+
         let config = LanceDbConfig::new(&uri);
         let client = LanceDbClient::new(config).await.unwrap();
-        
+
         // Initially no tables
         let tables = client.list_tables().await.unwrap();
         assert!(tables.is_empty());
-        
+
         // Check non-existent table
         let exists = client.table_exists("test_table").await.unwrap();
         assert!(!exists);
     }
-    
+
     #[test]
     fn test_document_schema() {
         let schema = utils::create_document_schema(384);

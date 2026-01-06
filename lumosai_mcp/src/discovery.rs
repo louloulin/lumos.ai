@@ -1,16 +1,15 @@
 //! MCP Server Discovery and Registry
-//! 
+//!
 //! This module provides automatic discovery and registration of MCP servers,
 //! including support for common MCP server patterns and configurations.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
-use serde::{Deserialize, Serialize};
-use url::Url;
 
-use crate::{MCPConfiguration, ServerDefinition, EnhancedMCPManager, Result, MCPError};
+use crate::{EnhancedMCPManager, MCPConfiguration, MCPError, Result, ServerDefinition};
 
 /// MCP server registry for discovering and managing available servers
 pub struct MCPServerRegistry {
@@ -99,12 +98,15 @@ impl MCPServerRegistry {
             return Ok(0);
         }
 
-        let mut entries = fs::read_dir(&dir_path).await
-            .map_err(|e| MCPError::IOError(format!("Failed to read directory: {}", e)))?;
+        let mut entries = fs::read_dir(&dir_path)
+            .await
+            .map_err(|e| MCPError::IOError(format!("Failed to read directory: {e}")))?;
 
-        while let Some(entry) = entries.next_entry().await
-            .map_err(|e| MCPError::IOError(format!("Failed to read directory entry: {}", e)))? {
-            
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| MCPError::IOError(format!("Failed to read directory entry: {e}")))?
+        {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 match self.load_server_config(&path).await {
@@ -113,23 +115,24 @@ impl MCPServerRegistry {
                         loaded_count += 1;
                     }
                     Err(e) => {
-                        eprintln!("⚠️  Failed to load server config from {:?}: {}", path, e);
+                        eprintln!("⚠️  Failed to load server config from {path:?}: {e}");
                     }
                 }
             }
         }
 
-        println!("📁 Loaded {} MCP server configurations from {:?}", loaded_count, dir_path);
+        println!("📁 Loaded {loaded_count} MCP server configurations from {dir_path:?}");
         Ok(loaded_count)
     }
 
     /// Load a single server configuration file
     async fn load_server_config(&self, path: &PathBuf) -> Result<ServerConfig> {
-        let content = fs::read_to_string(path).await
-            .map_err(|e| MCPError::IOError(format!("Failed to read config file: {}", e)))?;
+        let content = fs::read_to_string(path)
+            .await
+            .map_err(|e| MCPError::IOError(format!("Failed to read config file: {e}")))?;
 
         let config: ServerConfig = serde_json::from_str(&content)
-            .map_err(|e| MCPError::DeserializationError(format!("Invalid config format: {}", e)))?;
+            .map_err(|e| MCPError::DeserializationError(format!("Invalid config format: {e}")))?;
 
         Ok(config)
     }
@@ -143,7 +146,7 @@ impl MCPServerRegistry {
         discovered_count += self.discover_local_servers().await?;
         discovered_count += self.discover_npm_servers().await?;
 
-        println!("🔍 Auto-discovered {} MCP servers", discovered_count);
+        println!("🔍 Auto-discovered {discovered_count} MCP servers");
         Ok(discovered_count)
     }
 
@@ -164,7 +167,11 @@ impl MCPServerRegistry {
                     working_dir: None,
                 },
                 capabilities: vec!["web_search".to_string(), "search_results".to_string()],
-                tags: vec!["mastra".to_string(), "web".to_string(), "search".to_string()],
+                tags: vec![
+                    "mastra".to_string(),
+                    "web".to_string(),
+                    "search".to_string(),
+                ],
                 enabled: true,
                 priority: 80,
             },
@@ -178,7 +185,11 @@ impl MCPServerRegistry {
                     env: HashMap::new(),
                     working_dir: None,
                 },
-                capabilities: vec!["file_read".to_string(), "file_write".to_string(), "directory_list".to_string()],
+                capabilities: vec![
+                    "file_read".to_string(),
+                    "file_write".to_string(),
+                    "directory_list".to_string(),
+                ],
                 tags: vec!["mastra".to_string(), "filesystem".to_string()],
                 enabled: true,
                 priority: 75,
@@ -201,7 +212,11 @@ impl MCPServerRegistry {
 
         // Check for common local MCP server patterns
         let local_patterns = vec![
-            ("local-docs", "Local documentation server", "mcp-docs-server"),
+            (
+                "local-docs",
+                "Local documentation server",
+                "mcp-docs-server",
+            ),
             ("local-git", "Local Git operations", "mcp-git-server"),
             ("local-database", "Local database access", "mcp-db-server"),
         ];
@@ -241,9 +256,21 @@ impl MCPServerRegistry {
 
         // Common NPM MCP packages
         let npm_servers = vec![
-            ("calculator-mcp", "Basic calculator operations", "@modelcontextprotocol/calculator"),
-            ("weather-mcp", "Weather information", "@modelcontextprotocol/weather"),
-            ("time-mcp", "Time and date utilities", "@modelcontextprotocol/time"),
+            (
+                "calculator-mcp",
+                "Basic calculator operations",
+                "@modelcontextprotocol/calculator",
+            ),
+            (
+                "weather-mcp",
+                "Weather information",
+                "@modelcontextprotocol/weather",
+            ),
+            (
+                "time-mcp",
+                "Time and date utilities",
+                "@modelcontextprotocol/time",
+            ),
         ];
 
         for (name, description, package) in npm_servers {
@@ -288,16 +315,16 @@ impl MCPServerRegistry {
                 match self.connect_server(name, config).await {
                     Ok(()) => {
                         connected_count += 1;
-                        println!("✅ Connected to MCP server '{}'", name);
+                        println!("✅ Connected to MCP server '{name}'");
                     }
                     Err(e) => {
-                        eprintln!("❌ Failed to connect to MCP server '{}': {}", name, e);
+                        eprintln!("❌ Failed to connect to MCP server '{name}': {e}");
                     }
                 }
             }
         }
 
-        println!("🔗 Connected to {} MCP servers", connected_count);
+        println!("🔗 Connected to {connected_count} MCP servers");
         Ok(connected_count)
     }
 
@@ -306,28 +333,28 @@ impl MCPServerRegistry {
         let server_def = self.convert_to_server_definition(config)?;
         let mcp_config = MCPConfiguration::new(
             [(name.to_string(), server_def)].into_iter().collect(),
-            Some(format!("mcp-{}", name)),
+            Some(format!("mcp-{name}")),
         );
 
-        self.manager.register_mcp_server(name.to_string(), mcp_config).await
+        self.manager
+            .register_mcp_server(name.to_string(), mcp_config)
+            .await
     }
 
     /// Convert ServerConfig to ServerDefinition
     fn convert_to_server_definition(&self, config: &ServerConfig) -> Result<ServerDefinition> {
         match &config.connection {
-            ConnectionConfig::Stdio { command, args, env, .. } => {
-                Ok(ServerDefinition::Stdio {
-                    command: command.clone(),
-                    args: args.clone(),
-                    env: Some(env.clone()),
-                })
-            }
-            ConnectionConfig::SSE { url, .. } => {
-                Ok(ServerDefinition::SSE {
-                    url: url.clone(),
-                    request_init: None,
-                })
-            }
+            ConnectionConfig::Stdio {
+                command, args, env, ..
+            } => Ok(ServerDefinition::Stdio {
+                command: command.clone(),
+                args: args.clone(),
+                env: Some(env.clone()),
+            }),
+            ConnectionConfig::SSE { url, .. } => Ok(ServerDefinition::SSE {
+                url: url.clone(),
+                request_init: None,
+            }),
             ConnectionConfig::HTTP { base_url, .. } => {
                 // For now, treat HTTP as SSE
                 Ok(ServerDefinition::SSE {
@@ -345,14 +372,16 @@ impl MCPServerRegistry {
 
     /// Get servers by capability
     pub fn get_servers_by_capability(&self, capability: &str) -> Vec<&ServerConfig> {
-        self.servers.values()
+        self.servers
+            .values()
             .filter(|config| config.capabilities.contains(&capability.to_string()))
             .collect()
     }
 
     /// Get servers by tag
     pub fn get_servers_by_tag(&self, tag: &str) -> Vec<&ServerConfig> {
-        self.servers.values()
+        self.servers
+            .values()
             .filter(|config| config.tags.contains(&tag.to_string()))
             .collect()
     }
@@ -380,12 +409,13 @@ impl MCPServerRegistry {
     /// Save registry to file
     pub async fn save_to_file(&self, path: PathBuf) -> Result<()> {
         let json = serde_json::to_string_pretty(&self.servers)
-            .map_err(|e| MCPError::DeserializationError(format!("Failed to serialize: {}", e)))?;
+            .map_err(|e| MCPError::DeserializationError(format!("Failed to serialize: {e}")))?;
 
-        fs::write(&path, json).await
-            .map_err(|e| MCPError::IOError(format!("Failed to write file: {}", e)))?;
+        fs::write(&path, json)
+            .await
+            .map_err(|e| MCPError::IOError(format!("Failed to write file: {e}")))?;
 
-        println!("💾 Saved MCP server registry to {:?}", path);
+        println!("💾 Saved MCP server registry to {path:?}");
         Ok(())
     }
 }

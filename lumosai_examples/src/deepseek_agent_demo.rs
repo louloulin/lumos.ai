@@ -1,8 +1,8 @@
-use lumosai_core::{Result, Agent};
-use lumosai_core::llm::{DeepSeekProvider, Message, Role};
 use lumosai_core::agent::create_basic_agent;
 use lumosai_core::agent::types::AgentGenerateOptions;
-use lumosai_core::tool::{Tool, FunctionTool, ParameterSchema, ToolSchema};
+use lumosai_core::llm::{DeepSeekProvider, Message, Role};
+use lumosai_core::tool::{FunctionTool, ParameterSchema, Tool, ToolSchema};
+use lumosai_core::{Agent, Result};
 use serde_json::json;
 use std::sync::Arc;
 
@@ -33,16 +33,28 @@ fn create_code_analyzer() -> Box<dyn Tool> {
         schema,
         |params| {
             let code = params.get("code").and_then(|v| v.as_str()).unwrap_or("");
-            let language = params.get("language").and_then(|v| v.as_str()).unwrap_or("");
+            let language = params
+                .get("language")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
             let lines = code.lines().count();
-            let complexity = if lines > 50 { "高" } else if lines > 20 { "中" } else { "低" };
+            let complexity = if lines > 50 {
+                "高"
+            } else if lines > 20 {
+                "中"
+            } else {
+                "低"
+            };
 
             let suggestions = match language.to_lowercase().as_str() {
-                "rust" => vec!["考虑使用Result类型进行错误处理", "使用match表达式替代if-else链"],
+                "rust" => vec![
+                    "考虑使用Result类型进行错误处理",
+                    "使用match表达式替代if-else链",
+                ],
                 "python" => vec!["使用类型提示提高代码可读性", "考虑使用列表推导式"],
                 "javascript" => vec!["使用const/let替代var", "考虑使用箭头函数"],
-                _ => vec!["代码结构良好", "考虑添加注释"]
+                _ => vec!["代码结构良好", "考虑添加注释"],
             };
 
             Ok(json!({
@@ -58,23 +70,24 @@ fn create_code_analyzer() -> Box<dyn Tool> {
 
 // 简化的数学计算工具
 fn create_math_calculator() -> Box<dyn Tool> {
-    let schema = ToolSchema::new(vec![
-        ParameterSchema {
-            name: "expression".to_string(),
-            description: "要计算的数学表达式（如：2+3*4, sqrt(16)等）".to_string(),
-            r#type: "string".to_string(),
-            required: true,
-            properties: None,
-            default: None,
-        },
-    ]);
+    let schema = ToolSchema::new(vec![ParameterSchema {
+        name: "expression".to_string(),
+        description: "要计算的数学表达式（如：2+3*4, sqrt(16)等）".to_string(),
+        r#type: "string".to_string(),
+        required: true,
+        properties: None,
+        default: None,
+    }]);
 
     Box::new(FunctionTool::new(
         "math_calculator".to_string(),
         "计算复杂的数学表达式".to_string(),
         schema,
         |params| {
-            let expression = params.get("expression").and_then(|v| v.as_str()).unwrap_or("");
+            let expression = params
+                .get("expression")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
             let result = match expression {
                 expr if expr.contains("2+3*4") => 14.0,
@@ -86,7 +99,9 @@ fn create_math_calculator() -> Box<dyn Tool> {
                         let b = &b[1..];
                         if let (Ok(a), Ok(b)) = (a.trim().parse::<f64>(), b.trim().parse::<f64>()) {
                             a + b
-                        } else { 0.0 }
+                        } else {
+                            0.0
+                        }
                     } else {
                         expression.parse::<f64>().unwrap_or(0.0)
                     }
@@ -104,16 +119,14 @@ fn create_math_calculator() -> Box<dyn Tool> {
 
 // 简化的文本分析工具
 fn create_text_analyzer() -> Box<dyn Tool> {
-    let schema = ToolSchema::new(vec![
-        ParameterSchema {
-            name: "text".to_string(),
-            description: "要分析的文本内容".to_string(),
-            r#type: "string".to_string(),
-            required: true,
-            properties: None,
-            default: None,
-        },
-    ]);
+    let schema = ToolSchema::new(vec![ParameterSchema {
+        name: "text".to_string(),
+        description: "要分析的文本内容".to_string(),
+        r#type: "string".to_string(),
+        required: true,
+        properties: None,
+        default: None,
+    }]);
 
     Box::new(FunctionTool::new(
         "text_analyzer".to_string(),
@@ -124,13 +137,23 @@ fn create_text_analyzer() -> Box<dyn Tool> {
 
             let word_count = text.split_whitespace().count();
             let char_count = text.chars().count();
-            let positive_words = ["好", "棒", "优秀", "amazing", "great", "excellent", "wonderful"];
+            let positive_words = [
+                "好",
+                "棒",
+                "优秀",
+                "amazing",
+                "great",
+                "excellent",
+                "wonderful",
+            ];
             let negative_words = ["坏", "差", "糟糕", "bad", "terrible", "awful"];
 
-            let positive_count = positive_words.iter()
+            let positive_count = positive_words
+                .iter()
                 .map(|word| text.to_lowercase().matches(word).count())
                 .sum::<usize>();
-            let negative_count = negative_words.iter()
+            let negative_count = negative_words
+                .iter()
                 .map(|word| text.to_lowercase().matches(word).count())
                 .sum::<usize>();
 
@@ -197,7 +220,7 @@ async fn main() -> Result<()> {
     // 创建智能体
     let mut agent = create_deepseek_agent(api_key)?;
     println!("✅ DeepSeek智能助手初始化完成，包含3个工具");
-    
+
     // 简化的测试场景
     let test_scenarios = [
         ("数学计算", "请帮我计算 2+3*4 的结果，并解释计算过程。"),
@@ -221,13 +244,16 @@ async fn main() -> Result<()> {
             name: None,
         };
 
-        match agent.generate(&[user_message], &AgentGenerateOptions::default()).await {
+        match agent
+            .generate(&[user_message], &AgentGenerateOptions::default())
+            .await
+        {
             Ok(result) => {
                 println!("\n💬 DeepSeek: {}", result.response);
                 if !result.steps.is_empty() {
                     println!("🔧 使用了 {} 个工具", result.steps.len());
                 }
-            },
+            }
             Err(e) => {
                 println!("❌ 错误: {}", e);
             }
@@ -243,6 +269,6 @@ async fn main() -> Result<()> {
     println!("\n{}", "=".repeat(50));
     println!("🎉 DeepSeek Agent演示完成！");
     println!("{}", "=".repeat(50));
-    
+
     Ok(())
 }

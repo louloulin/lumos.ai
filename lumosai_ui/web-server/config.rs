@@ -39,7 +39,7 @@ impl Config {
             .and_then(|s| s.parse().ok())
             .unwrap_or(100);
 
-        let development_mode = env::var("DEVELOPMENT_MODE").is_ok() 
+        let development_mode = env::var("DEVELOPMENT_MODE").is_ok()
             || cfg!(debug_assertions);
 
         let auto_open_browser = env::var("AUTO_OPEN_BROWSER")

@@ -1,5 +1,5 @@
 //! Google Gemini LLM provider implementation
-//! 
+//!
 //! This module provides integration with Google's Gemini language models.
 
 use async_trait::async_trait;
@@ -8,12 +8,12 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::error::{Error, Result};
 use super::{
-    LlmProvider, LlmOptions, Message, Role,
     function_calling::{FunctionDefinition, ToolChoice},
-    provider::FunctionCallingResponse
+    provider::FunctionCallingResponse,
+    LlmOptions, LlmProvider, Message, Role,
 };
+use crate::error::{Error, Result};
 
 /// Gemini API configuration
 #[derive(Debug, Clone)]
@@ -102,14 +102,11 @@ impl GeminiProvider {
             model,
             ..Default::default()
         };
-        
+
         let client = Client::builder()
             .default_headers({
                 let mut headers = reqwest::header::HeaderMap::new();
-                headers.insert(
-                    "Content-Type",
-                    "application/json".parse().unwrap(),
-                );
+                headers.insert("Content-Type", "application/json".parse().unwrap());
                 headers
             })
             .build()
@@ -120,19 +117,19 @@ impl GeminiProvider {
 
     /// Create from environment variables
     pub fn from_env() -> Result<Self> {
-        let api_key = std::env::var("GEMINI_API_KEY")
-            .map_err(|_| Error::Configuration("GEMINI_API_KEY environment variable not set".to_string()))?;
-        
-        let model = std::env::var("GEMINI_MODEL")
-            .unwrap_or_else(|_| "gemini-1.5-pro".to_string());
-            
+        let api_key = std::env::var("GEMINI_API_KEY").map_err(|_| {
+            Error::Configuration("GEMINI_API_KEY environment variable not set".to_string())
+        })?;
+
+        let model = std::env::var("GEMINI_MODEL").unwrap_or_else(|_| "gemini-1.5-pro".to_string());
+
         Ok(Self::new(api_key, model))
     }
 
     /// Convert messages to Gemini format
     fn convert_messages(&self, messages: &[Message]) -> Result<Vec<Content>> {
         let mut contents = Vec::new();
-        
+
         for message in messages {
             let role = match message.role {
                 Role::System => {
@@ -146,17 +143,17 @@ impl GeminiProvider {
                     "user".to_string()
                 }
             };
-            
+
             let content = Content {
                 role,
                 parts: vec![ContentPart {
                     text: message.content.clone(),
                 }],
             };
-            
+
             contents.push(content);
         }
-        
+
         Ok(contents)
     }
 
@@ -179,11 +176,15 @@ impl LlmProvider for GeminiProvider {
 
     async fn generate(&self, prompt: &str, options: &LlmOptions) -> Result<String> {
         let contents = self.convert_prompt(prompt);
-        
+
         let generation_config = GenerationConfig {
-            temperature: options.temperature,
+            temperature: options.temperature.map(|t| t.value()),
             max_output_tokens: options.max_tokens,
-            top_p: options.extra.get("top_p").and_then(|v| v.as_f64()).map(|f| f as f32),
+            top_p: options
+                .extra
+                .get("top_p")
+                .and_then(|v| v.as_f64())
+                .map(|f| f as f32),
             top_k: None,
         };
 
@@ -197,20 +198,25 @@ impl LlmProvider for GeminiProvider {
             self.config.base_url, self.config.model, self.config.api_key
         );
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Gemini API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Gemini API error: {error_text}"
+            )));
         }
 
-        let response_json: GeminiResponse = response.json().await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+        let response_json: GeminiResponse = response
+            .json()
+            .await
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.candidates.is_empty() {
             return Err(Error::Parsing("No candidates in response".to_string()));
@@ -224,13 +230,21 @@ impl LlmProvider for GeminiProvider {
         Ok(candidate.content.parts[0].text.clone())
     }
 
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         let contents = self.convert_messages(messages)?;
-        
+
         let generation_config = GenerationConfig {
-            temperature: options.temperature,
+            temperature: options.temperature.map(|t| t.value()),
             max_output_tokens: options.max_tokens,
-            top_p: options.extra.get("top_p").and_then(|v| v.as_f64()).map(|f| f as f32),
+            top_p: options
+                .extra
+                .get("top_p")
+                .and_then(|v| v.as_f64())
+                .map(|f| f as f32),
             top_k: None,
         };
 
@@ -244,20 +258,25 @@ impl LlmProvider for GeminiProvider {
             self.config.base_url, self.config.model, self.config.api_key
         );
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Gemini API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Gemini API error: {error_text}"
+            )));
         }
 
-        let response_json: GeminiResponse = response.json().await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+        let response_json: GeminiResponse = response
+            .json()
+            .await
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.candidates.is_empty() {
             return Err(Error::Parsing("No candidates in response".to_string()));
@@ -277,7 +296,8 @@ impl LlmProvider for GeminiProvider {
         options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // For now, return a simple stream with the full response
-        // TODO: Implement proper streaming when needed
+        // Note: Proper streaming implementation would require Gemini's streaming API
+        // This is a fallback implementation that returns the complete response at once
         let response = self.generate(prompt, options).await?;
         let stream = futures::stream::once(async move { Ok(response) });
         Ok(Box::pin(stream))
@@ -296,20 +316,25 @@ impl LlmProvider for GeminiProvider {
             self.config.base_url, self.config.embedding_model, self.config.api_key
         );
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Gemini API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Gemini API error: {error_text}"
+            )));
         }
 
-        let response_json: serde_json::Value = response.json().await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+        let response_json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         let values = response_json["embedding"]["values"]
             .as_array()
@@ -339,7 +364,8 @@ impl LlmProvider for GeminiProvider {
         options: &LlmOptions,
     ) -> Result<FunctionCallingResponse> {
         // For now, fallback to regular generation
-        // TODO: Implement proper function calling support
+        // Note: Proper function calling would require Gemini's function calling API
+        // This fallback ignores function definitions and returns standard text response
         let content = self.generate_with_messages(messages, options).await?;
         Ok(FunctionCallingResponse {
             content: Some(content),
@@ -355,22 +381,16 @@ mod tests {
 
     #[test]
     fn test_gemini_provider_creation() {
-        let provider = GeminiProvider::new(
-            "test-key".to_string(),
-            "gemini-1.5-pro".to_string(),
-        );
-        
+        let provider = GeminiProvider::new("test-key".to_string(), "gemini-1.5-pro".to_string());
+
         assert_eq!(provider.name(), "gemini");
         assert_eq!(provider.config.model, "gemini-1.5-pro");
     }
 
     #[test]
     fn test_message_conversion() {
-        let provider = GeminiProvider::new(
-            "test-key".to_string(),
-            "gemini-1.5-pro".to_string(),
-        );
-        
+        let provider = GeminiProvider::new("test-key".to_string(), "gemini-1.5-pro".to_string());
+
         let messages = vec![
             Message {
                 role: Role::System,
@@ -385,7 +405,7 @@ mod tests {
                 name: None,
             },
         ];
-        
+
         let contents = provider.convert_messages(&messages).unwrap();
         assert_eq!(contents.len(), 2);
         assert_eq!(contents[0].role, "user"); // System becomes user
@@ -399,11 +419,11 @@ mod tests {
     async fn test_gemini_integration() {
         let api_key = std::env::var("GEMINI_API_KEY").expect("GEMINI_API_KEY not set");
         let provider = GeminiProvider::new(api_key, "gemini-1.5-pro".to_string());
-        
+
         let options = LlmOptions::default()
             .with_temperature(0.7)
             .with_max_tokens(50);
-        
+
         let response = provider.generate("Say hello", &options).await;
         assert!(response.is_ok());
         println!("Gemini response: {}", response.unwrap());

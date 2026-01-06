@@ -8,6 +8,17 @@ for UI-only components.
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
+// UI 标签样式角色枚举，用于统一控制标签的视觉风格
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum LabelRole {
+    Neutral,
+    Highlight,
+    Success,
+    Info,
+    Warning,
+    Danger,
+}
+
 // Visibility enum
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Visibility {
@@ -166,7 +177,8 @@ impl BionicOpenAPI {
 
     pub fn has_oauth2_security(&self) -> bool {
         // Simple implementation - check if spec contains oauth2 security
-        self.spec.get("components")
+        self.spec
+            .get("components")
             .and_then(|c| c.get("securitySchemes"))
             .map(|s| s.to_string().contains("oauth2"))
             .unwrap_or(false)
@@ -511,19 +523,45 @@ pub struct Rbac {
 }
 
 impl Rbac {
-    pub fn can_view_datasets(&self) -> bool { true }
-    pub fn can_view_prompts(&self) -> bool { true }
-    pub fn can_view_integrations(&self) -> bool { true }
-    pub fn can_use_api_keys(&self) -> bool { true }
-    pub fn can_view_teams(&self) -> bool { true }
-    pub fn can_view_audit_trail(&self) -> bool { true }
-    pub fn can_setup_models(&self) -> bool { true }
-    pub fn can_view_system_prompt(&self) -> bool { true }
-    pub fn can_delete_chat(&self) -> bool { true }
-    pub fn can_edit_dataset(&self, _dataset: &Dataset) -> bool { true }
-    pub fn can_manage_integrations(&self) -> bool { true }
-    pub fn can_make_assistant_public(&self) -> bool { true }
-    pub fn can_make_invitations(&self) -> bool { true }
+    pub fn can_view_datasets(&self) -> bool {
+        true
+    }
+    pub fn can_view_prompts(&self) -> bool {
+        true
+    }
+    pub fn can_view_integrations(&self) -> bool {
+        true
+    }
+    pub fn can_use_api_keys(&self) -> bool {
+        true
+    }
+    pub fn can_view_teams(&self) -> bool {
+        true
+    }
+    pub fn can_view_audit_trail(&self) -> bool {
+        true
+    }
+    pub fn can_setup_models(&self) -> bool {
+        true
+    }
+    pub fn can_view_system_prompt(&self) -> bool {
+        true
+    }
+    pub fn can_delete_chat(&self) -> bool {
+        true
+    }
+    pub fn can_edit_dataset(&self, _dataset: &Dataset) -> bool {
+        true
+    }
+    pub fn can_manage_integrations(&self) -> bool {
+        true
+    }
+    pub fn can_make_assistant_public(&self) -> bool {
+        true
+    }
+    pub fn can_make_invitations(&self) -> bool {
+        true
+    }
 }
 
 // Utility functions

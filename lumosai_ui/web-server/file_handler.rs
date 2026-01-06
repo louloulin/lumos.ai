@@ -97,7 +97,6 @@ impl Default for FileConfig {
                 "txt".to_string(),
                 "md".to_string(),
                 "rtf".to_string(),
-                
                 // 图片
                 "jpg".to_string(),
                 "jpeg".to_string(),
@@ -105,14 +104,12 @@ impl Default for FileConfig {
                 "gif".to_string(),
                 "webp".to_string(),
                 "bmp".to_string(),
-                
                 // 数据
                 "json".to_string(),
                 "csv".to_string(),
                 "xml".to_string(),
                 "yaml".to_string(),
                 "yml".to_string(),
-                
                 // 代码
                 "js".to_string(),
                 "ts".to_string(),
@@ -142,7 +139,7 @@ impl FileHandler {
     pub fn new(config: FileConfig, database: Database) -> Self {
         Self { config, database }
     }
-    
+
     /// 初始化上传目录
     pub async fn init(&self) -> Result<(), FileError> {
         if !self.config.upload_dir.exists() {
@@ -150,7 +147,7 @@ impl FileHandler {
         }
         Ok(())
     }
-    
+
     /// 验证文件类型
     fn validate_file_type(&self, filename: &str) -> Result<String, FileError> {
         let extension = std::path::Path::new(filename)
@@ -158,14 +155,14 @@ impl FileHandler {
             .and_then(|ext| ext.to_str())
             .map(|ext| ext.to_lowercase())
             .ok_or_else(|| FileError::InvalidFileName("文件没有扩展名".to_string()))?;
-        
+
         if !self.config.allowed_types.contains(&extension) {
             return Err(FileError::UnsupportedFileType(extension));
         }
-        
+
         Ok(extension)
     }
-    
+
     /// 验证文件大小
     fn validate_file_size(&self, size: usize) -> Result<(), FileError> {
         if size > self.config.max_file_size {
@@ -173,7 +170,7 @@ impl FileHandler {
         }
         Ok(())
     }
-    
+
     /// 生成文件ID
     fn generate_file_id(&self) -> String {
         use std::time::{SystemTime, UNIX_EPOCH};
@@ -183,7 +180,7 @@ impl FileHandler {
             .as_nanos();
         format!("file_{}", timestamp)
     }
-    
+
     /// 获取MIME类型
     fn get_mime_type(&self, extension: &str) -> String {
         match extension {
@@ -193,18 +190,18 @@ impl FileHandler {
             "txt" => "text/plain",
             "md" => "text/markdown",
             "rtf" => "application/rtf",
-            
+
             "jpg" | "jpeg" => "image/jpeg",
             "png" => "image/png",
             "gif" => "image/gif",
             "webp" => "image/webp",
             "bmp" => "image/bmp",
-            
+
             "json" => "application/json",
             "csv" => "text/csv",
             "xml" => "application/xml",
             "yaml" | "yml" => "application/x-yaml",
-            
+
             "js" => "application/javascript",
             "ts" => "application/typescript",
             "py" => "text/x-python",
@@ -215,11 +212,12 @@ impl FileHandler {
             "cpp" => "text/x-c++",
             "h" => "text/x-c-header",
             "hpp" => "text/x-c++-header",
-            
+
             _ => "application/octet-stream",
-        }.to_string()
+        }
+        .to_string()
     }
-    
+
     /// 保存文件
     async fn save_file(&self, filename: &str, data: &[u8]) -> Result<String, FileError> {
         let file_id = self.generate_file_id();
@@ -227,22 +225,22 @@ impl FileHandler {
             .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("");
-        
+
         let file_name = if extension.is_empty() {
             file_id.clone()
         } else {
             format!("{}.{}", file_id, extension)
         };
-        
+
         let file_path = self.config.upload_dir.join(&file_name);
-        
+
         let mut file = fs::File::create(&file_path).await?;
         file.write_all(data).await?;
         file.flush().await?;
-        
+
         Ok(file_path.to_string_lossy().to_string())
     }
-    
+
     /// 处理文件上传
     pub async fn upload_files(
         &self,
@@ -252,16 +250,21 @@ impl FileHandler {
     ) -> Result<FileUploadResponse, FileError> {
         let mut uploaded_files = Vec::new();
         let mut errors = Vec::new();
-        
-        while let Some(field) = multipart.next_field().await.map_err(|e| {
-            FileError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
-        })? {
+
+        while let Some(field) = multipart
+            .next_field()
+            .await
+            .map_err(|e| FileError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?
+        {
             if let Some(filename) = field.file_name() {
                 let filename = filename.to_string();
-                
+
                 match field.bytes().await {
                     Ok(data) => {
-                        match self.process_single_file(&filename, &data, user_id, conversation_id).await {
+                        match self
+                            .process_single_file(&filename, &data, user_id, conversation_id)
+                            .await
+                        {
                             Ok(file_info) => uploaded_files.push(file_info),
                             Err(e) => errors.push(format!("{}: {}", filename, e)),
                         }
@@ -270,14 +273,14 @@ impl FileHandler {
                 }
             }
         }
-        
+
         Ok(FileUploadResponse {
             success: errors.is_empty(),
             files: uploaded_files,
             errors,
         })
     }
-    
+
     /// 处理单个文件
     async fn process_single_file(
         &self,
@@ -288,13 +291,13 @@ impl FileHandler {
     ) -> Result<FileInfo, FileError> {
         // 验证文件类型
         let file_type = self.validate_file_type(filename)?;
-        
+
         // 验证文件大小
         self.validate_file_size(data.len())?;
-        
+
         // 保存文件
         let file_path = self.save_file(filename, data).await?;
-        
+
         // 创建文件信息
         let file_info = FileInfo {
             id: self.generate_file_id(),
@@ -307,20 +310,20 @@ impl FileHandler {
             conversation_id,
             file_path,
         };
-        
+
         // TODO: 保存到数据库
         // self.database.save_file_info(&file_info).await?;
-        
+
         Ok(file_info)
     }
-    
+
     /// 获取用户文件列表
     pub async fn list_user_files(&self, user_id: i64) -> Result<Vec<FileInfo>, FileError> {
         // TODO: 从数据库获取文件列表
         // self.database.get_user_files(user_id).await
         Ok(Vec::new())
     }
-    
+
     /// 删除文件
     pub async fn delete_file(&self, file_id: &str, user_id: i64) -> Result<(), FileError> {
         // TODO: 从数据库获取文件信息并验证权限
@@ -328,13 +331,13 @@ impl FileHandler {
         // if file_info.user_id != user_id {
         //     return Err(FileError::PermissionDenied);
         // }
-        
+
         // TODO: 删除物理文件
         // fs::remove_file(&file_info.file_path).await?;
-        
+
         // TODO: 从数据库删除记录
         // self.database.delete_file_info(file_id).await?;
-        
+
         Ok(())
     }
 }
@@ -347,8 +350,11 @@ pub async fn upload_files(
     // 默认用户ID为1（系统用户）
     let user_id = 1;
     let conversation_id = None;
-    
-    match file_handler.upload_files(multipart, user_id, conversation_id).await {
+
+    match file_handler
+        .upload_files(multipart, user_id, conversation_id)
+        .await
+    {
         Ok(response) => (StatusCode::OK, Json(response)),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -362,17 +368,18 @@ pub async fn upload_files(
 }
 
 /// 获取文件列表
-pub async fn list_files(
-    State(file_handler): State<FileHandler>,
-) -> impl IntoResponse {
+pub async fn list_files(State(file_handler): State<FileHandler>) -> impl IntoResponse {
     // 默认用户ID为1（系统用户）
     let user_id = 1;
-    
+
     match file_handler.list_user_files(user_id).await {
-        Ok(files) => (StatusCode::OK, Json(serde_json::json!({
-            "success": true,
-            "files": files
-        }))),
+        Ok(files) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "files": files
+            })),
+        ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
@@ -390,12 +397,15 @@ pub async fn delete_file(
 ) -> impl IntoResponse {
     // 默认用户ID为1（系统用户）
     let user_id = 1;
-    
+
     match file_handler.delete_file(&file_id, user_id).await {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({
-            "success": true,
-            "message": "文件删除成功"
-        }))),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "message": "文件删除成功"
+            })),
+        ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({

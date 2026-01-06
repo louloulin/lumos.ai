@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
-use async_trait::async_trait;
 use crate::error::Error;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// 工作流步骤的状态
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -227,13 +227,13 @@ pub enum StepExecutorOutput {
 pub trait Step: Send + Sync {
     /// 获取步骤的ID
     fn id(&self) -> &str;
-    
+
     /// 获取步骤的描述
     fn description(&self) -> &str;
-    
+
     /// 执行步骤
     async fn execute(&self, context: StepContext) -> Result<serde_json::Value, Error>;
-    
+
     /// 获取重试配置
     fn retry_config(&self) -> Option<RetryConfig> {
         None
@@ -260,4 +260,4 @@ pub enum StepCondition {
     Or(Vec<StepCondition>),
     /// 非条件
     Not(Box<StepCondition>),
-} 
+}

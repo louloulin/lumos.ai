@@ -1,10 +1,10 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
+use crate::agent::types::{TelemetrySettings, VoiceConfig};
+use crate::llm::{LlmOptions, Message};
 use crate::memory::MemoryConfig;
 use crate::memory::WorkingMemoryConfig;
-use crate::llm::{LlmOptions, Message};
-use crate::agent::types::{VoiceConfig, TelemetrySettings};
 
 /// Configuration for an agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +43,12 @@ pub struct AgentConfig {
     /// Tool execution timeout in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_timeout: Option<u64>,
+    /// Tenant ID for multi-tenant support
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tenant_id: Option<String>,
+    /// Isolation level for multi-tenancy
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub isolation_level: Option<String>,
 }
 
 impl Default for AgentConfig {
@@ -60,6 +66,8 @@ impl Default for AgentConfig {
             metadata: None,
             max_tool_calls: Some(10),
             tool_timeout: Some(30),
+            tenant_id: None,
+            isolation_level: None,
         }
     }
 }
@@ -126,4 +134,4 @@ impl Default for AgentGenerateOptions {
             llm_options: LlmOptions::default(),
         }
     }
-} 
+}

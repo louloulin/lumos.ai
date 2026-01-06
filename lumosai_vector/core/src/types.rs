@@ -66,8 +66,10 @@ impl From<bool> for MetadataValue {
 /// Similarity metrics for vector comparison
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default)]
 pub enum SimilarityMetric {
     /// Cosine similarity (normalized dot product)
+    #[default]
     Cosine,
     /// Euclidean distance (L2 norm)
     Euclidean,
@@ -77,12 +79,6 @@ pub enum SimilarityMetric {
     Manhattan,
     /// Hamming distance (for binary vectors)
     Hamming,
-}
-
-impl Default for SimilarityMetric {
-    fn default() -> Self {
-        SimilarityMetric::Cosine
-    }
 }
 
 /// Filter conditions for querying vectors
@@ -130,50 +126,47 @@ impl FilterCondition {
     pub fn eq(field: impl Into<String>, value: impl Into<MetadataValue>) -> Self {
         FilterCondition::Eq(field.into(), value.into())
     }
-    
+
     /// Create a not equal filter
     pub fn ne(field: impl Into<String>, value: impl Into<MetadataValue>) -> Self {
         FilterCondition::Ne(field.into(), value.into())
     }
-    
+
     /// Create a greater than filter
     pub fn gt(field: impl Into<String>, value: impl Into<MetadataValue>) -> Self {
         FilterCondition::Gt(field.into(), value.into())
     }
-    
+
     /// Create a less than filter
     pub fn lt(field: impl Into<String>, value: impl Into<MetadataValue>) -> Self {
         FilterCondition::Lt(field.into(), value.into())
     }
-    
+
     /// Create an in filter
     pub fn in_values(field: impl Into<String>, values: Vec<impl Into<MetadataValue>>) -> Self {
-        FilterCondition::In(
-            field.into(),
-            values.into_iter().map(|v| v.into()).collect(),
-        )
+        FilterCondition::In(field.into(), values.into_iter().map(|v| v.into()).collect())
     }
-    
+
     /// Create an AND filter
     pub fn and(conditions: Vec<FilterCondition>) -> Self {
         FilterCondition::And(conditions)
     }
-    
+
     /// Create an OR filter
     pub fn or(conditions: Vec<FilterCondition>) -> Self {
         FilterCondition::Or(conditions)
     }
-    
+
     /// Create a NOT filter
-    pub fn not(condition: FilterCondition) -> Self {
+    pub fn negate(condition: FilterCondition) -> Self {
         FilterCondition::Not(Box::new(condition))
     }
-    
+
     /// Create an exists filter
     pub fn exists(field: impl Into<String>) -> Self {
         FilterCondition::Exists(field.into())
     }
-    
+
     /// Create a contains filter
     pub fn contains(field: impl Into<String>, substring: impl Into<String>) -> Self {
         FilterCondition::Contains(field.into(), substring.into())
@@ -204,13 +197,13 @@ impl IndexConfig {
             options: HashMap::new(),
         }
     }
-    
+
     /// Set the similarity metric
     pub fn with_metric(mut self, metric: SimilarityMetric) -> Self {
         self.metric = metric;
         self
     }
-    
+
     /// Add an option
     pub fn with_option(mut self, key: impl Into<String>, value: impl Into<MetadataValue>) -> Self {
         self.options.insert(key.into(), value.into());
@@ -264,24 +257,28 @@ impl Document {
             metadata: HashMap::new(),
         }
     }
-    
+
     /// Create a new document with auto-generated ID
     pub fn with_content(content: impl Into<String>) -> Self {
         Self::new(Uuid::new_v4().to_string(), content)
     }
-    
+
     /// Set the embedding
     pub fn with_embedding(mut self, embedding: Vector) -> Self {
         self.embedding = Some(embedding);
         self
     }
-    
+
     /// Add metadata
-    pub fn with_metadata(mut self, key: impl Into<String>, value: impl Into<MetadataValue>) -> Self {
+    pub fn with_metadata(
+        mut self,
+        key: impl Into<String>,
+        value: impl Into<MetadataValue>,
+    ) -> Self {
         self.metadata.insert(key.into(), value.into());
         self
     }
-    
+
     /// Set all metadata
     pub fn with_all_metadata(mut self, metadata: Metadata) -> Self {
         self.metadata = metadata;
@@ -404,19 +401,19 @@ impl SearchResult {
             content: None,
         }
     }
-    
+
     /// Set the vector
     pub fn with_vector(mut self, vector: Vector) -> Self {
         self.vector = Some(vector);
         self
     }
-    
+
     /// Set the metadata
     pub fn with_metadata(mut self, metadata: Metadata) -> Self {
         self.metadata = Some(metadata);
         self
     }
-    
+
     /// Set the content
     pub fn with_content(mut self, content: impl Into<String>) -> Self {
         self.content = Some(content.into());
@@ -448,13 +445,13 @@ impl SearchResponse {
             metadata: HashMap::new(),
         }
     }
-    
+
     /// Set the total count
     pub fn with_total_count(mut self, count: usize) -> Self {
         self.total_count = Some(count);
         self
     }
-    
+
     /// Set the execution time
     pub fn with_execution_time(mut self, time_ms: u64) -> Self {
         self.execution_time_ms = Some(time_ms);

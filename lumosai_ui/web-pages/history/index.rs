@@ -1,12 +1,12 @@
 #![allow(non_snake_case)]
+use crate::types::{History, Rbac};
 use crate::{
     app_layout::{Layout, SideBar},
     hero::Hero,
 };
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, History};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(rbac: Rbac, team_id: i32, history: Vec<History>) -> String {
     let buckets = super::bucket_history(history);

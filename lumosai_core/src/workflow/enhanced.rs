@@ -1,21 +1,21 @@
 //! Enhanced workflow implementation based on Mastra design
-//! 
+//!
 //! Provides advanced workflow orchestration with parallel execution,
 //! conditional branching, loops, and dynamic step resolution.
 
+use async_trait::async_trait;
+use futures::stream::{self, StreamExt};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
-use futures::stream::{self, StreamExt};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use crate::{Result, Error};
+use super::{Workflow, WorkflowStatus};
 use crate::agent::types::RuntimeContext;
 use crate::tool::Tool;
-use super::{Workflow, WorkflowStatus};
+use crate::{Error, Result};
 
 /// Enhanced workflow step
 #[derive(Clone)]
@@ -105,9 +105,7 @@ pub enum StepType {
 #[derive(Clone)]
 pub enum StepFlowEntry {
     /// Single step
-    Step {
-        step: WorkflowStep,
-    },
+    Step { step: WorkflowStep },
     /// Parallel steps
     Parallel {
         steps: Vec<StepFlowEntry>,
@@ -130,31 +128,37 @@ pub enum StepFlowEntry {
 impl std::fmt::Debug for StepFlowEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StepFlowEntry::Step { step } => {
-                f.debug_struct("Step")
-                    .field("step", step)
-                    .finish()
-            }
-            StepFlowEntry::Parallel { steps, concurrency } => {
-                f.debug_struct("Parallel")
-                    .field("steps", &format!("{} steps", steps.len()))
-                    .field("concurrency", concurrency)
-                    .finish()
-            }
-            StepFlowEntry::Conditional { condition: _, if_true, if_false } => {
-                f.debug_struct("Conditional")
-                    .field("condition", &"<ConditionEvaluator>")
-                    .field("if_true", &format!("{} steps", if_true.len()))
-                    .field("if_false", &if_false.as_ref().map(|steps| format!("{} steps", steps.len())))
-                    .finish()
-            }
-            StepFlowEntry::Loop { condition: _, body, loop_type } => {
-                f.debug_struct("Loop")
-                    .field("condition", &"<ConditionEvaluator>")
-                    .field("body", &format!("{} steps", body.len()))
-                    .field("loop_type", loop_type)
-                    .finish()
-            }
+            StepFlowEntry::Step { step } => f.debug_struct("Step").field("step", step).finish(),
+            StepFlowEntry::Parallel { steps, concurrency } => f
+                .debug_struct("Parallel")
+                .field("steps", &format!("{} steps", steps.len()))
+                .field("concurrency", concurrency)
+                .finish(),
+            StepFlowEntry::Conditional {
+                condition: _,
+                if_true,
+                if_false,
+            } => f
+                .debug_struct("Conditional")
+                .field("condition", &"<ConditionEvaluator>")
+                .field("if_true", &format!("{} steps", if_true.len()))
+                .field(
+                    "if_false",
+                    &if_false
+                        .as_ref()
+                        .map(|steps| format!("{} steps", steps.len())),
+                )
+                .finish(),
+            StepFlowEntry::Loop {
+                condition: _,
+                body,
+                loop_type,
+            } => f
+                .debug_struct("Loop")
+                .field("condition", &"<ConditionEvaluator>")
+                .field("body", &format!("{} steps", body.len()))
+                .field("loop_type", loop_type)
+                .finish(),
         }
     }
 }
@@ -261,8 +265,13 @@ impl EnhancedWorkflow {
     }
 
     /// Add parallel steps
-    pub fn add_parallel(&mut self, steps: Vec<StepFlowEntry>, concurrency: Option<usize>) -> &mut Self {
-        self.step_flow.push(StepFlowEntry::Parallel { steps, concurrency });
+    pub fn add_parallel(
+        &mut self,
+        steps: Vec<StepFlowEntry>,
+        concurrency: Option<usize>,
+    ) -> &mut Self {
+        self.step_flow
+            .push(StepFlowEntry::Parallel { steps, concurrency });
         self
     }
 
@@ -314,7 +323,9 @@ impl EnhancedWorkflow {
             let mut current_input = input;
 
             for entry in entries {
-                current_input = self.execute_step_entry(entry, current_input, context, run).await?;
+                current_input = self
+                    .execute_step_entry(entry, current_input, context, run)
+                    .await?;
             }
 
             Ok(current_input)
@@ -335,13 +346,26 @@ impl EnhancedWorkflow {
                     self.execute_single_step(step, input, context, run).await
                 }
                 StepFlowEntry::Parallel { steps, concurrency } => {
-                    self.execute_parallel_steps(steps, input, context, run, *concurrency).await
+                    self.execute_parallel_steps(steps, input, context, run, *concurrency)
+                        .await
                 }
-                StepFlowEntry::Conditional { condition, if_true, if_false } => {
-                    self.execute_conditional_steps(condition, if_true, if_false, input, context, run).await
+                StepFlowEntry::Conditional {
+                    condition,
+                    if_true,
+                    if_false,
+                } => {
+                    self.execute_conditional_steps(
+                        condition, if_true, if_false, input, context, run,
+                    )
+                    .await
                 }
-                StepFlowEntry::Loop { condition, body, loop_type } => {
-                    self.execute_loop_steps(condition, body, loop_type, input, context, run).await
+                StepFlowEntry::Loop {
+                    condition,
+                    body,
+                    loop_type,
+                } => {
+                    self.execute_loop_steps(condition, body, loop_type, input, context, run)
+                        .await
                 }
             }
         })
@@ -424,7 +448,8 @@ impl EnhancedWorkflow {
             if condition_result {
                 self.execute_step_flow(if_true, input, context, run).await
             } else if let Some(false_steps) = if_false {
-                self.execute_step_flow(false_steps, input, context, run).await
+                self.execute_step_flow(false_steps, input, context, run)
+                    .await
             } else {
                 Ok(input)
             }
@@ -445,22 +470,22 @@ impl EnhancedWorkflow {
             let mut current_input = input;
 
             match loop_type {
-                LoopType::DoWhile => {
-                    loop {
-                        current_input = self.execute_step_flow(body, current_input, context, run).await?;
-                        if !condition.evaluate(&current_input, context).await? {
-                            break;
-                        }
+                LoopType::DoWhile => loop {
+                    current_input = self
+                        .execute_step_flow(body, current_input, context, run)
+                        .await?;
+                    if !condition.evaluate(&current_input, context).await? {
+                        break;
                     }
-                }
-                LoopType::DoUntil => {
-                    loop {
-                        current_input = self.execute_step_flow(body, current_input, context, run).await?;
-                        if condition.evaluate(&current_input, context).await? {
-                            break;
-                        }
+                },
+                LoopType::DoUntil => loop {
+                    current_input = self
+                        .execute_step_flow(body, current_input, context, run)
+                        .await?;
+                    if condition.evaluate(&current_input, context).await? {
+                        break;
                     }
-                }
+                },
                 LoopType::ForEach => {
                     if let Value::Array(items) = current_input {
                         let mut results = Vec::new();
@@ -470,7 +495,9 @@ impl EnhancedWorkflow {
                         }
                         current_input = Value::Array(results);
                     } else {
-                        return Err(Error::InvalidInput("ForEach loop requires array input".to_string()));
+                        return Err(Error::InvalidInput(
+                            "ForEach loop requires array input".to_string(),
+                        ));
                     }
                 }
             }
@@ -504,14 +531,16 @@ impl Workflow for EnhancedWorkflow {
             updated_at: chrono::Utc::now(),
         };
 
-        let result = self.execute_step_flow(&self.step_flow, input, context, &mut run).await;
+        let result = self
+            .execute_step_flow(&self.step_flow, input, context, &mut run)
+            .await;
 
         match result {
             Ok(output) => {
                 run.status = WorkflowStatus::Completed(output.clone());
                 run.output = Some(output.clone());
                 run.updated_at = chrono::Utc::now();
-                
+
                 self.runs.write().await.insert(run_id, run);
                 Ok(output)
             }
@@ -519,16 +548,24 @@ impl Workflow for EnhancedWorkflow {
                 run.status = WorkflowStatus::Failed(e.to_string());
                 run.error = Some(e.to_string());
                 run.updated_at = chrono::Utc::now();
-                
+
                 self.runs.write().await.insert(run_id, run);
                 Err(e)
             }
         }
     }
 
-    async fn execute_stream(&self, _input: Value, _context: &RuntimeContext) -> Result<Box<dyn futures::Stream<Item = Result<Value>> + Send + Unpin>> {
-        // TODO: Implement streaming execution
-        Err(Error::Unsupported("Streaming execution not yet implemented".to_string()))
+    async fn execute_stream(
+        &self,
+        _input: Value,
+        _context: &RuntimeContext,
+    ) -> Result<Box<dyn futures::Stream<Item = Result<Value>> + Send + Unpin>> {
+        // Note: Streaming execution would require real-time workflow step streaming
+        // This is a complex feature that needs proper event streaming infrastructure
+        Err(Error::Unsupported(
+            "Streaming execution not yet implemented - requires workflow event streaming"
+                .to_string(),
+        ))
     }
 
     async fn suspend(&self, run_id: &str) -> Result<()> {
@@ -538,7 +575,9 @@ impl Workflow for EnhancedWorkflow {
             run.updated_at = chrono::Utc::now();
             Ok(())
         } else {
-            Err(Error::NotFound(format!("Workflow run '{}' not found", run_id)))
+            Err(Error::NotFound(format!(
+                "Workflow run '{run_id}' not found"
+            )))
         }
     }
 
@@ -549,10 +588,14 @@ impl Workflow for EnhancedWorkflow {
                 if matches!(run.status, WorkflowStatus::Suspended) {
                     run.input.clone()
                 } else {
-                    return Err(Error::InvalidState(format!("Workflow run '{}' is not suspended", run_id)));
+                    return Err(Error::InvalidState(format!(
+                        "Workflow run '{run_id}' is not suspended"
+                    )));
                 }
             } else {
-                return Err(Error::NotFound(format!("Workflow run '{}' not found", run_id)));
+                return Err(Error::NotFound(format!(
+                    "Workflow run '{run_id}' not found"
+                )));
             }
         };
 

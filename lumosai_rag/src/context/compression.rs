@@ -3,21 +3,25 @@
 use async_trait::async_trait;
 use std::collections::HashSet;
 
-use crate::{
-    types::ScoredDocument,
-    error::Result,
-};
+use crate::{error::Result, types::ScoredDocument};
 
 /// Trait for context compression strategies
 #[async_trait]
 pub trait ContextCompressor: Send + Sync {
     /// Compress context documents
-    async fn compress_context(&self, documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>>;
+    async fn compress_context(&self, documents: Vec<ScoredDocument>)
+        -> Result<Vec<ScoredDocument>>;
 }
 
 /// Deduplication compressor - removes redundant content
 pub struct DeduplicationCompressor {
     similarity_threshold: f32,
+}
+
+impl Default for DeduplicationCompressor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DeduplicationCompressor {
@@ -36,10 +40,10 @@ impl DeduplicationCompressor {
     fn calculate_similarity(&self, text1: &str, text2: &str) -> f32 {
         let words1: HashSet<&str> = text1.split_whitespace().collect();
         let words2: HashSet<&str> = text2.split_whitespace().collect();
-        
+
         let intersection = words1.intersection(&words2).count();
         let union = words1.union(&words2).count();
-        
+
         if union == 0 {
             0.0
         } else {
@@ -50,7 +54,10 @@ impl DeduplicationCompressor {
 
 #[async_trait]
 impl ContextCompressor for DeduplicationCompressor {
-    async fn compress_context(&self, documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn compress_context(
+        &self,
+        documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         let mut result: Vec<ScoredDocument> = Vec::new();
 
         for doc in documents {
@@ -58,10 +65,8 @@ impl ContextCompressor for DeduplicationCompressor {
 
             // Check against already selected documents
             for existing in &result {
-                let similarity = self.calculate_similarity(
-                    &doc.document.content,
-                    &existing.document.content,
-                );
+                let similarity =
+                    self.calculate_similarity(&doc.document.content, &existing.document.content);
 
                 if similarity >= self.similarity_threshold {
                     is_duplicate = true;
@@ -96,12 +101,12 @@ impl ExtractionCompressor {
         }
 
         let mut selected = Vec::new();
-        
+
         // Always include first sentence (often contains key info)
         if !sentences.is_empty() {
             selected.push(sentences[0]);
         }
-        
+
         // Select sentences from middle and end
         let remaining = self.max_sentences.saturating_sub(1);
         if remaining > 0 && sentences.len() > 1 {
@@ -112,24 +117,27 @@ impl ExtractionCompressor {
                 }
             }
         }
-        
+
         selected.join(".") + "."
     }
 }
 
 #[async_trait]
 impl ContextCompressor for ExtractionCompressor {
-    async fn compress_context(&self, documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn compress_context(
+        &self,
+        documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         let mut result = Vec::new();
-        
+
         for doc in documents {
             let compressed_content = self.extract_key_sentences(&doc.document.content);
-            
+
             let mut compressed_doc = doc.clone();
             compressed_doc.document.content = compressed_content;
             result.push(compressed_doc);
         }
-        
+
         Ok(result)
     }
 }
@@ -153,26 +161,35 @@ impl SummarizationCompressor {
         // Simple approach: take first part and last part
         let half_length = self.max_length / 2;
         let first_part = text.chars().take(half_length).collect::<String>();
-        let last_part = text.chars().rev().take(half_length).collect::<String>()
-            .chars().rev().collect::<String>();
-        
+        let last_part = text
+            .chars()
+            .rev()
+            .take(half_length)
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect::<String>();
+
         format!("{}...\n\n...{}", first_part.trim(), last_part.trim())
     }
 }
 
 #[async_trait]
 impl ContextCompressor for SummarizationCompressor {
-    async fn compress_context(&self, documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn compress_context(
+        &self,
+        documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         let mut result = Vec::new();
-        
+
         for doc in documents {
             let summarized_content = self.summarize_text(&doc.document.content);
-            
+
             let mut summarized_doc = doc.clone();
             summarized_doc.document.content = summarized_content;
             result.push(summarized_doc);
         }
-        
+
         Ok(result)
     }
 }
@@ -181,6 +198,12 @@ impl ContextCompressor for SummarizationCompressor {
 pub struct HybridCompressor {
     deduplicator: DeduplicationCompressor,
     extractor: ExtractionCompressor,
+}
+
+impl Default for HybridCompressor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HybridCompressor {
@@ -194,13 +217,16 @@ impl HybridCompressor {
 
 #[async_trait]
 impl ContextCompressor for HybridCompressor {
-    async fn compress_context(&self, documents: Vec<ScoredDocument>) -> Result<Vec<ScoredDocument>> {
+    async fn compress_context(
+        &self,
+        documents: Vec<ScoredDocument>,
+    ) -> Result<Vec<ScoredDocument>> {
         // First apply deduplication
         let deduplicated = self.deduplicator.compress_context(documents).await?;
-        
+
         // Then apply extraction
         let extracted = self.extractor.compress_context(deduplicated).await?;
-        
+
         Ok(extracted)
     }
 }
@@ -234,7 +260,12 @@ mod tests {
         let result = compressor.compress_context(documents).await.unwrap();
 
         // Should remove exact duplicate (doc3)
-        assert_eq!(result.len(), 2, "Expected 2 documents after deduplication, got {}", result.len());
+        assert_eq!(
+            result.len(),
+            2,
+            "Expected 2 documents after deduplication, got {}",
+            result.len()
+        );
 
         // Check that we have the first two documents (different content)
         let ids: Vec<&str> = result.iter().map(|d| d.document.id.as_str()).collect();
@@ -248,21 +279,22 @@ mod tests {
     #[tokio::test]
     async fn test_extraction_compressor() {
         let compressor = ExtractionCompressor::new(2);
-        let documents = vec![
-            create_test_document(
-                "1", 
-                "First sentence. Second sentence. Third sentence. Fourth sentence.", 
-                0.9
-            ),
-        ];
+        let documents = vec![create_test_document(
+            "1",
+            "First sentence. Second sentence. Third sentence. Fourth sentence.",
+            0.9,
+        )];
 
         let result = compressor.compress_context(documents).await.unwrap();
         assert_eq!(result.len(), 1);
-        
+
         // Should extract key sentences
         let content = &result[0].document.content;
         assert!(content.contains("First sentence"));
-        assert!(content.len() < "First sentence. Second sentence. Third sentence. Fourth sentence.".len());
+        assert!(
+            content.len()
+                < "First sentence. Second sentence. Third sentence. Fourth sentence.".len()
+        );
     }
 
     #[tokio::test]
@@ -270,15 +302,15 @@ mod tests {
         let compressor = SummarizationCompressor::new(50);
         let documents = vec![
             create_test_document(
-                "1", 
-                "This is a very long document that needs to be summarized because it contains too much information for the context window and we need to compress it down to a smaller size.", 
+                "1",
+                "This is a very long document that needs to be summarized because it contains too much information for the context window and we need to compress it down to a smaller size.",
                 0.9
             ),
         ];
 
         let result = compressor.compress_context(documents).await.unwrap();
         assert_eq!(result.len(), 1);
-        
+
         // Should be shorter than original
         let content = &result[0].document.content;
         assert!(content.len() <= 50 + 10); // Allow some margin for formatting
@@ -290,12 +322,16 @@ mod tests {
         let documents = vec![
             create_test_document("1", "First document. Second sentence. Third sentence.", 0.9),
             create_test_document("2", "First document. Second sentence. Third sentence.", 0.8), // Duplicate
-            create_test_document("3", "Different document. With different content. And more sentences.", 0.7),
+            create_test_document(
+                "3",
+                "Different document. With different content. And more sentences.",
+                0.7,
+            ),
         ];
 
         let result = compressor.compress_context(documents).await.unwrap();
         assert_eq!(result.len(), 2); // Should remove duplicate
-        
+
         // Should also apply extraction
         for doc in &result {
             assert!(doc.document.content.len() > 0);

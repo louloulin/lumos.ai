@@ -1,21 +1,25 @@
 //! MCP Tool Adapter - Converts MCP tools to Lumos tools
-//! 
+//!
 //! This module provides seamless integration between MCP tools and the Lumos tool system,
 //! allowing MCP tools to be used as native Lumos tools with full type safety and validation.
 
-use std::collections::HashMap;
-use std::sync::Arc;
 use async_trait::async_trait;
 use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use lumosai_core::tool::{Tool as LumosTool, ToolExecutionContext, ToolExecutionOptions, ToolSchema, ParameterSchema, SchemaFormat};
-use lumosai_core::error::{Result as CoreResult, Error as CoreError};
 use lumosai_core::base::Base;
-use lumosai_core::logger::{Logger, Component as LogComponent, ConsoleLogger, LogLevel};
+use lumosai_core::compat::Component as LogComponent;
+use lumosai_core::error::Error as CoreError;
+use lumosai_core::logger::{default_logger, Logger};
 use lumosai_core::telemetry::TelemetrySink;
+use lumosai_core::tool::{
+    ParameterSchema, SchemaFormat, Tool as LumosTool, ToolExecutionContext, ToolExecutionOptions,
+    ToolSchema,
+};
 
-use crate::{EnhancedMCPManager, Result as MCPResult, MCPError};
-use crate::types::{ToolDefinition, ParameterSchema as MCPParameterSchema};
+use crate::types::{ParameterSchema as MCPParameterSchema, ToolDefinition};
+use crate::{EnhancedMCPManager, Result as MCPResult};
 
 /// Adapter that wraps MCP tools to work with the Lumos tool system
 #[derive(Debug, Clone)]
@@ -64,7 +68,9 @@ impl MCPToolAdapter {
 
     /// Convert MCP tool definition to Lumos tool schema
     fn create_tool_schema(&self) -> ToolSchema {
-        let parameters: Vec<ParameterSchema> = self.mcp_definition.parameters
+        let parameters: Vec<ParameterSchema> = self
+            .mcp_definition
+            .parameters
             .iter()
             .map(Self::convert_parameter_schema)
             .collect();
@@ -95,20 +101,26 @@ impl MCPToolAdapter {
                 let is_required = mcp_param.required.unwrap_or(false);
 
                 if is_required && !param_map.contains_key(param_name) {
-                    return Err(CoreError::Tool(format!("Required parameter '{}' is missing", param_name)));
+                    return Err(CoreError::Tool(format!(
+                        "Required parameter '{param_name}' is missing"
+                    )));
                 }
 
                 if let Some(value) = param_map.get(param_name) {
                     // Basic type validation
                     if !self.validate_parameter_type(value, &mcp_param.r#type) {
-                        return Err(CoreError::Tool(format!("Parameter '{}' has invalid type. Expected: {}",
-                                   param_name, mcp_param.r#type)));
+                        return Err(CoreError::Tool(format!(
+                            "Parameter '{}' has invalid type. Expected: {}",
+                            param_name, mcp_param.r#type
+                        )));
                     }
                     validated_params.insert(param_name.clone(), value.clone());
                 }
             }
         } else {
-            return Err(CoreError::Tool("Parameters must be a JSON object".to_string()));
+            return Err(CoreError::Tool(
+                "Parameters must be a JSON object".to_string(),
+            ));
         }
 
         Ok(validated_params)
@@ -138,7 +150,7 @@ impl Base for MCPToolAdapter {
 
     fn logger(&self) -> Arc<dyn Logger> {
         // Return a default logger for now
-        Arc::new(ConsoleLogger::new(&self.tool_name, LogComponent::Tool, LogLevel::Info))
+        default_logger()
     }
 
     fn set_logger(&mut self, _logger: Arc<dyn Logger>) {
@@ -182,11 +194,17 @@ impl LumosTool for MCPToolAdapter {
         let validated_params = self.validate_parameters(&parameters)?;
 
         // Execute via MCP manager
-        match self.mcp_manager.execute_mcp_tool(&self.tool_name, validated_params).await {
+        match self
+            .mcp_manager
+            .execute_mcp_tool(&self.tool_name, validated_params)
+            .await
+        {
             Ok(result) => Ok(result),
             Err(mcp_error) => {
                 // Convert MCP error to Core error
-                Err(CoreError::Tool(format!("MCP tool execution failed: {}", mcp_error)))
+                Err(CoreError::Tool(format!(
+                    "MCP tool execution failed: {mcp_error}"
+                )))
             }
         }
     }
@@ -206,10 +224,10 @@ impl MCPToolFactory {
     /// Create Lumos tools from all discovered MCP tools
     pub async fn create_all_tools(&self) -> MCPResult<Vec<Arc<dyn LumosTool>>> {
         let mut lumos_tools = Vec::new();
-        
+
         // Discover all tools from MCP servers
         let discovered_tools = self.mcp_manager.auto_discover_tools().await?;
-        
+
         for (server_name, tool_definitions) in discovered_tools {
             for tool_def in tool_definitions {
                 let adapter = MCPToolAdapter::new(
@@ -219,19 +237,22 @@ impl MCPToolFactory {
                     self.mcp_manager.clone(),
                     server_name.clone(),
                 );
-                
+
                 lumos_tools.push(Arc::new(adapter) as Arc<dyn LumosTool>);
             }
         }
-        
-        println!("🔧 Created {} Lumos tools from MCP servers", lumos_tools.len());
+
+        println!(
+            "🔧 Created {} Lumos tools from MCP servers",
+            lumos_tools.len()
+        );
         Ok(lumos_tools)
     }
 
     /// Create a specific tool by name
     pub async fn create_tool(&self, tool_name: &str) -> MCPResult<Option<Arc<dyn LumosTool>>> {
         let discovered_tools = self.mcp_manager.auto_discover_tools().await?;
-        
+
         for (server_name, tool_definitions) in discovered_tools {
             for tool_def in tool_definitions {
                 if tool_def.name == tool_name {
@@ -242,20 +263,23 @@ impl MCPToolFactory {
                         self.mcp_manager.clone(),
                         server_name.clone(),
                     );
-                    
+
                     return Ok(Some(Arc::new(adapter) as Arc<dyn LumosTool>));
                 }
             }
         }
-        
+
         Ok(None)
     }
 
     /// Get tools from a specific MCP server
-    pub async fn create_tools_from_server(&self, server_name: &str) -> MCPResult<Vec<Arc<dyn LumosTool>>> {
+    pub async fn create_tools_from_server(
+        &self,
+        server_name: &str,
+    ) -> MCPResult<Vec<Arc<dyn LumosTool>>> {
         let mut lumos_tools = Vec::new();
         let discovered_tools = self.mcp_manager.auto_discover_tools().await?;
-        
+
         if let Some(tool_definitions) = discovered_tools.get(server_name) {
             for tool_def in tool_definitions {
                 let adapter = MCPToolAdapter::new(
@@ -265,11 +289,11 @@ impl MCPToolFactory {
                     self.mcp_manager.clone(),
                     server_name.to_string(),
                 );
-                
+
                 lumos_tools.push(Arc::new(adapter) as Arc<dyn LumosTool>);
             }
         }
-        
+
         Ok(lumos_tools)
     }
 }
@@ -285,7 +309,7 @@ impl MCPIntegration {
     pub fn new() -> Self {
         let manager = Arc::new(EnhancedMCPManager::new(Default::default()));
         let factory = MCPToolFactory::new(manager.clone());
-        
+
         Self { manager, factory }
     }
 
@@ -303,7 +327,7 @@ impl MCPIntegration {
     pub async fn quick_setup(&self) -> MCPResult<()> {
         // Start background tasks
         self.manager.start_background_tasks().await;
-        
+
         println!("🚀 MCP integration initialized successfully");
         Ok(())
     }

@@ -1,5 +1,5 @@
 //! Comprehensive Mastra Integration Tests
-//! 
+//!
 //! This test suite validates the complete Mastra functionality migration
 //! to LumosAI, including streaming, function calling, memory management,
 //! and monitoring capabilities.
@@ -7,20 +7,25 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use lumosai_core::agent::{AgentConfig, BasicAgent};
-use lumosai_core::agent::streaming::{StreamingAgent, StreamingConfig, AgentEvent};
+use async_trait::async_trait;
+use lumosai_core::agent::evaluation::{EvaluationMetric, RelevanceMetric};
+use lumosai_core::agent::streaming::{AgentEvent, StreamingAgent, StreamingConfig};
 use lumosai_core::agent::types::{AgentGenerateOptions, RuntimeContext};
-use lumosai_core::agent::evaluation::{RelevanceMetric, EvaluationMetric};
-use lumosai_core::memory::{WorkingMemoryConfig, processor::{MessageLimitProcessor, MemoryProcessor}};
+use lumosai_core::agent::{AgentConfig, BasicAgent};
+use lumosai_core::base::Base;
+use lumosai_core::error::Result;
 use lumosai_core::llm::{Message, MockLlmProvider, Role};
 use lumosai_core::logger::Component;
-use lumosai_core::LogLevel;
-use lumosai_core::tool::{Tool, ToolSchema, ToolExecutionContext, ToolExecutionOptions, ParameterSchema, SchemaFormat};
-use lumosai_core::base::Base;
-use lumosai_core::{Logger};
+use lumosai_core::memory::{
+    processor::{MemoryProcessor, MessageLimitProcessor},
+    WorkingMemoryConfig,
+};
 use lumosai_core::telemetry::TelemetrySink;
-use lumosai_core::error::Result;
-use async_trait::async_trait;
+use lumosai_core::tool::{
+    ParameterSchema, SchemaFormat, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
+};
+use lumosai_core::LogLevel;
+use lumosai_core::Logger;
 
 use futures::StreamExt;
 use serde_json::Value;
@@ -61,7 +66,7 @@ async fn test_comprehensive_streaming_integration() {
         " that".to_string(),
         ".".to_string(),
     ];
-    
+
     let llm = Arc::new(MockLlmProvider::new(mock_responses));
     let agent = BasicAgent::new(agent_config, llm);
 
@@ -99,24 +104,30 @@ async fn test_comprehensive_streaming_integration() {
                     AgentEvent::TextDelta { delta, step_id } => {
                         text_deltas.push(delta.clone());
                         assert!(step_id.is_some(), "Step ID should be present");
-                    },
+                    }
                     AgentEvent::Metadata { key, value } => {
                         metadata_count += 1;
                         println!("📊 Metadata: {} = {:?}", key, value);
-                    },
-                    AgentEvent::GenerationComplete { final_response, total_steps } => {
+                    }
+                    AgentEvent::GenerationComplete {
+                        final_response,
+                        total_steps,
+                    } => {
                         generation_complete = true;
-                        assert!(!final_response.is_empty(), "Final response should not be empty");
+                        assert!(
+                            !final_response.is_empty(),
+                            "Final response should not be empty"
+                        );
                         assert!(*total_steps > 0, "Should have at least one step");
                         println!("✅ Generation complete: {} steps", total_steps);
-                    },
+                    }
                     AgentEvent::Error { error, step_id } => {
                         panic!("Unexpected error: {} (step: {:?})", error, step_id);
-                    },
+                    }
                     _ => {}
                 }
                 events.push(event);
-            },
+            }
             Err(e) => {
                 panic!("Stream error: {:?}", e);
             }
@@ -155,10 +166,7 @@ async fn test_dynamic_arguments_and_runtime_context() {
         context.get_variable("user_id"),
         Some(&Value::String("test_user_123".to_string()))
     );
-    assert_eq!(
-        context.get_metadata("request_type"),
-        Some("test")
-    );
+    assert_eq!(context.get_metadata("request_type"), Some("test"));
 
     // Test dynamic argument resolution
     let dynamic_instructions = |ctx: &RuntimeContext| -> String {
@@ -183,30 +191,46 @@ async fn test_evaluation_metrics_system() {
     println!("🧪 Testing evaluation metrics system...");
 
     // Test relevance metric
-    let logger = Arc::new(lumosai_core::logger::ConsoleLogger::new("test", Component::Agent, lumosai_core::LogLevel::Info));
+    let logger = Arc::new(lumosai_core::logger::ConsoleLogger::new(
+        "test",
+        Component::Agent,
+        lumosai_core::LogLevel::Info,
+    ));
     let relevance_metric = RelevanceMetric::new(logger, 0.7);
 
     let context = RuntimeContext::new();
 
     // Test high relevance case
-    let result = relevance_metric.evaluate(
-        "What is the weather like today?",
-        "Today's weather is sunny with a temperature of 25°C",
-        &context
-    ).await.expect("Evaluation should succeed");
+    let result = relevance_metric
+        .evaluate(
+            "What is the weather like today?",
+            "Today's weather is sunny with a temperature of 25°C",
+            &context,
+        )
+        .await
+        .expect("Evaluation should succeed");
 
     // Since this is a mock implementation, we'll just check that it returns a score
-    assert!(result.score >= 0.0 && result.score <= 1.0, "Score should be between 0 and 1");
+    assert!(
+        result.score >= 0.0 && result.score <= 1.0,
+        "Score should be between 0 and 1"
+    );
 
     // Test low relevance case
-    let result = relevance_metric.evaluate(
-        "What is the weather like today?",
-        "I like pizza and ice cream",
-        &context
-    ).await.expect("Evaluation should succeed");
+    let result = relevance_metric
+        .evaluate(
+            "What is the weather like today?",
+            "I like pizza and ice cream",
+            &context,
+        )
+        .await
+        .expect("Evaluation should succeed");
 
     // Since this is a mock implementation, we'll just check that it returns a score
-    assert!(result.score >= 0.0 && result.score <= 1.0, "Score should be between 0 and 1");
+    assert!(
+        result.score >= 0.0 && result.score <= 1.0,
+        "Score should be between 0 and 1"
+    );
 
     println!("✅ Evaluation metrics test passed:");
     println!("   - Metric name: {}", relevance_metric.metric_name());
@@ -220,24 +244,57 @@ async fn test_memory_processors_system() {
 
     // Create test messages
     let messages = vec![
-        Message { role: Role::User, content: "Hello".to_string(), name: None, metadata: None },
-        Message { role: Role::Assistant, content: "Hi there!".to_string(), name: None, metadata: None },
-        Message { role: Role::User, content: "How are you?".to_string(), name: None, metadata: None },
-        Message { role: Role::Assistant, content: "I'm doing well!".to_string(), name: None, metadata: None },
-        Message { role: Role::User, content: "Great!".to_string(), name: None, metadata: None },
+        Message {
+            role: Role::User,
+            content: "Hello".to_string(),
+            name: None,
+            metadata: None,
+        },
+        Message {
+            role: Role::Assistant,
+            content: "Hi there!".to_string(),
+            name: None,
+            metadata: None,
+        },
+        Message {
+            role: Role::User,
+            content: "How are you?".to_string(),
+            name: None,
+            metadata: None,
+        },
+        Message {
+            role: Role::Assistant,
+            content: "I'm doing well!".to_string(),
+            name: None,
+            metadata: None,
+        },
+        Message {
+            role: Role::User,
+            content: "Great!".to_string(),
+            name: None,
+            metadata: None,
+        },
     ];
 
     // Test message limit processor
-    let logger = Arc::new(lumosai_core::logger::ConsoleLogger::new("test", Component::Memory, lumosai_core::LogLevel::Info));
+    let logger = Arc::new(lumosai_core::logger::ConsoleLogger::new(
+        "test",
+        Component::Memory,
+        lumosai_core::LogLevel::Info,
+    ));
     let limit_processor = MessageLimitProcessor::new(3, logger);
     let options = Default::default();
-    
-    let processed = limit_processor.process(messages.clone(), &options)
+
+    let processed = limit_processor
+        .process(messages.clone(), &options)
         .await
         .expect("Processing should succeed");
-    
+
     assert_eq!(processed.len(), 3, "Should limit to 3 messages");
-    assert_eq!(processed[0].content, "How are you?", "Should keep most recent messages");
+    assert_eq!(
+        processed[0].content, "How are you?",
+        "Should keep most recent messages"
+    );
 
     println!("✅ Memory processors test passed:");
     println!("   - Original messages: {}", messages.len());
@@ -264,7 +321,11 @@ async fn test_function_calling_integration() {
         }
 
         fn logger(&self) -> Arc<dyn Logger> {
-            Arc::new(lumosai_core::logger::ConsoleLogger::new("calculator", Component::Tool, lumosai_core::LogLevel::Info))
+            Arc::new(lumosai_core::logger::ConsoleLogger::new(
+                "calculator",
+                Component::Tool,
+                lumosai_core::LogLevel::Info,
+            ))
         }
 
         fn set_logger(&mut self, _logger: Arc<dyn Logger>) {
@@ -292,16 +353,14 @@ async fn test_function_calling_integration() {
 
         fn schema(&self) -> ToolSchema {
             ToolSchema {
-                parameters: vec![
-                    ParameterSchema {
-                        name: "expression".to_string(),
-                        description: "The arithmetic expression to evaluate".to_string(),
-                        r#type: "string".to_string(),
-                        required: true,
-                        properties: None,
-                        default: None,
-                    }
-                ],
+                parameters: vec![ParameterSchema {
+                    name: "expression".to_string(),
+                    description: "The arithmetic expression to evaluate".to_string(),
+                    r#type: "string".to_string(),
+                    required: true,
+                    properties: None,
+                    default: None,
+                }],
                 json_schema: Some(serde_json::json!({
                     "type": "object",
                     "properties": {
@@ -325,7 +384,7 @@ async fn test_function_calling_integration() {
             &self,
             params: Value,
             context: ToolExecutionContext,
-            options: &ToolExecutionOptions
+            options: &ToolExecutionOptions,
         ) -> Result<Value> {
             if let Some(expression) = params.get("expression").and_then(|v| v.as_str()) {
                 // Simple evaluation for testing
@@ -338,7 +397,9 @@ async fn test_function_calling_integration() {
 
                 Ok(Value::String(result.to_string()))
             } else {
-                Err(lumosai_core::Error::InvalidInput("Invalid arguments".to_string()))
+                Err(lumosai_core::Error::InvalidInput(
+                    "Invalid arguments".to_string(),
+                ))
             }
         }
     }

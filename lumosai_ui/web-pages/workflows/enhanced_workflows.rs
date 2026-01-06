@@ -13,9 +13,9 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
 use crate::types::Rbac;
+use dioxus::prelude::*;
 
 // 临时类型定义
 #[derive(Clone, Debug, PartialEq)]
@@ -51,7 +51,7 @@ impl WorkflowStatus {
             WorkflowStatus::Archived => "Archived",
         }
     }
-    
+
     pub fn badge_class(&self) -> &str {
         match self {
             WorkflowStatus::Draft => "badge badge-neutral",
@@ -92,7 +92,7 @@ impl ExecutionStatus {
             ExecutionStatus::Cancelled => "Cancelled",
         }
     }
-    
+
     pub fn badge_class(&self) -> &str {
         match self {
             ExecutionStatus::Running => "badge badge-info",
@@ -115,16 +115,15 @@ pub struct WorkflowTemplate {
 
 /// 增强工作流管理页面
 #[component]
-pub fn EnhancedWorkflowsPage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn EnhancedWorkflowsPage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟数据
     let workflows = vec![
         Workflow {
             id: 1,
             name: "Document Processing Pipeline".to_string(),
-            description: Some("Automatically process uploaded documents and extract insights".to_string()),
+            description: Some(
+                "Automatically process uploaded documents and extract insights".to_string(),
+            ),
             category: "Data Processing".to_string(),
             status: WorkflowStatus::Active,
             created_at: "2024-01-15".to_string(),
@@ -408,11 +407,7 @@ fn WorkflowOverview(workflows: Vec<Workflow>) -> Element {
 
 /// 工作流列表组件
 #[component]
-fn WorkflowsList(
-    workflows: Vec<Workflow>,
-    rbac: Rbac,
-    team_id: i32,
-) -> Element {
+fn WorkflowsList(workflows: Vec<Workflow>, rbac: Rbac, team_id: i32) -> Element {
     rsx! {
         div {
             class: "card bg-base-100 shadow-lg",
@@ -466,11 +461,7 @@ fn WorkflowsList(
 
 /// 工作流行组件
 #[component]
-fn WorkflowRow(
-    workflow: Workflow,
-    rbac: Rbac,
-    team_id: i32,
-) -> Element {
+fn WorkflowRow(workflow: Workflow, rbac: Rbac, team_id: i32) -> Element {
     rsx! {
         tr {
             td {

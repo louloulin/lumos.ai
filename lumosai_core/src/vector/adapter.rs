@@ -15,7 +15,7 @@ impl VectorStorageAdapter {
     pub fn new(store: Box<dyn lumosai_stores::VectorStore>) -> Self {
         Self { store }
     }
-    
+
     /// Convert SimilarityMetric to string
     fn metric_to_string(metric: SimilarityMetric) -> String {
         match metric {
@@ -24,7 +24,7 @@ impl VectorStorageAdapter {
             SimilarityMetric::DotProduct => "dotproduct".to_string(),
         }
     }
-    
+
     /// Convert string to SimilarityMetric
     fn string_to_metric(s: &str) -> SimilarityMetric {
         match s.to_lowercase().as_str() {
@@ -33,7 +33,7 @@ impl VectorStorageAdapter {
             _ => SimilarityMetric::Cosine,
         }
     }
-    
+
     /// Convert FilterCondition to VectorFilter
     fn convert_filter(filter: FilterCondition) -> Option<lumosai_stores::vector::VectorFilter> {
         match filter {
@@ -107,7 +107,7 @@ impl VectorStorage for VectorStorageAdapter {
             dimension,
             metric: Self::metric_to_string(metric.unwrap_or(SimilarityMetric::Cosine)),
         };
-        
+
         self.store.create_index(params).await
             .map_err(|e| Error::Storage(e.to_string()))
     }
@@ -120,7 +120,7 @@ impl VectorStorage for VectorStorageAdapter {
     async fn describe_index(&self, index_name: &str) -> Result<IndexStats> {
         let stats = self.store.describe_index(index_name).await
             .map_err(|e| Error::Storage(e.to_string()))?;
-            
+
         Ok(IndexStats {
             dimension: stats.dimension,
             count: stats.count,
@@ -146,7 +146,7 @@ impl VectorStorage for VectorStorageAdapter {
             metadata: metadata.unwrap_or_default(),
             ids,
         };
-        
+
         self.store.upsert(params).await
             .map_err(|e| Error::Storage(e.to_string()))
     }
@@ -166,10 +166,10 @@ impl VectorStorage for VectorStorageAdapter {
             filter: filter.and_then(Self::convert_filter),
             include_vector: include_vectors,
         };
-        
+
         let results = self.store.query(params).await
             .map_err(|e| Error::Storage(e.to_string()))?;
-            
+
         Ok(results.into_iter().map(|r| QueryResult {
             id: r.id,
             score: r.score,

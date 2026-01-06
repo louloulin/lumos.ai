@@ -1,10 +1,11 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
+use crate::types::{Dataset, Document, Rbac};
+use crate::types::LabelRole;
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::*;
-use crate::types::{Rbac, Dataset, Document};
 use dioxus::prelude::*;
+use web_assets::files::*;
 
 pub fn page(rbac: Rbac, team_id: i32, dataset: Dataset, documents: Vec<Document>) -> String {
     let page = rsx! {
@@ -139,14 +140,7 @@ pub fn Row(document: Document, team_id: i32, first_time: bool) -> Element {
             td { "{document.content_size}" }
             td {
                 if document.waiting > 0 || document.batches == 0 {
-                    turbo-frame {
-                        id,
-                        src,
-                        Label {
-                            class: class,
-                            "Processing ({document.waiting} remaining)"
-                        }
-                    }
+                    turbo-frame { id, src, span { class: class, "Processing ({document.waiting} remaining)" } }
                 } else if document.failure_reason.is_some() {
                     turbo-frame {
                         id,
@@ -154,10 +148,7 @@ pub fn Row(document: Document, team_id: i32, first_time: bool) -> Element {
 
                         ToolTip {
                             text: "{text}",
-                            Label {
-                                label_role: LabelRole::Danger,
-                                "Failed"
-                            }
+                            span { class: crate::role_class(LabelRole::Danger), "Failed" }
                         }
                     }
                 } else if document.batches == 0 {
@@ -165,39 +156,28 @@ pub fn Row(document: Document, team_id: i32, first_time: bool) -> Element {
                         id,
                         src,
 
-                        Label {
-                            "Queued"
-                        }
+                        span { class: crate::role_class(LabelRole::Neutral), "Queued" }
                     }
                 } else if document.fail_count > 0 {
                     turbo-frame {
                         id,
                         src,
 
-                        Label {
-                            label_role: LabelRole::Danger,
-                            "Processed ({document.fail_count} failed)"
-                        }
+                        span { class: crate::role_class(LabelRole::Danger), "Processed ({document.fail_count} failed)" }
                     }
                 } else if document.failure_reason.is_some() {
                     turbo-frame {
                         id,
                         src,
 
-                        Label {
-                            label_role: LabelRole::Danger,
-                            "Failed"
-                        }
+                        span { class: crate::role_class(LabelRole::Danger), "Failed" }
                     }
                 } else {
                     turbo-frame {
                         id,
                         src,
 
-                        Label {
-                            label_role: LabelRole::Success,
-                            "Processed"
-                        }
+                        span { class: crate::role_class(LabelRole::Success), "Processed" }
                     }
                 }
             }

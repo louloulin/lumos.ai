@@ -3,12 +3,12 @@ use crate::app_layout::{Layout, SideBar};
 use crate::assistants::prompt_card::PromptCard;
 use crate::hero::Hero;
 use crate::routes;
+use crate::types::{Category, Prompt, Rbac};
 use crate::ConfirmModal;
-use web_assets::files::*;
 use daisy_rsx::{Button, ButtonScheme, ButtonType, TabContainer, TabPanel};
-use crate::types::{Rbac, Prompt, Category};
 use dioxus::prelude::*;
 use std::collections::HashMap;
+use web_assets::files::*;
 
 pub fn page(team_id: i32, rbac: Rbac, prompts: Vec<Prompt>, categories: Vec<Category>) -> String {
     // Get categories with more than one prompt
@@ -118,35 +118,35 @@ fn AssistantTab(
     rbac: Rbac,
 ) -> Element {
     rsx! {
-        TabPanel {
-            name: "prompt-tabs",
-            tab_name: "{category.name}",
-            checked,
+            TabPanel {
+                name: "prompt-tabs",
+                tab_name: "{category.name}",
+                checked,
 
-            div {
-                class: "mt-12  w-full",
-                h3 {
-                    class: "text-xl font-semibold md:text-2xl",
-                    "{category.name}"
-                }
-                h4 {
-                    class: "mb-8 text-sm md:text-base",
-{category.description.as_deref().unwrap_or("No description")}
-                }
                 div {
-                    class: "grid grid-cols-1 gap-x-1.5 gap-y-1 md:gap-x-2 md:gap-y-1.5 lg:grid-cols-2 lg:gap-x-3 lg:gap-y-2.5",
+                    class: "mt-12  w-full",
+                    h3 {
+                        class: "text-xl font-semibold md:text-2xl",
+                        "{category.name}"
+                    }
+                    h4 {
+                        class: "mb-8 text-sm md:text-base",
+    {category.description.as_deref().unwrap_or("No description")}
+                    }
+                    div {
+                        class: "grid grid-cols-1 gap-x-1.5 gap-y-1 md:gap-x-2 md:gap-y-1.5 lg:grid-cols-2 lg:gap-x-3 lg:gap-y-2.5",
 
-                    for prompt in &prompts {
-                        PromptCard {
-                            team_id,
-                            prompt: prompt.clone(),
-                            rbac: rbac.clone()
+                        for prompt in &prompts {
+                            PromptCard {
+                                team_id,
+                                prompt: prompt.clone(),
+                                rbac: rbac.clone()
+                            }
                         }
                     }
                 }
             }
         }
-    }
 }
 
 // Extracts categories with at least one prompt

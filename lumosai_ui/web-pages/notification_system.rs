@@ -13,10 +13,10 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
 use crate::app_layout::{Layout, SideBar};
 use crate::types::Rbac;
+use dioxus::prelude::*;
+use serde::{Deserialize, Serialize};
 
 // 通知类型定义
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -114,16 +114,14 @@ pub struct NotificationStats {
 
 /// 增强的通知系统页面
 #[component]
-pub fn NotificationSystemPage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn NotificationSystemPage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟通知数据
     let notifications = vec![
         Notification {
             id: 1,
             title: "AI Model Update".to_string(),
-            message: "GPT-4 model has been updated with improved performance and new capabilities.".to_string(),
+            message: "GPT-4 model has been updated with improved performance and new capabilities."
+                .to_string(),
             notification_type: NotificationType::System,
             priority: NotificationPriority::High,
             timestamp: "2 minutes ago".to_string(),
@@ -181,8 +179,19 @@ pub fn NotificationSystemPage(
     let stats = NotificationStats {
         total: notifications.len(),
         unread: notifications.iter().filter(|n| !n.is_read).count(),
-        high_priority: notifications.iter().filter(|n| matches!(n.priority, NotificationPriority::High | NotificationPriority::Critical)).count(),
-        system_notifications: notifications.iter().filter(|n| matches!(n.notification_type, NotificationType::System)).count(),
+        high_priority: notifications
+            .iter()
+            .filter(|n| {
+                matches!(
+                    n.priority,
+                    NotificationPriority::High | NotificationPriority::Critical
+                )
+            })
+            .count(),
+        system_notifications: notifications
+            .iter()
+            .filter(|n| matches!(n.notification_type, NotificationType::System))
+            .count(),
     };
 
     rsx! {
@@ -357,7 +366,7 @@ fn NotificationFilters() -> Element {
                 }
                 div {
                     class: "flex flex-wrap gap-4",
-                    
+
                     // 类型过滤
                     div {
                         class: "form-control",
@@ -627,10 +636,7 @@ pub fn NotificationToast(
 
 /// 通知偏好设置组件
 #[component]
-pub fn NotificationPreferences(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn NotificationPreferences(team_id: i32, rbac: Rbac) -> Element {
     rsx! {
         div {
             class: "card bg-base-100 shadow-lg",

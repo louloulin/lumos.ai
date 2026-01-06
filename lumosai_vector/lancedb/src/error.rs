@@ -11,67 +11,67 @@ pub enum LanceDbError {
     /// Connection error
     #[error("Connection error: {0}")]
     Connection(String),
-    
+
     /// Database operation error
     #[error("Database error: {0}")]
     Database(String),
-    
+
     /// Table operation error
     #[error("Table error: {0}")]
     Table(String),
-    
+
     /// Index operation error
     #[error("Index error: {0}")]
     Index(String),
-    
+
     /// Query error
     #[error("Query error: {0}")]
     Query(String),
-    
+
     /// Invalid data error
     #[error("Invalid data: {0}")]
     InvalidData(String),
-    
+
     /// Invalid configuration error
     #[error("Invalid configuration: {0}")]
     InvalidConfiguration(String),
-    
+
     /// Serialization/deserialization error
     #[error("Serialization error: {0}")]
     Serialization(String),
-    
+
     /// Arrow error
     #[error("Arrow error: {0}")]
     Arrow(String),
-    
+
     /// IO error
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     /// Timeout error
     #[error("Operation timed out")]
     Timeout,
-    
+
     /// Not found error
     #[error("Not found: {0}")]
     NotFound(String),
-    
+
     /// Already exists error
     #[error("Already exists: {0}")]
     AlreadyExists(String),
-    
+
     /// Permission denied error
     #[error("Permission denied: {0}")]
     PermissionDenied(String),
-    
+
     /// Storage error (cloud storage related)
     #[error("Storage error: {0}")]
     Storage(String),
-    
+
     /// Authentication error
     #[error("Authentication error: {0}")]
     Authentication(String),
-    
+
     /// Generic error
     #[error("LanceDB error: {0}")]
     Generic(String),
@@ -82,72 +82,72 @@ impl LanceDbError {
     pub fn connection<S: Into<String>>(msg: S) -> Self {
         Self::Connection(msg.into())
     }
-    
+
     /// Create a new database error
     pub fn database<S: Into<String>>(msg: S) -> Self {
         Self::Database(msg.into())
     }
-    
+
     /// Create a new table error
     pub fn table<S: Into<String>>(msg: S) -> Self {
         Self::Table(msg.into())
     }
-    
+
     /// Create a new index error
     pub fn index<S: Into<String>>(msg: S) -> Self {
         Self::Index(msg.into())
     }
-    
+
     /// Create a new query error
     pub fn query<S: Into<String>>(msg: S) -> Self {
         Self::Query(msg.into())
     }
-    
+
     /// Create a new invalid data error
     pub fn invalid_data<S: Into<String>>(msg: S) -> Self {
         Self::InvalidData(msg.into())
     }
-    
+
     /// Create a new configuration error
     pub fn config<S: Into<String>>(msg: S) -> Self {
         Self::InvalidConfiguration(msg.into())
     }
-    
+
     /// Create a new serialization error
     pub fn serialization<S: Into<String>>(msg: S) -> Self {
         Self::Serialization(msg.into())
     }
-    
+
     /// Create a new arrow error
     pub fn arrow<S: Into<String>>(msg: S) -> Self {
         Self::Arrow(msg.into())
     }
-    
+
     /// Create a new not found error
     pub fn not_found<S: Into<String>>(msg: S) -> Self {
         Self::NotFound(msg.into())
     }
-    
+
     /// Create a new already exists error
     pub fn already_exists<S: Into<String>>(msg: S) -> Self {
         Self::AlreadyExists(msg.into())
     }
-    
+
     /// Create a new storage error
     pub fn storage<S: Into<String>>(msg: S) -> Self {
         Self::Storage(msg.into())
     }
-    
+
     /// Create a new authentication error
     pub fn authentication<S: Into<String>>(msg: S) -> Self {
         Self::Authentication(msg.into())
     }
-    
+
     /// Create a new generic error
     pub fn generic<S: Into<String>>(msg: S) -> Self {
         Self::Generic(msg.into())
     }
-    
+
     /// Check if this is a recoverable error
     pub fn is_recoverable(&self) -> bool {
         match self {
@@ -170,7 +170,7 @@ impl LanceDbError {
             LanceDbError::Generic(_) => true,
         }
     }
-    
+
     /// Get error category for logging/monitoring
     pub fn category(&self) -> &'static str {
         match self {
@@ -193,7 +193,7 @@ impl LanceDbError {
             LanceDbError::Generic(_) => "generic",
         }
     }
-    
+
     /// Check if this is a client error (4xx equivalent)
     pub fn is_client_error(&self) -> bool {
         match self {
@@ -206,7 +206,7 @@ impl LanceDbError {
             _ => false,
         }
     }
-    
+
     /// Check if this is a server error (5xx equivalent)
     pub fn is_server_error(&self) -> bool {
         match self {
@@ -226,7 +226,7 @@ impl From<lancedb::Error> for LanceDbError {
     fn from(err: lancedb::Error) -> Self {
         // Map LanceDB errors to our error types
         let error_str = err.to_string();
-        
+
         if error_str.contains("connection") || error_str.contains("connect") {
             LanceDbError::Connection(error_str)
         } else if error_str.contains("table") {
@@ -269,22 +269,50 @@ impl From<serde_json::Error> for LanceDbError {
 impl From<LanceDbError> for lumosai_vector_core::error::VectorError {
     fn from(err: LanceDbError) -> Self {
         match err {
-            LanceDbError::Connection(msg) => lumosai_vector_core::error::VectorError::ConnectionFailed(msg),
-            LanceDbError::Database(msg) => lumosai_vector_core::error::VectorError::StorageBackend(msg),
-            LanceDbError::Table(msg) => lumosai_vector_core::error::VectorError::StorageBackend(msg),
-            LanceDbError::Index(msg) => lumosai_vector_core::error::VectorError::InvalidIndexConfig(msg),
+            LanceDbError::Connection(msg) => {
+                lumosai_vector_core::error::VectorError::ConnectionFailed(msg)
+            }
+            LanceDbError::Database(msg) => {
+                lumosai_vector_core::error::VectorError::StorageBackend(msg)
+            }
+            LanceDbError::Table(msg) => {
+                lumosai_vector_core::error::VectorError::StorageBackend(msg)
+            }
+            LanceDbError::Index(msg) => {
+                lumosai_vector_core::error::VectorError::InvalidIndexConfig(msg)
+            }
             LanceDbError::Query(msg) => lumosai_vector_core::error::VectorError::InvalidQuery(msg),
-            LanceDbError::InvalidData(msg) => lumosai_vector_core::error::VectorError::InvalidVector(msg),
-            LanceDbError::InvalidConfiguration(msg) => lumosai_vector_core::error::VectorError::InvalidConfig(msg),
-            LanceDbError::Serialization(msg) => lumosai_vector_core::error::VectorError::Serialization(msg),
+            LanceDbError::InvalidData(msg) => {
+                lumosai_vector_core::error::VectorError::InvalidVector(msg)
+            }
+            LanceDbError::InvalidConfiguration(msg) => {
+                lumosai_vector_core::error::VectorError::InvalidConfig(msg)
+            }
+            LanceDbError::Serialization(msg) => {
+                lumosai_vector_core::error::VectorError::Serialization(msg)
+            }
             LanceDbError::Arrow(msg) => lumosai_vector_core::error::VectorError::Internal(msg),
-            LanceDbError::Io(err) => lumosai_vector_core::error::VectorError::StorageBackend(err.to_string()),
-            LanceDbError::Timeout => lumosai_vector_core::error::VectorError::QueryTimeout { seconds: 30 },
-            LanceDbError::NotFound(msg) => lumosai_vector_core::error::VectorError::IndexNotFound(msg),
-            LanceDbError::AlreadyExists(msg) => lumosai_vector_core::error::VectorError::IndexAlreadyExists(msg),
-            LanceDbError::PermissionDenied(msg) => lumosai_vector_core::error::VectorError::PermissionDenied(msg),
-            LanceDbError::Storage(msg) => lumosai_vector_core::error::VectorError::StorageBackend(msg),
-            LanceDbError::Authentication(msg) => lumosai_vector_core::error::VectorError::AuthenticationFailed(msg),
+            LanceDbError::Io(err) => {
+                lumosai_vector_core::error::VectorError::StorageBackend(err.to_string())
+            }
+            LanceDbError::Timeout => {
+                lumosai_vector_core::error::VectorError::QueryTimeout { seconds: 30 }
+            }
+            LanceDbError::NotFound(msg) => {
+                lumosai_vector_core::error::VectorError::IndexNotFound(msg)
+            }
+            LanceDbError::AlreadyExists(msg) => {
+                lumosai_vector_core::error::VectorError::IndexAlreadyExists(msg)
+            }
+            LanceDbError::PermissionDenied(msg) => {
+                lumosai_vector_core::error::VectorError::PermissionDenied(msg)
+            }
+            LanceDbError::Storage(msg) => {
+                lumosai_vector_core::error::VectorError::StorageBackend(msg)
+            }
+            LanceDbError::Authentication(msg) => {
+                lumosai_vector_core::error::VectorError::AuthenticationFailed(msg)
+            }
             LanceDbError::Generic(msg) => lumosai_vector_core::error::VectorError::Internal(msg),
         }
     }
@@ -293,7 +321,7 @@ impl From<LanceDbError> for lumosai_vector_core::error::VectorError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_error_creation() {
         let err = LanceDbError::connection("Test connection error");
@@ -303,33 +331,33 @@ mod tests {
         assert!(!err.is_client_error());
         assert_eq!(err.category(), "connection");
     }
-    
+
     #[test]
     fn test_error_categories() {
         let client_err = LanceDbError::not_found("Table not found");
         assert!(client_err.is_client_error());
         assert!(!client_err.is_server_error());
         assert!(!client_err.is_recoverable());
-        
-        let server_err = LanceDbError::timeout();
+
+        let server_err = LanceDbError::Timeout;
         assert!(server_err.is_server_error());
         assert!(!server_err.is_client_error());
         assert!(server_err.is_recoverable());
     }
-    
+
     #[test]
     fn test_error_conversion() {
         let lancedb_err = LanceDbError::database("Test database error");
         let vector_err: lumosai_vector_core::error::VectorError = lancedb_err.into();
-        
+
         match vector_err {
-            lumosai_vector_core::error::VectorError::DatabaseError(msg) => {
+            lumosai_vector_core::error::VectorError::StorageBackend(msg) => {
                 assert!(msg.contains("Test database error"));
             }
-            _ => panic!("Expected DatabaseError"),
+            _ => panic!("Expected StorageBackend error"),
         }
     }
-    
+
     #[test]
     fn test_timeout_error() {
         let err = LanceDbError::Timeout;

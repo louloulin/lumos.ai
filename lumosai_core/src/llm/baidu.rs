@@ -5,10 +5,10 @@ use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::{Error, Result};
-use super::provider::{LlmProvider, FunctionCallingResponse};
+use super::function_calling::{FunctionCall, FunctionDefinition, ToolChoice};
+use super::provider::{FunctionCallingResponse, LlmProvider};
 use super::types::{LlmOptions, Message};
-use super::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
+use crate::{Error, Result};
 
 /// 百度ERNIE API response structures
 #[derive(Debug, Deserialize)]
@@ -118,7 +118,12 @@ impl BaiduProvider {
     }
 
     /// Create a new 百度ERNIE provider with custom base URL
-    pub fn with_base_url(api_key: String, secret_key: String, base_url: String, model: Option<String>) -> Self {
+    pub fn with_base_url(
+        api_key: String,
+        secret_key: String,
+        base_url: String,
+        model: Option<String>,
+    ) -> Self {
         Self {
             api_key,
             secret_key,
@@ -140,25 +145,27 @@ impl BaiduProvider {
             self.base_url, self.api_key, self.secret_key
         );
 
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE token request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE token request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE token response: {}", e)))?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE token response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE token API returned error status {}: {}",
-                status, text
+                "百度ERNIE token API returned error status {status}: {text}"
             )));
         }
 
         let token_response: BaiduTokenResponse = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE token response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE token response: {e}")))?;
 
         self.access_token = Some(token_response.access_token.clone());
         Ok(token_response.access_token)
@@ -211,11 +218,14 @@ impl LlmProvider for BaiduProvider {
 
         let mut provider = self.clone();
         let access_token = provider.get_access_token().await?;
-        
+
         let model = options.model.clone().unwrap_or_else(|| self.model.clone());
         let endpoint = self.get_model_endpoint(&model);
-        let url = format!("{}{}?access_token={}", self.base_url, endpoint, access_token);
-        
+        let url = format!(
+            "{}{}?access_token={}",
+            self.base_url, endpoint, access_token
+        );
+
         // Build request body
         let mut body = serde_json::json!({
             "messages": messages,
@@ -236,53 +246,62 @@ impl LlmProvider for BaiduProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {}", e)))?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE API returned error status {}: {}",
-                status, text
+                "百度ERNIE API returned error status {status}: {text}"
             )));
         }
-        
+
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {}", e)))?;
-            
+            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {e}")))?;
+
         // Extract generated text
         let content = response["result"]
             .as_str()
             .ok_or_else(|| Error::Llm("Invalid response format from 百度ERNIE".to_string()))?;
-            
+
         Ok(content.to_string())
     }
-    
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         let mut provider = self.clone();
         let access_token = provider.get_access_token().await?;
-        
+
         let model = options.model.clone().unwrap_or_else(|| self.model.clone());
         let endpoint = self.get_model_endpoint(&model);
-        let url = format!("{}{}?access_token={}", self.base_url, endpoint, access_token);
-        
+        let url = format!(
+            "{}{}?access_token={}",
+            self.base_url, endpoint, access_token
+        );
+
         // Convert messages to 百度ERNIE format
         let api_messages = self.convert_messages(messages);
-        
+
         // Build request body
         let mut body = serde_json::json!({
             "messages": api_messages,
         });
-        
+
         // Add optional parameters
         if let Some(temperature) = options.temperature {
             body["temperature"] = serde_json::json!(temperature);
@@ -298,41 +317,43 @@ impl LlmProvider for BaiduProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {}", e)))?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE API returned error status {}: {}",
-                status, text
+                "百度ERNIE API returned error status {status}: {text}"
             )));
         }
-        
+
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {}", e)))?;
-            
+            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {e}")))?;
+
         // Extract generated text
         let content = response["result"]
             .as_str()
             .ok_or_else(|| Error::Llm("Invalid response format from 百度ERNIE".to_string()))?;
-            
+
         Ok(content.to_string())
     }
 
     async fn generate_stream<'a>(
         &'a self,
         prompt: &'a str,
-        options: &'a LlmOptions
+        options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // Convert prompt to messages format
         let messages = vec![serde_json::json!({
@@ -345,7 +366,10 @@ impl LlmProvider for BaiduProvider {
 
         let model = options.model.clone().unwrap_or_else(|| self.model.clone());
         let endpoint = self.get_model_endpoint(&model);
-        let url = format!("{}{}?access_token={}", self.base_url, endpoint, access_token);
+        let url = format!(
+            "{}{}?access_token={}",
+            self.base_url, endpoint, access_token
+        );
 
         // Build request body with streaming enabled
         let mut body = serde_json::json!({
@@ -368,21 +392,23 @@ impl LlmProvider for BaiduProvider {
         }
 
         // Send request
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE streaming request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE streaming request failed: {e}")))?;
 
         let status = response.status();
         if !status.is_success() {
-            let error_text = response.text().await
+            let error_text = response
+                .text()
+                .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(Error::Llm(format!(
-                "百度ERNIE streaming API returned error status {}: {}",
-                status, error_text
+                "百度ERNIE streaming API returned error status {status}: {error_text}"
             )));
         }
 
@@ -395,37 +421,44 @@ impl LlmProvider for BaiduProvider {
         let mut provider = self.clone();
         let access_token = provider.get_access_token().await?;
 
-        let url = format!("{}/rpc/2.0/ai_custom/v1/wenxinworkshop/embeddings/embedding-v1?access_token={}",
-                         self.base_url, access_token);
+        let url = format!(
+            "{}/rpc/2.0/ai_custom/v1/wenxinworkshop/embeddings/embedding-v1?access_token={}",
+            self.base_url, access_token
+        );
 
         let body = serde_json::json!({
             "input": [text],
         });
 
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE embedding request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE embedding request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE embedding response: {}", e)))?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE embedding response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE embedding API returned error status {}: {}",
-                status, text
+                "百度ERNIE embedding API returned error status {status}: {text}"
             )));
         }
 
-        let response: BaiduEmbeddingResponse = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE embedding response: {}", e)))?;
+        let response: BaiduEmbeddingResponse = serde_json::from_str(&text).map_err(|e| {
+            Error::Llm(format!("Failed to parse 百度ERNIE embedding response: {e}"))
+        })?;
 
         if response.data.is_empty() {
-            return Err(Error::Llm("No embedding data in 百度ERNIE response".to_string()));
+            return Err(Error::Llm(
+                "No embedding data in 百度ERNIE response".to_string(),
+            ));
         }
 
         Ok(response.data[0].embedding.clone())
@@ -447,19 +480,25 @@ impl LlmProvider for BaiduProvider {
 
         let model = options.model.clone().unwrap_or_else(|| self.model.clone());
         let endpoint = self.get_model_endpoint(&model);
-        let url = format!("{}{}?access_token={}", self.base_url, endpoint, access_token);
+        let url = format!(
+            "{}{}?access_token={}",
+            self.base_url, endpoint, access_token
+        );
 
         // Convert messages to 百度ERNIE format
         let api_messages = self.convert_messages(messages);
 
         // Convert function definitions to 百度ERNIE functions format
-        let functions_json: Vec<Value> = functions.iter().map(|func| {
-            serde_json::json!({
-                "name": func.name,
-                "description": func.description,
-                "parameters": func.parameters
+        let functions_json: Vec<Value> = functions
+            .iter()
+            .map(|func| {
+                serde_json::json!({
+                    "name": func.name,
+                    "description": func.description,
+                    "parameters": func.parameters
+                })
             })
-        }).collect();
+            .collect();
 
         // Build request
         let mut body = serde_json::json!({
@@ -483,31 +522,34 @@ impl LlmProvider for BaiduProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("百度ERNIE API request failed: {e}")))?;
 
         let status = res.status();
-        let response_text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {}", e)))?;
+        let response_text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read 百度ERNIE response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "百度ERNIE API returned error status {}: {}",
-                status, response_text
+                "百度ERNIE API returned error status {status}: {response_text}"
             )));
         }
 
         // Parse response
         let response: BaiduResponse = serde_json::from_str(&response_text)
-            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse 百度ERNIE response: {e}")))?;
 
         // Convert function calls
-        let function_calls: Vec<FunctionCall> = if let Some(function_call) = response.function_call {
+        let function_calls: Vec<FunctionCall> = if let Some(function_call) = response.function_call
+        {
             vec![FunctionCall {
                 id: None, // 百度ERNIE doesn't provide function call IDs
                 name: function_call.name,
@@ -534,12 +576,12 @@ impl BaiduProvider {
         let byte_stream = response.bytes_stream();
 
         Ok(byte_stream
-            .map_err(|e| Error::Llm(format!("HTTP stream error: {}", e)))
+            .map_err(|e| Error::Llm(format!("HTTP stream error: {e}")))
             .map(|chunk_result| {
                 chunk_result.and_then(|chunk| {
                     // Convert bytes to string
                     let text = String::from_utf8(chunk.to_vec())
-                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {}", e)))?;
+                        .map_err(|e| Error::Llm(format!("UTF-8 decode error: {e}")))?;
 
                     // Split by lines and process each line
                     let mut results = Vec::new();
@@ -572,7 +614,7 @@ impl BaiduProvider {
                                 }
                                 Err(e) => {
                                     return Err(Error::Llm(format!(
-                                        "Failed to parse 百度ERNIE streaming response: {}", e
+                                        "Failed to parse 百度ERNIE streaming response: {e}"
                                     )));
                                 }
                             }
@@ -606,7 +648,11 @@ mod tests {
 
     #[test]
     fn test_baidu_provider_with_custom_model() {
-        let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string(), Some("ernie-bot-4".to_string()));
+        let provider = BaiduProvider::new(
+            "test-key".to_string(),
+            "test-secret".to_string(),
+            Some("ernie-bot-4".to_string()),
+        );
         assert_eq!(provider.model, "ernie-bot-4");
     }
 
@@ -616,7 +662,7 @@ mod tests {
             "test-key".to_string(),
             "test-secret".to_string(),
             "https://custom.api.example.com".to_string(),
-            None
+            None,
         );
         assert_eq!(provider.base_url, "https://custom.api.example.com");
     }
@@ -637,9 +683,21 @@ mod tests {
     fn test_get_model_endpoint() {
         let provider = BaiduProvider::new("test-key".to_string(), "test-secret".to_string(), None);
 
-        assert_eq!(provider.get_model_endpoint("ernie-bot"), "/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions");
-        assert_eq!(provider.get_model_endpoint("ernie-bot-turbo"), "/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant");
-        assert_eq!(provider.get_model_endpoint("ernie-bot-4"), "/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions_pro");
-        assert_eq!(provider.get_model_endpoint("unknown-model"), "/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions");
+        assert_eq!(
+            provider.get_model_endpoint("ernie-bot"),
+            "/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions"
+        );
+        assert_eq!(
+            provider.get_model_endpoint("ernie-bot-turbo"),
+            "/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant"
+        );
+        assert_eq!(
+            provider.get_model_endpoint("ernie-bot-4"),
+            "/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions_pro"
+        );
+        assert_eq!(
+            provider.get_model_endpoint("unknown-model"),
+            "/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions"
+        );
     }
 }

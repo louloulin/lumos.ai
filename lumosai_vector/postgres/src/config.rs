@@ -1,20 +1,20 @@
 //! PostgreSQL configuration for vector storage
 
-use std::time::Duration;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 /// PostgreSQL vector storage configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PostgresConfig {
     /// Database connection URL
     pub database_url: String,
-    
+
     /// Connection pool configuration
     pub pool: PoolConfig,
-    
+
     /// Table configuration
     pub table: TableConfig,
-    
+
     /// Performance settings
     pub performance: PerformanceConfig,
 }
@@ -24,16 +24,16 @@ pub struct PostgresConfig {
 pub struct PoolConfig {
     /// Maximum number of connections in the pool
     pub max_connections: u32,
-    
+
     /// Minimum number of connections in the pool
     pub min_connections: u32,
-    
+
     /// Connection timeout
     pub connect_timeout: Duration,
-    
+
     /// Idle timeout for connections
     pub idle_timeout: Option<Duration>,
-    
+
     /// Maximum lifetime of a connection
     pub max_lifetime: Option<Duration>,
 }
@@ -43,13 +43,13 @@ pub struct PoolConfig {
 pub struct TableConfig {
     /// Schema name (default: "public")
     pub schema: String,
-    
+
     /// Table prefix for vector tables
     pub table_prefix: Option<String>,
-    
+
     /// Whether to create tables automatically
     pub auto_create_tables: bool,
-    
+
     /// Whether to create indexes automatically
     pub auto_create_indexes: bool,
 }
@@ -59,13 +59,13 @@ pub struct TableConfig {
 pub struct PerformanceConfig {
     /// Batch size for bulk operations
     pub batch_size: usize,
-    
+
     /// Vector index type
     pub index_type: VectorIndexType,
-    
+
     /// Index parameters
     pub index_params: IndexParams,
-    
+
     /// Whether to use prepared statements
     pub use_prepared_statements: bool,
 }
@@ -86,7 +86,7 @@ pub enum VectorIndexType {
 pub struct IndexParams {
     /// IVFFlat parameters
     pub ivf_flat: IvfFlatParams,
-    
+
     /// HNSW parameters
     pub hnsw: HnswParams,
 }
@@ -96,7 +96,7 @@ pub struct IndexParams {
 pub struct IvfFlatParams {
     /// Number of lists (clusters)
     pub lists: u32,
-    
+
     /// Number of probes during search
     pub probes: u32,
 }
@@ -106,10 +106,10 @@ pub struct IvfFlatParams {
 pub struct HnswParams {
     /// Maximum number of connections per node
     pub m: u32,
-    
+
     /// Size of the dynamic candidate list during construction
     pub ef_construction: u32,
-    
+
     /// Size of the dynamic candidate list during search
     pub ef_search: u32,
 }
@@ -195,31 +195,31 @@ impl PostgresConfig {
             ..Default::default()
         }
     }
-    
+
     /// Set pool configuration
     pub fn with_pool(mut self, pool: PoolConfig) -> Self {
         self.pool = pool;
         self
     }
-    
+
     /// Set table configuration
     pub fn with_table(mut self, table: TableConfig) -> Self {
         self.table = table;
         self
     }
-    
+
     /// Set performance configuration
     pub fn with_performance(mut self, performance: PerformanceConfig) -> Self {
         self.performance = performance;
         self
     }
-    
+
     /// Get the full table name with schema and prefix
     pub fn table_name(&self, name: &str) -> String {
         let prefix = self.table.table_prefix.as_deref().unwrap_or("");
         format!("{}.{}{}", self.table.schema, prefix, name)
     }
-    
+
     /// Get the index name for a table
     pub fn index_name(&self, table_name: &str, index_type: &str) -> String {
         let prefix = self.table.table_prefix.as_deref().unwrap_or("");
@@ -229,33 +229,38 @@ impl PostgresConfig {
 
 impl VectorIndexType {
     /// Get the SQL for creating this index type
-    pub fn create_index_sql(&self, table_name: &str, index_name: &str, params: &IndexParams) -> String {
+    pub fn create_index_sql(
+        &self,
+        table_name: &str,
+        index_name: &str,
+        params: &IndexParams,
+    ) -> String {
         match self {
             VectorIndexType::IvfFlat => {
                 format!(
                     "CREATE INDEX {} ON {} USING ivfflat (embedding vector_cosine_ops) WITH (lists = {})",
                     index_name, table_name, params.ivf_flat.lists
                 )
-            },
+            }
             VectorIndexType::Hnsw => {
                 format!(
                     "CREATE INDEX {} ON {} USING hnsw (embedding vector_cosine_ops) WITH (m = {}, ef_construction = {})",
                     index_name, table_name, params.hnsw.m, params.hnsw.ef_construction
                 )
-            },
+            }
             VectorIndexType::None => String::new(),
         }
     }
-    
+
     /// Get the SQL for setting search parameters
     pub fn search_params_sql(&self, params: &IndexParams) -> Vec<String> {
         match self {
             VectorIndexType::IvfFlat => {
                 vec![format!("SET ivfflat.probes = {}", params.ivf_flat.probes)]
-            },
+            }
             VectorIndexType::Hnsw => {
                 vec![format!("SET hnsw.ef_search = {}", params.hnsw.ef_search)]
-            },
+            }
             VectorIndexType::None => vec![],
         }
     }

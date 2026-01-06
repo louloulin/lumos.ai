@@ -1,7 +1,7 @@
+pub mod enhanced_audit;
 pub mod filter;
 pub mod index;
 pub mod table;
-pub mod enhanced_audit;
 
 use crate::types::{AuditAccessType, AuditAction};
 

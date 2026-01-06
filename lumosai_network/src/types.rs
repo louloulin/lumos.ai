@@ -1,7 +1,7 @@
 //! Agent网络基本类型定义
 
+use serde::{Deserialize, Serialize};
 use std::fmt;
-use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 /// Agent ID
@@ -13,17 +13,17 @@ impl AgentId {
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
     }
-    
+
     /// 从字符串创建Agent ID
     pub fn from_str(id: impl Into<String>) -> Self {
         Self(id.into())
     }
-    
+
     /// 获取Agent ID字符串
     pub fn as_str(&self) -> &str {
         &self.0
     }
-    
+
     /// 获取内部字符串值的克隆
     pub fn value(&self) -> String {
         self.0.clone()
@@ -110,7 +110,7 @@ impl AgentCapability {
             metadata: None,
         }
     }
-    
+
     /// 添加能力元数据
     pub fn with_metadata(mut self, metadata: serde_json::Value) -> Self {
         self.metadata = Some(metadata);
@@ -141,16 +141,16 @@ impl AgentLocation {
             description: None,
         }
     }
-    
+
     /// 设置区域
     pub fn with_region(mut self, region: impl Into<String>) -> Self {
         self.region = Some(region.into());
         self
     }
-    
+
     /// 设置描述
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
-} 
+}

@@ -1,12 +1,12 @@
 //! YAML configuration support for LumosAI
-//! 
+//!
 //! This module provides YAML configuration parsing and loading,
 //! extending the existing TOML configuration support.
 
+use crate::{Error, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
-use crate::{Result, Error};
 
 /// YAML configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -140,62 +140,74 @@ impl YamlConfig {
     /// Load configuration from YAML file
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = std::fs::read_to_string(path)
-            .map_err(|e| Error::Configuration(format!("Failed to read YAML config file: {}", e)))?;
-        
+            .map_err(|e| Error::Configuration(format!("Failed to read YAML config file: {e}")))?;
+
         Self::from_str(&content)
     }
-    
+
     /// Parse configuration from YAML string
     pub fn from_str(content: &str) -> Result<Self> {
         serde_yaml::from_str(content)
-            .map_err(|e| Error::Configuration(format!("Failed to parse YAML config: {}", e)))
+            .map_err(|e| Error::Configuration(format!("Failed to parse YAML config: {e}")))
     }
-    
+
     /// Save configuration to YAML file
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let content = self.to_string()?;
         std::fs::write(path, content)
-            .map_err(|e| Error::Configuration(format!("Failed to write YAML config file: {}", e)))
+            .map_err(|e| Error::Configuration(format!("Failed to write YAML config file: {e}")))
     }
-    
+
     /// Convert configuration to YAML string
     pub fn to_string(&self) -> Result<String> {
         serde_yaml::to_string(self)
-            .map_err(|e| Error::Configuration(format!("Failed to serialize YAML config: {}", e)))
+            .map_err(|e| Error::Configuration(format!("Failed to serialize YAML config: {e}")))
     }
-    
+
     /// Validate configuration
     pub fn validate(&self) -> Result<()> {
         // Validate project configuration
         if let Some(project) = &self.project {
             if project.name.is_empty() {
-                return Err(Error::Configuration("Project name cannot be empty".to_string()));
+                return Err(Error::Configuration(
+                    "Project name cannot be empty".to_string(),
+                ));
             }
         }
-        
+
         // Validate agents
         if let Some(agents) = &self.agents {
             for (name, agent) in agents {
                 if name.is_empty() {
-                    return Err(Error::Configuration("Agent name cannot be empty".to_string()));
+                    return Err(Error::Configuration(
+                        "Agent name cannot be empty".to_string(),
+                    ));
                 }
                 if agent.model.is_empty() {
-                    return Err(Error::Configuration(format!("Agent '{}' must have a model", name)));
+                    return Err(Error::Configuration(format!(
+                        "Agent '{name}' must have a model"
+                    )));
                 }
                 if agent.instructions.is_empty() {
-                    return Err(Error::Configuration(format!("Agent '{}' must have instructions", name)));
+                    return Err(Error::Configuration(format!(
+                        "Agent '{name}' must have instructions"
+                    )));
                 }
             }
         }
-        
+
         // Validate workflows
         if let Some(workflows) = &self.workflows {
             for (name, workflow) in workflows {
                 if name.is_empty() {
-                    return Err(Error::Configuration("Workflow name cannot be empty".to_string()));
+                    return Err(Error::Configuration(
+                        "Workflow name cannot be empty".to_string(),
+                    ));
                 }
                 if workflow.steps.is_empty() {
-                    return Err(Error::Configuration(format!("Workflow '{}' must have at least one step", name)));
+                    return Err(Error::Configuration(format!(
+                        "Workflow '{name}' must have at least one step"
+                    )));
                 }
 
                 // Validate workflow steps
@@ -203,7 +215,7 @@ impl YamlConfig {
                     // At least one of agent, tool, or workflow must be specified
                     if step.agent.is_none() && step.tool.is_none() && step.workflow.is_none() {
                         return Err(Error::Configuration(format!(
-                            "Workflow '{}' step {} must specify an agent, tool, or workflow", name, i
+                            "Workflow '{name}' step {i} must specify an agent, tool, or workflow"
                         )));
                     }
 
@@ -211,7 +223,7 @@ impl YamlConfig {
                     if let Some(agent_name) = &step.agent {
                         if agent_name.is_empty() {
                             return Err(Error::Configuration(format!(
-                                "Workflow '{}' step {} agent name cannot be empty", name, i
+                                "Workflow '{name}' step {i} agent name cannot be empty"
                             )));
                         }
                     }
@@ -220,7 +232,7 @@ impl YamlConfig {
                     if let Some(tool_name) = &step.tool {
                         if tool_name.is_empty() {
                             return Err(Error::Configuration(format!(
-                                "Workflow '{}' step {} tool name cannot be empty", name, i
+                                "Workflow '{name}' step {i} tool name cannot be empty"
                             )));
                         }
                     }
@@ -229,27 +241,27 @@ impl YamlConfig {
                     if let Some(workflow_id) = &step.workflow {
                         if workflow_id.is_empty() {
                             return Err(Error::Configuration(format!(
-                                "Workflow '{}' step {} workflow ID cannot be empty", name, i
+                                "Workflow '{name}' step {i} workflow ID cannot be empty"
                             )));
                         }
                     }
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Get agent configuration by name
     pub fn get_agent(&self, name: &str) -> Option<&AgentConfig> {
         self.agents.as_ref()?.get(name)
     }
-    
+
     /// Get workflow configuration by name
     pub fn get_workflow(&self, name: &str) -> Option<&WorkflowConfig> {
         self.workflows.as_ref()?.get(name)
     }
-    
+
     /// List all agent names
     pub fn list_agents(&self) -> Vec<String> {
         self.agents
@@ -257,7 +269,7 @@ impl YamlConfig {
             .map(|agents| agents.keys().cloned().collect())
             .unwrap_or_default()
     }
-    
+
     /// List all workflow names
     pub fn list_workflows(&self) -> Vec<String> {
         self.workflows
@@ -278,20 +290,23 @@ impl Default for YamlConfig {
             }),
             agents: Some({
                 let mut agents = HashMap::new();
-                agents.insert("assistant".to_string(), AgentConfig {
-                    model: "gpt-4".to_string(),
-                    instructions: "You are a helpful assistant".to_string(),
-                    tools: Some(vec!["web_search".to_string(), "calculator".to_string()]),
-                    temperature: Some(0.7),
-                    max_tokens: Some(2000),
-                    timeout: Some(30),
-                    memory: Some(MemoryConfig {
-                        enabled: Some(true),
-                        max_capacity: Some(100),
-                        persistence: Some("memory".to_string()),
-                    }),
-                    voice: None,
-                });
+                agents.insert(
+                    "assistant".to_string(),
+                    AgentConfig {
+                        model: "gpt-4".to_string(),
+                        instructions: "You are a helpful assistant".to_string(),
+                        tools: Some(vec!["web_search".to_string(), "calculator".to_string()]),
+                        temperature: Some(0.7),
+                        max_tokens: Some(2000),
+                        timeout: Some(30),
+                        memory: Some(MemoryConfig {
+                            enabled: Some(true),
+                            max_capacity: Some(100),
+                            persistence: Some("memory".to_string()),
+                        }),
+                        voice: None,
+                    },
+                );
                 agents
             }),
             workflows: None,
@@ -322,7 +337,7 @@ impl Default for YamlConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_yaml_config_parsing() {
         let yaml_content = r#"
@@ -350,21 +365,21 @@ workflows:
         agent: assistant
         condition: general_query
 "#;
-        
+
         let config = YamlConfig::from_str(yaml_content).unwrap();
-        
+
         assert_eq!(config.project.as_ref().unwrap().name, "test-app");
         assert_eq!(config.get_agent("assistant").unwrap().model, "gpt-4");
         assert_eq!(config.get_workflow("support").unwrap().steps.len(), 1);
     }
-    
+
     #[test]
     fn test_yaml_config_validation() {
         let mut config = YamlConfig::default();
-        
+
         // Valid configuration should pass
         assert!(config.validate().is_ok());
-        
+
         // Invalid agent model should fail
         if let Some(agents) = &mut config.agents {
             if let Some(agent) = agents.get_mut("assistant") {
@@ -373,14 +388,17 @@ workflows:
         }
         assert!(config.validate().is_err());
     }
-    
+
     #[test]
     fn test_yaml_config_serialization() {
         let config = YamlConfig::default();
         let yaml_string = config.to_string().unwrap();
-        
+
         // Should be able to parse back
         let parsed_config = YamlConfig::from_str(&yaml_string).unwrap();
-        assert_eq!(parsed_config.project.as_ref().unwrap().name, config.project.as_ref().unwrap().name);
+        assert_eq!(
+            parsed_config.project.as_ref().unwrap().name,
+            config.project.as_ref().unwrap().name
+        );
     }
 }

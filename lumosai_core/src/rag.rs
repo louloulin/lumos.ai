@@ -1,9 +1,9 @@
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use async_trait::async_trait;
-use serde_json::Value;
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 
 use crate::error::Result;
 use crate::vector::VectorStorage;
@@ -137,6 +137,12 @@ pub struct QueryConfig {
     pub filter: Option<String>,
 }
 
+impl Default for QueryConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QueryConfig {
     pub fn new() -> Self {
         Self {
@@ -182,13 +188,13 @@ pub struct QueryResult {
 pub trait RagPipeline: Send + Sync {
     /// 处理并索引文档
     async fn process_documents(&mut self, source: DocumentSource) -> Result<usize>;
-    
+
     /// 基于字符串查询检索内容
     async fn query(&self, query: &str, top_k: usize) -> Result<QueryResult>;
-    
+
     /// 获取管道名称
     fn name(&self) -> &str;
-    
+
     /// 获取管道描述
     fn description(&self) -> Option<&str>;
 }
@@ -214,48 +220,52 @@ impl BasicRagPipeline {
         Self {
             name: name.into(),
             description: None,
-            vector_store: Arc::new(tokio::sync::Mutex::new(crate::vector::MemoryVectorStorage::new(1536, None))),
+            vector_store: Arc::new(tokio::sync::Mutex::new(
+                crate::vector::MemoryVectorStorage::new(1536, None),
+            )),
             embedding_fn: Arc::new(embedding_fn),
         }
     }
-    
+
     /// 设置描述
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
-    
+
     /// 处理文本文档
     async fn process_text(&mut self, text: &str) -> Result<usize> {
         let documents = split_text_into_documents(text);
         let mut count = 0;
-        
+
         for mut doc in documents {
             // 生成嵌入
             let embedding = (self.embedding_fn)(&doc.content)?;
             doc.embedding = embedding;
-            
+
             // 准备元数据
-            let metadata = vec![HashMap::from([
-                ("content".to_string(), Value::String(doc.content.clone()))
-            ])];
-            
+            let metadata = vec![HashMap::from([(
+                "content".to_string(),
+                Value::String(doc.content.clone()),
+            )])];
+
             // 获取锁后调用upsert
             {
                 let store = self.vector_store.lock().await;
                 // 使用完全限定路径
                 <dyn VectorStorage>::upsert(
                     &*store,
-                    "default", 
+                    "default",
                     vec![doc.embedding.clone()],
-                    Some(vec![doc.id.clone()]), 
-                    Some(metadata)
-                ).await?;
+                    Some(vec![doc.id.clone()]),
+                    Some(metadata),
+                )
+                .await?;
             }
-            
+
             count += 1;
         }
-        
+
         Ok(count)
     }
 }
@@ -264,22 +274,22 @@ impl BasicRagPipeline {
 impl RagPipeline for BasicRagPipeline {
     async fn process_documents(&mut self, source: DocumentSource) -> Result<usize> {
         match source {
-            DocumentSource::Text(text) => {
-                self.process_text(&text).await
-            },
+            DocumentSource::Text(text) => self.process_text(&text).await,
             DocumentSource::Directory(dir_path) => {
                 let path = Path::new(&dir_path);
                 if !path.exists() || !path.is_dir() {
-                    return Err(crate::error::Error::InvalidInput(format!("Directory not found: {}", dir_path)));
+                    return Err(crate::error::Error::InvalidInput(format!(
+                        "Directory not found: {dir_path}"
+                    )));
                 }
-                
+
                 let mut total_count = 0;
-                
+
                 // 遍历目录，只处理文本文件
                 for entry in std::fs::read_dir(path)? {
                     let entry = entry?;
                     let path = entry.path();
-                    
+
                     if path.is_file() {
                         if let Some(ext) = path.extension() {
                             if ext == "txt" || ext == "md" || ext == "rst" {
@@ -289,60 +299,62 @@ impl RagPipeline for BasicRagPipeline {
                         }
                     }
                 }
-                
+
                 Ok(total_count)
-            },
+            }
             DocumentSource::Url(url) => {
                 // 简单实现，实际项目中可能需要使用reqwest等库
-                Err(crate::error::Error::Other(format!("URL document source not implemented yet: {}", url)))
-            },
+                Err(crate::error::Error::Other(format!(
+                    "URL document source not implemented yet: {url}"
+                )))
+            }
             DocumentSource::Database(connection_string) => {
                 // 简单实现，实际项目中需要连接数据库
-                Err(crate::error::Error::Other(format!("Database document source not implemented yet: {}", connection_string)))
+                Err(crate::error::Error::Other(format!(
+                    "Database document source not implemented yet: {connection_string}"
+                )))
             }
         }
     }
-    
+
     async fn query(&self, query: &str, top_k: usize) -> Result<QueryResult> {
         // 生成查询嵌入
         let query_embedding = (self.embedding_fn)(query)?;
-        
+
         // 使用向量存储搜索 - 从锁中获取数据
         let vector_results = {
             let store = self.vector_store.lock().await;
             // 使用完全限定路径
-            <dyn VectorStorage>::query(
-                &*store,
-                "default", 
-                query_embedding, 
-                top_k, 
-                None, 
-                true
-            ).await?
+            <dyn VectorStorage>::query(&*store, "default", query_embedding, top_k, None, true)
+                .await?
         };
-        
+
         // 提取文档和分数
-        let documents: Vec<crate::vector::Document> = vector_results.iter().map(|result| {
-            let mut doc = crate::vector::Document::new(result.id.clone(), "");
-            if let Some(metadata) = &result.metadata {
-                if let Some(content) = metadata.get("content").and_then(|v| v.as_str()) {
-                    doc.content = content.to_string();
+        let documents: Vec<crate::vector::Document> = vector_results
+            .iter()
+            .map(|result| {
+                let mut doc = crate::vector::Document::new(result.id.clone(), "");
+                if let Some(metadata) = &result.metadata {
+                    if let Some(content) = metadata.get("content").and_then(|v| v.as_str()) {
+                        doc.content = content.to_string();
+                    }
                 }
-            }
-            if let Some(vec) = &result.vector {
-                doc.embedding = vec.clone();
-            }
-            doc
-        }).collect();
-        
+                if let Some(vec) = &result.vector {
+                    doc.embedding = vec.clone();
+                }
+                doc
+            })
+            .collect();
+
         let scores = vector_results.iter().map(|result| result.score).collect();
-        
+
         // 构建上下文
-        let context = documents.iter()
+        let context = documents
+            .iter()
             .map(|doc| doc.content.clone())
             .collect::<Vec<String>>()
             .join("\n\n");
-        
+
         Ok(QueryResult {
             query: query.to_string(),
             documents,
@@ -351,11 +363,11 @@ impl RagPipeline for BasicRagPipeline {
             metadata: serde_json::json!({}),
         })
     }
-    
+
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> Option<&str> {
         self.description.as_deref()
     }
@@ -365,15 +377,12 @@ impl RagPipeline for BasicRagPipeline {
 fn split_text_into_documents(text: &str) -> Vec<crate::vector::Document> {
     // 简单实现，按段落分割
     let paragraphs: Vec<&str> = text.split("\n\n").collect();
-    
-    paragraphs.iter().enumerate()
+
+    paragraphs
+        .iter()
+        .enumerate()
         .filter(|(_, p)| !p.trim().is_empty())
-        .map(|(i, p)| {
-            crate::vector::Document::new(
-                format!("doc_{}", i),
-                p.trim().to_string()
-            )
-        })
+        .map(|(i, p)| crate::vector::Document::new(format!("doc_{i}"), p.trim().to_string()))
         .collect()
 }
 

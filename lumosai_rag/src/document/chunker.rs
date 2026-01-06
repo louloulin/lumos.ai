@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use uuid::Uuid;
 use regex::Regex;
+use uuid::Uuid;
 
 use crate::error::{RagError, Result};
 use crate::types::{ChunkingConfig, ChunkingStrategy, Document};
@@ -15,6 +15,12 @@ pub trait DocumentChunker: Send + Sync {
 /// Enhanced document chunker supporting multiple strategies
 pub struct EnhancedChunker;
 
+impl Default for EnhancedChunker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnhancedChunker {
     pub fn new() -> Self {
         Self
@@ -27,27 +33,57 @@ impl EnhancedChunker {
         config: &ChunkingConfig,
     ) -> Result<Vec<Document>> {
         match &config.strategy {
-            ChunkingStrategy::Recursive { separators, is_separator_regex } => {
-                self.chunk_recursive(&document, config, separators.as_ref(), *is_separator_regex).await
+            ChunkingStrategy::Recursive {
+                separators,
+                is_separator_regex,
+            } => {
+                self.chunk_recursive(&document, config, separators.as_ref(), *is_separator_regex)
+                    .await
             }
-            ChunkingStrategy::Character { separator, is_separator_regex } => {
-                self.chunk_character(&document, config, separator, *is_separator_regex).await
+            ChunkingStrategy::Character {
+                separator,
+                is_separator_regex,
+            } => {
+                self.chunk_character(&document, config, separator, *is_separator_regex)
+                    .await
             }
-            ChunkingStrategy::Token { encoding_name: _, model_name: _ } => {
-                self.chunk_token(&document, config).await
+            ChunkingStrategy::Token {
+                encoding_name: _,
+                model_name: _,
+            } => self.chunk_token(&document, config).await,
+            ChunkingStrategy::Markdown {
+                headers,
+                return_each_line,
+                strip_headers,
+            } => {
+                self.chunk_markdown(
+                    &document,
+                    config,
+                    headers.as_ref(),
+                    *return_each_line,
+                    *strip_headers,
+                )
+                .await
             }
-            ChunkingStrategy::Markdown { headers, return_each_line, strip_headers } => {
-                self.chunk_markdown(&document, config, headers.as_ref(), *return_each_line, *strip_headers).await
+            ChunkingStrategy::Html {
+                headers,
+                sections,
+                return_each_line,
+            } => {
+                self.chunk_html(
+                    &document,
+                    config,
+                    headers.as_ref(),
+                    sections.as_ref(),
+                    *return_each_line,
+                )
+                .await
             }
-            ChunkingStrategy::Html { headers, sections, return_each_line } => {
-                self.chunk_html(&document, config, headers.as_ref(), sections.as_ref(), *return_each_line).await
-            }
-            ChunkingStrategy::Json { ensure_ascii: _, convert_lists: _ } => {
-                self.chunk_json(&document, config).await
-            }
-            ChunkingStrategy::Latex => {
-                self.chunk_latex(&document, config).await
-            }
+            ChunkingStrategy::Json {
+                ensure_ascii: _,
+                convert_lists: _,
+            } => self.chunk_json(&document, config).await,
+            ChunkingStrategy::Latex => self.chunk_latex(&document, config).await,
         }
     }
 
@@ -67,7 +103,8 @@ impl EnhancedChunker {
         ];
 
         let seps = separators.unwrap_or(&default_separators);
-        let chunks = self.split_text_recursive(&document.content, seps, config, is_separator_regex)?;
+        let chunks =
+            self.split_text_recursive(&document.content, seps, config, is_separator_regex)?;
 
         self.create_chunk_documents(document, chunks)
     }
@@ -82,10 +119,17 @@ impl EnhancedChunker {
     ) -> Result<Vec<Document>> {
         let chunks = if is_separator_regex {
             let regex = Regex::new(separator)
-                .map_err(|e| RagError::DocumentChunking(format!("Invalid regex: {}", e)))?;
-            regex.split(&document.content).map(|s| s.to_string()).collect()
+                .map_err(|e| RagError::DocumentChunking(format!("Invalid regex: {e}")))?;
+            regex
+                .split(&document.content)
+                .map(|s| s.to_string())
+                .collect()
         } else {
-            document.content.split(separator).map(|s| s.to_string()).collect()
+            document
+                .content
+                .split(separator)
+                .map(|s| s.to_string())
+                .collect()
         };
 
         let merged_chunks = self.merge_chunks(chunks, config)?;
@@ -132,10 +176,19 @@ impl EnhancedChunker {
         strip_headers: bool,
     ) -> Result<Vec<Document>> {
         if let Some(header_levels) = headers {
-            self.chunk_by_headers(&document.content, header_levels, return_each_line, strip_headers, config, document).await
+            self.chunk_by_headers(
+                &document.content,
+                header_levels,
+                return_each_line,
+                strip_headers,
+                config,
+                document,
+            )
+            .await
         } else {
             // Default markdown chunking by paragraphs
-            let chunks: Vec<String> = document.content
+            let chunks: Vec<String> = document
+                .content
                 .split("\n\n")
                 .filter(|s| !s.trim().is_empty())
                 .map(|s| s.to_string())
@@ -156,12 +209,20 @@ impl EnhancedChunker {
         return_each_line: bool,
     ) -> Result<Vec<Document>> {
         if let Some(header_tags) = headers {
-            self.chunk_by_html_headers(&document.content, header_tags, return_each_line, config, document).await
+            self.chunk_by_html_headers(
+                &document.content,
+                header_tags,
+                return_each_line,
+                config,
+                document,
+            )
+            .await
         } else if let Some(section_tags) = sections {
-            self.chunk_by_html_sections(&document.content, section_tags, config, document).await
+            self.chunk_by_html_sections(&document.content, section_tags, config, document)
+                .await
         } else {
             return Err(RagError::DocumentChunking(
-                "HTML chunking requires either headers or sections to be specified".into()
+                "HTML chunking requires either headers or sections to be specified".into(),
             ));
         }
     }
@@ -174,7 +235,7 @@ impl EnhancedChunker {
     ) -> Result<Vec<Document>> {
         // Parse JSON and chunk by objects/arrays
         let json_value: serde_json::Value = serde_json::from_str(&document.content)
-            .map_err(|e| RagError::DocumentChunking(format!("Invalid JSON: {}", e)))?;
+            .map_err(|e| RagError::DocumentChunking(format!("Invalid JSON: {e}")))?;
 
         let chunks = self.chunk_json_value(&json_value, config.chunk_size)?;
         self.create_chunk_documents(document, chunks)
@@ -196,7 +257,8 @@ impl EnhancedChunker {
             "\n".to_string(),
         ];
 
-        let chunks = self.split_text_recursive(&document.content, &latex_separators, config, false)?;
+        let chunks =
+            self.split_text_recursive(&document.content, &latex_separators, config, false)?;
         self.create_chunk_documents(document, chunks)
     }
 
@@ -217,7 +279,7 @@ impl EnhancedChunker {
 
         let splits: Vec<String> = if is_separator_regex {
             let regex = Regex::new(separator)
-                .map_err(|e| RagError::DocumentChunking(format!("Invalid regex: {}", e)))?;
+                .map_err(|e| RagError::DocumentChunking(format!("Invalid regex: {e}")))?;
             regex.split(text).map(|s| s.to_string()).collect()
         } else {
             text.split(separator).map(|s| s.to_string()).collect()
@@ -230,7 +292,12 @@ impl EnhancedChunker {
             if split_str.len() <= config.chunk_size {
                 final_chunks.push(split_str);
             } else if !remaining_separators.is_empty() {
-                let sub_chunks = self.split_text_recursive(&split_str, remaining_separators, config, is_separator_regex)?;
+                let sub_chunks = self.split_text_recursive(
+                    &split_str,
+                    remaining_separators,
+                    config,
+                    is_separator_regex,
+                )?;
                 final_chunks.extend(sub_chunks);
             } else {
                 // Force split by characters if no more separators
@@ -239,7 +306,7 @@ impl EnhancedChunker {
             }
         }
 
-        Ok(self.merge_chunks(final_chunks, config)?)
+        self.merge_chunks(final_chunks, config)
     }
 
     /// Force split text by characters when no separators work
@@ -271,8 +338,9 @@ impl EnhancedChunker {
             }
 
             // Check if adding this chunk would exceed the limit
-            if !current_chunk.is_empty() &&
-               current_chunk.len() + chunk.len() + 1 > config.chunk_size {
+            if !current_chunk.is_empty()
+                && current_chunk.len() + chunk.len() + 1 > config.chunk_size
+            {
                 // Save current chunk and start a new one
                 merged.push(current_chunk.clone());
                 current_chunk = chunk.to_string();
@@ -294,7 +362,11 @@ impl EnhancedChunker {
     }
 
     /// Create chunk documents from text chunks
-    fn create_chunk_documents(&self, original: &Document, chunks: Vec<String>) -> Result<Vec<Document>> {
+    fn create_chunk_documents(
+        &self,
+        original: &Document,
+        chunks: Vec<String>,
+    ) -> Result<Vec<Document>> {
         let mut documents = Vec::with_capacity(chunks.len());
 
         for (i, chunk_content) in chunks.into_iter().enumerate() {
@@ -402,8 +474,9 @@ impl EnhancedChunker {
             let mut is_header = false;
 
             for header_tag in headers {
-                if line.contains(&format!("<{}>", header_tag)) ||
-                   line.contains(&format!("<{} ", header_tag)) {
+                if line.contains(&format!("<{header_tag}>"))
+                    || line.contains(&format!("<{header_tag} "))
+                {
                     if !current_chunk.is_empty() {
                         chunks.push(current_chunk.clone());
                         current_chunk.clear();
@@ -413,11 +486,9 @@ impl EnhancedChunker {
                 }
             }
 
-            if return_each_line && !is_header {
-                if !current_chunk.is_empty() {
-                    chunks.push(current_chunk.clone());
-                    current_chunk.clear();
-                }
+            if return_each_line && !is_header && !current_chunk.is_empty() {
+                chunks.push(current_chunk.clone());
+                current_chunk.clear();
             }
 
             current_chunk.push_str(line);
@@ -448,8 +519,9 @@ impl EnhancedChunker {
             let mut _is_section_start = false;
 
             for section_tag in sections {
-                if line.contains(&format!("<{}>", section_tag)) ||
-                   line.contains(&format!("<{} ", section_tag)) {
+                if line.contains(&format!("<{section_tag}>"))
+                    || line.contains(&format!("<{section_tag} "))
+                {
                     if !current_chunk.is_empty() {
                         chunks.push(current_chunk.clone());
                         current_chunk.clear();
@@ -478,37 +550,40 @@ impl EnhancedChunker {
         match value {
             serde_json::Value::Object(obj) => {
                 for (key, val) in obj {
-                    let val_str = serde_json::to_string_pretty(val)
-                        .map_err(|e| RagError::DocumentChunking(format!("JSON serialization error: {}", e)))?;
+                    let val_str = serde_json::to_string_pretty(val).map_err(|e| {
+                        RagError::DocumentChunking(format!("JSON serialization error: {e}"))
+                    })?;
 
                     if val_str.len() <= max_size {
-                        chunks.push(format!("{}: {}", key, val_str));
+                        chunks.push(format!("{key}: {val_str}"));
                     } else {
                         let sub_chunks = self.chunk_json_value(val, max_size)?;
                         for sub_chunk in sub_chunks {
-                            chunks.push(format!("{}: {}", key, sub_chunk));
+                            chunks.push(format!("{key}: {sub_chunk}"));
                         }
                     }
                 }
             }
             serde_json::Value::Array(arr) => {
                 for (i, val) in arr.iter().enumerate() {
-                    let val_str = serde_json::to_string_pretty(val)
-                        .map_err(|e| RagError::DocumentChunking(format!("JSON serialization error: {}", e)))?;
+                    let val_str = serde_json::to_string_pretty(val).map_err(|e| {
+                        RagError::DocumentChunking(format!("JSON serialization error: {e}"))
+                    })?;
 
                     if val_str.len() <= max_size {
-                        chunks.push(format!("[{}]: {}", i, val_str));
+                        chunks.push(format!("[{i}]: {val_str}"));
                     } else {
                         let sub_chunks = self.chunk_json_value(val, max_size)?;
                         for sub_chunk in sub_chunks {
-                            chunks.push(format!("[{}]: {}", i, sub_chunk));
+                            chunks.push(format!("[{i}]: {sub_chunk}"));
                         }
                     }
                 }
             }
             _ => {
-                let val_str = serde_json::to_string_pretty(value)
-                    .map_err(|e| RagError::DocumentChunking(format!("JSON serialization error: {}", e)))?;
+                let val_str = serde_json::to_string_pretty(value).map_err(|e| {
+                    RagError::DocumentChunking(format!("JSON serialization error: {e}"))
+                })?;
                 chunks.push(val_str);
             }
         }
@@ -534,113 +609,119 @@ impl TextChunker {
     pub fn new(config: ChunkingConfig) -> Self {
         Self { config }
     }
-    
+
     /// 使用默认配置创建分块器
     pub fn default() -> Self {
-        Self { config: ChunkingConfig::default() }
+        Self {
+            config: ChunkingConfig::default(),
+        }
     }
-    
+
     /// 将文本分块
     pub fn chunk_text(&self, text: &str) -> Result<Vec<String>> {
         // Use character-based chunking by default
         self.chunk_by_chars(text)
     }
-    
+
     /// 将文档分块
     pub fn chunk_document(&self, document: &Document) -> Result<Vec<Document>> {
         let chunks = self.chunk_text(&document.content)?;
         let mut documents = Vec::with_capacity(chunks.len());
-        
+
         for (i, chunk_text) in chunks.into_iter().enumerate() {
             let mut metadata = document.metadata.clone();
             metadata.add("chunk_index", i as i64);
             metadata.add("parent_id", document.id.clone());
-            
+
             let chunk_document = Document {
                 id: format!("{}-chunk-{}", document.id, i),
                 content: chunk_text,
                 metadata,
                 embedding: None,
             };
-            
+
             documents.push(chunk_document);
         }
-        
+
         Ok(documents)
     }
-    
+
     /// 按字符分块
     fn chunk_by_chars(&self, text: &str) -> Result<Vec<String>> {
         let chars: Vec<char> = text.chars().collect();
         let chunk_size = self.config.chunk_size;
         let overlap = self.config.chunk_overlap;
-        
+
         if chunk_size == 0 {
-            return Err(RagError::DocumentChunking("Chunk size cannot be zero".into()));
+            return Err(RagError::DocumentChunking(
+                "Chunk size cannot be zero".into(),
+            ));
         }
-        
+
         let mut chunks = Vec::new();
         let mut i = 0;
-        
+
         while i < chars.len() {
             let end = std::cmp::min(i + chunk_size, chars.len());
             let chunk: String = chars[i..end].iter().collect();
             chunks.push(chunk);
-            
+
             // 处理重叠
             if end >= chars.len() {
                 break;
             }
-            
+
             i += chunk_size - overlap;
         }
-        
+
         Ok(chunks)
     }
-    
+
     /// 按句子分块
     fn chunk_by_sentences(&self, text: &str) -> Result<Vec<String>> {
         // 不使用正则表达式的简单句子分割方法
         let sentence_endings = ['.', '!', '?'];
-        
+
         let mut sentences = Vec::new();
         let mut current_sentence = String::new();
         let mut last_char = ' ';
-        
+
         for c in text.chars() {
             current_sentence.push(c);
-            
+
             // 如果当前字符是句子结束符号，且下一个字符是空格
             if sentence_endings.contains(&last_char) && c.is_whitespace() {
                 sentences.push(current_sentence.clone());
                 current_sentence.clear();
             }
-            
+
             last_char = c;
         }
-        
+
         // 添加最后一个句子（如果有）
         if !current_sentence.is_empty() {
             sentences.push(current_sentence);
         }
-        
+
         // 将句子合并为块
         let chunk_size = self.config.chunk_size;
         let overlap = self.config.chunk_overlap;
-        
+
         if chunk_size == 0 {
-            return Err(RagError::DocumentChunking("Chunk size cannot be zero".into()));
+            return Err(RagError::DocumentChunking(
+                "Chunk size cannot be zero".into(),
+            ));
         }
-        
+
         let mut chunks = Vec::new();
         let mut current_chunk = String::new();
         let mut sentences_in_chunk = 0;
-        
+
         for sentence in sentences {
             // 如果当前块已经达到或接近目标大小，创建新块
             if sentences_in_chunk >= chunk_size {
                 chunks.push(current_chunk.clone());
-                
+
                 // 考虑重叠
                 if overlap > 0 {
                     let overlap_sentences = sentences_in_chunk.min(overlap);
@@ -650,45 +731,47 @@ impl TextChunker {
                     sentences_in_chunk = 0;
                 }
             }
-            
+
             current_chunk.push_str(&sentence);
             sentences_in_chunk += 1;
         }
-        
+
         // 添加最后一个块（如果有）
         if !current_chunk.is_empty() {
             chunks.push(current_chunk);
         }
-        
+
         Ok(chunks)
     }
-    
+
     /// 按token分块
     fn chunk_by_tokens(&self, text: &str) -> Result<Vec<String>> {
         // 简单实现，将单词作为token
         let words: Vec<&str> = text.split_whitespace().collect();
         let chunk_size = self.config.chunk_size;
         let overlap = self.config.chunk_overlap;
-        
+
         if chunk_size == 0 {
-            return Err(RagError::DocumentChunking("Chunk size cannot be zero".into()));
+            return Err(RagError::DocumentChunking(
+                "Chunk size cannot be zero".into(),
+            ));
         }
-        
+
         let mut chunks = Vec::new();
         let mut i = 0;
-        
+
         while i < words.len() {
             let end = std::cmp::min(i + chunk_size, words.len());
             let chunk = words[i..end].join(" ");
             chunks.push(chunk);
-            
+
             if end >= words.len() {
                 break;
             }
-            
+
             i += chunk_size - overlap;
         }
-        
+
         Ok(chunks)
     }
 }
@@ -702,19 +785,17 @@ impl DocumentChunker for TextChunker {
                 // For this example, we'll approximate with sentences
                 self.chunk_by_sentences(&document.content)?
             }
-            _ => {
-                self.chunk_by_chars(&document.content)?
-            }
+            _ => self.chunk_by_chars(&document.content)?,
         };
-        
+
         let mut chunked_docs = Vec::with_capacity(chunks.len());
-        
+
         for (i, chunk_content) in chunks.into_iter().enumerate() {
             // Create metadata for the chunk
             let mut chunk_metadata = document.metadata.clone();
             chunk_metadata.add("chunk_index", i as i64);
             chunk_metadata.add("parent_document_id", document.id.clone());
-            
+
             // Create the chunk document
             let chunk_doc = Document {
                 id: Uuid::new_v4().to_string(),
@@ -722,10 +803,10 @@ impl DocumentChunker for TextChunker {
                 metadata: chunk_metadata,
                 embedding: None,
             };
-            
+
             chunked_docs.push(chunk_doc);
         }
-        
+
         Ok(chunked_docs)
     }
 }
@@ -748,27 +829,37 @@ mod tests {
         });
         let doc = Document {
             id: "test".to_string(),
-            content: "This is a test document. It has multiple sentences. We want to chunk it.".to_string(),
+            content: "This is a test document. It has multiple sentences. We want to chunk it."
+                .to_string(),
             metadata: Metadata::new(),
             embedding: None,
         };
-        
-        let chunks = chunker.chunk(doc, &ChunkingConfig::default()).await.unwrap();
-        
+
+        let chunks = chunker
+            .chunk(doc, &ChunkingConfig::default())
+            .await
+            .unwrap();
+
         assert!(chunks.len() > 1);
-        
+
         // Check that each chunk is approximately the right size
         for chunk in &chunks {
             assert!(chunk.content.len() <= 10 + 20); // Allow some flexibility
         }
-        
+
         // Check that the chunks have appropriate metadata
         for (i, chunk) in chunks.iter().enumerate() {
-            assert_eq!(chunk.metadata.fields.get("chunk_index").unwrap(), &serde_json::json!(i as i64));
-            assert_eq!(chunk.metadata.fields.get("parent_document_id").unwrap(), &serde_json::json!("test"));
+            assert_eq!(
+                chunk.metadata.fields.get("chunk_index").unwrap(),
+                &serde_json::json!(i as i64)
+            );
+            assert_eq!(
+                chunk.metadata.fields.get("parent_document_id").unwrap(),
+                &serde_json::json!("test")
+            );
         }
     }
-    
+
     #[tokio::test]
     async fn test_text_chunker_by_sentences() {
         let chunker = TextChunker::new(ChunkingConfig {
@@ -782,13 +873,17 @@ mod tests {
         });
         let doc = Document {
             id: "test".to_string(),
-            content: "This is sentence one. This is sentence two! This is three? This is four.".to_string(),
+            content: "This is sentence one. This is sentence two! This is three? This is four."
+                .to_string(),
             metadata: Metadata::new(),
             embedding: None,
         };
-        
-        let chunks = chunker.chunk(doc, &ChunkingConfig::default()).await.unwrap();
-        
+
+        let chunks = chunker
+            .chunk(doc, &ChunkingConfig::default())
+            .await
+            .unwrap();
+
         assert!(chunks.len() > 1);
     }
-} 
+}

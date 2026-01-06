@@ -1,29 +1,29 @@
 //! 多语言绑定类型定义
-//! 
+//!
 //! 提供跨语言的统一类型定义和转换
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// 跨语言消息类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
     /// 消息ID
     pub id: String,
-    
+
     /// 消息内容
     pub content: String,
-    
+
     /// 消息类型
     pub message_type: MessageType,
-    
+
     /// 发送者
     pub sender: String,
-    
+
     /// 时间戳
     pub timestamp: DateTime<Utc>,
-    
+
     /// 元数据
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -48,19 +48,19 @@ pub enum MessageType {
 pub struct Conversation {
     /// 会话ID
     pub id: String,
-    
+
     /// 消息列表
     pub messages: Vec<Message>,
-    
+
     /// 会话状态
     pub status: ConversationStatus,
-    
+
     /// 创建时间
     pub created_at: DateTime<Utc>,
-    
+
     /// 更新时间
     pub updated_at: DateTime<Utc>,
-    
+
     /// 会话元数据
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -83,25 +83,25 @@ pub enum ConversationStatus {
 pub struct ToolDefinition {
     /// 工具名称
     pub name: String,
-    
+
     /// 工具描述
     pub description: String,
-    
+
     /// 参数模式
     pub parameters: ParameterSchema,
-    
+
     /// 返回值模式
     pub returns: Option<ParameterSchema>,
-    
+
     /// 工具类型
     pub tool_type: ToolType,
-    
+
     /// 是否异步
     pub is_async: bool,
-    
+
     /// 工具标签
     pub tags: Vec<String>,
-    
+
     /// 工具版本
     pub version: String,
 }
@@ -111,22 +111,22 @@ pub struct ToolDefinition {
 pub struct ParameterSchema {
     /// 参数类型
     pub param_type: ParameterType,
-    
+
     /// 参数描述
     pub description: Option<String>,
-    
+
     /// 是否必需
     pub required: bool,
-    
+
     /// 默认值
     pub default: Option<serde_json::Value>,
-    
+
     /// 枚举值
     pub enum_values: Option<Vec<serde_json::Value>>,
-    
+
     /// 子参数（对象类型）
     pub properties: Option<HashMap<String, ParameterSchema>>,
-    
+
     /// 数组项类型
     pub items: Option<Box<ParameterSchema>>,
 }
@@ -174,22 +174,22 @@ pub enum ToolType {
 pub struct ExecutionResult {
     /// 执行ID
     pub execution_id: String,
-    
+
     /// 是否成功
     pub success: bool,
-    
+
     /// 结果数据
     pub data: serde_json::Value,
-    
+
     /// 错误信息
     pub error: Option<String>,
-    
+
     /// 执行时间（毫秒）
     pub execution_time_ms: u64,
-    
+
     /// 内存使用（字节）
     pub memory_usage_bytes: Option<u64>,
-    
+
     /// 执行统计
     pub stats: ExecutionStats,
 }
@@ -199,19 +199,19 @@ pub struct ExecutionResult {
 pub struct ExecutionStats {
     /// 开始时间
     pub start_time: DateTime<Utc>,
-    
+
     /// 结束时间
     pub end_time: DateTime<Utc>,
-    
+
     /// CPU使用率
     pub cpu_usage_percent: Option<f64>,
-    
+
     /// 网络请求数
     pub network_requests: u32,
-    
+
     /// 缓存命中数
     pub cache_hits: u32,
-    
+
     /// 缓存未命中数
     pub cache_misses: u32,
 }
@@ -221,13 +221,13 @@ pub struct ExecutionStats {
 pub struct ConfigOptions {
     /// 语言特定配置
     pub language_config: LanguageConfig,
-    
+
     /// 性能配置
     pub performance: PerformanceConfig,
-    
+
     /// 安全配置
     pub security: SecurityConfig,
-    
+
     /// 日志配置
     pub logging: LoggingConfig,
 }
@@ -237,10 +237,10 @@ pub struct ConfigOptions {
 pub struct LanguageConfig {
     /// 目标语言
     pub target_language: TargetLanguage,
-    
+
     /// 语言版本
     pub language_version: String,
-    
+
     /// 特定选项
     pub language_options: HashMap<String, serde_json::Value>,
 }
@@ -271,16 +271,16 @@ pub enum TargetLanguage {
 pub struct PerformanceConfig {
     /// 线程池大小
     pub thread_pool_size: Option<usize>,
-    
+
     /// 内存限制（字节）
     pub memory_limit_bytes: Option<u64>,
-    
+
     /// 超时时间（秒）
     pub timeout_seconds: u64,
-    
+
     /// 启用缓存
     pub enable_cache: bool,
-    
+
     /// 缓存大小
     pub cache_size: Option<usize>,
 }
@@ -290,13 +290,13 @@ pub struct PerformanceConfig {
 pub struct SecurityConfig {
     /// 启用沙箱
     pub enable_sandbox: bool,
-    
+
     /// 允许的域名
     pub allowed_domains: Vec<String>,
-    
+
     /// 禁止的操作
     pub forbidden_operations: Vec<String>,
-    
+
     /// API密钥验证
     pub require_api_key: bool,
 }
@@ -306,13 +306,13 @@ pub struct SecurityConfig {
 pub struct LoggingConfig {
     /// 日志级别
     pub level: LogLevel,
-    
+
     /// 日志格式
     pub format: LogFormat,
-    
+
     /// 输出目标
     pub output: LogOutput,
-    
+
     /// 启用结构化日志
     pub structured: bool,
 }
@@ -393,17 +393,17 @@ impl Default for LoggingConfig {
 /// 类型转换工具
 pub mod conversion {
     use super::*;
-    
+
     /// 将Rust值转换为跨语言值
     pub fn to_cross_lang_value(value: &serde_json::Value) -> serde_json::Value {
         value.clone()
     }
-    
+
     /// 将跨语言值转换为Rust值
     pub fn from_cross_lang_value(value: &serde_json::Value) -> serde_json::Value {
         value.clone()
     }
-    
+
     /// 验证参数类型
     pub fn validate_parameter(value: &serde_json::Value, schema: &ParameterSchema) -> bool {
         match (&schema.param_type, value) {

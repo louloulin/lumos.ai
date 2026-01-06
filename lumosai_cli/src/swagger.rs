@@ -93,7 +93,7 @@ pub struct OpenApiComponents {
 /// 生成 OpenAPI 规范
 pub fn generate_open_api_spec(server_port: u16) -> OpenApiSpec {
     let base_url = format!("http://localhost:{}", server_port);
-    
+
     // 创建基本规范
     let mut spec = OpenApiSpec {
         openapi: "3.0.0".to_string(),
@@ -113,16 +113,16 @@ pub fn generate_open_api_spec(server_port: u16) -> OpenApiSpec {
             schemas: HashMap::new(),
         },
     };
-    
+
     // 添加路径
     add_agent_routes(&mut spec);
     add_tool_routes(&mut spec);
     add_workflow_routes(&mut spec);
     add_system_routes(&mut spec);
-    
+
     // 添加组件
     add_schema_components(&mut spec);
-    
+
     spec
 }
 
@@ -233,7 +233,7 @@ fn add_agent_routes(spec: &mut OpenApiSpec) {
             }
         )]),
     );
-    
+
     // POST /api/agents/:agentId/generate - 生成响应
     spec.paths.insert(
         "/api/agents/{agentId}/generate".to_string(),
@@ -347,7 +347,7 @@ fn add_tool_routes(spec: &mut OpenApiSpec) {
             }
         )]),
     );
-    
+
     // POST /api/tools/:toolId/execute - 执行工具
     spec.paths.insert(
         "/api/tools/{toolId}/execute".to_string(),
@@ -461,7 +461,7 @@ fn add_workflow_routes(spec: &mut OpenApiSpec) {
             }
         )]),
     );
-    
+
     // POST /api/workflows/:workflowId/start - 开始工作流
     spec.paths.insert(
         "/api/workflows/{workflowId}/start".to_string(),
@@ -595,7 +595,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
             ref_path: None,
         }
     );
-    
+
     // Tool 模式
     spec.components.schemas.insert(
         "Tool".to_string(),
@@ -646,7 +646,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
             ref_path: None,
         }
     );
-    
+
     // Workflow 模式
     spec.components.schemas.insert(
         "Workflow".to_string(),
@@ -685,7 +685,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
             ref_path: None,
         }
     );
-    
+
     // Message 模式
     spec.components.schemas.insert(
         "Message".to_string(),
@@ -729,7 +729,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
             ref_path: None,
         }
     );
-    
+
     // GenerateRequest 模式
     spec.components.schemas.insert(
         "GenerateRequest".to_string(),
@@ -776,7 +776,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
             ref_path: None,
         }
     );
-    
+
     // GenerateResponse 模式
     spec.components.schemas.insert(
         "GenerateResponse".to_string(),
@@ -815,7 +815,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
             ref_path: None,
         }
     );
-    
+
     // ToolExecuteRequest 模式
     spec.components.schemas.insert(
         "ToolExecuteRequest".to_string(),
@@ -842,7 +842,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
             ref_path: None,
         }
     );
-    
+
     // ToolExecuteResponse 模式
     spec.components.schemas.insert(
         "ToolExecuteResponse".to_string(),
@@ -869,7 +869,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
             ref_path: None,
         }
     );
-    
+
     // WorkflowStartRequest 模式
     spec.components.schemas.insert(
         "WorkflowStartRequest".to_string(),
@@ -896,7 +896,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
             ref_path: None,
         }
     );
-    
+
     // WorkflowStartResponse 模式
     spec.components.schemas.insert(
         "WorkflowStartResponse".to_string(),
@@ -940,7 +940,7 @@ fn add_schema_components(spec: &mut OpenApiSpec) {
 /// 生成 Swagger UI HTML
 pub fn generate_swagger_ui_html(server_port: u16) -> String {
     let swagger_url = format!("http://localhost:{}/openapi.json", server_port);
-    
+
     format!(r#"
 <!DOCTYPE html>
 <html lang="en">
@@ -954,13 +954,13 @@ pub fn generate_swagger_ui_html(server_port: u16) -> String {
             overflow: -moz-scrollbars-vertical;
             overflow-y: scroll;
         }}
-        
+
         *,
         *:before,
         *:after {{
             box-sizing: inherit;
         }}
-        
+
         body {{
             margin:0;
             background: #fafafa;
@@ -969,7 +969,7 @@ pub fn generate_swagger_ui_html(server_port: u16) -> String {
 </head>
 <body>
     <div id="swagger-ui"></div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.5.0/swagger-ui-bundle.js"> </script>
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.5.0/swagger-ui-standalone-preset.js"> </script>
     <script>
@@ -987,7 +987,7 @@ pub fn generate_swagger_ui_html(server_port: u16) -> String {
             ],
             layout: "BaseLayout"
         }})
-        
+
         window.ui = ui
     }}
     </script>

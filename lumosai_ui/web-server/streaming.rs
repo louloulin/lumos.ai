@@ -26,8 +26,8 @@ use tokio_stream::StreamExt;
 
 use crate::ai_client::{AIClient, ChatMessage, MessageRole};
 use crate::database::Database;
-use crate::tools::{ToolRegistry, ToolContext};
 use crate::file_handler::FileHandler;
+use crate::tools::{ToolContext, ToolRegistry};
 
 /// 流式聊天请求
 #[derive(Debug, Deserialize)]
@@ -49,9 +49,7 @@ pub enum StreamEvent {
     },
     /// 文本增量
     #[serde(rename = "delta")]
-    Delta {
-        content: String,
-    },
+    Delta { content: String },
     /// 工具调用
     #[serde(rename = "tool_call")]
     ToolCall {
@@ -88,13 +86,12 @@ pub async fn stream_chat(
     Json(request): Json<StreamChatRequest>,
 ) -> impl IntoResponse {
     let stream = create_chat_stream(state.ai_client, state.database, request).await;
-    
-    Sse::new(stream)
-        .keep_alive(
-            KeepAlive::new()
-                .interval(Duration::from_secs(15))
-                .text("keep-alive-text"),
-        )
+
+    Sse::new(stream).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(15))
+            .text("keep-alive-text"),
+    )
 }
 
 /// 创建聊天流
@@ -145,7 +142,7 @@ async fn create_chat_stream(
                                 }
                             }
                         }
-                        
+
                         // 如果没有内容，发送空的delta
                         let event = StreamEvent::Delta {
                             content: String::new(),
@@ -165,8 +162,9 @@ async fn create_chat_stream(
                     }
                 }
             });
-            
-            Box::pin(mapped_stream) as std::pin::Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>
+
+            Box::pin(mapped_stream)
+                as std::pin::Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>
         }
         Err(e) => {
             let error_event = StreamEvent::Error {
@@ -252,29 +250,31 @@ pub async fn get_conversation(
     // 默认用户ID为1（系统用户）
     let user_id = 1;
 
-    match state.database.get_conversation(conversation_id, user_id).await {
-        Ok(conversation) => {
-            match state.database.get_messages(conversation_id).await {
-                Ok(messages) => Json(serde_json::json!({
-                    "success": true,
-                    "conversation": {
-                        "id": conversation.id,
-                        "title": conversation.title,
-                        "created_at": conversation.created_at,
-                        "updated_at": conversation.updated_at
-                    },
-                    "messages": messages
-                })),
-                Err(e) => Json(serde_json::json!({
-                    "success": false,
-                    "error": format!("Failed to get messages: {}", e)
-                }))
-            }
-        }
+    match state
+        .database
+        .get_conversation(conversation_id, user_id)
+        .await
+    {
+        Ok(conversation) => match state.database.get_messages(conversation_id).await {
+            Ok(messages) => Json(serde_json::json!({
+                "success": true,
+                "conversation": {
+                    "id": conversation.id,
+                    "title": conversation.title,
+                    "created_at": conversation.created_at,
+                    "updated_at": conversation.updated_at
+                },
+                "messages": messages
+            })),
+            Err(e) => Json(serde_json::json!({
+                "success": false,
+                "error": format!("Failed to get messages: {}", e)
+            })),
+        },
         Err(e) => Json(serde_json::json!({
             "success": false,
             "error": format!("Conversation not found: {}", e)
-        }))
+        })),
     }
 }
 
@@ -296,7 +296,11 @@ pub async fn delete_conversation(
     // 默认用户ID为1（系统用户）
     let user_id = 1;
 
-    match state.database.delete_conversation(conversation_id, user_id).await {
+    match state
+        .database
+        .delete_conversation(conversation_id, user_id)
+        .await
+    {
         Ok(_) => Json(serde_json::json!({
             "success": true,
             "conversation_id": conversation_id
@@ -304,14 +308,12 @@ pub async fn delete_conversation(
         Err(e) => Json(serde_json::json!({
             "success": false,
             "error": format!("Failed to delete conversation: {}", e)
-        }))
+        })),
     }
 }
 
 /// 获取对话列表
-pub async fn list_conversations(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn list_conversations(State(state): State<AppState>) -> impl IntoResponse {
     // 默认用户ID为1（系统用户）
     let user_id = 1;
 
@@ -324,7 +326,7 @@ pub async fn list_conversations(
         Err(e) => Json(serde_json::json!({
             "success": false,
             "error": format!("Failed to get conversations: {}", e)
-        }))
+        })),
     }
 }
 
@@ -348,9 +350,7 @@ pub async fn health_check() -> impl IntoResponse {
 }
 
 /// 获取可用工具列表
-pub async fn list_tools(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn list_tools(State(state): State<AppState>) -> impl IntoResponse {
     let tools = state.tool_registry.get_enabled_definitions();
     Json(serde_json::json!({
         "success": true,
@@ -364,15 +364,18 @@ pub async fn execute_tool(
     State(state): State<AppState>,
     Json(request): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    let tool_name = request.get("tool_name")
+    let tool_name = request
+        .get("tool_name")
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
-    let params = request.get("parameters")
+    let params = request
+        .get("parameters")
         .cloned()
         .unwrap_or(serde_json::json!({}));
 
-    let conversation_id = request.get("conversation_id")
+    let conversation_id = request
+        .get("conversation_id")
         .and_then(|v| v.as_i64())
         .unwrap_or(0);
 
@@ -383,7 +386,10 @@ pub async fn execute_tool(
         permissions: vec!["basic".to_string()],
     };
 
-    match state.tool_registry.execute_tool(tool_name, params, &context) {
+    match state
+        .tool_registry
+        .execute_tool(tool_name, params, &context)
+    {
         Ok(result) => Json(serde_json::json!({
             "success": true,
             "tool_name": tool_name,
@@ -393,7 +399,7 @@ pub async fn execute_tool(
             "success": false,
             "tool_name": tool_name,
             "error": e.to_string()
-        }))
+        })),
     }
 }
 

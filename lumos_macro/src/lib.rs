@@ -3,26 +3,29 @@
 #![allow(unexpected_cfgs, unused_assignments)]
 extern crate proc_macro;
 use proc_macro::TokenStream;
-use syn::{Expr, Ident, LitStr, Token, parse::{Parse, ParseStream}};
+use syn::{
+    parse::{Parse, ParseStream},
+    Expr, Ident, LitStr, Token,
+};
 // use syn::spanned::Spanned; // 暂时未使用
 
-mod parser;
-mod tool_macro;
-mod agent_macro;
-mod workflow;
-mod rag;
-mod eval;
-mod mcp;
 mod agent;
-mod tools;
+mod agent_macro;
+mod eval;
 mod lumos;
+mod mcp;
+mod parser;
+mod rag;
+mod tool_macro;
+mod tools;
+mod workflow;
 
 /// Macro for defining a tool in a simplified way
-/// 
+///
 /// # Example
 /// ```
 /// use lumos_macro::tool;
-/// 
+///
 /// #[tool(
 ///     name = "calculator",
 ///     description = "Performs basic math operations"
@@ -31,11 +34,11 @@ mod lumos;
 ///     #[parameter(
 ///         name = "operation",
 ///         description = "The operation to perform: add, subtract, multiply, divide",
-///         r#type = "string", 
+///         r#type = "string",
 ///         required = true
 ///     )]
 ///     operation: String,
-///     
+///
 ///     #[parameter(
 ///         name = "a",
 ///         description = "First number",
@@ -43,7 +46,7 @@ mod lumos;
 ///         required = true
 ///     )]
 ///     a: f64,
-///     
+///
 ///     #[parameter(
 ///         name = "b",
 ///         description = "Second number",
@@ -57,7 +60,69 @@ mod lumos;
 /// ```
 #[proc_macro_attribute]
 pub fn tool(attr: TokenStream, item: TokenStream) -> TokenStream {
-    tool_macro::tool_macro(attr, item)
+    tool_macro::tool_attribute_macro(attr, item)
+}
+
+/// Parameter attribute macro (DEPRECATED - 不推荐使用)
+///
+/// **⚠️ 重要警告**: 由于 Rust 语言限制，**不能在函数参数上使用自定义属性宏**。
+///
+/// ## 为什么不能使用？
+///
+/// 根据 [Rust Reference](https://doc.rust-lang.org/reference/items/functions.html#attributes-on-function-parameters)：
+///
+/// > Outer attributes are allowed on function parameters and the permitted built-in
+/// > attributes are restricted to `cfg`, `cfg_attr`, `allow`, `warn`, `deny`, and `forbid`.
+///
+/// 这意味着：
+/// - ✅ 函数参数**允许**外部属性（Outer attributes）
+/// - ❌ 但**仅限于**内置属性：`cfg`, `cfg_attr`, `allow`, `warn`, `deny`, `forbid`
+/// - ❌ **不允许**自定义过程宏属性（如 `#[parameter]`）
+///
+/// ## 推荐的替代方案
+///
+/// ### 方案 1: 使用函数级文档注释（推荐 ⭐⭐⭐⭐⭐）
+///
+/// ```rust
+/// /// 计算器工具 - 执行基本的数学运算
+/// ///
+/// /// 参数:
+/// /// - operation: 运算类型 (add, subtract, multiply, divide)
+/// /// - a: 第一个数字
+/// /// - b: 第二个数字
+/// #[tool(name = "calculator", description = "执行数学计算")]
+/// async fn calculator(operation: String, a: f64, b: f64) -> Result<Value> {
+///     // 实现...
+/// }
+/// ```
+///
+/// ### 方案 2: 使用 ToolBuilder（手动构建）
+///
+/// ```rust
+/// let tool = ToolBuilder::new()
+///     .name("calculator")
+///     .description("执行数学计算")
+///     .parameter("operation", "string", "运算类型", true)
+///     .parameter("a", "number", "第一个数字", true)
+///     .parameter("b", "number", "第二个数字", true)
+///     .handler(|params| async move {
+///         // 实现...
+///     })
+///     .build()?;
+/// ```
+///
+/// ## 技术细节
+///
+/// 这个宏被保留是为了向后兼容，但它实际上不做任何事情。
+/// `#[tool]` 宏会从函数的文档注释中提取参数描述。
+///
+/// 详细分析请参考：`docs/PARAMETER_MACRO_ANALYSIS.md`
+#[proc_macro_attribute]
+pub fn parameter(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    // 这个宏被保留是为了向后兼容，但实际上不做任何事情
+    // 由于 Rust 限制，不能在函数参数上使用自定义属性宏
+    // 请使用函数级文档注释来描述参数
+    item
 }
 
 struct ToolAttributes {
@@ -69,11 +134,11 @@ impl Parse for ToolAttributes {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut name = None;
         let mut description = None;
-        
+
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
             input.parse::<Token![=]>()?;
-            
+
             if ident == "name" {
                 name = Some(input.parse()?);
             } else if ident == "description" {
@@ -81,16 +146,17 @@ impl Parse for ToolAttributes {
             } else {
                 return Err(syn::Error::new(ident.span(), "Unknown attribute"));
             }
-            
+
             // Allow trailing comma
             if input.peek(Token![,]) {
                 input.parse::<Token![,]>()?;
             }
         }
-        
+
         let name = name.ok_or_else(|| syn::Error::new(input.span(), "Missing name attribute"))?;
-        let description = description.ok_or_else(|| syn::Error::new(input.span(), "Missing description attribute"))?;
-        
+        let description = description
+            .ok_or_else(|| syn::Error::new(input.span(), "Missing description attribute"))?;
+
         Ok(ToolAttributes { name, description })
     }
 }
@@ -108,15 +174,11 @@ impl Parse for ParameterAttributes {
         let mut description = None;
         let mut type_ = None;
         let mut required = None;
-        
-        let content;
-        syn::parenthesized!(content in input);
-        let input = &content;
-        
+
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
             input.parse::<Token![=]>()?;
-            
+
             if ident == "name" {
                 name = Some(input.parse()?);
             } else if ident == "description" {
@@ -133,28 +195,34 @@ impl Parse for ParameterAttributes {
             } else {
                 return Err(syn::Error::new(ident.span(), "Unknown parameter attribute"));
             }
-            
+
             // Allow trailing comma
             if input.peek(Token![,]) {
                 input.parse::<Token![,]>()?;
             }
         }
-        
+
         let name = name.ok_or_else(|| syn::Error::new(input.span(), "Missing name attribute"))?;
-        let description = description.ok_or_else(|| syn::Error::new(input.span(), "Missing description attribute"))?;
+        let description = description
+            .ok_or_else(|| syn::Error::new(input.span(), "Missing description attribute"))?;
         let type_ = type_.ok_or_else(|| syn::Error::new(input.span(), "Missing type attribute"))?;
         let required = required.unwrap_or(false);
-        
-        Ok(ParameterAttributes { name, description, type_, required })
+
+        Ok(ParameterAttributes {
+            name,
+            description,
+            type_,
+            required,
+        })
     }
 }
 
 /// Macro for defining an agent with tools in a simplified way
-/// 
+///
 /// # Example
 /// ```
 /// use lumos_macro::agent_attr;
-/// 
+///
 /// #[agent_attr(
 ///     name = "math_agent",
 ///     instructions = "You are a helpful math assistant that can perform calculations.",
@@ -163,7 +231,7 @@ impl Parse for ParameterAttributes {
 /// struct MathAgent {
 ///     #[tool]
 ///     calculator: CalculatorTool,
-///     
+///
 ///     #[tool]
 ///     unit_converter: UnitConverterTool,
 /// }
@@ -184,11 +252,11 @@ impl Parse for AgentAttributes {
         let mut name = None;
         let mut instructions = None;
         let mut model = None;
-        
+
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
             input.parse::<Token![=]>()?;
-            
+
             if ident == "name" {
                 name = Some(input.parse()?);
             } else if ident == "instructions" {
@@ -198,27 +266,33 @@ impl Parse for AgentAttributes {
             } else {
                 return Err(syn::Error::new(ident.span(), "Unknown attribute"));
             }
-            
+
             // Allow trailing comma
             if input.peek(Token![,]) {
                 input.parse::<Token![,]>()?;
             }
         }
-        
+
         let name = name.ok_or_else(|| syn::Error::new(input.span(), "Missing name attribute"))?;
-        let instructions = instructions.ok_or_else(|| syn::Error::new(input.span(), "Missing instructions attribute"))?;
-        let model = model.ok_or_else(|| syn::Error::new(input.span(), "Missing model attribute"))?;
-        
-        Ok(AgentAttributes { name, instructions, model })
+        let instructions = instructions
+            .ok_or_else(|| syn::Error::new(input.span(), "Missing instructions attribute"))?;
+        let model =
+            model.ok_or_else(|| syn::Error::new(input.span(), "Missing model attribute"))?;
+
+        Ok(AgentAttributes {
+            name,
+            instructions,
+            model,
+        })
     }
 }
 
 /// A convenient derive macro for defining a model adapter
-/// 
+///
 /// # Example
 /// ```
 /// use lumos_macro::LlmAdapter;
-/// 
+///
 /// #[derive(LlmAdapter)]
 /// struct OpenAIAdapter {
 ///     api_key: String,
@@ -257,11 +331,11 @@ impl Parse for ToolExecuteArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut tool = None;
         let mut params = None;
-        
+
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
             input.parse::<Token![:]>()?;
-            
+
             if ident == "tool" {
                 tool = Some(input.parse()?);
             } else if ident == "params" {
@@ -269,24 +343,24 @@ impl Parse for ToolExecuteArgs {
             } else {
                 return Err(syn::Error::new(ident.span(), "Unknown field"));
             }
-            
+
             // Allow trailing comma
             if input.peek(Token![,]) {
                 input.parse::<Token![,]>()?;
             }
         }
-        
+
         let tool = tool.ok_or_else(|| syn::Error::new(input.span(), "Missing tool field"))?;
         let params = params.ok_or_else(|| syn::Error::new(input.span(), "Missing params field"))?;
-        
+
         Ok(ToolExecuteArgs { tool, params })
     }
 }
 
 /// 创建一个工作流定义，参考Mastra的工作流API设计
-/// 
+///
 /// # 示例
-/// 
+///
 /// ```rust
 /// workflow! {
 ///     name: "content_creation",
@@ -312,32 +386,32 @@ pub fn workflow(input: TokenStream) -> TokenStream {
 }
 
 /// 创建一个RAG管道，参考Mastra的RAG原语API设计
-/// 
+///
 /// # 示例
-/// 
+///
 /// ```rust
 /// rag_pipeline! {
 ///     name: "knowledge_base",
-///     
+///
 ///     source: DocumentSource::from_directory("./docs"),
-///     
+///
 ///     pipeline: {
 ///         chunk: {
 ///             chunk_size: 1000,
 ///             chunk_overlap: 200
 ///         },
-///         
+///
 ///         embed: {
 ///             model: "text-embedding-3-small",
 ///             dimensions: 1536
 ///         },
-///         
+///
 ///         store: {
 ///             db: "pgvector",
 ///             collection: "embeddings"
 ///         }
 ///     },
-///     
+///
 ///     query_pipeline: {
 ///         rerank: true,
 ///         top_k: 5,
@@ -351,24 +425,24 @@ pub fn rag_pipeline(input: TokenStream) -> TokenStream {
 }
 
 /// 创建一个评估套件，参考Mastra的Eval框架
-/// 
+///
 /// # 示例
-/// 
+///
 /// ```rust
 /// eval_suite! {
 ///     name: "agent_performance",
-///     
+///
 ///     metrics: {
 ///         accuracy: AccuracyMetric::new(0.8),
 ///         relevance: RelevanceMetric::new(0.7),
 ///         completeness: CompletenessMetric::new(0.6)
 ///     },
-///     
+///
 ///     test_cases: {
 ///         basic_queries: "./tests/basic_queries.json",
 ///         complex_queries: "./tests/complex_queries.json"
 ///     },
-///     
+///
 ///     reporting: {
 ///         format: "html",
 ///         output: "./reports/eval_results.html"
@@ -381,16 +455,16 @@ pub fn eval_suite(input: TokenStream) -> TokenStream {
 }
 
 /// 创建一个MCP客户端配置，参考Mastra的MCP支持
-/// 
+///
 /// # 示例
-/// 
+///
 /// ```rust
 /// mcp_client! {
 ///     discovery: {
 ///         endpoints: ["https://tools.example.com/mcp", "https://api.mcp.run"],
 ///         auto_register: true
 ///     },
-///     
+///
 ///     tools: {
 ///         data_analysis: {
 ///             enabled: true,
@@ -412,24 +486,24 @@ pub fn mcp_client(input: TokenStream) -> TokenStream {
 }
 
 /// 创建一个代理定义，参考Mastra的Agent API设计
-/// 
+///
 /// # 示例
-/// 
+///
 /// ```rust
 /// agent! {
 ///     name: "research_assistant",
 ///     instructions: "你是一个专业的研究助手，擅长收集和整理信息。",
-///     
+///
 ///     llm: {
 ///         provider: openai_adapter,
 ///         model: "gpt-4"
 ///     },
-///     
+///
 ///     memory: {
 ///         store_type: "buffer",
 ///         capacity: 10
 ///     },
-///     
+///
 ///     tools: {
 ///         search_tool,
 ///         calculator_tool: { precision: 2 },
@@ -443,9 +517,9 @@ pub fn agent(input: TokenStream) -> TokenStream {
 }
 
 /// 一次性定义多个工具，参考Mastra的工具API设计
-/// 
+///
 /// # 示例
-/// 
+///
 /// ```rust
 /// tools! {
 ///     {
@@ -475,7 +549,7 @@ pub fn agent(input: TokenStream) -> TokenStream {
 ///             let operation = params.get("operation").unwrap().as_str().unwrap();
 ///             let a = params.get("a").unwrap().as_f64().unwrap();
 ///             let b = params.get("b").unwrap().as_f64().unwrap();
-///             
+///
 ///             let result = match operation {
 ///                 "add" => a + b,
 ///                 "subtract" => a - b,
@@ -483,7 +557,7 @@ pub fn agent(input: TokenStream) -> TokenStream {
 ///                 "divide" => a / b,
 ///                 _ => return Err(Error::InvalidInput("Unknown operation".into()))
 ///             };
-///             
+///
 ///             Ok(json!({ "result": result }))
 ///         }
 ///     },

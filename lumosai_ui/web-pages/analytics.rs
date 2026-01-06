@@ -13,10 +13,10 @@
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
+use crate::charts::{ApiRequestChartCard, TokenUsageChartCard};
 use crate::types::Rbac;
-use crate::charts::{TokenUsageChartCard, ApiRequestChartCard};
+use dioxus::prelude::*;
 
 // 分析数据类型定义
 #[derive(Clone, Debug, PartialEq)]
@@ -59,10 +59,7 @@ pub struct CostBreakdown {
 
 /// 分析页面
 #[component]
-pub fn AnalyticsPage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn AnalyticsPage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟数据
     let overview = AnalyticsOverview {
         total_users: 45,
@@ -179,13 +176,13 @@ pub fn AnalyticsPage(
                 // 图表区域
                 div {
                     class: "grid grid-cols-1 lg:grid-cols-2 gap-6",
-                    
+
                     // 令牌使用趋势图
                     TokenUsageChartCard {
                         data: vec![], // 这里应该传入真实数据
                         title: "Token Usage Trends".to_string()
                     }
-                    
+
                     // API请求趋势图
                     ApiRequestChartCard {
                         data: vec![], // 这里应该传入真实数据

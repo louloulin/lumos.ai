@@ -1,6 +1,6 @@
 //! 存储管理模块
 
-use crate::{Result, CloudError};
+use crate::{CloudError, Result};
 
 pub struct StorageManager {}
 

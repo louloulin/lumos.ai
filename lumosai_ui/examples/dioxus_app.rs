@@ -18,8 +18,8 @@ cargo run --example dioxus_app --features ssr
 ```
 */
 
-use lumosai_ui::prelude::*;
 use dioxus::prelude::*;
+use lumosai_ui::prelude::*;
 
 fn main() {
     println!("🚀 Starting LumosAI UI Application");
@@ -45,7 +45,7 @@ fn App() -> Element {
     rsx! {
         div {
             class: "min-h-screen bg-base-100",
-            
+
             // Navigation Header
             header {
                 class: "navbar bg-base-200 shadow-lg",
@@ -64,13 +64,13 @@ fn App() -> Element {
                     class: "navbar-end",
                     div {
                         class: "flex items-center space-x-2",
-                        
+
                         // Theme Toggle
                         button {
                             class: "btn btn-ghost btn-sm",
                             if theme == "light" { "🌙" } else { "☀️" }
                         }
-                        
+
                         // User Menu
                         div {
                             class: "dropdown dropdown-end",
@@ -82,10 +82,10 @@ fn App() -> Element {
                     }
                 }
             }
-            
+
             div {
                 class: "flex",
-                
+
                 // Sidebar
                 aside {
                     class: if sidebar_collapsed {
@@ -93,12 +93,12 @@ fn App() -> Element {
                     } else {
                         "w-64 bg-base-200 min-h-screen transition-all duration-300"
                     },
-                    
+
                     nav {
                         class: "p-4",
                         ul {
                             class: "space-y-2",
-                            
+
                             NavItem {
                                 icon: "📊",
                                 label: "Dashboard",
@@ -136,11 +136,11 @@ fn App() -> Element {
                         }
                     }
                 }
-                
+
                 // Main Content
                 main {
                     class: "flex-1 p-6",
-                    
+
                     match current_page.as_str() {
                         "dashboard" => rsx! { DashboardPage {} },
                         "assistants" => rsx! { AssistantsPage {} },
@@ -156,12 +156,7 @@ fn App() -> Element {
 }
 
 #[component]
-fn NavItem(
-    icon: String,
-    label: String,
-    active: bool,
-    collapsed: bool,
-) -> Element {
+fn NavItem(icon: String, label: String, active: bool, collapsed: bool) -> Element {
     rsx! {
         li {
             button {
@@ -171,9 +166,9 @@ fn NavItem(
                     "w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg"
                 },
 
-                
+
                 span { class: "text-lg", "{icon}" }
-                
+
                 if !collapsed {
                     span { class: "ml-3", "{label}" }
                 }
@@ -187,7 +182,7 @@ fn DashboardPage() -> Element {
     rsx! {
         div {
             class: "space-y-6",
-            
+
             // Page Header
             div {
                 class: "flex items-center justify-between",
@@ -207,32 +202,32 @@ fn DashboardPage() -> Element {
                     }
                 }
             }
-            
+
             // Stats Cards
             div {
                 class: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6",
-                
+
                 StatsCard {
                     title: "Active Assistants",
                     value: "12",
                     icon: "🤖",
                     color: "bg-blue-500"
                 }
-                
+
                 StatsCard {
                     title: "Total Conversations",
                     value: "1,234",
                     icon: "💬",
                     color: "bg-green-500"
                 }
-                
+
                 StatsCard {
                     title: "API Calls Today",
                     value: "5,678",
                     icon: "📡",
                     color: "bg-purple-500"
                 }
-                
+
                 StatsCard {
                     title: "Success Rate",
                     value: "98.5%",
@@ -240,7 +235,7 @@ fn DashboardPage() -> Element {
                     color: "bg-orange-500"
                 }
             }
-            
+
             // Recent Activity
             Card {
                 class: "p-6",
@@ -279,29 +274,29 @@ fn AssistantsPage() -> Element {
     rsx! {
         div {
             class: "space-y-6",
-            
+
             h2 {
                 class: "text-3xl font-bold",
                 "🤖 AI Assistants"
             }
-            
+
             div {
                 class: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
-                
+
                 AssistantCard {
                     name: "Customer Support Bot",
                     description: "Handles customer inquiries and support tickets",
                     status: "Active",
                     conversations: 156
                 }
-                
+
                 AssistantCard {
                     name: "Sales Assistant",
                     description: "Helps with product recommendations and sales",
-                    status: "Active", 
+                    status: "Active",
                     conversations: 89
                 }
-                
+
                 AssistantCard {
                     name: "Technical Helper",
                     description: "Provides technical documentation and guidance",
@@ -318,17 +313,17 @@ fn ConsolePage() -> Element {
     rsx! {
         div {
             class: "space-y-6",
-            
+
             h2 {
                 class: "text-3xl font-bold",
                 "💬 AI Console"
             }
-            
+
             Card {
                 class: "p-6",
                 div {
                     class: "space-y-4",
-                    
+
                     // Chat Interface
                     div {
                         class: "h-96 bg-base-200 rounded-lg p-4 overflow-y-auto",
@@ -339,12 +334,12 @@ fn ConsolePage() -> Element {
                                 content: "Hello! Can you help me with my project?"
                             }
                             ChatMessage {
-                                role: "assistant", 
+                                role: "assistant",
                                 content: "Of course! I'd be happy to help you with your project. What specific area would you like assistance with?"
                             }
                         }
                     }
-                    
+
                     // Input Area
                     div {
                         class: "flex space-x-2",
@@ -370,12 +365,12 @@ fn AnalyticsPage() -> Element {
     rsx! {
         div {
             class: "space-y-6",
-            
+
             h2 {
                 class: "text-3xl font-bold",
                 "📈 Analytics"
             }
-            
+
             p {
                 class: "text-gray-600",
                 "Analytics dashboard coming soon..."
@@ -389,22 +384,22 @@ fn SettingsPage() -> Element {
     rsx! {
         div {
             class: "space-y-6",
-            
+
             h2 {
                 class: "text-3xl font-bold",
                 "⚙️ Settings"
             }
-            
+
             Card {
                 class: "p-6",
                 div {
                     class: "space-y-4",
-                    
+
                     h3 {
                         class: "text-lg font-semibold",
                         "General Settings"
                     }
-                    
+
                     div {
                         class: "space-y-3",
                         Input {
@@ -413,14 +408,14 @@ fn SettingsPage() -> Element {
                             label: "Application Name",
                             value: "LumosAI Dashboard".to_string(),
                         }
-                        
+
                         Input {
                             input_type: InputType::Email,
                             name: "admin_email",
                             label: "Admin Email",
                             value: "admin@lumosai.com".to_string(),
                         }
-                        
+
                         Select {
                             name: "theme",
                             label: "Theme",
@@ -437,7 +432,7 @@ fn SettingsPage() -> Element {
                             }
                         }
                     }
-                    
+
                     div {
                         class: "pt-4",
                         Button {
@@ -571,7 +566,7 @@ fn ChatMessage(role: String, content: String) -> Element {
 // Function to render the app to HTML (for non-interactive demo)
 fn render_app_to_html() -> String {
     let app_html = render(rsx! { App {} });
-    
+
     format!(
         r#"<!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -592,7 +587,7 @@ fn render_app_to_html() -> String {
     {}
     <script>
         console.log('🌟 LumosAI Dashboard loaded successfully!');
-        
+
         // Add some basic interactivity
         document.addEventListener('DOMContentLoaded', function() {{
             // Add click handlers for buttons

@@ -1,13 +1,13 @@
 //! Node.js绑定模块
-//! 
+//!
 //! 为JavaScript/TypeScript提供Lumos.ai的完整绑定支持
 
+use crate::core::{CrossLangAgent, CrossLangAgentBuilder, CrossLangResponse, CrossLangTool};
+use crate::error::BindingError;
+use crate::types::*;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::collections::HashMap;
-use crate::core::{CrossLangAgent, CrossLangAgentBuilder, CrossLangTool, CrossLangResponse};
-use crate::error::BindingError;
-use crate::types::*;
 
 /// Node.js Agent包装器
 #[napi]
@@ -101,52 +101,65 @@ impl Agent {
     /// 生成响应
     #[napi]
     pub fn generate(&self, input: String) -> Result<Response> {
-        let response = self.inner.generate(&input)
+        let response = self
+            .inner
+            .generate(&input)
             .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))?;
-        
+
         Ok(Response {
             content: response.content,
             response_type: format!("{:?}", response.response_type),
             metadata: response.metadata,
-            tool_calls: response.tool_calls.into_iter().map(|tc| ToolCallResult {
-                tool_name: tc.tool_name,
-                parameters: tc.parameters,
-                result: tc.result,
-                execution_time_ms: tc.execution_time_ms as u32,
-                success: tc.success,
-                error: tc.error,
-            }).collect(),
+            tool_calls: response
+                .tool_calls
+                .into_iter()
+                .map(|tc| ToolCallResult {
+                    tool_name: tc.tool_name,
+                    parameters: tc.parameters,
+                    result: tc.result,
+                    execution_time_ms: tc.execution_time_ms as u32,
+                    success: tc.success,
+                    error: tc.error,
+                })
+                .collect(),
             error: response.error,
         })
     }
-    
+
     /// 异步生成响应
     #[napi]
     pub async fn generate_async(&self, input: String) -> Result<Response> {
-        let response = self.inner.generate_async(&input).await
+        let response = self
+            .inner
+            .generate_async(&input)
+            .await
             .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))?;
-        
+
         Ok(Response {
             content: response.content,
             response_type: format!("{:?}", response.response_type),
             metadata: response.metadata,
-            tool_calls: response.tool_calls.into_iter().map(|tc| ToolCallResult {
-                tool_name: tc.tool_name,
-                parameters: tc.parameters,
-                result: tc.result,
-                execution_time_ms: tc.execution_time_ms as u32,
-                success: tc.success,
-                error: tc.error,
-            }).collect(),
+            tool_calls: response
+                .tool_calls
+                .into_iter()
+                .map(|tc| ToolCallResult {
+                    tool_name: tc.tool_name,
+                    parameters: tc.parameters,
+                    result: tc.result,
+                    execution_time_ms: tc.execution_time_ms as u32,
+                    success: tc.success,
+                    error: tc.error,
+                })
+                .collect(),
             error: response.error,
         })
     }
-    
+
     /// 获取配置
     #[napi]
     pub fn get_config(&self) -> Config {
         let config = self.inner.get_config();
-        
+
         Config {
             model: ModelConfig {
                 name: config.model.name,
@@ -174,35 +187,35 @@ impl AgentBuilder {
             inner: CrossLangAgentBuilder::new(),
         }
     }
-    
+
     /// 设置名称
     #[napi]
     pub fn name(&mut self, name: String) -> &Self {
         self.inner = std::mem::take(&mut self.inner).name(&name);
         self
     }
-    
+
     /// 设置指令
     #[napi]
     pub fn instructions(&mut self, instructions: String) -> &Self {
         self.inner = std::mem::take(&mut self.inner).instructions(&instructions);
         self
     }
-    
+
     /// 设置模型
     #[napi]
     pub fn model(&mut self, model: String) -> &Self {
         self.inner = std::mem::take(&mut self.inner).model(&model);
         self
     }
-    
+
     /// 添加工具
     #[napi]
     pub fn tool(&mut self, tool: &Tool) -> &Self {
         self.inner = std::mem::take(&mut self.inner).tool(tool.inner.clone());
         self
     }
-    
+
     /// 添加多个工具
     #[napi]
     pub fn tools(&mut self, tools: Vec<&Tool>) -> &Self {
@@ -211,22 +224,29 @@ impl AgentBuilder {
         }
         self
     }
-    
+
     /// 构建Agent
     #[napi]
     pub fn build(&self) -> Result<Agent> {
-        let agent = self.inner.clone().build()
+        let agent = self
+            .inner
+            .clone()
+            .build()
             .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))?;
-        
+
         Ok(Agent { inner: agent })
     }
-    
+
     /// 异步构建Agent
     #[napi]
     pub async fn build_async(&self) -> Result<Agent> {
-        let agent = self.inner.clone().build_async().await
+        let agent = self
+            .inner
+            .clone()
+            .build_async()
+            .await
             .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))?;
-        
+
         Ok(Agent { inner: agent })
     }
 }
@@ -238,26 +258,41 @@ impl Tool {
     pub fn metadata(&self) -> HashMap<String, serde_json::Value> {
         let metadata = self.inner.metadata();
         let mut result = HashMap::new();
-        
-        result.insert("name".to_string(), serde_json::Value::String(metadata.name.clone()));
-        result.insert("description".to_string(), serde_json::Value::String(metadata.description.clone()));
-        result.insert("tool_type".to_string(), serde_json::Value::String(metadata.tool_type.clone()));
-        result.insert("is_async".to_string(), serde_json::Value::Bool(metadata.is_async));
+
+        result.insert(
+            "name".to_string(),
+            serde_json::Value::String(metadata.name.clone()),
+        );
+        result.insert(
+            "description".to_string(),
+            serde_json::Value::String(metadata.description.clone()),
+        );
+        result.insert(
+            "tool_type".to_string(),
+            serde_json::Value::String(metadata.tool_type.clone()),
+        );
+        result.insert(
+            "is_async".to_string(),
+            serde_json::Value::Bool(metadata.is_async),
+        );
         result.insert("parameters".to_string(), metadata.parameters.clone());
-        
+
         result
     }
-    
+
     /// 执行工具
     #[napi]
-    pub fn execute(&self, parameters: HashMap<String, serde_json::Value>) -> Result<ToolCallResult> {
-        let params = serde_json::Value::Object(
-            parameters.into_iter().collect()
-        );
-        
-        let result = self.inner.execute(params)
+    pub fn execute(
+        &self,
+        parameters: HashMap<String, serde_json::Value>,
+    ) -> Result<ToolCallResult> {
+        let params = serde_json::Value::Object(parameters.into_iter().collect());
+
+        let result = self
+            .inner
+            .execute(params)
             .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))?;
-        
+
         Ok(ToolCallResult {
             tool_name: result.tool_name,
             parameters: result.parameters,
@@ -289,7 +324,7 @@ pub mod tools {
     use super::*;
     use crate::core::ToolMetadata;
     use std::sync::Arc;
-    
+
     /// Web搜索工具
     #[napi]
     pub fn web_search() -> Tool {
@@ -315,12 +350,12 @@ pub mod tools {
             tool_type: "web".to_string(),
             is_async: true,
         };
-        
+
         Tool {
             inner: CrossLangTool::new(tool, metadata),
         }
     }
-    
+
     /// HTTP请求工具
     #[napi]
     pub fn http_request() -> Tool {
@@ -347,12 +382,12 @@ pub mod tools {
             tool_type: "web".to_string(),
             is_async: true,
         };
-        
+
         Tool {
             inner: CrossLangTool::new(tool, metadata),
         }
     }
-    
+
     /// 计算器工具
     #[napi]
     pub fn calculator() -> Tool {
@@ -373,12 +408,12 @@ pub mod tools {
             tool_type: "math".to_string(),
             is_async: false,
         };
-        
+
         Tool {
             inner: CrossLangTool::new(tool, metadata),
         }
     }
-    
+
     /// 文件读取工具
     #[napi]
     pub fn file_reader() -> Tool {
@@ -399,7 +434,7 @@ pub mod tools {
             tool_type: "file".to_string(),
             is_async: true,
         };
-        
+
         Tool {
             inner: CrossLangTool::new(tool, metadata),
         }

@@ -1,22 +1,23 @@
 //! Demonstration of the new simplified Agent API
-//! 
+//!
 //! This example shows how to use the new Mastra-like API for creating agents
 //! with minimal boilerplate while maintaining Rust's performance advantages.
 
-use lumosai_core::agent::{Agent, web_agent, file_agent, data_agent};
+use lumosai_core::agent::{data_agent, file_agent, web_agent, Agent};
 use lumosai_core::llm::MockLlmProvider;
 use lumosai_core::Agent as AgentTrait;
 use std::sync::Arc;
 use tokio;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Lumos.ai Simplified API Demo");
     println!("================================");
 
     // Create a mock LLM provider for demonstration
     let mock_responses = vec![
-        "Hello! I'm a helpful AI assistant created with the new simplified Lumos.ai API.".to_string(),
+        "Hello! I'm a helpful AI assistant created with the new simplified Lumos.ai API."
+            .to_string(),
         "I can help you with web searches, file operations, and data processing.".to_string(),
         "The new API makes it much easier to create and configure AI agents!".to_string(),
     ];
@@ -24,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n1. 📝 Quick Agent Creation");
     println!("---------------------------");
-    
+
     // Example 1: Quick agent creation with minimal configuration
     let quick_agent = Agent::quick("assistant", "You are a helpful assistant")
         .model(llm.clone())
@@ -44,20 +45,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .max_tool_calls(10)
         .tool_timeout(60)
         .build()?;
-    
+
     println!("✅ Created builder agent: {}", builder_agent.get_name());
     println!("   Instructions: {}", builder_agent.get_instructions());
 
     println!("\n3. 🌐 Web-Enabled Agent");
     println!("------------------------");
-    
+
     // Example 3: Web agent with pre-configured web tools
     let web_agent_instance = web_agent("web_helper", "You are a web assistant")
         .model(llm.clone())
         .build()?;
 
     println!("✅ Created web agent: {}", web_agent_instance.get_name());
-    println!("   Available tools: {}", web_agent_instance.get_tools().len());
+    println!(
+        "   Available tools: {}",
+        web_agent_instance.get_tools().len()
+    );
 
     // List available tools
     for tool_name in web_agent_instance.get_tools().keys() {
@@ -73,7 +77,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     println!("✅ Created file agent: {}", file_agent_instance.get_name());
-    println!("   Available tools: {}", file_agent_instance.get_tools().len());
+    println!(
+        "   Available tools: {}",
+        file_agent_instance.get_tools().len()
+    );
 
     // List available tools
     for tool_name in file_agent_instance.get_tools().keys() {
@@ -89,7 +96,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     println!("✅ Created data agent: {}", data_agent_instance.get_name());
-    println!("   Available tools: {}", data_agent_instance.get_tools().len());
+    println!(
+        "   Available tools: {}",
+        data_agent_instance.get_tools().len()
+    );
 
     // List available tools
     for tool_name in data_agent_instance.get_tools().keys() {
@@ -98,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n6. 🔧 Multi-Tool Agent");
     println!("-----------------------");
-    
+
     // Example 6: Agent with multiple tool collections
     let multi_tool_agent = AgentBuilder::new()
         .name("multi_tool_agent")
@@ -108,18 +118,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_file_tools()
         .with_data_tools()
         .build()?;
-    
-    println!("✅ Created multi-tool agent: {}", multi_tool_agent.get_name());
-    println!("   Total available tools: {}", multi_tool_agent.get_tools().len());
+
+    println!(
+        "✅ Created multi-tool agent: {}",
+        multi_tool_agent.get_name()
+    );
+    println!(
+        "   Total available tools: {}",
+        multi_tool_agent.get_tools().len()
+    );
 
     println!("\n7. 🧠 Smart Defaults Demo");
     println!("--------------------------");
-    
+
     // Example 7: Demonstrate smart defaults
     let smart_agent = Agent::quick("smart_agent", "You are a smart assistant")
         .model(llm.clone())
         .build()?;
-    
+
     println!("✅ Created smart agent with automatic defaults");
     println!("   Smart defaults automatically applied:");
     println!("   - Memory configuration: enabled");
@@ -130,43 +146,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n8. 🔄 Backward Compatibility");
     println!("-----------------------------");
-    
+
     // Example 8: Show that old API still works
     use lumosai_core::agent::AgentBuilder;
-    
+
     let old_style_agent = AgentBuilder::new()
         .name("old_style_agent")
         .instructions("Created with the traditional builder pattern")
         .model(llm.clone())
         .build()?;
-    
-    println!("✅ Old-style agent still works: {}", old_style_agent.get_name());
+
+    println!(
+        "✅ Old-style agent still works: {}",
+        old_style_agent.get_name()
+    );
     println!("   Backward compatibility maintained!");
 
     println!("\n🎉 API Comparison Summary");
     println!("=========================");
-    
+
     println!("📊 Lines of code comparison:");
     println!("   Old API (complex):  ~15-20 lines for basic agent");
     println!("   New Quick API:      ~3 lines for basic agent");
     println!("   New Builder API:    ~5-8 lines for advanced agent");
-    
+
     println!("\n🚀 Performance Benefits:");
     println!("   ✅ Zero-cost abstractions");
     println!("   ✅ Compile-time optimizations");
     println!("   ✅ Smart defaults reduce runtime overhead");
     println!("   ✅ Tool collections pre-optimized");
-    
+
     println!("\n🎯 Developer Experience:");
     println!("   ✅ Mastra-like simplicity");
     println!("   ✅ Rust performance and safety");
     println!("   ✅ Intelligent error messages");
     println!("   ✅ Auto-completion friendly");
-    
+
     println!("\n✨ Demo completed successfully!");
     println!("   The new simplified API provides the best of both worlds:");
     println!("   - Simple, intuitive interface like Mastra");
     println!("   - High performance and safety of Rust");
-    
+
     Ok(())
 }

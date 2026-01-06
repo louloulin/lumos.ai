@@ -1,21 +1,21 @@
 //! Agent运行时上下文系统
-//! 
+//!
 //! 提供Agent执行过程中的上下文管理，包括会话状态、工具调用历史、
 //! 内存访问和执行环境信息。
 
-use std::collections::HashMap;
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::llm::Message;
-use crate::tool::Tool;
-use crate::memory::WorkingMemory;
 use crate::error::Result;
+use crate::llm::Message;
+use crate::memory::WorkingMemory;
+use crate::tool::Tool;
 
 /// Agent运行时上下文
-/// 
+///
 /// 包含Agent执行过程中需要的所有上下文信息，支持动态更新和状态管理
 #[derive(Debug, Clone)]
 pub struct RuntimeContext {
@@ -67,7 +67,7 @@ pub struct ToolCallRecord {
 }
 
 /// 上下文管理器
-/// 
+///
 /// 负责管理多个Agent的运行时上下文，支持并发访问和状态同步
 pub struct ContextManager {
     /// 活跃的上下文映射
@@ -213,11 +213,15 @@ impl ContextManager {
     }
 
     /// 创建新的运行时上下文
-    pub async fn create_context(&self, session_id: String, run_id: String) -> Result<RuntimeContext> {
+    pub async fn create_context(
+        &self,
+        session_id: String,
+        run_id: String,
+    ) -> Result<RuntimeContext> {
         let context = RuntimeContext::new(session_id.clone(), run_id);
-        
+
         let mut contexts = self.contexts.write().await;
-        
+
         // 检查容量限制
         if contexts.len() >= self.config.max_contexts {
             // 移除最旧的上下文
@@ -225,7 +229,7 @@ impl ContextManager {
                 contexts.remove(&oldest_key);
             }
         }
-        
+
         contexts.insert(session_id, context.clone());
         Ok(context)
     }
@@ -263,13 +267,13 @@ impl ContextManager {
 
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(interval));
-            
+
             loop {
                 interval.tick().await;
-                
+
                 let now = chrono::Utc::now();
                 let mut contexts = contexts.write().await;
-                
+
                 // 移除过期的上下文
                 contexts.retain(|_, context| {
                     let age = now - context.started_at;
@@ -301,19 +305,22 @@ mod tests {
     #[tokio::test]
     async fn test_context_manager() {
         let manager = create_context_manager();
-        
+
         // 创建上下文
-        let context = manager.create_context("session1".to_string(), "run1".to_string()).await.unwrap();
+        let context = manager
+            .create_context("session1".to_string(), "run1".to_string())
+            .await
+            .unwrap();
         assert_eq!(context.session_id, "session1");
-        
+
         // 获取上下文
         let retrieved = manager.get_context("session1").await.unwrap();
         assert_eq!(retrieved.session_id, "session1");
-        
+
         // 删除上下文
         let removed = manager.remove_context("session1").await.unwrap();
         assert_eq!(removed.session_id, "session1");
-        
+
         // 确认已删除
         assert!(manager.get_context("session1").await.is_none());
     }
@@ -321,22 +328,31 @@ mod tests {
     #[test]
     fn test_context_variables() {
         let mut context = RuntimeContext::new("session1".to_string(), "run1".to_string());
-        
+
         // 设置变量
         context.set_variable("user_name".to_string(), Value::String("Alice".to_string()));
-        context.set_variable("age".to_string(), Value::Number(serde_json::Number::from(25)));
-        
+        context.set_variable(
+            "age".to_string(),
+            Value::Number(serde_json::Number::from(25)),
+        );
+
         // 获取变量
-        assert_eq!(context.get_variable("user_name"), Some(&Value::String("Alice".to_string())));
-        assert_eq!(context.get_variable("age"), Some(&Value::Number(serde_json::Number::from(25))));
+        assert_eq!(
+            context.get_variable("user_name"),
+            Some(&Value::String("Alice".to_string()))
+        );
+        assert_eq!(
+            context.get_variable("age"),
+            Some(&Value::Number(serde_json::Number::from(25)))
+        );
         assert_eq!(context.get_variable("unknown"), None);
     }
 
     #[test]
     fn test_step_counting() {
-        let mut context = RuntimeContext::new("session1".to_string(), "run1".to_string())
-            .with_max_steps(3);
-        
+        let mut context =
+            RuntimeContext::new("session1".to_string(), "run1".to_string()).with_max_steps(3);
+
         // 测试步骤计数
         assert!(!context.is_max_steps_reached());
         assert!(context.increment_step()); // 步骤 1

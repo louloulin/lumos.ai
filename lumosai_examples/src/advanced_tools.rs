@@ -1,18 +1,19 @@
 //! Advanced tool examples demonstrating Function Calling capabilities
-//! 
+//!
 //! This module showcases sophisticated tools that leverage the Function Calling
 //! system for type-safe parameter handling and complex operations.
 
+use async_trait::async_trait;
+use serde_json::{json, Value};
 use std::fs;
 use std::path::Path;
-use serde_json::{json, Value};
-use async_trait::async_trait;
 
 use lumosai_core::{
     base::{Base, BaseComponent, ComponentConfig},
+    compat::Component,
     error::{Error, Result},
-    logger::{Component, LogLevel},
-    tool::{Tool, ToolSchema, ParameterSchema, ToolExecutionContext, ToolExecutionOptions},
+    logger::LogLevel,
+    tool::{ParameterSchema, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema},
 };
 
 /// File management tool with advanced Function Calling support
@@ -55,7 +56,10 @@ impl FileManagerTool {
             "list_directory" => self.list_directory(params).await,
             "create_directory" => self.create_directory(params).await,
             "delete_file" => self.delete_file(params).await,
-            _ => Err(Error::InvalidInput(format!("Unknown operation: {}", operation)))
+            _ => Err(Error::InvalidInput(format!(
+                "Unknown operation: {}",
+                operation
+            ))),
         }
     }
 
@@ -64,7 +68,10 @@ impl FileManagerTool {
             .map_err(|_| Error::InvalidInput("Missing or invalid 'path' parameter".to_string()))?;
 
         if !self.is_path_allowed(&path) {
-            return Err(Error::InvalidInput(format!("Access denied to path: {}", path)));
+            return Err(Error::InvalidInput(format!(
+                "Access denied to path: {}",
+                path
+            )));
         }
 
         match fs::read_to_string(&path) {
@@ -77,18 +84,22 @@ impl FileManagerTool {
                 "success": false,
                 "error": e.to_string(),
                 "path": path
-            }))
+            })),
         }
     }
 
     async fn write_file(&self, params: Value) -> Result<Value> {
         let path: String = serde_json::from_value(params["path"].clone())
             .map_err(|_| Error::InvalidInput("Missing or invalid 'path' parameter".to_string()))?;
-        let content: String = serde_json::from_value(params["content"].clone())
-            .map_err(|_| Error::InvalidInput("Missing or invalid 'content' parameter".to_string()))?;
+        let content: String = serde_json::from_value(params["content"].clone()).map_err(|_| {
+            Error::InvalidInput("Missing or invalid 'content' parameter".to_string())
+        })?;
 
         if !self.is_path_allowed(&path) {
-            return Err(Error::InvalidInput(format!("Access denied to path: {}", path)));
+            return Err(Error::InvalidInput(format!(
+                "Access denied to path: {}",
+                path
+            )));
         }
 
         match fs::write(&path, &content) {
@@ -102,7 +113,7 @@ impl FileManagerTool {
                 "success": false,
                 "error": e.to_string(),
                 "path": path
-            }))
+            })),
         }
     }
 
@@ -111,7 +122,10 @@ impl FileManagerTool {
             .map_err(|_| Error::InvalidInput("Missing or invalid 'path' parameter".to_string()))?;
 
         if !self.is_path_allowed(&path) {
-            return Err(Error::InvalidInput(format!("Access denied to path: {}", path)));
+            return Err(Error::InvalidInput(format!(
+                "Access denied to path: {}",
+                path
+            )));
         }
 
         match fs::read_dir(&path) {
@@ -137,12 +151,12 @@ impl FileManagerTool {
                     "directories": directories,
                     "total_items": files.len() + directories.len()
                 }))
-            },
+            }
             Err(e) => Ok(json!({
                 "success": false,
                 "error": e.to_string(),
                 "path": path
-            }))
+            })),
         }
     }
 
@@ -151,7 +165,10 @@ impl FileManagerTool {
             .map_err(|_| Error::InvalidInput("Missing or invalid 'path' parameter".to_string()))?;
 
         if !self.is_path_allowed(&path) {
-            return Err(Error::InvalidInput(format!("Access denied to path: {}", path)));
+            return Err(Error::InvalidInput(format!(
+                "Access denied to path: {}",
+                path
+            )));
         }
 
         match fs::create_dir_all(&path) {
@@ -164,7 +181,7 @@ impl FileManagerTool {
                 "success": false,
                 "error": e.to_string(),
                 "path": path
-            }))
+            })),
         }
     }
 
@@ -173,7 +190,10 @@ impl FileManagerTool {
             .map_err(|_| Error::InvalidInput("Missing or invalid 'path' parameter".to_string()))?;
 
         if !self.is_path_allowed(&path) {
-            return Err(Error::InvalidInput(format!("Access denied to path: {}", path)));
+            return Err(Error::InvalidInput(format!(
+                "Access denied to path: {}",
+                path
+            )));
         }
 
         let result = if Path::new(&path).is_dir() {
@@ -192,7 +212,7 @@ impl FileManagerTool {
                 "success": false,
                 "error": e.to_string(),
                 "path": path
-            }))
+            })),
         }
     }
 }
@@ -209,24 +229,27 @@ impl Base for FileManagerTool {
     fn name(&self) -> Option<&str> {
         self.base.name()
     }
-    
+
     fn component(&self) -> Component {
         self.base.component()
     }
-    
+
     fn logger(&self) -> std::sync::Arc<dyn lumosai_core::logger::Logger> {
         self.base.logger()
     }
-    
+
     fn set_logger(&mut self, logger: std::sync::Arc<dyn lumosai_core::logger::Logger>) {
         self.base.set_logger(logger);
     }
-    
+
     fn telemetry(&self) -> Option<std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>> {
         self.base.telemetry()
     }
-    
-    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>) {
+
+    fn set_telemetry(
+        &mut self,
+        telemetry: std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>,
+    ) {
         self.base.set_telemetry(telemetry);
     }
 }
@@ -280,8 +303,10 @@ impl Tool for FileManagerTool {
         _context: ToolExecutionContext,
         _options: &ToolExecutionOptions,
     ) -> Result<Value> {
-        let operation: String = serde_json::from_value(params["operation"].clone())
-            .map_err(|_| Error::InvalidInput("Missing or invalid 'operation' parameter".to_string()))?;
+        let operation: String =
+            serde_json::from_value(params["operation"].clone()).map_err(|_| {
+                Error::InvalidInput("Missing or invalid 'operation' parameter".to_string())
+            })?;
 
         self.execute_file_operation(&operation, params).await
     }
@@ -311,7 +336,10 @@ impl DataAnalysisTool {
             "statistics" => self.calculate_statistics(data).await,
             "trend" => self.analyze_trend(data).await,
             "outliers" => self.detect_outliers(data).await,
-            _ => Err(Error::InvalidInput(format!("Unknown analysis type: {}", analysis_type)))
+            _ => Err(Error::InvalidInput(format!(
+                "Unknown analysis type: {}",
+                analysis_type
+            ))),
         }
     }
 
@@ -327,10 +355,8 @@ impl DataAnalysisTool {
         let mean = sum / data.len() as f64;
         let min = data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
         let max = data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        
-        let variance = data.iter()
-            .map(|x| (x - mean).powi(2))
-            .sum::<f64>() / data.len() as f64;
+
+        let variance = data.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / data.len() as f64;
         let std_dev = variance.sqrt();
 
         Ok(json!({
@@ -358,15 +384,15 @@ impl DataAnalysisTool {
 
         let n = data.len() as f64;
         let x_values: Vec<f64> = (0..data.len()).map(|i| i as f64).collect();
-        
+
         let sum_x: f64 = x_values.iter().sum();
         let sum_y: f64 = data.iter().sum();
         let sum_xy: f64 = x_values.iter().zip(data.iter()).map(|(x, y)| x * y).sum();
         let sum_x2: f64 = x_values.iter().map(|x| x * x).sum();
-        
+
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
         let intercept = (sum_y - slope * sum_x) / n;
-        
+
         let trend_direction = if slope > 0.01 {
             "increasing"
         } else if slope < -0.01 {
@@ -397,17 +423,18 @@ impl DataAnalysisTool {
 
         let mut sorted_data = data.clone();
         sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        
+
         let q1_index = sorted_data.len() / 4;
         let q3_index = 3 * sorted_data.len() / 4;
         let q1 = sorted_data[q1_index];
         let q3 = sorted_data[q3_index];
         let iqr = q3 - q1;
-        
+
         let lower_bound = q1 - 1.5 * iqr;
         let upper_bound = q3 + 1.5 * iqr;
-        
-        let outliers: Vec<f64> = data.iter()
+
+        let outliers: Vec<f64> = data
+            .iter()
             .filter(|&&x| x < lower_bound || x > upper_bound)
             .cloned()
             .collect();
@@ -438,24 +465,27 @@ impl Base for DataAnalysisTool {
     fn name(&self) -> Option<&str> {
         self.base.name()
     }
-    
+
     fn component(&self) -> Component {
         self.base.component()
     }
-    
+
     fn logger(&self) -> std::sync::Arc<dyn lumosai_core::logger::Logger> {
         self.base.logger()
     }
-    
+
     fn set_logger(&mut self, logger: std::sync::Arc<dyn lumosai_core::logger::Logger>) {
         self.base.set_logger(logger);
     }
-    
+
     fn telemetry(&self) -> Option<std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>> {
         self.base.telemetry()
     }
-    
-    fn set_telemetry(&mut self, telemetry: std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>) {
+
+    fn set_telemetry(
+        &mut self,
+        telemetry: std::sync::Arc<dyn lumosai_core::telemetry::TelemetrySink>,
+    ) {
         self.base.set_telemetry(telemetry);
     }
 }
@@ -503,9 +533,11 @@ impl Tool for DataAnalysisTool {
     ) -> Result<Value> {
         let data: Vec<f64> = serde_json::from_value(params["data"].clone())
             .map_err(|_| Error::InvalidInput("Missing or invalid 'data' parameter".to_string()))?;
-        
+
         let analysis_type: String = serde_json::from_value(params["analysis_type"].clone())
-            .map_err(|_| Error::InvalidInput("Missing or invalid 'analysis_type' parameter".to_string()))?;
+            .map_err(|_| {
+                Error::InvalidInput("Missing or invalid 'analysis_type' parameter".to_string())
+            })?;
 
         self.analyze_data(data, &analysis_type).await
     }

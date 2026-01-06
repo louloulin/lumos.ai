@@ -1,24 +1,26 @@
 //! Demonstration of Phase 1 OpenAI Function Calling enhancements
-//! 
+//!
 //! This example shows how the modernized function calling system works,
 //! including the distinction between function calling mode and legacy regex mode.
 
-use std::sync::Arc;
-use std::collections::HashMap;
 use async_trait::async_trait;
-use serde_json::{json, Value};
-use lumosai_core::{Result, Error};
-use lumosai_core::agent::{Agent, AgentConfig};
+use futures::stream::{self, BoxStream};
 use lumosai_core::agent::executor::BasicAgent;
 use lumosai_core::agent::types::AgentGenerateOptions;
-use lumosai_core::llm::{LlmProvider, LlmOptions, Message, Role};
-use lumosai_core::llm::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
+use lumosai_core::agent::{Agent, AgentConfig};
+use lumosai_core::base::{Base, BaseComponent, ComponentConfig};
+use lumosai_core::compat::{Component, Event};
+use lumosai_core::llm::function_calling::{FunctionCall, FunctionDefinition, ToolChoice};
 use lumosai_core::llm::provider::FunctionCallingResponse;
-use lumosai_core::tool::{Tool, ToolSchema, ParameterSchema, ToolExecutionOptions, ToolExecutionContext};
-use lumosai_core::base::{BaseComponent, ComponentConfig, Base};
-use lumosai_core::logger::{Logger, LogEntry};
-use lumosai_core::telemetry::{TelemetrySink, Event};
-use futures::stream::{self, BoxStream};
+use lumosai_core::llm::{LlmOptions, LlmProvider, Message, Role};
+use lumosai_core::logger::Logger;
+use lumosai_core::telemetry::TelemetrySink;
+use lumosai_core::tool::{
+    ParameterSchema, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
+};
+use lumosai_core::{Error, Result};
+use serde_json::{json, Value};
+use std::sync::Arc;
 
 /// Mock LLM provider with function calling support for testing
 pub struct MockLlmWithFunctionCalling {
@@ -35,6 +37,10 @@ impl MockLlmWithFunctionCalling {
 
 #[async_trait]
 impl LlmProvider for MockLlmWithFunctionCalling {
+    fn name(&self) -> &str {
+        "MockLlmWithFunctionCalling"
+    }
+
     async fn generate(&self, _prompt: &str, _options: &LlmOptions) -> Result<String> {
         if self.supports_function_calling {
             Ok("I'll use function calling to help you.".to_string())
@@ -43,8 +49,13 @@ impl LlmProvider for MockLlmWithFunctionCalling {
         }
     }
 
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
-        self.generate(&messages.last().unwrap().content, options).await
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
+        self.generate(&messages.last().unwrap().content, options)
+            .await
     }
 
     async fn generate_stream<'a>(
@@ -79,7 +90,8 @@ impl LlmProvider for MockLlmWithFunctionCalling {
                 name: "calculator".to_string(),
                 arguments: json!({
                     "expression": "2+2"
-                }).to_string(),
+                })
+                .to_string(),
             };
 
             Ok(FunctionCallingResponse {
@@ -130,23 +142,23 @@ impl Base for CalculatorTool {
     fn name(&self) -> Option<&str> {
         self.base.name()
     }
-    
-    fn component(&self) -> lumosai_core::logger::Component {
+
+    fn component(&self) -> Component {
         self.base.component()
     }
-    
+
     fn logger(&self) -> Arc<dyn Logger> {
         self.base.logger()
     }
-    
+
     fn set_logger(&mut self, logger: Arc<dyn Logger>) {
         self.base.set_logger(logger);
     }
-    
+
     fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
         self.base.telemetry()
     }
-    
+
     fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
         self.base.set_telemetry(telemetry);
     }
@@ -163,16 +175,14 @@ impl Tool for CalculatorTool {
     }
 
     fn schema(&self) -> ToolSchema {
-        ToolSchema::new(vec![
-            ParameterSchema {
-                name: "expression".to_string(),
-                description: "Mathematical expression to evaluate".to_string(),
-                r#type: "string".to_string(),
-                required: true,
-                properties: None,
-                default: None,
-            }
-        ])
+        ToolSchema::new(vec![ParameterSchema {
+            name: "expression".to_string(),
+            description: "Mathematical expression to evaluate".to_string(),
+            r#type: "string".to_string(),
+            required: true,
+            properties: None,
+            default: None,
+        }])
     }
 
     async fn execute(
@@ -195,42 +205,52 @@ impl Tool for CalculatorTool {
 
         Ok(json!(result))
     }
-    
+
     fn clone_box(&self) -> Box<dyn Tool> {
         Box::new(self.clone())
     }
 }
 
 /// Mock logger for testing
+#[derive(Debug)]
 pub struct MockLogger;
 
+#[async_trait]
 impl Logger for MockLogger {
-    fn debug(&self, message: &str, _metadata: Option<HashMap<String, Value>>) {
-        println!("[DEBUG] {}", message);
-    }
-
-    fn info(&self, message: &str, _metadata: Option<HashMap<String, Value>>) {
-        println!("[INFO] {}", message);
-    }
-
-    fn warn(&self, message: &str, _metadata: Option<HashMap<String, Value>>) {
-        println!("[WARN] {}", message);
-    }
-
-    fn error(&self, message: &str, _metadata: Option<HashMap<String, Value>>) {
-        println!("[ERROR] {}", message);
-    }
-
-    fn get_logs_by_run_id(&self, _run_id: &str) -> Vec<LogEntry> {
-        vec![]
+    async fn log(
+        &self,
+        level: lumosai_core::logger::LogLevel,
+        message: &str,
+        _metadata: Option<serde_json::Value>,
+    ) {
+        println!("[{:?}] {}", level, message);
     }
 }
 
 /// Mock telemetry sink for testing
+#[derive(Debug)]
 pub struct MockTelemetry;
 
+#[async_trait]
 impl TelemetrySink for MockTelemetry {
-    fn record_event(&self, _event: Event) {
+    async fn record_metric(
+        &self,
+        _name: &str,
+        _value: f64,
+        _tags: Option<std::collections::HashMap<String, String>>,
+    ) {
+        // No-op for testing
+    }
+
+    async fn start_trace(&self, _name: &str) -> String {
+        "mock_trace_id".to_string()
+    }
+
+    async fn end_trace(&self, _trace_id: &str, _duration: std::time::Duration) {
+        // No-op for testing
+    }
+
+    async fn record_event(&self, _name: &str, _data: serde_json::Value) {
         // No-op for testing
     }
 }
@@ -242,7 +262,7 @@ async fn main() -> Result<()> {
     // Test 1: Agent with function calling enabled LLM
     println!("🔧 Test 1: Agent with Function Calling Support");
     println!("============================================");
-    
+
     let llm_with_fc = Arc::new(MockLlmWithFunctionCalling::new(true));
     let config_with_fc = AgentConfig {
         name: "test_agent_fc".to_string(),
@@ -250,25 +270,22 @@ async fn main() -> Result<()> {
         enable_function_calling: Some(true),
         ..Default::default()
     };
-    
-    let mut agent_with_fc = BasicAgent::new(
-        config_with_fc,
-        llm_with_fc,
-    );
-    
+
+    let mut agent_with_fc = BasicAgent::new(config_with_fc, llm_with_fc);
+
     // Add calculator tool
     agent_with_fc.add_tool(Box::new(CalculatorTool::new()))?;
-    
+
     let messages_fc = vec![Message {
         role: Role::User,
         content: "Please calculate 2+2".to_string(),
         metadata: None,
         name: None,
     }];
-    
+
     let options_fc = AgentGenerateOptions::default();
     let result_fc = agent_with_fc.generate(&messages_fc, &options_fc).await?;
-    
+
     println!("User: Please calculate 2+2");
     println!("Agent (Function Calling): {}", result_fc.response);
     println!("Steps: {}", result_fc.steps.len());
@@ -277,7 +294,7 @@ async fn main() -> Result<()> {
     // Test 2: Agent with legacy regex mode LLM
     println!("🔧 Test 2: Agent with Legacy Regex Mode");
     println!("======================================");
-    
+
     let llm_legacy = Arc::new(MockLlmWithFunctionCalling::new(false));
     let config_legacy = AgentConfig {
         name: "test_agent_legacy".to_string(),
@@ -285,25 +302,24 @@ async fn main() -> Result<()> {
         enable_function_calling: Some(true), // Still enabled, but LLM doesn't support it
         ..Default::default()
     };
-    
-    let mut agent_legacy = BasicAgent::new(
-        config_legacy,
-        llm_legacy,
-    );
-    
+
+    let mut agent_legacy = BasicAgent::new(config_legacy, llm_legacy);
+
     // Add calculator tool
     agent_legacy.add_tool(Box::new(CalculatorTool::new()))?;
-    
+
     let messages_legacy = vec![Message {
         role: Role::User,
         content: "Please calculate 2+2".to_string(),
         metadata: None,
         name: None,
     }];
-    
+
     let options_legacy = AgentGenerateOptions::default();
-    let result_legacy = agent_legacy.generate(&messages_legacy, &options_legacy).await?;
-    
+    let result_legacy = agent_legacy
+        .generate(&messages_legacy, &options_legacy)
+        .await?;
+
     println!("User: Please calculate 2+2");
     println!("Agent (Legacy Regex): {}", result_legacy.response);
     println!("Steps: {}", result_legacy.steps.len());
@@ -312,7 +328,7 @@ async fn main() -> Result<()> {
     // Test 3: Agent with function calling disabled
     println!("🔧 Test 3: Agent with Function Calling Disabled");
     println!("==============================================");
-    
+
     let llm_disabled = Arc::new(MockLlmWithFunctionCalling::new(true));
     let config_disabled = AgentConfig {
         name: "test_agent_disabled".to_string(),
@@ -320,27 +336,29 @@ async fn main() -> Result<()> {
         enable_function_calling: Some(false), // Explicitly disabled
         ..Default::default()
     };
-    
-    let mut agent_disabled = BasicAgent::new(
-        config_disabled,
-        llm_disabled,
-    );
-    
+
+    let mut agent_disabled = BasicAgent::new(config_disabled, llm_disabled);
+
     // Add calculator tool
     agent_disabled.add_tool(Box::new(CalculatorTool::new()))?;
-    
+
     let messages_disabled = vec![Message {
         role: Role::User,
         content: "Please calculate 2+2".to_string(),
         metadata: None,
         name: None,
     }];
-    
+
     let options_disabled = AgentGenerateOptions::default();
-    let result_disabled = agent_disabled.generate(&messages_disabled, &options_disabled).await?;
-    
+    let result_disabled = agent_disabled
+        .generate(&messages_disabled, &options_disabled)
+        .await?;
+
     println!("User: Please calculate 2+2");
-    println!("Agent (Function Calling Disabled): {}", result_disabled.response);
+    println!(
+        "Agent (Function Calling Disabled): {}",
+        result_disabled.response
+    );
     println!("Steps: {}", result_disabled.steps.len());
     println!();
 
@@ -349,6 +367,6 @@ async fn main() -> Result<()> {
     println!("- Function calling mode: Cleaner system messages, native OpenAI function calling");
     println!("- Legacy regex mode: Detailed tool descriptions in system message");
     println!("- Disabled mode: Falls back to regex parsing even with capable LLM");
-    
+
     Ok(())
 }

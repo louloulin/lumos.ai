@@ -605,4 +605,54 @@ pub mod files {
     pub const empty_api_keys_svg: StaticFile = EMPTY_API_KEYS_SVG;
     #[allow(non_upper_case_globals)]
     pub const avatar_svg: StaticFile = AVATAR_SVG;
+
+    pub fn get(path: &str) -> Option<StaticFile> {
+        let name = path.trim_start_matches("/static/");
+        match name {
+            "index.css" => Some(INDEX_CSS),
+            "output.css" => Some(OUTPUT_CSS),
+            "index.js" => Some(INDEX_JS),
+            "favicon.svg" => Some(BIONIC_LOGO_SVG),
+            s if s.starts_with("icons/") => {
+                let icon = &s[6..];
+                match icon {
+                    "collapse.svg" => Some(COLLAPSE_SVG),
+                    "nav-service-requests.svg" => Some(NAV_SERVICE_REQUESTS_SVG),
+                    "nav-history.svg" => Some(NAV_HISTORY_SVG),
+                    "assistant.svg" => Some(ASSISTANT_SVG),
+                    "nav-audit.svg" => Some(NAV_AUDIT_SVG),
+                    "nav-ccsds-data.svg" => Some(NAV_CCSDS_DATA_SVG),
+                    "nav-api-keys.svg" => Some(NAV_API_KEYS_SVG),
+                    "nav-members.svg" => Some(NAV_MEMBERS_SVG),
+                    "nav-teams.svg" => Some(NAV_TEAMS_SVG),
+                    "nav-phonebook.svg" => Some(NAV_PHONEBOOK_SVG),
+                    "limits.svg" => Some(LIMITS_SVG),
+                    "button-plus.svg" => Some(BUTTON_PLUS_SVG),
+                    "delete.svg" => Some(DELETE_SVG),
+                    "spinner.svg" => Some(SPINNER_SVG),
+                    "tools.svg" => Some(TOOLS_SVG),
+                    "handshake.svg" => Some(HANDSHAKE_SVG),
+                    "read-aloud-loading.svg" => Some(READ_ALOUD_LOADING_SVG),
+                    "read-aloud-stop.svg" => Some(READ_ALOUD_STOP_SVG),
+                    "read-aloud.svg" => Some(READ_ALOUD_SVG),
+                    "tick-copy.svg" => Some(TICK_COPY_SVG),
+                    "copy.svg" => Some(COPY_SVG),
+                    "profile.svg" => Some(PROFILE_SVG),
+                    "ai.svg" => Some(AI_SVG),
+                    "microphone.svg" => Some(MICROPHONE_SVG),
+                    "stop-recording.svg" => Some(STOP_RECORDING_SVG),
+                    "attach.svg" => Some(ATTACH_SVG),
+                    "streaming-stop.svg" => Some(STREAMING_STOP_SVG),
+                    "submit-button.svg" => Some(SUBMIT_BUTTON_SVG),
+                    "button-select.svg" => Some(BUTTON_SELECT_SVG),
+                    "button-edit.svg" => Some(BUTTON_EDIT_SVG),
+                    "menu-delete.svg" => Some(MENU_DELETE_SVG),
+                    "empty-api-keys.svg" => Some(EMPTY_API_KEYS_SVG),
+                    "avatar.svg" => Some(AVATAR_SVG),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
 }

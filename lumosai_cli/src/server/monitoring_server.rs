@@ -1,24 +1,45 @@
+use actix::{Actor, ActorContext, AsyncContext, Running, StreamHandler};
+use actix_cors::Cors;
+use actix_files as fs;
+use actix_web::{
+    middleware, web, App, HttpRequest, HttpResponse, HttpServer, Responder, Result as ActixResult,
+};
+use actix_web_actors::ws;
+use colored::Colorize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, middleware, Result as ActixResult, HttpRequest};
-use actix_files as fs;
-use actix_cors::Cors;
-use actix::{Actor, StreamHandler, ActorContext, AsyncContext, Running};
-use actix_web_actors::ws;
-use serde::{Serialize, Deserialize};
-use colored::Colorize;
 
-use lumosai_core::telemetry::metrics::{
-    MetricsCollector, 
-    MetricsSummary, TimeRange
-};
-use lumosai_core::telemetry::trace::TraceCollector;
-use crate::error::{CliResult, CliError};
+use crate::error::{CliError, CliResult};
 use crate::util::get_available_port;
+use lumosai_core::compat::{
+    InMemoryMetricsCollector, MetricValue, MetricsCollector, TraceCollector,
+};
+
+// 临时结构体定义，用于监控服务器
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MetricsSummary {
+    pub total_executions: u64,
+    pub successful_executions: u64,
+    pub failed_executions: u64,
+    pub avg_execution_time_ms: f64,
+    pub min_execution_time_ms: u64,
+    pub max_execution_time_ms: u64,
+    pub total_tokens_used: u64,
+    pub avg_tokens_per_execution: f64,
+    pub tool_call_stats: HashMap<String, u64>,
+    pub time_range: TimeRange,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimeRange {
+    pub start: u64,
+    pub end: u64,
+}
 
 /// 监控服务器配置
 #[derive(Debug, Clone)]
@@ -233,39 +254,41 @@ impl<T> MonitoringApiResponse<T> {
 
 /// 检查服务器端口是否可用
 async fn check_port_available(port: u16) -> bool {
-    TcpListener::bind(format!("127.0.0.1:{}", port)).await.is_ok()
+    TcpListener::bind(format!("127.0.0.1:{}", port))
+        .await
+        .is_ok()
 }
 
 /// 获取实时监控数据处理器
-async fn get_realtime_metrics(
-    data: web::Data<MonitoringAppState>,
-) -> ActixResult<impl Responder> {
+async fn get_realtime_metrics(data: web::Data<MonitoringAppState>) -> ActixResult<impl Responder> {
     let state = data.get_ref();
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis() as u64;
-    
-    let uptime = now - state.start_time
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u64;
+
+    let uptime = now
+        - state
+            .start_time
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
 
     // 获取代理概览统计
     let agent_overview = get_agent_overview(&state.metrics_collector).await;
-    
+
     // 获取活跃代理列表
     let active_agents = get_active_agents(&state.metrics_collector).await;
-    
+
     // 获取系统性能指标
     let system_metrics = get_system_metrics().await;
-    
+
     // 获取最近错误
     let recent_errors = get_recent_errors(&state.metrics_collector).await;
-    
+
     // 获取工具使用统计
     let tool_usage = get_tool_usage_stats(&state.metrics_collector).await;
-    
+
     // 获取内存统计
     let memory_stats = get_memory_stats(&state.metrics_collector).await;
 
@@ -289,28 +312,25 @@ async fn get_agent_overview(collector: &Arc<dyn MetricsCollector>) -> AgentOverv
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis() as u64;
-    
+
     let twenty_four_hours_ago = now - (24 * 60 * 60 * 1000);
-    
-    // 获取最近24小时的统计
-    let summary = collector
-        .get_metrics_summary(None, Some(twenty_four_hours_ago), Some(now))
-        .await
-        .unwrap_or_else(|_| MetricsSummary {
-            total_executions: 0,
-            successful_executions: 0,
-            failed_executions: 0,
-            avg_execution_time_ms: 0.0,
-            min_execution_time_ms: 0,
-            max_execution_time_ms: 0,
-            total_tokens_used: 0,
-            avg_tokens_per_execution: 0.0,
-            tool_call_stats: HashMap::new(),
-            time_range: TimeRange {
-                start: twenty_four_hours_ago,
-                end: now,
-            },
-        });
+
+    // 临时实现 - 创建默认的指标摘要
+    let summary = MetricsSummary {
+        total_executions: 0,
+        successful_executions: 0,
+        failed_executions: 0,
+        avg_execution_time_ms: 0.0,
+        min_execution_time_ms: 0,
+        max_execution_time_ms: 0,
+        total_tokens_used: 0,
+        avg_tokens_per_execution: 0.0,
+        tool_call_stats: HashMap::new(),
+        time_range: TimeRange {
+            start: twenty_four_hours_ago,
+            end: now,
+        },
+    };
 
     let success_rate = if summary.total_executions > 0 {
         summary.successful_executions as f64 / summary.total_executions as f64
@@ -319,7 +339,7 @@ async fn get_agent_overview(collector: &Arc<dyn MetricsCollector>) -> AgentOverv
     };
 
     AgentOverview {
-        total_agents: 5, // 示例数据，实际应从配置获取
+        total_agents: 5,  // 示例数据，实际应从配置获取
         active_agents: 3, // 示例数据
         total_executions: summary.total_executions,
         successful_executions: summary.successful_executions,
@@ -350,7 +370,8 @@ async fn get_active_agents(collector: &Arc<dyn MetricsCollector>) -> Vec<AgentSt
             last_activity: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_millis() as u64 - 300000, // 5分钟前
+                .as_millis() as u64
+                - 300000, // 5分钟前
             is_active: true,
             executions_last_hour: 8,
             avg_response_time: 2800.0,
@@ -375,18 +396,17 @@ async fn get_system_metrics() -> SystemMetrics {
 /// 获取最近错误
 async fn get_recent_errors(collector: &Arc<dyn MetricsCollector>) -> Vec<ErrorEvent> {
     // 示例数据，实际应从collector获取真实错误数据
-    vec![
-        ErrorEvent {
-            timestamp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64 - 120000, // 2分钟前
-            agent_name: "chat_agent".to_string(),
-            error_type: "timeout".to_string(),
-            error_message: "Request timeout after 30 seconds".to_string(),
-            severity: "warning".to_string(),
-        },
-    ]
+    vec![ErrorEvent {
+        timestamp: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+            - 120000, // 2分钟前
+        agent_name: "chat_agent".to_string(),
+        error_type: "timeout".to_string(),
+        error_message: "Request timeout after 30 seconds".to_string(),
+        severity: "warning".to_string(),
+    }]
 }
 
 /// 获取工具使用统计
@@ -411,7 +431,8 @@ async fn get_tool_usage_stats(collector: &Arc<dyn MetricsCollector>) -> Vec<Tool
             last_used: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_millis() as u64 - 180000, // 3分钟前
+                .as_millis() as u64
+                - 180000, // 3分钟前
         },
     ]
 }
@@ -437,16 +458,9 @@ async fn get_agent_performance(
     let agent_name = path.into_inner();
     let state = data.get_ref();
 
-    match state.metrics_collector.get_agent_performance(&agent_name).await {
-        Ok(performance) => {
-            Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(performance)))
-        }
-        Err(e) => {
-            Ok(HttpResponse::NotFound().json(MonitoringApiResponse::<()>::error(
-                format!("Agent '{}' not found: {}", agent_name, e)
-            )))
-        }
-    }
+    // 临时实现 - 返回空的性能数据
+    let performance: HashMap<String, f64> = HashMap::new();
+    Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(performance)))
 }
 
 /// 获取指标摘要处理器
@@ -455,37 +469,52 @@ async fn get_metrics_summary(
     data: web::Data<MonitoringAppState>,
 ) -> ActixResult<impl Responder> {
     let state = data.get_ref();
-    
+
     let agent_name = query.get("agent").map(|s| s.as_str());
     let from_time = query.get("from").and_then(|s| s.parse::<u64>().ok());
     let to_time = query.get("to").and_then(|s| s.parse::<u64>().ok());
 
-    match state.metrics_collector.get_metrics_summary(agent_name, from_time, to_time).await {
-        Ok(summary) => {
-            Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(summary)))
-        }
-        Err(e) => {
-            Ok(HttpResponse::InternalServerError().json(MonitoringApiResponse::<()>::error(
-                format!("Failed to get metrics summary: {}", e)
-            )))
-        }
-    }
+    // 临时实现 - 创建默认的指标摘要
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    let start_time = from_time.unwrap_or(now - (24 * 60 * 60 * 1000));
+    let end_time = to_time.unwrap_or(now);
+
+    let summary = MetricsSummary {
+        total_executions: 0,
+        successful_executions: 0,
+        failed_executions: 0,
+        avg_execution_time_ms: 0.0,
+        min_execution_time_ms: 0,
+        max_execution_time_ms: 0,
+        total_tokens_used: 0,
+        avg_tokens_per_execution: 0.0,
+        tool_call_stats: HashMap::new(),
+        time_range: TimeRange {
+            start: start_time,
+            end: end_time,
+        },
+    };
+
+    Ok(HttpResponse::Ok().json(MonitoringApiResponse::success(summary)))
 }
 
 /// 获取系统健康状态处理器
-async fn get_health_status(
-    data: web::Data<MonitoringAppState>,
-) -> ActixResult<impl Responder> {
+async fn get_health_status(data: web::Data<MonitoringAppState>) -> ActixResult<impl Responder> {
     let state = data.get_ref();
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis() as u64;
-    
-    let uptime = now - state.start_time
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u64;
+
+    let uptime = now
+        - state
+            .start_time
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
 
     let health_status = serde_json::json!({
         "status": "healthy",
@@ -503,11 +532,9 @@ async fn get_health_status(
 }
 
 /// 获取监控配置处理器
-async fn get_monitoring_config(
-    data: web::Data<MonitoringAppState>,
-) -> ActixResult<impl Responder> {
+async fn get_monitoring_config(data: web::Data<MonitoringAppState>) -> ActixResult<impl Responder> {
     let state = data.get_ref();
-    
+
     let config_info = serde_json::json!({
         "port": state.config.port,
         "bind_address": state.config.bind_address,
@@ -546,7 +573,7 @@ fn get_static_dir() -> PathBuf {
 async fn serve_dashboard() -> ActixResult<impl Responder> {
     let static_dir = get_static_dir();
     let dashboard_path = static_dir.join("index.html");
-    
+
     if dashboard_path.exists() {
         match tokio::fs::read_to_string(&dashboard_path).await {
             Ok(content) => {
@@ -557,7 +584,7 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
             }
         }
     }
-    
+
     // 使用内嵌的HTML内容
     let dashboard_html = r#"<!DOCTYPE html>
 <html lang="zh-CN">
@@ -951,20 +978,20 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
 
             try {
                 websocket = new WebSocket(WS_URL);
-                
+
                 websocket.onopen = function(event) {
                     console.log('WebSocket连接已建立');
                     wsConnectionStatus = 'connected';
                     fallbackToHttp = false;
                     updateConnectionStatus();
-                    
+
                     // 停止HTTP轮询
                     if (refreshInterval) {
                         clearInterval(refreshInterval);
                         refreshInterval = null;
                     }
                 };
-                
+
                 websocket.onmessage = function(event) {
                     try {
                         const message = JSON.parse(event.data);
@@ -973,26 +1000,26 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
                         console.error('解析WebSocket消息失败:', error);
                     }
                 };
-                
+
                 websocket.onclose = function(event) {
                     console.log('WebSocket连接已断开');
                     wsConnectionStatus = 'disconnected';
                     updateConnectionStatus();
-                    
+
                     // 启用HTTP轮询作为备用
                     fallbackToHttp = true;
                     startHttpPolling();
-                    
+
                     // 尝试重连
                     setTimeout(connectWebSocket, 5000);
                 };
-                
+
                 websocket.onerror = function(error) {
                     console.error('WebSocket错误:', error);
                     wsConnectionStatus = 'error';
                     updateConnectionStatus();
                 };
-                
+
             } catch (error) {
                 console.error('创建WebSocket连接失败:', error);
                 fallbackToHttp = true;
@@ -1053,7 +1080,7 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
                 `;
                 document.body.appendChild(statusIndicator);
             }
-            
+
             switch (wsConnectionStatus) {
                 case 'connected':
                     statusIndicator.textContent = '🟢 实时连接';
@@ -1086,12 +1113,12 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
                 z-index: 1001;
                 animation: slideIn 0.3s ease;
             `;
-            
-            const bgColor = alert.level === 'error' ? '#fef2f2' : 
+
+            const bgColor = alert.level === 'error' ? '#fef2f2' :
                           alert.level === 'warning' ? '#fef3c7' : '#ecfdf5';
-            const textColor = alert.level === 'error' ? '#dc2626' : 
+            const textColor = alert.level === 'error' ? '#dc2626' :
                             alert.level === 'warning' ? '#d97706' : '#059669';
-            
+
             alertContainer.style.background = bgColor;
             alertContainer.style.color = textColor;
             alertContainer.innerHTML = `
@@ -1101,9 +1128,9 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
                     ${new Date(alert.timestamp).toLocaleTimeString()}
                 </div>
             `;
-            
+
             document.body.appendChild(alertContainer);
-            
+
             // 5秒后自动移除
             setTimeout(() => {
                 if (alertContainer.parentNode) {
@@ -1118,7 +1145,7 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
             if (refreshInterval) {
                 clearInterval(refreshInterval);
             }
-            
+
             refreshInterval = setInterval(() => {
                 if (!fallbackToHttp) return;
                 loadDashboardData();
@@ -1130,7 +1157,7 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
             const secs = seconds % 60;
-            
+
             if (hours > 0) {
                 return `${hours}小时 ${minutes}分钟`;
             } else if (minutes > 0) {
@@ -1159,21 +1186,21 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
             try {
                 console.log('Loading dashboard data via HTTP...');
                 const response = await fetch(`${API_BASE}/api/monitoring/realtime`);
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                
+
                 const data = await response.json();
                 console.log('Received data:', data);
-                
+
                 if (!data.success) {
                     throw new Error(data.error || '获取数据失败');
                 }
-                
+
                 updateDashboard(data.data);
                 showDashboard();
-                
+
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
                 showError(`加载监控数据失败: ${error.message}`);
@@ -1203,7 +1230,7 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
             // 活跃代理
             const agentList = document.getElementById('agent-list');
             agentList.innerHTML = '';
-            
+
             if (metrics.active_agents.length === 0) {
                 agentList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 1rem;">暂无活跃代理</div>';
             } else {
@@ -1230,7 +1257,7 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
             // 最近错误
             const errorsContainer = document.getElementById('recent-errors');
             errorsContainer.innerHTML = '';
-            
+
             if (metrics.recent_errors.length === 0) {
                 errorsContainer.innerHTML = '<div style="text-align: center; color: #10b981; padding: 1rem;">✅ 无最近错误</div>';
             } else {
@@ -1251,7 +1278,7 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
             }
 
             // 更新时间戳
-            document.getElementById('last-update').textContent = 
+            document.getElementById('last-update').textContent =
                 `最后更新: ${new Date().toLocaleTimeString()}`;
         }
 
@@ -1266,7 +1293,7 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
         function showError(message) {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'none';
-            
+
             const errorContainer = document.getElementById('error-container');
             errorContainer.innerHTML = `
                 <div class="error-message">
@@ -1285,7 +1312,7 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
             if (refreshInterval) {
                 clearInterval(refreshInterval);
             }
-            
+
             refreshInterval = setInterval(() => {
                 loadDashboardData();
             }, 5000); // 每5秒刷新一次
@@ -1312,7 +1339,9 @@ async fn serve_dashboard() -> ActixResult<impl Responder> {
     </script>
 </body>
 </html>"#;
-    Ok(HttpResponse::Ok().content_type("text/html").body(dashboard_html))
+    Ok(HttpResponse::Ok()
+        .content_type("text/html")
+        .body(dashboard_html))
 }
 
 /// WebSocket消息类型
@@ -1322,11 +1351,18 @@ pub enum WebSocketMessage {
     /// 实时指标数据
     RealTimeMetrics(RealTimeMetrics),
     /// 代理状态更新
-    AgentStatus { agent_name: String, status: AgentStatus },
+    AgentStatus {
+        agent_name: String,
+        status: AgentStatus,
+    },
     /// 错误事件
     ErrorEvent(ErrorEvent),
     /// 告警信息
-    Alert { level: String, message: String, timestamp: u64 },
+    Alert {
+        level: String,
+        message: String,
+        timestamp: u64,
+    },
     /// 连接确认
     Connected { client_id: String, timestamp: u64 },
     /// 心跳检测
@@ -1365,12 +1401,21 @@ impl WebSocketManager {
     pub async fn add_connection(&self, client_id: String, addr: actix::Addr<MonitoringWebSocket>) {
         let connection_info = WebSocketConnectionInfo {
             client_id: client_id.clone(),
-            connected_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
-            last_ping: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+            connected_at: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
+            last_ping: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
             addr,
         };
-        
-        self.connections.write().await.insert(client_id, connection_info);
+
+        self.connections
+            .write()
+            .await
+            .insert(client_id, connection_info);
     }
 
     /// 移除连接
@@ -1393,11 +1438,12 @@ impl WebSocketManager {
 
     /// 清理超时连接
     pub async fn cleanup_stale_connections(&self, timeout_ms: u64) {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
         let mut connections = self.connections.write().await;
-        connections.retain(|_id, connection| {
-            now - connection.last_ping < timeout_ms
-        });
+        connections.retain(|_id, connection| now - connection.last_ping < timeout_ms);
     }
 }
 
@@ -1421,17 +1467,22 @@ impl MonitoringWebSocket {
     fn start_heartbeat(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(Duration::from_secs(30), |act, ctx| {
             // 检查是否超时
-            if std::time::Instant::now().duration_since(act.last_heartbeat) > Duration::from_secs(60) {
+            if std::time::Instant::now().duration_since(act.last_heartbeat)
+                > Duration::from_secs(60)
+            {
                 println!("WebSocket心跳超时，断开连接: {}", act.client_id);
                 ctx.stop();
                 return;
             }
-            
+
             // 发送心跳
             let ping_message = WebSocketMessage::Ping {
-                timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                timestamp: SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64,
             };
-            
+
             if let Ok(text) = serde_json::to_string(&ping_message) {
                 ctx.text(text);
             }
@@ -1444,25 +1495,28 @@ impl Actor for MonitoringWebSocket {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         println!("WebSocket连接已建立: {}", self.client_id);
-        
+
         // 开始心跳检测
         self.start_heartbeat(ctx);
-        
+
         // 注册连接
         let client_id = self.client_id.clone();
         let addr = ctx.address();
         let manager = self.websocket_manager.clone();
-        
+
         tokio::spawn(async move {
             manager.add_connection(client_id.clone(), addr).await;
         });
-        
+
         // 发送连接确认消息
         let connected_message = WebSocketMessage::Connected {
             client_id: self.client_id.clone(),
-            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
         };
-        
+
         if let Ok(text) = serde_json::to_string(&connected_message) {
             ctx.text(text);
         }
@@ -1470,15 +1524,15 @@ impl Actor for MonitoringWebSocket {
 
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
         println!("WebSocket连接正在断开: {}", self.client_id);
-        
+
         // 从管理器中移除连接
         let client_id = self.client_id.clone();
         let manager = self.websocket_manager.clone();
-        
+
         tokio::spawn(async move {
             manager.remove_connection(&client_id).await;
         });
-        
+
         Running::Stop
     }
 }
@@ -1495,7 +1549,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MonitoringWebSock
             }
             Ok(ws::Message::Text(text)) => {
                 self.last_heartbeat = std::time::Instant::now();
-                
+
                 // 处理客户端消息
                 if let Ok(message) = serde_json::from_str::<WebSocketMessage>(&text) {
                     match message {
@@ -1544,10 +1598,10 @@ async fn websocket_handler(
 ) -> ActixResult<impl Responder> {
     // 生成客户端ID
     let client_id = format!("client_{}", rand::random::<u32>());
-    
+
     // 创建WebSocket Actor
     let websocket = MonitoringWebSocket::new(client_id, data.websocket_manager.clone());
-    
+
     // 启动WebSocket连接
     ws::start(websocket, &req, stream)
 }
@@ -1559,15 +1613,15 @@ async fn broadcast_realtime_metrics(
     refresh_interval: u64,
 ) {
     let mut interval = tokio::time::interval(Duration::from_secs(refresh_interval));
-    
+
     loop {
         interval.tick().await;
-        
+
         // 检查是否有WebSocket连接
         if websocket_manager.connection_count().await == 0 {
             continue;
         }
-        
+
         // 生成实时指标数据
         match generate_realtime_metrics(&metrics_collector).await {
             Ok(metrics) => {
@@ -1576,19 +1630,24 @@ async fn broadcast_realtime_metrics(
             }
             Err(e) => {
                 eprintln!("生成实时指标数据失败: {}", e);
-                
+
                 // 发送错误告警
                 let alert_message = WebSocketMessage::Alert {
                     level: "error".to_string(),
                     message: format!("指标收集失败: {}", e),
-                    timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
+                    timestamp: SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis() as u64,
                 };
                 websocket_manager.broadcast(alert_message).await;
             }
         }
-        
+
         // 清理超时连接（5分钟超时）
-        websocket_manager.cleanup_stale_connections(5 * 60 * 1000).await;
+        websocket_manager
+            .cleanup_stale_connections(5 * 60 * 1000)
+            .await;
     }
 }
 
@@ -1603,19 +1662,19 @@ async fn generate_realtime_metrics(
 
     // 获取代理概览统计
     let agent_overview = get_agent_overview(metrics_collector).await;
-    
+
     // 获取活跃代理列表
     let active_agents = get_active_agents(metrics_collector).await;
-    
+
     // 获取系统性能指标
     let system_metrics = get_system_metrics().await;
-    
+
     // 获取最近错误
     let recent_errors = get_recent_errors(metrics_collector).await;
-    
+
     // 获取工具使用统计
     let tool_usage = get_tool_usage_stats(metrics_collector).await;
-    
+
     // 获取内存统计
     let memory_stats = get_memory_stats(metrics_collector).await;
 
@@ -1639,92 +1698,147 @@ pub fn start_monitoring_server(
     trace_collector: Arc<dyn TraceCollector>,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = CliResult<()>> + Send>> {
     Box::pin(async move {
-    // 检查端口是否可用
-    if !check_port_available(port).await {
-        let new_port = get_available_port(port).unwrap_or(port + 1);
-        println!("{}", format!("端口 {} 已被占用，使用端口 {}", port, new_port).bright_yellow());
-        
-        return start_monitoring_server(new_port, project_dir, metrics_collector, trace_collector).await;
-    }
-    
-    let config = MonitoringServerConfig::new(port, project_dir.clone());
-    let start_time = SystemTime::now();
-    let websocket_manager = WebSocketManager::new();
-    
-    let app_state = MonitoringAppState {
-        metrics_collector: metrics_collector.clone(),
-        trace_collector,
-        config: config.clone(),
-        start_time,
-        websocket_manager: websocket_manager.clone(),
-    };
-    
-    println!("{}", "启动监控服务器...".bright_blue());
-    println!("{}", format!("项目目录: {}", project_dir.display()).bright_blue());
-    println!("{}", format!("绑定地址: {}", config.get_bind_address()).bright_blue());
-    println!("{}", format!("实时监控: {}", if config.enable_realtime { "启用" } else { "禁用" }).bright_blue());
-    
-    let state_data = web::Data::new(app_state);
-    
-    // 启动背景任务来广播实时数据
-    tokio::spawn(broadcast_realtime_metrics(
-        websocket_manager.clone(),
-        metrics_collector.clone(),
-        config.refresh_interval,
-    ));
-    
-    // 创建并启动HTTP服务器
-    let server = HttpServer::new(move || {
-        // 配置CORS
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_method()
-            .allow_any_header()
-            .max_age(3600);
-        
-        App::new()
-            .wrap(middleware::Logger::default())
-            .wrap(cors)
-            .app_data(state_data.clone())
-            // 仪表板首页
-            .service(web::resource("/").route(web::get().to(serve_dashboard)))
-            .service(web::resource("/dashboard").route(web::get().to(serve_dashboard)))
-            // WebSocket端点
-            .service(web::resource("/ws/monitoring").route(web::get().to(websocket_handler)))
-            // 健康检查端点
-            .service(web::resource("/health").route(web::get().to(get_health_status)))
-            // 实时监控数据端点
-            .service(web::resource("/api/monitoring/realtime").route(web::get().to(get_realtime_metrics)))
-            // 代理性能统计端点
-            .service(web::resource("/api/monitoring/agents/{name}/performance").route(web::get().to(get_agent_performance)))
-            // 指标摘要端点
-            .service(web::resource("/api/monitoring/metrics/summary").route(web::get().to(get_metrics_summary)))
-            // 监控配置端点
-            .service(web::resource("/api/monitoring/config").route(web::get().to(get_monitoring_config)))
-            // 静态资源（如果目录存在）
-            .service({
-                let static_dir = get_static_dir();
-                if static_dir.exists() {
-                    fs::Files::new("/static", &static_dir).show_files_listing()
+        // 检查端口是否可用
+        if !check_port_available(port).await {
+            let new_port = get_available_port(port).unwrap_or(port + 1);
+            println!(
+                "{}",
+                format!("端口 {} 已被占用，使用端口 {}", port, new_port).bright_yellow()
+            );
+
+            return start_monitoring_server(
+                new_port,
+                project_dir,
+                metrics_collector,
+                trace_collector,
+            )
+            .await;
+        }
+
+        let config = MonitoringServerConfig::new(port, project_dir.clone());
+        let start_time = SystemTime::now();
+        let websocket_manager = WebSocketManager::new();
+
+        let app_state = MonitoringAppState {
+            metrics_collector: metrics_collector.clone(),
+            trace_collector,
+            config: config.clone(),
+            start_time,
+            websocket_manager: websocket_manager.clone(),
+        };
+
+        println!("{}", "启动监控服务器...".bright_blue());
+        println!(
+            "{}",
+            format!("项目目录: {}", project_dir.display()).bright_blue()
+        );
+        println!(
+            "{}",
+            format!("绑定地址: {}", config.get_bind_address()).bright_blue()
+        );
+        println!(
+            "{}",
+            format!(
+                "实时监控: {}",
+                if config.enable_realtime {
+                    "启用"
                 } else {
-                    fs::Files::new("/static", ".").show_files_listing() // 占位符
+                    "禁用"
                 }
-            })
-    })
-    .bind(&config.get_bind_address())
-    .map_err(|e| CliError::io_string(format!("无法绑定到端口: {}", config.port), e))?
-    .run();
-    
-    println!("{}", "监控服务器已启动".bright_green());
-    println!("{}", format!("仪表板: http://localhost:{}/", config.port).bright_green());
-    println!("{}", format!("WebSocket: ws://localhost:{}/ws/monitoring", config.port).bright_green());
-    println!("{}", format!("健康检查: http://localhost:{}/health", config.port).bright_green());
-    println!("{}", format!("实时监控API: http://localhost:{}/api/monitoring/realtime", config.port).bright_green());
-    
-    // 等待服务器结束
-    server.await
-        .map_err(|e| CliError::io("启动监控服务器时出错", e))?;
-    
-    Ok(())
+            )
+            .bright_blue()
+        );
+
+        let state_data = web::Data::new(app_state);
+
+        // 启动背景任务来广播实时数据
+        tokio::spawn(broadcast_realtime_metrics(
+            websocket_manager.clone(),
+            metrics_collector.clone(),
+            config.refresh_interval,
+        ));
+
+        // 创建并启动HTTP服务器
+        let server = HttpServer::new(move || {
+            // 配置CORS
+            let cors = Cors::default()
+                .allow_any_origin()
+                .allow_any_method()
+                .allow_any_header()
+                .max_age(3600);
+
+            App::new()
+                .wrap(middleware::Logger::default())
+                .wrap(cors)
+                .app_data(state_data.clone())
+                // 仪表板首页
+                .service(web::resource("/").route(web::get().to(serve_dashboard)))
+                .service(web::resource("/dashboard").route(web::get().to(serve_dashboard)))
+                // WebSocket端点
+                .service(web::resource("/ws/monitoring").route(web::get().to(websocket_handler)))
+                // 健康检查端点
+                .service(web::resource("/health").route(web::get().to(get_health_status)))
+                // 实时监控数据端点
+                .service(
+                    web::resource("/api/monitoring/realtime")
+                        .route(web::get().to(get_realtime_metrics)),
+                )
+                // 代理性能统计端点
+                .service(
+                    web::resource("/api/monitoring/agents/{name}/performance")
+                        .route(web::get().to(get_agent_performance)),
+                )
+                // 指标摘要端点
+                .service(
+                    web::resource("/api/monitoring/metrics/summary")
+                        .route(web::get().to(get_metrics_summary)),
+                )
+                // 监控配置端点
+                .service(
+                    web::resource("/api/monitoring/config")
+                        .route(web::get().to(get_monitoring_config)),
+                )
+                // 静态资源（如果目录存在）
+                .service({
+                    let static_dir = get_static_dir();
+                    if static_dir.exists() {
+                        fs::Files::new("/static", &static_dir).show_files_listing()
+                    } else {
+                        fs::Files::new("/static", ".").show_files_listing() // 占位符
+                    }
+                })
+        })
+        .bind(&config.get_bind_address())
+        .map_err(|e| CliError::io_string(format!("无法绑定到端口: {}", config.port), e))?
+        .run();
+
+        println!("{}", "监控服务器已启动".bright_green());
+        println!(
+            "{}",
+            format!("仪表板: http://localhost:{}/", config.port).bright_green()
+        );
+        println!(
+            "{}",
+            format!("WebSocket: ws://localhost:{}/ws/monitoring", config.port).bright_green()
+        );
+        println!(
+            "{}",
+            format!("健康检查: http://localhost:{}/health", config.port).bright_green()
+        );
+        println!(
+            "{}",
+            format!(
+                "实时监控API: http://localhost:{}/api/monitoring/realtime",
+                config.port
+            )
+            .bright_green()
+        );
+
+        // 等待服务器结束
+        server
+            .await
+            .map_err(|e| CliError::io("启动监控服务器时出错", e))?;
+
+        Ok(())
     })
 }

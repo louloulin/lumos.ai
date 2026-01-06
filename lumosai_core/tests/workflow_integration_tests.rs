@@ -1,16 +1,15 @@
 //! Integration tests for workflow functionality
-//! 
+//!
 //! Tests the complete workflow system including configuration loading,
 //! workflow creation, and execution.
 
-use lumosai_core::app::LumosApp;
-use lumosai_core::config::{YamlConfig, ConfigLoader};
-use lumosai_core::workflow::{WorkflowBuilder, EnhancedWorkflow};
 use lumosai_core::agent::AgentBuilder;
-use lumosai_core::llm::MockLlmProvider;
+use lumosai_core::app::LumosApp;
+use lumosai_core::config::{ConfigLoader, YamlConfig};
+use lumosai_core::workflow::{EnhancedWorkflow, WorkflowBuilder};
+use std::fs;
 use std::sync::Arc;
 use tempfile::tempdir;
-use std::fs;
 
 #[tokio::test]
 async fn test_workflow_from_config() {
@@ -54,7 +53,7 @@ workflows:
         condition: always
         timeout: 60
         retries: 2
-      
+
       - id: code_help
         name: Code Help
         description: Provide coding assistance if needed
@@ -90,38 +89,41 @@ rag:
 
     // Load configuration
     let config = ConfigLoader::load(&config_path).unwrap();
-    
+
     // Validate configuration structure
     assert!(config.project.is_some());
     assert!(config.agents.is_some());
     assert!(config.workflows.is_some());
-    
+
     let project = config.project.as_ref().unwrap();
     assert_eq!(project.name, "workflow-test-app");
-    
+
     let agents = config.agents.as_ref().unwrap();
     assert!(agents.contains_key("assistant"));
     assert!(agents.contains_key("coder"));
-    
+
     let workflows = config.workflows.as_ref().unwrap();
     assert!(workflows.contains_key("support_workflow"));
     assert!(workflows.contains_key("simple_workflow"));
-    
+
     // Test workflow configuration details
     let support_workflow = workflows.get("support_workflow").unwrap();
     assert_eq!(support_workflow.id.as_ref().unwrap(), "support_wf_001");
-    assert_eq!(support_workflow.name.as_ref().unwrap(), "Customer Support Workflow");
+    assert_eq!(
+        support_workflow.name.as_ref().unwrap(),
+        "Customer Support Workflow"
+    );
     assert_eq!(support_workflow.steps.len(), 2);
     assert_eq!(support_workflow.timeout, Some(300));
     assert_eq!(support_workflow.max_retries, Some(3));
-    
+
     // Test step configuration
     let first_step = &support_workflow.steps[0];
     assert_eq!(first_step.id.as_ref().unwrap(), "initial_assessment");
     assert_eq!(first_step.agent.as_ref().unwrap(), "assistant");
     assert_eq!(first_step.timeout, Some(60));
     assert_eq!(first_step.retries, Some(2));
-    
+
     let second_step = &support_workflow.steps[1];
     assert_eq!(second_step.id.as_ref().unwrap(), "code_help");
     assert_eq!(second_step.agent.as_ref().unwrap(), "coder");
@@ -131,10 +133,7 @@ rag:
 #[tokio::test]
 async fn test_workflow_builder() {
     // Create a mock LLM provider
-    let mock_llm = Arc::new(MockLlmProvider::new(vec![
-        "Hello! I'm here to help.".to_string(),
-        "I can assist with coding tasks.".to_string(),
-    ]));
+    let mock_llm = create_test_zhipu_provider_arc();
 
     // Create agents
     let assistant = AgentBuilder::new()
@@ -164,7 +163,7 @@ async fn test_workflow_builder() {
 
     // Note: We can't complete the build without step configurations
     // This test validates the builder pattern works correctly
-    
+
     // In a real scenario, we would add step configurations and build
     // let workflow = workflow.build().expect("Failed to build workflow");
 }
@@ -202,20 +201,23 @@ workflows:
     // Note: This will fail because we don't have real LLM providers
     // but it tests the configuration parsing and structure
     let result = LumosApp::from_config(&config_path).await;
-    
+
     // The result should be an error due to missing API keys, but not due to config structure
     assert!(result.is_err());
-    
+
     // Test that we can at least load the configuration
     let config = ConfigLoader::load(&config_path).unwrap();
     assert!(config.workflows.is_some());
-    
+
     let workflows = config.workflows.as_ref().unwrap();
     assert!(workflows.contains_key("simple"));
-    
+
     let simple_workflow = workflows.get("simple").unwrap();
     assert_eq!(simple_workflow.steps.len(), 1);
-    assert_eq!(simple_workflow.steps[0].agent.as_ref().unwrap(), "assistant");
+    assert_eq!(
+        simple_workflow.steps[0].agent.as_ref().unwrap(),
+        "assistant"
+    );
 }
 
 #[test]
@@ -306,12 +308,12 @@ workflows:
         name: Agent Step
         agent: assistant
         condition: always
-      
+
       - id: tool_step
         name: Tool Step
         tool: calculator
         condition: needs_calculation
-      
+
       - id: workflow_step
         name: Sub-Workflow Step
         workflow: sub_workflow_id
@@ -320,24 +322,24 @@ workflows:
 
     let config = YamlConfig::from_str(yaml_content).unwrap();
     assert!(config.validate().is_ok());
-    
+
     let workflows = config.workflows.as_ref().unwrap();
     let multi_step = workflows.get("multi_step").unwrap();
-    
+
     assert_eq!(multi_step.steps.len(), 3);
-    
+
     // Check agent step
     let agent_step = &multi_step.steps[0];
     assert!(agent_step.agent.is_some());
     assert!(agent_step.tool.is_none());
     assert!(agent_step.workflow.is_none());
-    
+
     // Check tool step
     let tool_step = &multi_step.steps[1];
     assert!(tool_step.agent.is_none());
     assert!(tool_step.tool.is_some());
     assert!(tool_step.workflow.is_none());
-    
+
     // Check workflow step
     let workflow_step = &multi_step.steps[2];
     assert!(workflow_step.agent.is_none());

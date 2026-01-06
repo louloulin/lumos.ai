@@ -9,27 +9,27 @@ use lumosai_ui::prelude::*;
 fn main() {
     println!("🚀 LumosAI UI Comprehensive Validation");
     println!("=====================================");
-    
+
     // Test all component categories
     test_layout_components();
     test_form_components();
     test_navigation_components();
     test_data_display_components();
     test_feedback_components();
-    
+
     // Test page rendering
     test_page_rendering();
-    
+
     // Test asset integration
     test_asset_integration();
-    
+
     println!("\n🎉 All UI validation tests passed successfully!");
     println!("✅ LumosAI UI is fully functional and ready for production use.");
 }
 
 fn test_layout_components() {
     println!("\n📐 Testing Layout Components...");
-    
+
     // Test Card component
     let card = render(rsx! {
         Card {
@@ -44,7 +44,7 @@ fn test_layout_components() {
     assert!(card.contains("test-card"));
     assert!(card.contains("Test Card"));
     println!("  ✅ Card component");
-    
+
     // Test basic layout structure
     let layout = render(rsx! {
         div {
@@ -61,7 +61,7 @@ fn test_layout_components() {
 
 fn test_form_components() {
     println!("\n📝 Testing Form Components...");
-    
+
     // Test Input component
     let input = render(rsx! {
         Input {
@@ -75,7 +75,7 @@ fn test_form_components() {
     assert!(input.contains("test_input"));
     assert!(input.contains("Test Label"));
     println!("  ✅ Input component");
-    
+
     // Test Button component
     let button = render(rsx! {
         Button {
@@ -86,7 +86,7 @@ fn test_form_components() {
     });
     assert!(button.contains("Click me"));
     println!("  ✅ Button component");
-    
+
     // Test Select component
     let select = render(rsx! {
         Select {
@@ -99,7 +99,7 @@ fn test_form_components() {
                 "Option 1"
             }
             SelectOption {
-                value: "option2", 
+                value: "option2",
                 selected_value: "option1".to_string(),
                 "Option 2"
             }
@@ -112,7 +112,7 @@ fn test_form_components() {
 
 fn test_navigation_components() {
     println!("\n🧭 Testing Navigation Components...");
-    
+
     // Test Breadcrumb component
     let breadcrumb = render(rsx! {
         Breadcrumb {
@@ -135,7 +135,7 @@ fn test_navigation_components() {
     assert!(breadcrumb.contains("Home"));
     assert!(breadcrumb.contains("Dashboard"));
     println!("  ✅ Breadcrumb component");
-    
+
     // Test navigation menu structure
     let nav = render(rsx! {
         nav {
@@ -154,7 +154,7 @@ fn test_navigation_components() {
 
 fn test_data_display_components() {
     println!("\n📊 Testing Data Display Components...");
-    
+
     // Test table structure
     let table = render(rsx! {
         table {
@@ -183,7 +183,7 @@ fn test_data_display_components() {
     assert!(table.contains("data-table"));
     assert!(table.contains("John Doe"));
     println!("  ✅ Table component");
-    
+
     // Test Label component
     let label = render(rsx! {
         Label {
@@ -197,7 +197,7 @@ fn test_data_display_components() {
 
 fn test_feedback_components() {
     println!("\n💬 Testing Feedback Components...");
-    
+
     // Test Alert/Message component
     let alert = render(rsx! {
         div {
@@ -208,7 +208,7 @@ fn test_feedback_components() {
     assert!(alert.contains("alert"));
     assert!(alert.contains("Operation completed"));
     println!("  ✅ Alert component");
-    
+
     // Test Modal structure
     let modal = render(rsx! {
         ConfirmModal {
@@ -227,7 +227,7 @@ fn test_feedback_components() {
 
 fn test_page_rendering() {
     println!("\n📄 Testing Page Rendering...");
-    
+
     // Test complete page structure
     let page = render(rsx! {
         div {
@@ -267,44 +267,44 @@ fn test_page_rendering() {
             }
         }
     });
-    
+
     assert!(page.contains("page-container"));
     assert!(page.contains("LumosAI Dashboard"));
     assert!(page.contains("Welcome to LumosAI"));
     assert!(page.contains("Get Started"));
     assert!(page.contains("© 2024 LumosAI"));
-    
+
     println!("  ✅ Complete page rendering");
     println!("  📏 Page HTML size: {} characters", page.len());
 }
 
 fn test_asset_integration() {
     println!("\n🎨 Testing Asset Integration...");
-    
+
     // Test static file references
     use web_assets::files::*;
-    
+
     // Test CSS assets
     assert_eq!(INDEX_CSS.mime_type, "text/css");
     assert_eq!(OUTPUT_CSS.mime_type, "text/css");
     println!("  ✅ CSS assets");
-    
+
     // Test JavaScript assets
     assert_eq!(INDEX_JS.mime_type, "application/javascript");
     println!("  ✅ JavaScript assets");
-    
+
     // Test SVG assets
     assert_eq!(COLLAPSE_SVG.mime_type, "image/svg+xml");
     assert_eq!(BIONIC_LOGO_SVG.mime_type, "image/svg+xml");
     assert_eq!(ASSISTANT_SVG.mime_type, "image/svg+xml");
     println!("  ✅ SVG assets");
-    
+
     // Test asset names
     assert_eq!(INDEX_CSS.name, "index.css");
     assert_eq!(INDEX_JS.name, "index.js");
     assert_eq!(COLLAPSE_SVG.name, "collapse.svg");
     println!("  ✅ Asset naming");
-    
+
     println!("  📦 Total assets available: 37+");
 }
 
@@ -315,7 +315,7 @@ fn ValidationApp() -> Element {
             class: "validation-app min-h-screen bg-gray-50 py-8",
             div {
                 class: "max-w-6xl mx-auto px-4",
-                
+
                 // Header
                 header {
                     class: "text-center mb-12",
@@ -328,11 +328,11 @@ fn ValidationApp() -> Element {
                         "Comprehensive testing of all UI components and functionality"
                     }
                 }
-                
+
                 // Component showcase grid
                 div {
                     class: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8",
-                    
+
                     // Buttons showcase
                     Card {
                         class: "p-6",
@@ -362,7 +362,7 @@ fn ValidationApp() -> Element {
                             }
                         }
                     }
-                    
+
                     // Forms showcase
                     Card {
                         class: "p-6",
@@ -388,7 +388,7 @@ fn ValidationApp() -> Element {
                             }
                         }
                     }
-                    
+
                     // Navigation showcase
                     Card {
                         class: "p-6",
@@ -417,7 +417,7 @@ fn ValidationApp() -> Element {
                         }
                     }
                 }
-                
+
                 // Status section
                 div {
                     class: "mt-12 text-center",

@@ -6,7 +6,9 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/louloulin/lumos.ai)
+[![CI](https://github.com/louloulin/lumos.ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/louloulin/lumos.ai/actions/workflows/ci.yml)
+[![Release](https://github.com/louloulin/lumos.ai/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/louloulin/lumos.ai/actions/workflows/release.yml)
+[![Docker Publish](https://github.com/louloulin/lumos.ai/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/louloulin/lumos.ai/actions/workflows/docker-publish.yml)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/lumosai)
 [![Tests](https://img.shields.io/badge/tests-7%2F7%20passing-brightgreen.svg)](tests/)
 
@@ -16,13 +18,27 @@
 > - ✅ Enterprise-grade features fully preserved
 > - ✅ Production-ready status achieved
 >
-> 📖 See [Project Completion Report](docs/PROJECT_COMPLETION_REPORT.md) for detailed information
+> 📖 See [Implementation Summary](docs/overview/IMPLEMENTATION_SUMMARY.md) for detailed information
 
-[📖 Documentation](docs/README.md) | [🚀 Quick Start](docs/QUICK_START.md) | [💡 Examples](#examples) | [🤝 Contributing](#contributing)
+[📖 文档中心](docs/README.md) | [🚀 快速开始](docs/learn/getting-started/quick-start.md) | [📚 API文档](docs/reference/api/README.md) | [💡 示例](examples/) | [🤝 贡献指南](docs/contribute/development.md)
 
 </div>
 
 ---
+
+## Table of Contents
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Requirements](#requirements)
+- [Examples](#examples)
+- [Architecture](#architecture)
+- [Workspace Overview](#workspace-overview)
+- [Feature Flags](#feature-flags)
+- [Documentation](#documentation)
+- [Changelog & Releases](#changelog--releases)
+- [Contributing](#contributing)
+- [Community & Support](#community--support)
+- [License](#license)
 
 ## ✨ Features
 
@@ -72,15 +88,18 @@ Add LumosAI to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lumosai = "0.1.3"
+lumosai = "0.2.0"
 tokio = { version = "1.0", features = ["full"] }
 ```
+
+默认启用内存向量存储（`vector-memory`），无需额外配置即可运行 RAG 与向量示例。
 
 ### Basic Usage
 
 ```rust
 use lumosai::prelude::*;
 
+/// Entry point: demonstrate Agent creation and chat
 #[tokio::main]
 async fn main() -> Result<()> {
     // 🤖 Create a simple agent
@@ -104,13 +123,14 @@ async fn main() -> Result<()> {
 ```rust
 use lumosai::prelude::*;
 
+/// Entry point: demonstrate RAG creation and retrieval
 #[tokio::main]
 async fn main() -> Result<()> {
     // 📦 Create vector storage
-    let storage = VectorStorage::memory().await?;
+    let storage = lumosai::vector::memory().await?;
 
     // 🧠 Create RAG system
-    let rag = RagSystem::builder()
+    let rag = lumosai::rag::builder()
         .storage(storage)
         .embedding_provider("openai")
         .chunking_strategy("recursive")
@@ -129,6 +149,37 @@ async fn main() -> Result<()> {
 ```
 
 ---
+### 🐳 Docker Quick Start
+
+Use the provided script to spin up a local environment:
+
+```bash
+# Start local dev services (requires Docker)
+./scripts/quick-start.sh
+
+# After services are ready, run an example
+cargo run --example basic_agent
+```
+
+Note: Ensure Docker is installed and running. Some examples may require provider API keys.
+
+---
+
+## 🧩 Requirements
+- `Rust` >= `1.70` (workspace uses Rust 2021 edition)
+- `tokio` 1.x (async runtime)
+- macOS, Linux, or Windows (primary CI validated on macOS)
+- Optional: access to external model providers when using integrations
+
+## ✅ Tests & Quality
+
+Run unit tests and static analysis locally:
+
+```bash
+cargo test
+cargo clippy
+cargo fmt --check
+```
 
 ## 💡 Examples
 
@@ -148,6 +199,9 @@ Our comprehensive example suite demonstrates real-world usage patterns:
 | [🔐 Authentication](examples/auth_demo.rs) | Enterprise security features | ⭐⭐⭐⭐ |
 | [📈 Monitoring](examples/monitoring_demo_simple.rs) | System monitoring and metrics | ⭐⭐⭐⭐ |
 | [🎯 Complete API Demo](examples/simplified_api_complete_demo.rs) | Full framework demonstration | ⭐⭐⭐⭐⭐ |
+| [🔧 Tool Macro Demo](examples/tool_macro_demo.rs) | Procedural macro for tool creation | ⭐⭐ |
+| [🧠 Unified Memory Demo](examples/unified_memory_demo.rs) | Unified memory interface system | ⭐⭐ |
+| [❌ Friendly Errors Demo](examples/friendly_errors_demo.rs) | User-friendly error handling | ⭐⭐ |
 
 ### Running Examples
 
@@ -163,6 +217,12 @@ cargo run --example multi_agent_workflow
 
 # Complete API demonstration
 cargo run --example simplified_api_complete_demo
+```
+
+Note: Some demos require provider API keys. For DeepSeek:
+
+```bash
+export DEEPSEEK_API_KEY=sk_your_key_here
 ```
 
 ---
@@ -220,6 +280,46 @@ LumosAI follows a modular, layered architecture designed for scalability and mai
 
 ---
 
+## 🧭 Workspace Overview
+The project is organized as a Rust workspace with modular crates:
+
+- `lumosai_core` — Core traits, types, configs, and simplified APIs
+- `lumosai_vector` — Unified vector storage layer (memory backend enabled by default)
+- `lumosai_rag` — Retrieval-Augmented Generation engine and pipelines
+- `lumosai_cli` — Command-line tooling and example runners
+- `lumosai_evals` — Evaluation utilities and benchmarking (optional)
+- `lumosai_network` — Networking utilities and integrations (optional)
+- `lumosai_mcp` — MCP integrations (optional)
+- `lumosai_auth` — Authentication and security primitives
+- `lumosai_enterprise` — Enterprise features (RBAC, multi-tenant, auditing)
+- `lumosai_security` — Security policies and helper utilities
+- `lumosai_telemetry` — Monitoring and observability instrumentation
+- `lumosai_voice` — Voice interfaces and audio processing
+- `lumosai_bindings` — Language bindings (Python/Node) and interop
+- `lumos_macro` — Procedural macros and DSL support
+- `lumosai_derive` — Derive macros for common patterns
+- `lumosai_multimodal` — Multimodal processing utilities
+- `lumosai_examples` — Comprehensive examples and demos
+
+Refer to `Cargo.toml` for the full workspace member list and temporarily excluded crates.
+
+---
+
+## 🧱 Feature Flags
+Feature flags allow tailoring builds to your needs (from `Cargo.toml`):
+
+- `default = ["integrations", "vector-memory"]`
+- `integrations` — Enables HTTP client integrations (e.g., `reqwest`-based remote APIs)
+- `vector-memory` — Enables in-memory vector storage via `lumosai_vector/memory`
+- (temporarily disabled) `vector-qdrant`, `vector-weaviate`, `vector-postgres` — alternative vector databases
+
+Enable/disable features in your `Cargo.toml`:
+
+```toml
+[dependencies]
+lumosai = { version = "0.2.0", features = ["integrations", "vector-memory"] }
+```
+
 ## 📚 Documentation
 
 ### 📖 User Guides
@@ -244,9 +344,16 @@ LumosAI follows a modular, layered architecture designed for scalability and mai
 ### 💡 Tutorials & Examples
 - [🧪 Testing Guide](docs/testing/README.md) - Testing strategies and best practices
 - [❓ FAQ](docs/8_faq.md) - Frequently asked questions
-- [🚀 Quick Start](docs/QUICK_START.md) - Quick start guide
+- [🚀 Quick Start](docs/quick-start/README.md) - Quick start guide
 
 ---
+
+## 📜 Changelog & Releases
+- Release notes: `docs/releases/`
+- Update history: `docs/updates/`
+- Release configuration: `release.toml`
+
+We follow semantic versioning where applicable. Refer to the release guide for details: `docs/RELEASE_GUIDE.md`.
 
 ## 🤝 Contributing
 
@@ -356,6 +463,12 @@ For enterprise customers, we offer:
 Contact us at [enterprise@lumosai.com](mailto:enterprise@lumosai.com) for more information.
 
 ---
+
+## License
+
+This project is licensed under the MIT License — see `LICENSE` for details.
+
+
 
 ## 📄 License
 

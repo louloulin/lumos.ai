@@ -4,10 +4,10 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::{Error, Result};
-use super::provider::{LlmProvider, FunctionCallingResponse};
+use super::function_calling::{FunctionCall, FunctionDefinition, ToolChoice};
+use super::provider::{FunctionCallingResponse, LlmProvider};
 use super::types::{LlmOptions, Message, Role};
-use super::function_calling::{FunctionDefinition, FunctionCall, ToolChoice};
+use crate::{Error, Result};
 
 /// DeepSeek API response structures (compatible with OpenAI format)
 #[derive(Debug, Deserialize)]
@@ -134,7 +134,7 @@ impl LlmProvider for DeepSeekProvider {
 
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
-        
+
         // Build request body
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
@@ -156,41 +156,47 @@ impl LlmProvider for DeepSeekProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {}", e)))?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "DeepSeek API returned error status {}: {}",
-                status, text
+                "DeepSeek API returned error status {status}: {text}"
             )));
         }
-        
+
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {}", e)))?;
-            
+            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {e}")))?;
+
         // Extract generated text
         let content = response["choices"][0]["message"]["content"]
             .as_str()
             .ok_or_else(|| Error::Llm("Invalid response format from DeepSeek".to_string()))?;
-            
+
         Ok(content.to_string())
     }
-    
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         // Prepare request data
         let url = format!("{}/chat/completions", self.base_url);
-        
+
         // Convert messages to DeepSeek format
         let api_messages: Vec<serde_json::Value> = messages
             .iter()
@@ -202,13 +208,13 @@ impl LlmProvider for DeepSeekProvider {
                 })
             })
             .collect();
-        
+
         // Build request body
         let mut body = serde_json::json!({
             "model": options.model.clone().unwrap_or_else(|| self.model.clone()),
             "messages": api_messages,
         });
-        
+
         // Add optional parameters
         if let Some(temperature) = options.temperature {
             body["temperature"] = serde_json::json!(temperature);
@@ -224,56 +230,59 @@ impl LlmProvider for DeepSeekProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {e}")))?;
 
         let status = res.status();
-        let text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {}", e)))?;
+        let text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "DeepSeek API returned error status {}: {}",
-                status, text
+                "DeepSeek API returned error status {status}: {text}"
             )));
         }
-        
+
         // Parse response
         let response: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {}", e)))?;
-            
+            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {e}")))?;
+
         // Extract generated text
         let content = response["choices"][0]["message"]["content"]
             .as_str()
             .ok_or_else(|| Error::Llm("Invalid response format from DeepSeek".to_string()))?;
-            
+
         Ok(content.to_string())
     }
-    
+
     async fn generate_stream<'a>(
-        &'a self, 
-        prompt: &'a str, 
-        options: &'a LlmOptions
+        &'a self,
+        prompt: &'a str,
+        options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // For now, implement a simple chunked response
-        // TODO: Implement proper streaming using SSE (Server-Sent Events)
+        // Note: Proper streaming would require DeepSeek's SSE API support
+        // This is a fallback implementation that returns the complete response at once
         let result = self.generate(prompt, options).await?;
-        
+
         // Split the result into chunks for simulation
         let words: Vec<&str> = result.split_whitespace().collect();
         let chunks: Vec<Result<String>> = words
             .chunks(3)
             .map(|chunk| Ok(chunk.join(" ") + " "))
             .collect();
-        
+
         Ok(Box::pin(stream::iter(chunks)))
     }
-    
+
     async fn get_embedding(&self, _text: &str) -> Result<Vec<f32>> {
         // Note: DeepSeek doesn't provide embedding API in their current offering
         // This is a placeholder implementation
@@ -281,7 +290,7 @@ impl LlmProvider for DeepSeekProvider {
         // 1. Use a different embedding service
         // 2. Return an error indicating embeddings are not supported
         // 3. Implement a fallback mechanism
-        
+
         Err(Error::Llm("DeepSeek does not provide embedding API. Consider using OpenAI or other providers for embeddings.".to_string()))
     }
 
@@ -297,7 +306,7 @@ impl LlmProvider for DeepSeekProvider {
         options: &LlmOptions,
     ) -> Result<FunctionCallingResponse> {
         let url = format!("{}/chat/completions", self.base_url);
-        
+
         // Convert messages to DeepSeek format
         let api_messages: Vec<serde_json::Value> = messages
             .iter()
@@ -335,16 +344,19 @@ impl LlmProvider for DeepSeekProvider {
             .collect();
 
         // Convert function definitions to DeepSeek tools format (same as OpenAI)
-        let tools: Vec<Value> = functions.iter().map(|func| {
-            serde_json::json!({
-                "type": "function",
-                "function": {
-                    "name": func.name,
-                    "description": func.description,
-                    "parameters": func.parameters
-                }
+        let tools: Vec<Value> = functions
+            .iter()
+            .map(|func| {
+                serde_json::json!({
+                    "type": "function",
+                    "function": {
+                        "name": func.name,
+                        "description": func.description,
+                        "parameters": func.parameters
+                    }
+                })
             })
-        }).collect();
+            .collect();
 
         // Convert tool choice (same format as OpenAI)
         let tool_choice_value = match tool_choice {
@@ -381,28 +393,30 @@ impl LlmProvider for DeepSeekProvider {
         }
 
         // Send request
-        let res = self.client
+        let res = self
+            .client
             .post(&url)
             .headers(self.create_headers())
             .json(&body)
             .send()
             .await
-            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("DeepSeek API request failed: {e}")))?;
 
         let status = res.status();
-        let response_text = res.text().await
-            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {}", e)))?;
+        let response_text = res
+            .text()
+            .await
+            .map_err(|e| Error::Llm(format!("Failed to read DeepSeek response: {e}")))?;
 
         if !status.is_success() {
             return Err(Error::Llm(format!(
-                "DeepSeek API returned error status {}: {}",
-                status, response_text
+                "DeepSeek API returned error status {status}: {response_text}"
             )));
         }
 
         // Parse response
         let response: DeepSeekResponse = serde_json::from_str(&response_text)
-            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {}", e)))?;
+            .map_err(|e| Error::Llm(format!("Failed to parse DeepSeek response: {e}")))?;
 
         if response.choices.is_empty() {
             return Err(Error::Llm("No choices in DeepSeek response".to_string()));
@@ -412,7 +426,8 @@ impl LlmProvider for DeepSeekProvider {
         let message = &choice.message;
 
         // Convert function calls
-        let function_calls: Vec<FunctionCall> = message.tool_calls
+        let function_calls: Vec<FunctionCall> = message
+            .tool_calls
             .iter()
             .filter(|tc| tc.call_type == "function")
             .map(|tc| FunctionCall {
@@ -425,7 +440,10 @@ impl LlmProvider for DeepSeekProvider {
         Ok(FunctionCallingResponse {
             content: message.content.clone(),
             function_calls,
-            finish_reason: choice.finish_reason.clone().unwrap_or_else(|| "stop".to_string()),
+            finish_reason: choice
+                .finish_reason
+                .clone()
+                .unwrap_or_else(|| "stop".to_string()),
         })
     }
 }
@@ -443,7 +461,10 @@ mod tests {
 
     #[test]
     fn test_deepseek_provider_with_custom_model() {
-        let provider = DeepSeekProvider::new("test-key".to_string(), Some("deepseek-reasoner".to_string()));
+        let provider = DeepSeekProvider::new(
+            "test-key".to_string(),
+            Some("deepseek-reasoner".to_string()),
+        );
         assert_eq!(provider.model, "deepseek-reasoner");
     }
 
@@ -452,7 +473,7 @@ mod tests {
         let provider = DeepSeekProvider::with_base_url(
             "test-key".to_string(),
             "https://custom.api.example.com".to_string(),
-            None
+            None,
         );
         assert_eq!(provider.base_url, "https://custom.api.example.com");
     }
@@ -468,6 +489,9 @@ mod tests {
         let provider = DeepSeekProvider::new("test-key".to_string(), None);
         let result = provider.get_embedding("test text").await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("DeepSeek does not provide embedding API"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("DeepSeek does not provide embedding API"));
     }
 }

@@ -1,29 +1,29 @@
 //! Weaviate-specific error types
 
-use thiserror::Error;
 use lumosai_vector_core::prelude::VectorError;
+use thiserror::Error;
 
 /// Weaviate-specific error type
 #[derive(Error, Debug)]
 pub enum WeaviateError {
     #[error("HTTP request failed: {0}")]
     Http(#[from] reqwest::Error),
-    
+
     #[error("JSON serialization/deserialization failed: {0}")]
     Json(#[from] serde_json::Error),
-    
+
     #[error("URL parsing failed: {0}")]
     Url(#[from] url::ParseError),
-    
+
     #[error("Weaviate API error: {0}")]
     Api(String),
-    
+
     #[error("Schema error: {0}")]
     Schema(String),
-    
+
     #[error("Class not found: {0}")]
     ClassNotFound(String),
-    
+
     #[error("Invalid configuration: {0}")]
     Config(String),
 }

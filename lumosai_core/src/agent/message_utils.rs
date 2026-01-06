@@ -45,24 +45,24 @@ pub fn tool_message(content: impl Into<String>, tool_name: impl Into<String>) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_message_creation() {
         let system = system_message("System instruction");
         assert_eq!(system.role, Role::System);
         assert_eq!(system.content, "System instruction");
-        
+
         let user = user_message("User query");
         assert_eq!(user.role, Role::User);
         assert_eq!(user.content, "User query");
-        
+
         let assistant = assistant_message("Assistant response");
         assert_eq!(assistant.role, Role::Assistant);
         assert_eq!(assistant.content, "Assistant response");
-        
+
         let tool = tool_message("Tool result", "calculator");
         assert_eq!(tool.role, Role::Tool);
         assert_eq!(tool.content, "Tool result");
         assert_eq!(tool.name, Some("calculator".to_string()));
     }
-} 
+}

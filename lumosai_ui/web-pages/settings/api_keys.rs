@@ -12,9 +12,9 @@ API密钥管理界面，参考bionic-gpt实现，提供API密钥的创建、管�
 */
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
 use crate::app_layout::{Layout, SideBar};
 use crate::types::Rbac;
+use dioxus::prelude::*;
 
 // 临时类型定义
 #[derive(Clone, Debug, PartialEq)]
@@ -37,10 +37,7 @@ pub struct TokenUsage {
 
 /// API密钥管理页面
 #[component]
-pub fn ApiKeysPage(
-    team_id: i32,
-    rbac: Rbac,
-) -> Element {
+pub fn ApiKeysPage(team_id: i32, rbac: Rbac) -> Element {
     // 模拟数据
     let api_keys = vec![
         ApiKey {
@@ -243,10 +240,7 @@ fn UsageOverview(token_usage: Vec<TokenUsage>) -> Element {
 
 /// API密钥列表组件
 #[component]
-fn ApiKeysList(
-    api_keys: Vec<ApiKey>,
-    rbac: Rbac,
-) -> Element {
+fn ApiKeysList(api_keys: Vec<ApiKey>, rbac: Rbac) -> Element {
     rsx! {
         div {
             class: "card bg-base-100 shadow-lg",
@@ -300,10 +294,7 @@ fn ApiKeysList(
 
 /// API密钥行组件
 #[component]
-fn ApiKeyRow(
-    api_key: ApiKey,
-    rbac: Rbac,
-) -> Element {
+fn ApiKeyRow(api_key: ApiKey, rbac: Rbac) -> Element {
     rsx! {
         tr {
             td {
@@ -419,7 +410,7 @@ fn UsageGuide() -> Element {
                 }
                 div {
                     class: "grid grid-cols-1 md:grid-cols-2 gap-6",
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",
@@ -432,7 +423,7 @@ fn UsageGuide() -> Element {
                             li { "• Start making API calls to Lumos AI" }
                         }
                     }
-                    
+
                     div {
                         h5 {
                             class: "font-semibold mb-2",

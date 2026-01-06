@@ -1,19 +1,19 @@
 //! Enhanced memory management system
-//! 
+//!
 //! Provides Mastra-like memory management features including semantic retrieval, working memory and memory processors
 
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
-use serde_json::Value;
 
-use crate::error::Result;
 use crate::base::{Base, BaseComponent, ComponentConfig};
-use crate::llm::{Message, LlmProvider};
+use crate::compat::Component;
+use crate::error::Result;
+use crate::llm::{LlmProvider, Message};
 use crate::memory::{Memory, MemoryConfig};
 use crate::vector::VectorStorage;
-use crate::logger::{Component, Logger};
 
 /// Memory entry type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -91,10 +91,10 @@ pub struct MemoryQueryOptions {
 pub trait MemoryProcessor: Send + Sync {
     /// Process memory entries
     async fn process(&self, entries: &mut Vec<MemoryEntry>) -> Result<()>;
-    
+
     /// Get processor name
     fn name(&self) -> &str;
-    
+
     /// Get processor description
     fn description(&self) -> &str;
 }
@@ -119,7 +119,7 @@ impl MemoryProcessor for ImportanceProcessor {
                 "Please evaluate the importance of the following content, return a value between 0.0 and 1.0:\n\n{}",
                 entry.content
             );
-            
+
             let options = crate::llm::LlmOptions::default();
             match self.llm.generate(&prompt, &options).await {
                 Ok(response) => {
@@ -135,11 +135,11 @@ impl MemoryProcessor for ImportanceProcessor {
         }
         Ok(())
     }
-    
+
     fn name(&self) -> &str {
         "ImportanceProcessor"
     }
-    
+
     fn description(&self) -> &str {
         "Use LLM to evaluate the importance of memory entries"
     }
@@ -148,22 +148,22 @@ impl MemoryProcessor for ImportanceProcessor {
 impl ImportanceProcessor {
     fn calculate_heuristic_importance(&self, entry: &MemoryEntry) -> f32 {
         let mut importance = 0.5; // Base importance
-        
+
         // Adjust based on content length
         if entry.content.len() > 100 {
             importance += 0.1;
         }
-        
+
         // Adjust based on access count
         importance += (entry.access_count as f32 * 0.01).min(0.3);
-        
+
         // Adjust based on entry type
         match entry.entry_type {
             MemoryEntryType::Fact => importance += 0.2,
             MemoryEntryType::ToolCall | MemoryEntryType::ToolResult => importance += 0.1,
             _ => {}
         }
-        
+
         importance.clamp(0.0, 1.0)
     }
 }
@@ -205,7 +205,7 @@ impl EnhancedMemory {
 
         // Add default processor
         memory.add_processor(Arc::new(ImportanceProcessor::new(llm)));
-        
+
         memory
     }
 
@@ -225,31 +225,50 @@ impl EnhancedMemory {
 
         // Generate embedding vector
         let embedding = self.llm.get_embedding(&entry.content).await?;
-        
+
         // Store to vector database
         let mut metadata = entry.metadata.clone();
         metadata.insert("id".to_string(), Value::String(entry.id.clone()));
-        metadata.insert("entry_type".to_string(), Value::String(format!("{:?}", entry.entry_type)));
-        metadata.insert("created_at".to_string(), Value::Number(entry.created_at.into()));
-        metadata.insert("importance".to_string(), Value::Number(serde_json::Number::from_f64(entry.importance as f64).unwrap_or_else(|| serde_json::Number::from(0))));
-        
+        metadata.insert(
+            "entry_type".to_string(),
+            Value::String(format!("{:?}", entry.entry_type)),
+        );
+        metadata.insert(
+            "created_at".to_string(),
+            Value::Number(entry.created_at.into()),
+        );
+        metadata.insert(
+            "importance".to_string(),
+            Value::Number(
+                serde_json::Number::from_f64(entry.importance as f64)
+                    .unwrap_or_else(|| serde_json::Number::from(0)),
+            ),
+        );
+
         if let Some(thread_id) = &entry.thread_id {
             metadata.insert("thread_id".to_string(), Value::String(thread_id.clone()));
         }
-        
+
         if let Some(resource_id) = &entry.resource_id {
-            metadata.insert("resource_id".to_string(), Value::String(resource_id.clone()));
+            metadata.insert(
+                "resource_id".to_string(),
+                Value::String(resource_id.clone()),
+            );
         }
 
         let entry_id = entry.id.clone();
-        self.vector_storage.upsert(
-            "default",
-            vec![embedding],
-            Some(vec![entry.id]),
-            Some(vec![metadata])
-        ).await?;
+        self.vector_storage
+            .upsert(
+                "default",
+                vec![embedding],
+                Some(vec![entry.id]),
+                Some(vec![metadata]),
+            )
+            .await?;
 
-        self.base.logger().debug(&format!("Stored memory entry: {}", entry_id), None);
+        self.base
+            .logger()
+            .debug(&format!("Stored memory entry: {entry_id}"));
         Ok(())
     }
 
@@ -257,27 +276,33 @@ impl EnhancedMemory {
     pub async fn query(&self, options: &MemoryQueryOptions) -> Result<Vec<MemoryEntry>> {
         // Generate query vector
         let query_embedding = self.llm.get_embedding(&options.query).await?;
-        
+
         // Build filter conditions
         let mut filters = options.filters.clone().unwrap_or_default();
-        
+
         if let Some(thread_id) = &options.thread_id {
             filters.insert("thread_id".to_string(), Value::String(thread_id.clone()));
         }
-        
+
         if let Some(resource_id) = &options.resource_id {
-            filters.insert("resource_id".to_string(), Value::String(resource_id.clone()));
+            filters.insert(
+                "resource_id".to_string(),
+                Value::String(resource_id.clone()),
+            );
         }
 
         // Execute vector search
         let limit = options.limit.unwrap_or(10);
-        let results = self.vector_storage.query(
-            "default",
-            query_embedding,
-            limit,
-            None, // filters not supported in this simple implementation
-            false, // include_vectors
-        ).await?;
+        let results = self
+            .vector_storage
+            .query(
+                "default",
+                query_embedding,
+                limit,
+                None,  // filters not supported in this simple implementation
+                false, // include_vectors
+            )
+            .await?;
 
         // Convert results to memory entries
         let mut entries = Vec::new();
@@ -290,7 +315,10 @@ impl EnhancedMemory {
 
             // Reconstruct memory entry from metadata
             if let Some(metadata) = &result.metadata {
-                if let Some(entry) = self.reconstruct_entry_from_metadata(&result.id, metadata).await? {
+                if let Some(entry) = self
+                    .reconstruct_entry_from_metadata(&result.id, metadata)
+                    .await?
+                {
                     entries.push(entry);
                 }
             }
@@ -320,7 +348,8 @@ impl EnhancedMemory {
     ) -> Result<Option<MemoryEntry>> {
         // This should get entry details from complete storage
         // For simplification, we reconstruct basic info from metadata
-        let entry_type = metadata.get("entry_type")
+        let entry_type = metadata
+            .get("entry_type")
             .and_then(|v| v.as_str())
             .map(|s| match s {
                 "UserMessage" => MemoryEntryType::UserMessage,
@@ -334,20 +363,24 @@ impl EnhancedMemory {
             })
             .unwrap_or(MemoryEntryType::Context);
 
-        let created_at = metadata.get("created_at")
+        let created_at = metadata
+            .get("created_at")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
 
-        let importance = metadata.get("importance")
+        let importance = metadata
+            .get("importance")
             .and_then(|v| v.as_f64())
             .map(|f| f as f32)
             .unwrap_or(0.5);
 
-        let thread_id = metadata.get("thread_id")
+        let thread_id = metadata
+            .get("thread_id")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let resource_id = metadata.get("resource_id")
+        let resource_id = metadata
+            .get("resource_id")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 

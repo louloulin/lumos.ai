@@ -1,0 +1,29 @@
+[package]
+name = "hello-world"
+version = "0.1.0"
+edition = "2021"
+description = "最简单的 LumosAI Agent 示例"
+authors = ["LumosAI Team"]
+license = "MIT"
+
+# 独立的包，不属于主 workspace
+[workspace]
+
+[dependencies]
+lumosai = { path = "../../../", version = "0.2.0" }
+tokio = { version = "1.0", features = ["full"] }
+serde_json = "1.0"
+anyhow = "1.0"
+env_logger = "0.10"
+
+[[bin]]
+name = "hello-world"
+path = "src/main.rs"
+
+[[example]]
+name = "interactive"
+path = "examples/interactive.rs"
+
+[[example]]
+name = "configured"
+path = "examples/configured.rs"

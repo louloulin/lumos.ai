@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
-use web_assets::files::{bionic_logo_svg, button_select_svg, profile_svg};
-use daisy_rsx::*;
 use crate::types::Team;
+use daisy_rsx::*;
 use dioxus::prelude::*;
+use web_assets::files::{bionic_logo_svg, button_select_svg, profile_svg};
 
 pub fn popup(teams: Vec<(String, String)>, team: Team) -> String {
     let page = if !team.name.is_empty() {

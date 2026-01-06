@@ -5,7 +5,7 @@ use syn::{parse_macro_input, DeriveInput};
 pub fn llm_adapter_impl(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    
+
     // Generate the LlmProvider implementation
     let expanded = quote! {
         #[async_trait::async_trait]
@@ -41,6 +41,6 @@ pub fn llm_adapter_impl(input: TokenStream) -> TokenStream {
             }
         }
     };
-    
+
     TokenStream::from(expanded)
-} 
+}

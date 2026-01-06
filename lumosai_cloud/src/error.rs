@@ -1,5 +1,5 @@
 //! 云原生部署错误处理
-//! 
+//!
 //! 提供统一的错误类型和处理机制
 
 use std::fmt;
@@ -11,122 +11,126 @@ pub enum CloudError {
     /// Kubernetes相关错误
     #[error("Kubernetes error: {0}")]
     KubernetesConnection(String),
-    
+
     #[error("Kubernetes deployment error: {0}")]
     KubernetesDeployment(String),
-    
+
     #[error("Kubernetes not configured")]
     KubernetesNotConfigured,
-    
+
     /// Docker相关错误
     #[error("Docker error: {0}")]
     DockerConnection(String),
-    
+
     #[error("Docker deployment error: {0}")]
     DockerDeployment(String),
-    
+
     #[error("Docker not configured")]
     DockerNotConfigured,
-    
+
+    /// 功能未启用错误
+    #[error("Feature '{0}' is not enabled. Please enable it in Cargo.toml")]
+    FeatureNotEnabled(String),
+
     /// 云提供商错误
     #[error("Cloud provider '{0}' not configured")]
     CloudProviderNotConfigured(String),
-    
+
     #[error("AWS error: {0}")]
     AwsError(String),
-    
+
     #[error("Azure error: {0}")]
     AzureError(String),
-    
+
     #[error("GCP error: {0}")]
     GcpError(String),
-    
+
     /// 配置错误
     #[error("Configuration error: {0}")]
     Configuration(String),
-    
+
     #[error("Invalid deployment config: {field}: {message}")]
     InvalidDeploymentConfig { field: String, message: String },
-    
+
     /// 网络错误
     #[error("Network error: {0}")]
     Network(String),
-    
+
     #[error("Service discovery error: {0}")]
     ServiceDiscovery(String),
-    
+
     #[error("Load balancer error: {0}")]
     LoadBalancer(String),
-    
+
     /// 存储错误
     #[error("Storage error: {0}")]
     Storage(String),
-    
+
     #[error("Volume mount error: {0}")]
     VolumeMount(String),
-    
+
     /// 安全错误
     #[error("Security error: {0}")]
     Security(String),
-    
+
     #[error("Authentication error: {0}")]
     Authentication(String),
-    
+
     #[error("Authorization error: {0}")]
     Authorization(String),
-    
+
     /// 监控错误
     #[error("Monitoring error: {0}")]
     Monitoring(String),
-    
+
     #[error("Metrics collection error: {0}")]
     MetricsCollection(String),
-    
+
     /// 自动扩容错误
     #[error("Autoscaling error: {0}")]
     Autoscaling(String),
-    
+
     #[error("Resource scaling error: {0}")]
     ResourceScaling(String),
-    
+
     /// 资源错误
     #[error("Resource not found: {resource_type} '{name}'")]
     ResourceNotFound { resource_type: String, name: String },
-    
+
     #[error("Resource conflict: {0}")]
     ResourceConflict(String),
-    
+
     #[error("Insufficient resources: {0}")]
     InsufficientResources(String),
-    
+
     /// 部署错误
     #[error("Deployment failed: {0}")]
     DeploymentFailed(String),
-    
+
     #[error("Deployment timeout: operation timed out after {timeout_seconds}s")]
     DeploymentTimeout { timeout_seconds: u64 },
-    
+
     #[error("Rollback failed: {0}")]
     RollbackFailed(String),
-    
+
     /// 健康检查错误
     #[error("Health check failed: {0}")]
     HealthCheckFailed(String),
-    
+
     #[error("Readiness probe failed: {0}")]
     ReadinessProbe(String),
-    
+
     #[error("Liveness probe failed: {0}")]
     LivenessProbe(String),
-    
+
     /// 序列化错误
     #[error("Serialization error: {0}")]
     Serialization(String),
-    
+
     /// IO错误
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     /// 其他错误
     #[error("Unknown error: {0}")]
     Unknown(String),
@@ -140,25 +144,25 @@ pub type Result<T> = std::result::Result<T, CloudError>;
 pub struct ErrorContext {
     /// 错误代码
     pub error_code: String,
-    
+
     /// 错误消息
     pub message: String,
-    
+
     /// 详细信息
     pub details: Option<String>,
-    
+
     /// 建议操作
     pub suggestions: Vec<String>,
-    
+
     /// 错误分类
     pub category: ErrorCategory,
-    
+
     /// 严重程度
     pub severity: ErrorSeverity,
-    
+
     /// 是否可重试
     pub retryable: bool,
-    
+
     /// 相关文档链接
     pub documentation_url: Option<String>,
 }
@@ -211,7 +215,9 @@ impl CloudError {
                 category: ErrorCategory::Infrastructure,
                 severity: ErrorSeverity::High,
                 retryable: true,
-                documentation_url: Some("https://docs.lumosai.com/deployment/kubernetes".to_string()),
+                documentation_url: Some(
+                    "https://docs.lumosai.com/deployment/kubernetes".to_string(),
+                ),
             },
             Self::KubernetesDeployment(msg) => ErrorContext {
                 error_code: "KUBERNETES_DEPLOYMENT".to_string(),
@@ -225,7 +231,9 @@ impl CloudError {
                 category: ErrorCategory::Deployment,
                 severity: ErrorSeverity::High,
                 retryable: true,
-                documentation_url: Some("https://docs.lumosai.com/troubleshooting/kubernetes".to_string()),
+                documentation_url: Some(
+                    "https://docs.lumosai.com/troubleshooting/kubernetes".to_string(),
+                ),
             },
             Self::DockerConnection(msg) => ErrorContext {
                 error_code: "DOCKER_CONNECTION".to_string(),
@@ -253,9 +261,14 @@ impl CloudError {
                 category: ErrorCategory::Configuration,
                 severity: ErrorSeverity::Medium,
                 retryable: false,
-                documentation_url: Some("https://docs.lumosai.com/configuration/deployment".to_string()),
+                documentation_url: Some(
+                    "https://docs.lumosai.com/configuration/deployment".to_string(),
+                ),
             },
-            Self::ResourceNotFound { resource_type, name } => ErrorContext {
+            Self::ResourceNotFound {
+                resource_type,
+                name,
+            } => ErrorContext {
                 error_code: "RESOURCE_NOT_FOUND".to_string(),
                 message: format!("资源 {} '{}' 未找到", resource_type, name),
                 details: None,
@@ -281,7 +294,9 @@ impl CloudError {
                 category: ErrorCategory::Deployment,
                 severity: ErrorSeverity::High,
                 retryable: true,
-                documentation_url: Some("https://docs.lumosai.com/troubleshooting/timeouts".to_string()),
+                documentation_url: Some(
+                    "https://docs.lumosai.com/troubleshooting/timeouts".to_string(),
+                ),
             },
             Self::InsufficientResources(msg) => ErrorContext {
                 error_code: "INSUFFICIENT_RESOURCES".to_string(),
@@ -309,7 +324,7 @@ impl CloudError {
             },
         }
     }
-    
+
     /// 获取错误代码
     pub fn error_code(&self) -> &'static str {
         match self {
@@ -319,6 +334,7 @@ impl CloudError {
             Self::DockerConnection(_) => "DOCKER_CONNECTION",
             Self::DockerDeployment(_) => "DOCKER_DEPLOYMENT",
             Self::DockerNotConfigured => "DOCKER_NOT_CONFIGURED",
+            Self::FeatureNotEnabled(_) => "FEATURE_NOT_ENABLED",
             Self::CloudProviderNotConfigured(_) => "CLOUD_PROVIDER_NOT_CONFIGURED",
             Self::AwsError(_) => "AWS_ERROR",
             Self::AzureError(_) => "AZURE_ERROR",
@@ -351,19 +367,19 @@ impl CloudError {
             Self::Unknown(_) => "UNKNOWN_ERROR",
         }
     }
-    
+
     /// 是否可重试
     pub fn is_retryable(&self) -> bool {
         matches!(
             self,
-            Self::KubernetesConnection(_) |
-            Self::DockerConnection(_) |
-            Self::Network(_) |
-            Self::DeploymentTimeout { .. } |
-            Self::InsufficientResources(_) |
-            Self::HealthCheckFailed(_) |
-            Self::ReadinessProbe(_) |
-            Self::LivenessProbe(_)
+            Self::KubernetesConnection(_)
+                | Self::DockerConnection(_)
+                | Self::Network(_)
+                | Self::DeploymentTimeout { .. }
+                | Self::InsufficientResources(_)
+                | Self::HealthCheckFailed(_)
+                | Self::ReadinessProbe(_)
+                | Self::LivenessProbe(_)
         )
     }
 }

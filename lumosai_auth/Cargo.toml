@@ -1,0 +1,36 @@
+[package]
+name = "lumosai_auth"
+version = "0.2.0"
+edition = "2021"
+authors = ["Lumosai Team <team@lumosai.dev>"]
+description = "LumosAI 认证和授权模块"
+license = "MIT"
+repository = "https://github.com/louloulin/lumos.ai.git"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai_auth"
+keywords = ["ai", "auth", "jwt", "oauth2", "rbac"]
+categories = ["authentication", "web-programming"]
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+
+# JWT 支持
+jsonwebtoken = "9.3"
+# OAuth2 支持  
+oauth2 = "4.4"
+# 密码哈希
+argon2 = "0.5"
+# 会话管理
+redis = { workspace = true, optional = true }
+
+[features]
+default = []
+redis-session = ["redis"]

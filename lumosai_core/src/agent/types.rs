@@ -1,8 +1,8 @@
 //! Agent types and configurations
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::llm::{LlmOptions, Message, Role};
@@ -85,43 +85,43 @@ pub struct AgentGenerateOptions {
     /// Override the system message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_message: Option<Message>,
-    
+
     /// Optional instructions to override the agent's default instructions
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instructions: Option<String>,
-    
+
     /// Additional context messages to include
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<Vec<Message>>,
-    
+
     /// Memory configuration options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory_options: Option<MemoryConfig>,
-    
+
     /// Thread ID for conversation tracking
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thread_id: Option<String>,
-    
+
     /// Resource ID for tracking
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource_id: Option<String>,
-    
+
     /// Unique ID for this generation run
     #[serde(skip_serializing_if = "Option::is_none")]
     pub run_id: Option<String>,
-    
+
     /// Maximum number of steps allowed for generation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_steps: Option<u32>,
-    
+
     /// Controls how tools are selected during generation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<ToolChoice>,
-    
+
     /// Maximum number of context messages to include from memory
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context_window: Option<usize>,
-    
+
     /// LLM options
     #[serde(flatten)]
     pub llm_options: LlmOptions,
@@ -151,35 +151,35 @@ pub struct AgentStreamOptions {
     /// Optional instructions to override the agent's default instructions
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instructions: Option<String>,
-    
+
     /// Additional context messages to include
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<Vec<Message>>,
-    
+
     /// Memory configuration options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory_options: Option<MemoryConfig>,
-    
+
     /// Thread ID for conversation tracking
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thread_id: Option<String>,
-    
+
     /// Resource ID for tracking
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource_id: Option<String>,
-    
+
     /// Unique ID for this generation run
     #[serde(skip_serializing_if = "Option::is_none")]
     pub run_id: Option<String>,
-    
+
     /// Maximum number of steps allowed for generation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_steps: Option<u32>,
-    
+
     /// Controls how tools are selected during generation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<ToolChoice>,
-    
+
     /// LLM options
     #[serde(flatten)]
     pub llm_options: LlmOptions,
@@ -224,7 +224,7 @@ pub struct AgentStep {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum StepType {
-    /// Initial step 
+    /// Initial step
     Initial,
     /// Tool execution step
     Tool,
@@ -394,6 +394,75 @@ pub enum ToolsInput {
 
 /// Toolsets input for organizing tools into groups
 pub type ToolsetsInput = HashMap<String, HashMap<String, Box<dyn Tool>>>;
+
+/// Agent health status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum HealthStatus {
+    /// Agent is healthy
+    Healthy,
+    /// Agent is degraded but still functioning
+    Degraded,
+    /// Agent is unhealthy and needs attention
+    Unhealthy,
+}
+
+/// Agent lifecycle state
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum LifecycleState {
+    /// Agent has been created but not started
+    Created,
+    /// Agent is starting up
+    Starting,
+    /// Agent is running normally
+    Running,
+    /// Agent is paused
+    Paused,
+    /// Agent is stopping
+    Stopping,
+    /// Agent has stopped
+    Stopped,
+    /// Agent has failed
+    Failed(String),
+}
+
+/// Agent status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub enum AgentStatus {
+    /// Agent is idle
+    #[default]
+    Idle,
+    /// Agent is processing a request
+    Processing,
+    /// Agent is in an error state
+    Error(String),
+    /// Agent is paused
+    Paused,
+}
+
+/// Agent capabilities
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AgentCapabilities {
+    /// List of agent capabilities
+    pub capabilities: Vec<String>,
+    /// Capability metadata
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Isolation level for multi-tenant environments
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub enum IsolationLevel {
+    /// No isolation
+    #[default]
+    None,
+    /// Tenant-level isolation
+    Tenant,
+    /// User-level isolation
+    User,
+    /// Session-level isolation
+    Session,
+    /// Custom isolation level
+    Custom(String),
+}
 
 /// Evaluation metric trait for agent performance measurement
 pub trait EvaluationMetric: Send + Sync {

@@ -1,11 +1,8 @@
-use lumosai_network::{
-    AgentNode, Message, MessageType,
-    AgentId, AgentType, AgentCapability
-};
-use lumosai_network::network::AgentConfig;
 use lumosai_network::message::MessagePriority;
+use lumosai_network::network::AgentConfig;
+use lumosai_network::{AgentCapability, AgentId, AgentNode, AgentType, Message, MessageType};
 use serde_json::json;
-use std::time::{Instant, Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 use tokio::time::sleep;
 
 /// 网络和分布式系统全面验证测试
@@ -13,31 +10,31 @@ use tokio::time::sleep;
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🚀 LumosAI 网络和分布式系统验证测试");
     println!("========================================");
-    
+
     // 测试1: 服务发现验证
     println!("\n📋 测试1: 服务发现验证");
     test_service_discovery().await?;
-    
+
     // 测试2: 网络拓扑验证
     println!("\n📋 测试2: 网络拓扑验证");
     test_network_topology().await?;
-    
+
     // 测试3: 消息路由验证
     println!("\n📋 测试3: 消息路由验证");
     test_message_routing().await?;
-    
+
     // 测试4: Agent节点验证
     println!("\n📋 测试4: Agent节点验证");
     test_agent_nodes().await?;
-    
+
     // 测试5: 网络管理器验证
     println!("\n📋 测试5: 网络管理器验证");
     test_network_manager().await?;
-    
+
     // 测试6: 分布式通信验证
     println!("\n📋 测试6: 分布式通信验证");
     test_distributed_communication().await?;
-    
+
     println!("\n✅ 所有网络和分布式系统验证测试完成！");
     Ok(())
 }
@@ -52,7 +49,12 @@ async fn test_service_discovery() -> std::result::Result<(), Box<dyn std::error:
     let services = vec![
         ("test-service-1", "TestService", "1.0.0", "127.0.0.1:8080"),
         ("test-service-2", "WorkerService", "1.0.0", "127.0.0.1:8081"),
-        ("test-service-3", "CoordinatorService", "1.0.0", "127.0.0.1:8082"),
+        (
+            "test-service-3",
+            "CoordinatorService",
+            "1.0.0",
+            "127.0.0.1:8082",
+        ),
     ];
 
     for (service_id, service_name, version, address) in &services {
@@ -79,7 +81,10 @@ async fn test_service_discovery() -> std::result::Result<(), Box<dyn std::error:
     println!("📊 发现的服务数量: {}", services.len());
 
     for (service_id, service_name, _, address) in &services {
-        println!("📝 发现服务: {} ({}) @ {}", service_name, service_id, address);
+        println!(
+            "📝 发现服务: {} ({}) @ {}",
+            service_name, service_id, address
+        );
     }
 
     // 模拟服务更新
@@ -109,8 +114,18 @@ async fn test_network_topology() -> std::result::Result<(), Box<dyn std::error::
     // 模拟节点信息
     let nodes = vec![
         ("node-1", "127.0.0.1:8001", "agent", vec!["llm", "tools"]),
-        ("node-2", "127.0.0.1:8002", "worker", vec!["compute", "storage"]),
-        ("node-3", "127.0.0.1:8003", "coordinator", vec!["orchestration", "monitoring"]),
+        (
+            "node-2",
+            "127.0.0.1:8002",
+            "worker",
+            vec!["compute", "storage"],
+        ),
+        (
+            "node-3",
+            "127.0.0.1:8003",
+            "coordinator",
+            vec!["orchestration", "monitoring"],
+        ),
     ];
 
     // 模拟节点添加
@@ -185,7 +200,10 @@ async fn test_message_routing() -> std::result::Result<(), Box<dyn std::error::E
         sleep(tokio::time::Duration::from_millis(1)).await;
         let duration = start_time.elapsed();
 
-        println!("✅ 路由 '{}' -> '{}' 添加成功! 耗时: {:?}", node_id, address, duration);
+        println!(
+            "✅ 路由 '{}' -> '{}' 添加成功! 耗时: {:?}",
+            node_id, address, duration
+        );
     }
 
     // 创建测试消息
@@ -194,20 +212,23 @@ async fn test_message_routing() -> std::result::Result<(), Box<dyn std::error::E
             AgentId::new(),
             vec![AgentId::new()],
             MessageType::Command,
-            json!({"action": "process", "data": "test data 1"})
-        ).with_priority(MessagePriority::Normal),
+            json!({"action": "process", "data": "test data 1"}),
+        )
+        .with_priority(MessagePriority::Normal),
         Message::new(
             AgentId::new(),
             vec![AgentId::new()],
             MessageType::Response,
-            json!({"result": "processed", "status": "success"})
-        ).with_priority(MessagePriority::Normal),
+            json!({"result": "processed", "status": "success"}),
+        )
+        .with_priority(MessagePriority::Normal),
         Message::new(
             AgentId::new(),
             vec![AgentId::new(), AgentId::new()],
             MessageType::System,
-            json!({"announcement": "system maintenance", "time": "2025-01-12T20:00:00Z"})
-        ).with_priority(MessagePriority::High),
+            json!({"announcement": "system maintenance", "time": "2025-01-12T20:00:00Z"}),
+        )
+        .with_priority(MessagePriority::High),
     ];
 
     for (i, message) in test_messages.iter().enumerate() {
@@ -223,12 +244,7 @@ async fn test_message_routing() -> std::result::Result<(), Box<dyn std::error::E
     }
 
     // 模拟路由策略测试
-    let strategies = vec![
-        "Direct",
-        "LoadBalance",
-        "Failover",
-        "Broadcast",
-    ];
+    let strategies = vec!["Direct", "LoadBalance", "Failover", "Broadcast"];
 
     for strategy in strategies {
         let start_time = Instant::now();
@@ -258,7 +274,8 @@ async fn test_agent_nodes() -> std::result::Result<(), Box<dyn std::error::Error
 
         // 创建Agent节点
         let agent_id = AgentId::new();
-        let agent_capabilities: Vec<AgentCapability> = capabilities.iter()
+        let agent_capabilities: Vec<AgentCapability> = capabilities
+            .iter()
             .map(|cap| AgentCapability::new(cap.to_string(), format!("{} capability", cap)))
             .collect();
 
@@ -300,7 +317,10 @@ async fn test_agent_nodes() -> std::result::Result<(), Box<dyn std::error::Error
         let status = agent_node.status().await;
         let duration = start_time.elapsed();
 
-        println!("✅ Agent节点 '{}' 状态查询成功! 耗时: {:?}", agent_id, duration);
+        println!(
+            "✅ Agent节点 '{}' 状态查询成功! 耗时: {:?}",
+            agent_id, duration
+        );
         println!("📝 节点状态: {:?}", status);
     }
 
@@ -401,7 +421,7 @@ async fn test_distributed_communication() -> std::result::Result<(), Box<dyn std
                 "scenario": scenario_name,
                 "type": message_type,
                 "timestamp": SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()
-            })
+            }),
         );
 
         // 模拟消息处理延迟
@@ -445,7 +465,10 @@ async fn test_distributed_communication() -> std::result::Result<(), Box<dyn std
     let duration = start_time.elapsed();
     println!("✅ 负载均衡测试完成! 耗时: {:?}", duration);
     println!("📊 处理消息数量: {}", load_test_messages);
-    println!("📊 平均处理时间: {:?}", duration / load_test_messages as u32);
+    println!(
+        "📊 平均处理时间: {:?}",
+        duration / load_test_messages as u32
+    );
 
     println!("✅ 分布式通信验证完成！");
 

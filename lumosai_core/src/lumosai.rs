@@ -3,15 +3,18 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use serde::{Serialize, Deserialize};
+use crate::compat::{Component, Storage};
+use crate::logger::{default_logger, LogLevel, Logger};
+use crate::telemetry::TelemetrySink;
+use serde::{Deserialize, Serialize};
 
 use crate::agent::trait_def::Agent;
 use crate::base::Base;
 use crate::error::{Error, Result};
-use crate::logger::{Component, Logger, LogLevel, create_logger, create_noop_logger};
+// use crate::compat::{create_logger, create_noop_logger, Component, LogLevel, Logger};
 use crate::memory::Memory;
-use crate::storage::Storage;
-use crate::telemetry::TelemetrySink;
+// use crate::compat::Storage;
+// use crate::compat::TelemetrySink;
 use crate::vector::VectorStorage;
 use crate::workflow::basic::Workflow;
 
@@ -50,13 +53,11 @@ impl Lumosai {
     /// 创建新的Lumosai实例
     pub fn new(config: LumosaiConfig) -> Self {
         let logger = if config.disable_logger {
-            create_noop_logger()
+            // 使用noop logger实现 - 需要统一Logger trait类型
+            // 暂时使用default_logger，需要后续重构Logger接口
+            default_logger()
         } else {
-            create_logger(
-                config.name.clone().unwrap_or_else(|| "Lumosai".to_string()),
-                Component::Llm,
-                config.log_level.unwrap_or(LogLevel::Info),
-            )
+            default_logger()
         };
 
         Self {
@@ -94,76 +95,109 @@ impl Lumosai {
     /// 注册Agent
     pub fn register_agent(&self, name: impl Into<String>, agent: Arc<dyn Agent>) -> Result<()> {
         let name = name.into();
-        let mut agents = self.agents.lock().map_err(|_| Error::Lock("无法锁定agents".to_string()))?;
-        
+        let mut agents = self
+            .agents
+            .lock()
+            .map_err(|_| Error::Lock("无法锁定agents".to_string()))?;
+
         if agents.contains_key(&name) {
-            return Err(Error::AlreadyExists(format!("Agent '{}'已存在", name)));
+            return Err(Error::AlreadyExists(format!("Agent '{name}'已存在")));
         }
-        
+
         agents.insert(name, agent);
         Ok(())
     }
 
     /// 获取Agent
     pub fn get_agent(&self, name: &str) -> Result<Arc<dyn Agent>> {
-        let agents = self.agents.lock().map_err(|_| Error::Lock("无法锁定agents".to_string()))?;
-        
-        agents.get(name)
+        let agents = self
+            .agents
+            .lock()
+            .map_err(|_| Error::Lock("无法锁定agents".to_string()))?;
+
+        agents
+            .get(name)
             .cloned()
-            .ok_or_else(|| Error::NotFound(format!("Agent '{}'不存在", name)))
+            .ok_or_else(|| Error::NotFound(format!("Agent '{name}'不存在")))
     }
 
     /// 获取所有Agent
     pub fn get_agents(&self) -> Result<Vec<(String, Arc<dyn Agent>)>> {
-        let agents = self.agents.lock().map_err(|_| Error::Lock("无法锁定agents".to_string()))?;
-        
-        Ok(agents.iter()
+        let agents = self
+            .agents
+            .lock()
+            .map_err(|_| Error::Lock("无法锁定agents".to_string()))?;
+
+        Ok(agents
+            .iter()
             .map(|(name, agent)| (name.clone(), agent.clone()))
             .collect())
     }
 
     /// 注册向量存储
-    pub fn register_vector(&self, name: impl Into<String>, vector: Arc<dyn VectorStorage>) -> Result<()> {
+    pub fn register_vector(
+        &self,
+        name: impl Into<String>,
+        vector: Arc<dyn VectorStorage>,
+    ) -> Result<()> {
         let name = name.into();
-        let mut vectors = self.vectors.lock().map_err(|_| Error::Lock("无法锁定vectors".to_string()))?;
-        
+        let mut vectors = self
+            .vectors
+            .lock()
+            .map_err(|_| Error::Lock("无法锁定vectors".to_string()))?;
+
         if vectors.contains_key(&name) {
-            return Err(Error::AlreadyExists(format!("Vector '{}'已存在", name)));
+            return Err(Error::AlreadyExists(format!("Vector '{name}'已存在")));
         }
-        
+
         vectors.insert(name, vector);
         Ok(())
     }
 
     /// 获取向量存储
     pub fn get_vector(&self, name: &str) -> Result<Arc<dyn VectorStorage>> {
-        let vectors = self.vectors.lock().map_err(|_| Error::Lock("无法锁定vectors".to_string()))?;
-        
-        vectors.get(name)
+        let vectors = self
+            .vectors
+            .lock()
+            .map_err(|_| Error::Lock("无法锁定vectors".to_string()))?;
+
+        vectors
+            .get(name)
             .cloned()
-            .ok_or_else(|| Error::NotFound(format!("Vector '{}'不存在", name)))
+            .ok_or_else(|| Error::NotFound(format!("Vector '{name}'不存在")))
     }
 
     /// 注册工作流
-    pub fn register_workflow(&self, name: impl Into<String>, workflow: Arc<dyn Workflow>) -> Result<()> {
+    pub fn register_workflow(
+        &self,
+        name: impl Into<String>,
+        workflow: Arc<dyn Workflow>,
+    ) -> Result<()> {
         let name = name.into();
-        let mut workflows = self.workflows.lock().map_err(|_| Error::Lock("无法锁定workflows".to_string()))?;
-        
+        let mut workflows = self
+            .workflows
+            .lock()
+            .map_err(|_| Error::Lock("无法锁定workflows".to_string()))?;
+
         if workflows.contains_key(&name) {
-            return Err(Error::AlreadyExists(format!("Workflow '{}'已存在", name)));
+            return Err(Error::AlreadyExists(format!("Workflow '{name}'已存在")));
         }
-        
+
         workflows.insert(name, workflow);
         Ok(())
     }
 
     /// 获取工作流
     pub fn get_workflow(&self, name: &str) -> Result<Arc<dyn Workflow>> {
-        let workflows = self.workflows.lock().map_err(|_| Error::Lock("无法锁定workflows".to_string()))?;
-        
-        workflows.get(name)
+        let workflows = self
+            .workflows
+            .lock()
+            .map_err(|_| Error::Lock("无法锁定workflows".to_string()))?;
+
+        workflows
+            .get(name)
             .cloned()
-            .ok_or_else(|| Error::NotFound(format!("Workflow '{}'不存在", name)))
+            .ok_or_else(|| Error::NotFound(format!("Workflow '{name}'不存在")))
     }
 
     /// 设置存储
@@ -191,24 +225,24 @@ impl Base for Lumosai {
     fn name(&self) -> Option<&str> {
         self.config.name.as_deref()
     }
-    
+
     fn component(&self) -> Component {
         Component::Llm
     }
-    
+
     fn logger(&self) -> Arc<dyn Logger> {
         self.logger.clone()
     }
-    
+
     fn set_logger(&mut self, logger: Arc<dyn Logger>) {
         self.logger = logger;
     }
-    
+
     fn telemetry(&self) -> Option<Arc<dyn TelemetrySink>> {
         self.telemetry.clone()
     }
-    
+
     fn set_telemetry(&mut self, telemetry: Arc<dyn TelemetrySink>) {
         self.telemetry = Some(telemetry);
     }
-} 
+}

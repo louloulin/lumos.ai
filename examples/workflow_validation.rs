@@ -1,54 +1,54 @@
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
-use std::collections::HashMap;
 
 /// 工作流编排全面验证测试
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🔄 LumosAI 工作流编排验证测试");
     println!("========================================");
-    
+
     // 测试1: 基础工作流执行
     println!("\n📋 测试1: 基础工作流执行");
     test_basic_workflow_execution().await?;
-    
+
     // 测试2: 条件分支工作流
     println!("\n📋 测试2: 条件分支工作流");
     test_conditional_workflow().await?;
-    
+
     // 测试3: 并行任务执行
     println!("\n📋 测试3: 并行任务执行");
     test_parallel_task_execution().await?;
-    
+
     // 测试4: 多代理协作
     println!("\n📋 测试4: 多代理协作");
     test_multi_agent_collaboration().await?;
-    
+
     // 测试5: 工作流状态管理
     println!("\n📋 测试5: 工作流状态管理");
     test_workflow_state_management().await?;
-    
+
     // 测试6: 错误处理和重试
     println!("\n📋 测试6: 错误处理和重试");
     test_workflow_error_handling().await?;
-    
+
     // 测试7: 工作流监控
     println!("\n📋 测试7: 工作流监控");
     test_workflow_monitoring().await?;
-    
+
     // 测试8: 复杂业务流程
     println!("\n📋 测试8: 复杂业务流程");
     test_complex_business_workflow().await?;
-    
+
     println!("\n✅ 所有工作流编排验证测试完成！");
     Ok(())
 }
 
 async fn test_basic_workflow_execution() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🧪 测试基础工作流执行...");
-    
+
     println!("✅ 基础工作流执行测试开始");
-    
+
     // 定义简单的线性工作流
     let workflow_steps = vec![
         ("初始化", "设置工作流环境和参数"),
@@ -58,116 +58,126 @@ async fn test_basic_workflow_execution() -> std::result::Result<(), Box<dyn std:
         ("结果生成", "生成最终输出结果"),
         ("清理资源", "清理临时资源和缓存"),
     ];
-    
+
     println!("🔄 执行线性工作流...");
     let start_time = Instant::now();
-    
+
     let mut workflow_context = HashMap::new();
     workflow_context.insert("workflow_id".to_string(), "wf_001".to_string());
     workflow_context.insert("user_id".to_string(), "user_123".to_string());
-    
+
     for (i, (step_name, description)) in workflow_steps.iter().enumerate() {
         let step_start = Instant::now();
-        
+
         println!("  🔸 步骤 {}: {} - {}", i + 1, step_name, description);
-        
+
         // 模拟步骤执行时间
         let execution_time = match i {
-            0 => 100,  // 初始化
-            1 => 300,  // 数据收集
-            2 => 200,  // 数据处理
-            3 => 500,  // 分析计算
-            4 => 150,  // 结果生成
-            5 => 50,   // 清理资源
+            0 => 100, // 初始化
+            1 => 300, // 数据收集
+            2 => 200, // 数据处理
+            3 => 500, // 分析计算
+            4 => 150, // 结果生成
+            5 => 50,  // 清理资源
             _ => 100,
         };
-        
+
         sleep(Duration::from_millis(execution_time)).await;
-        
+
         let step_duration = step_start.elapsed();
-        
+
         // 更新工作流上下文
         workflow_context.insert(
-            format!("step_{}_completed", i + 1), 
-            chrono::Utc::now().to_rfc3339()
+            format!("step_{}_completed", i + 1),
+            chrono::Utc::now().to_rfc3339(),
         );
-        
+
         println!("    ✓ 完成 (耗时: {:?})", step_duration);
     }
-    
+
     let total_duration = start_time.elapsed();
-    
+
     println!("✅ 线性工作流执行完成! 总耗时: {:?}", total_duration);
     println!("📝 步骤数: {}", workflow_steps.len());
-    println!("📝 平均步骤时间: {:?}", total_duration / workflow_steps.len() as u32);
+    println!(
+        "📝 平均步骤时间: {:?}",
+        total_duration / workflow_steps.len() as u32
+    );
     println!("📝 工作流上下文: {} 个键值对", workflow_context.len());
-    
+
     // 测试循环工作流
     println!("🔁 测试循环工作流...");
     let start_time = Instant::now();
-    
+
     let max_iterations = 5;
     let mut iteration = 0;
     let mut convergence_achieved = false;
-    
+
     while iteration < max_iterations && !convergence_achieved {
         iteration += 1;
         println!("  🔄 迭代 {}/{}", iteration, max_iterations);
-        
+
         // 模拟迭代处理
         sleep(Duration::from_millis(200)).await;
-        
+
         // 模拟收敛检查
         let convergence_score = iteration as f64 / max_iterations as f64;
         println!("    📊 收敛分数: {:.2}", convergence_score);
-        
+
         if convergence_score >= 0.8 {
             convergence_achieved = true;
             println!("    ✓ 达到收敛条件");
         }
     }
-    
+
     let duration = start_time.elapsed();
-    
+
     println!("✅ 循环工作流完成! 耗时: {:?}", duration);
     println!("📝 迭代次数: {}", iteration);
-    println!("📝 收敛状态: {}", if convergence_achieved { "已收敛" } else { "未收敛" });
-    
+    println!(
+        "📝 收敛状态: {}",
+        if convergence_achieved {
+            "已收敛"
+        } else {
+            "未收敛"
+        }
+    );
+
     Ok(())
 }
 
 async fn test_conditional_workflow() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🧪 测试条件分支工作流...");
-    
+
     println!("✅ 条件分支工作流测试开始");
-    
+
     // 测试不同的条件分支场景
     let test_scenarios = vec![
         ("用户类型: VIP", "vip", true),
         ("用户类型: 普通", "normal", false),
         ("用户类型: 企业", "enterprise", true),
     ];
-    
+
     for (scenario_name, user_type, is_premium) in &test_scenarios {
         println!("🔀 执行场景: {}", scenario_name);
         let start_time = Instant::now();
-        
+
         // 步骤1: 用户验证
         println!("  🔸 步骤1: 用户验证");
         sleep(Duration::from_millis(100)).await;
         println!("    ✓ 用户类型: {}", user_type);
-        
+
         // 步骤2: 权限检查
         println!("  🔸 步骤2: 权限检查");
         sleep(Duration::from_millis(50)).await;
         println!("    ✓ 高级权限: {}", if *is_premium { "是" } else { "否" });
-        
+
         // 条件分支
         if *is_premium {
             println!("  🔸 步骤3a: 高级用户流程");
             sleep(Duration::from_millis(200)).await;
             println!("    ✓ 启用高级功能");
-            
+
             println!("  🔸 步骤4a: 个性化服务");
             sleep(Duration::from_millis(150)).await;
             println!("    ✓ 提供个性化推荐");
@@ -175,42 +185,47 @@ async fn test_conditional_workflow() -> std::result::Result<(), Box<dyn std::err
             println!("  🔸 步骤3b: 标准用户流程");
             sleep(Duration::from_millis(100)).await;
             println!("    ✓ 提供标准服务");
-            
+
             println!("  🔸 步骤4b: 升级提示");
             sleep(Duration::from_millis(80)).await;
             println!("    ✓ 显示升级选项");
         }
-        
+
         // 汇聚步骤
         println!("  🔸 步骤5: 结果汇总");
         sleep(Duration::from_millis(100)).await;
         println!("    ✓ 生成最终响应");
-        
+
         let duration = start_time.elapsed();
-        
+
         println!("✅ 场景 '{}' 完成! 耗时: {:?}", scenario_name, duration);
     }
-    
+
     // 测试多条件复杂分支
     println!("🌳 测试多条件复杂分支...");
     let start_time = Instant::now();
-    
+
     let conditions = vec![
         ("地区", "北京", true),
         ("时间", "工作日", true),
         ("负载", "正常", false),
     ];
-    
+
     println!("🔍 评估条件:");
     for (condition_name, value, result) in &conditions {
         sleep(Duration::from_millis(30)).await;
-        println!("  📋 {}: {} -> {}", condition_name, value, if *result { "满足" } else { "不满足" });
+        println!(
+            "  📋 {}: {} -> {}",
+            condition_name,
+            value,
+            if *result { "满足" } else { "不满足" }
+        );
     }
-    
+
     // 根据条件组合决定执行路径
     let all_conditions_met = conditions.iter().all(|(_, _, result)| *result);
     let any_condition_met = conditions.iter().any(|(_, _, result)| *result);
-    
+
     if all_conditions_met {
         println!("  🎯 执行路径: 全条件满足分支");
         sleep(Duration::from_millis(200)).await;
@@ -221,25 +236,25 @@ async fn test_conditional_workflow() -> std::result::Result<(), Box<dyn std::err
         println!("  🎯 执行路径: 默认分支");
         sleep(Duration::from_millis(100)).await;
     }
-    
+
     let duration = start_time.elapsed();
-    
+
     println!("✅ 多条件分支测试完成! 耗时: {:?}", duration);
-    
+
     Ok(())
 }
 
 async fn test_parallel_task_execution() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("🧪 测试并行任务执行...");
-    
+
     println!("✅ 并行任务执行测试开始");
-    
+
     // 测试简单并行任务
     println!("⚡ 测试简单并行任务...");
     let start_time = Instant::now();
-    
+
     let mut handles = Vec::new();
-    
+
     // 创建并行任务
     let tasks = vec![
         ("数据库查询", 300),
@@ -247,42 +262,43 @@ async fn test_parallel_task_execution() -> std::result::Result<(), Box<dyn std::
         ("文件处理", 400),
         ("缓存更新", 150),
     ];
-    
+
     for (task_name, duration_ms) in tasks {
         let handle = tokio::spawn(async move {
             let task_start = Instant::now();
-            
+
             println!("  🔸 开始任务: {}", task_name);
             sleep(Duration::from_millis(duration_ms)).await;
-            
+
             let task_duration = task_start.elapsed();
             println!("  ✓ 完成任务: {} (耗时: {:?})", task_name, task_duration);
-            
+
             (task_name, task_duration)
         });
-        
+
         handles.push(handle);
     }
-    
+
     // 等待所有并行任务完成
     let mut results = Vec::new();
     for handle in handles {
         let result = handle.await?;
         results.push(result);
     }
-    
+
     let total_duration = start_time.elapsed();
-    
+
     println!("✅ 并行任务执行完成! 总耗时: {:?}", total_duration);
     println!("📝 并行任务数: {}", results.len());
-    
+
     // 计算并行效率
     let sequential_time: Duration = results.iter().map(|(_, duration)| *duration).sum();
-    let parallel_efficiency = sequential_time.as_millis() as f64 / total_duration.as_millis() as f64;
-    
+    let parallel_efficiency =
+        sequential_time.as_millis() as f64 / total_duration.as_millis() as f64;
+
     println!("📝 顺序执行时间: {:?}", sequential_time);
     println!("📝 并行效率: {:.2}x", parallel_efficiency);
-    
+
     Ok(())
 }
 
@@ -418,14 +434,14 @@ async fn test_workflow_state_management() -> std::result::Result<(), Box<dyn std
             WorkflowState::Running => {
                 println!("    ⚡ 执行工作流任务...");
                 sleep(Duration::from_millis(300)).await;
-            },
+            }
             WorkflowState::Paused => {
                 println!("    ⏸️ 工作流已暂停，等待恢复...");
                 sleep(Duration::from_millis(500)).await;
-            },
+            }
             WorkflowState::Completed => {
                 println!("    ✅ 工作流执行完成");
-            },
+            }
             _ => {}
         }
     }
@@ -535,8 +551,10 @@ async fn test_workflow_monitoring() -> std::result::Result<(), Box<dyn std::erro
     println!("  📝 完成任务数: {}", metrics["tasks_completed"]);
     println!("  📝 失败任务数: {}", metrics["tasks_failed"]);
     println!("  📝 总执行时间: {} ms", metrics["total_execution_time_ms"]);
-    println!("  📝 成功率: {:.1}%",
-             metrics["tasks_completed"] as f64 / tasks.len() as f64 * 100.0);
+    println!(
+        "  📝 成功率: {:.1}%",
+        metrics["tasks_completed"] as f64 / tasks.len() as f64 * 100.0
+    );
 
     Ok(())
 }

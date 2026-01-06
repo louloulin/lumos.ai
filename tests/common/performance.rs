@@ -1,5 +1,5 @@
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 /// 性能基准测试框架
 pub struct PerformanceBenchmark {
@@ -18,12 +18,12 @@ impl PerformanceBenchmark {
             start_time: None,
         }
     }
-    
+
     /// 开始测量
     pub fn start(&mut self) {
         self.start_time = Some(Instant::now());
     }
-    
+
     /// 结束测量并记录
     pub fn end(&mut self) {
         if let Some(start) = self.start_time.take() {
@@ -31,53 +31,53 @@ impl PerformanceBenchmark {
             self.measurements.push(duration);
         }
     }
-    
+
     /// 记录内存使用
     pub fn record_memory(&mut self, usage: usize) {
         self.memory_measurements.push(usage);
     }
-    
+
     /// 获取平均执行时间
     pub fn average_duration(&self) -> Duration {
         if self.measurements.is_empty() {
             return Duration::from_millis(0);
         }
-        
+
         let total: Duration = self.measurements.iter().sum();
         total / self.measurements.len() as u32
     }
-    
+
     /// 获取最小执行时间
     pub fn min_duration(&self) -> Duration {
         self.measurements.iter().min().copied().unwrap_or_default()
     }
-    
+
     /// 获取最大执行时间
     pub fn max_duration(&self) -> Duration {
         self.measurements.iter().max().copied().unwrap_or_default()
     }
-    
+
     /// 获取P95执行时间
     pub fn p95_duration(&self) -> Duration {
         if self.measurements.is_empty() {
             return Duration::from_millis(0);
         }
-        
+
         let mut sorted = self.measurements.clone();
         sorted.sort();
         let index = (sorted.len() as f64 * 0.95) as usize;
         sorted.get(index).copied().unwrap_or_default()
     }
-    
+
     /// 获取平均内存使用
     pub fn average_memory(&self) -> usize {
         if self.memory_measurements.is_empty() {
             return 0;
         }
-        
+
         self.memory_measurements.iter().sum::<usize>() / self.memory_measurements.len()
     }
-    
+
     /// 生成报告
     pub fn report(&self) -> PerformanceReport {
         PerformanceReport {
@@ -116,7 +116,7 @@ impl PerformanceReport {
         println!("Average Memory: {} bytes", self.avg_memory);
         println!("=====================================");
     }
-    
+
     /// 验证性能是否符合预期
     pub fn validate(&self, max_avg_duration: Duration, max_p95_duration: Duration) -> bool {
         self.avg_duration <= max_avg_duration && self.p95_duration <= max_p95_duration
@@ -134,23 +134,24 @@ impl PerformanceManager {
             benchmarks: HashMap::new(),
         }
     }
-    
+
     /// 创建新的基准测试
     pub fn create_benchmark(&mut self, name: &str) -> &mut PerformanceBenchmark {
-        self.benchmarks.insert(name.to_string(), PerformanceBenchmark::new(name));
+        self.benchmarks
+            .insert(name.to_string(), PerformanceBenchmark::new(name));
         self.benchmarks.get_mut(name).unwrap()
     }
-    
+
     /// 获取基准测试
     pub fn get_benchmark(&mut self, name: &str) -> Option<&mut PerformanceBenchmark> {
         self.benchmarks.get_mut(name)
     }
-    
+
     /// 生成所有报告
     pub fn generate_reports(&self) -> Vec<PerformanceReport> {
         self.benchmarks.values().map(|b| b.report()).collect()
     }
-    
+
     /// 打印所有报告
     pub fn print_all_reports(&self) {
         for report in self.generate_reports() {
@@ -162,15 +163,13 @@ impl PerformanceManager {
 /// 性能测试宏
 #[macro_export]
 macro_rules! benchmark {
-    ($manager:expr, $name:expr, $code:block) => {
-        {
-            let benchmark = $manager.create_benchmark($name);
-            benchmark.start();
-            let result = $code;
-            benchmark.end();
-            result
-        }
-    };
+    ($manager:expr, $name:expr, $code:block) => {{
+        let benchmark = $manager.create_benchmark($name);
+        benchmark.start();
+        let result = $code;
+        benchmark.end();
+        result
+    }};
 }
 
 /// 并发性能测试
@@ -185,18 +184,18 @@ where
     T: Send + 'static,
 {
     let mut benchmark = PerformanceBenchmark::new(name);
-    
+
     benchmark.start();
-    
+
     let tasks: Vec<_> = (0..task_count)
         .map(|_| tokio::spawn(task_factory()))
         .collect();
-    
+
     // 等待所有任务完成
     for task in tasks {
         let _ = task.await;
     }
-    
+
     benchmark.end();
     benchmark.report()
 }
@@ -215,24 +214,24 @@ where
 {
     let mut benchmark = PerformanceBenchmark::new(name);
     let start_time = Instant::now();
-    
+
     while start_time.elapsed() < duration {
         benchmark.start();
-        
+
         let tasks: Vec<_> = (0..concurrent_tasks)
             .map(|_| {
                 let factory = task_factory.clone();
                 tokio::spawn(factory())
             })
             .collect();
-        
+
         // 等待所有任务完成
         for task in tasks {
             let _ = task.await;
         }
-        
+
         benchmark.end();
     }
-    
+
     benchmark.report()
 }

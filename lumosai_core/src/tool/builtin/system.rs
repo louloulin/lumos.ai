@@ -1,16 +1,18 @@
 //! System utility tools inspired by Mastra's system integrations
-//! 
+//!
 //! This module provides datetime, UUID generation, and other system utilities
 
-use crate::tool::{Tool, ToolSchema, ParameterSchema, FunctionTool, ToolExecutionContext, ToolExecutionOptions};
-use serde_json::{Value, json};
-use std::collections::HashMap;
-use std::process::{Command, Stdio};
-use std::io::Write;
-use tempfile::NamedTempFile;
-use crate::{Result, Error};
 use crate::base::Base;
+use crate::tool::{
+    FunctionTool, ParameterSchema, Tool, ToolExecutionContext, ToolExecutionOptions, ToolSchema,
+};
+use crate::{Error, Result};
 use async_trait::async_trait;
+use serde_json::{json, Value};
+use std::collections::HashMap;
+use std::io::Write;
+use std::process::{Command, Stdio};
+use tempfile::NamedTempFile;
 
 /// Create a datetime tool
 /// Similar to Mastra's date/time utilities
@@ -58,7 +60,9 @@ pub fn create_datetime_tool() -> FunctionTool {
         },
         ParameterSchema {
             name: "unit".to_string(),
-            description: "Unit for add/subtract (seconds, minutes, hours, days, weeks, months, years)".to_string(),
+            description:
+                "Unit for add/subtract (seconds, minutes, hours, days, weeks, months, years)"
+                    .to_string(),
             r#type: "string".to_string(),
             required: false,
             properties: None,
@@ -71,37 +75,39 @@ pub fn create_datetime_tool() -> FunctionTool {
         "Comprehensive datetime operations and formatting",
         schema,
         |params| {
-            let operation = params.get("operation")
+            let operation = params
+                .get("operation")
                 .and_then(|v| v.as_str())
                 .ok_or("Operation is required")?;
-            
+
             let input = params.get("input").and_then(|v| v.as_str());
-            let format = params.get("format")
+            let format = params
+                .get("format")
                 .and_then(|v| v.as_str())
                 .unwrap_or("%Y-%m-%d %H:%M:%S");
-            let timezone = params.get("timezone")
+            let timezone = params
+                .get("timezone")
                 .and_then(|v| v.as_str())
                 .unwrap_or("UTC");
             let amount = params.get("amount").and_then(|v| v.as_i64());
-            let unit = params.get("unit")
+            let unit = params
+                .get("unit")
                 .and_then(|v| v.as_str())
                 .unwrap_or("seconds");
 
             let now = chrono::Utc::now();
 
             match operation {
-                "now" => {
-                    Ok(json!({
-                        "success": true,
-                        "operation": "now",
-                        "result": {
-                            "iso": now.to_rfc3339(),
-                            "timestamp": now.timestamp(),
-                            "formatted": now.format(format).to_string(),
-                            "timezone": timezone
-                        }
-                    }))
-                },
+                "now" => Ok(json!({
+                    "success": true,
+                    "operation": "now",
+                    "result": {
+                        "iso": now.to_rfc3339(),
+                        "timestamp": now.timestamp(),
+                        "formatted": now.format(format).to_string(),
+                        "timezone": timezone
+                    }
+                })),
                 "parse" => {
                     if let Some(input) = input {
                         // Mock parsing - in real implementation would use chrono parsing
@@ -122,7 +128,7 @@ pub fn create_datetime_tool() -> FunctionTool {
                             "error": "Input datetime string is required for parse operation"
                         }))
                     }
-                },
+                }
                 "format" => {
                     if let Some(input) = input {
                         Ok(json!({
@@ -141,12 +147,12 @@ pub fn create_datetime_tool() -> FunctionTool {
                             "error": "Input datetime string is required for format operation"
                         }))
                     }
-                },
+                }
                 "add" | "subtract" => {
                     if let Some(amount) = amount {
                         let multiplier = if operation == "subtract" { -1 } else { 1 };
                         let adjusted_amount = amount * multiplier;
-                        
+
                         // Mock calculation
                         let result_time = match unit {
                             "seconds" => now + chrono::Duration::seconds(adjusted_amount),
@@ -175,14 +181,12 @@ pub fn create_datetime_tool() -> FunctionTool {
                             "error": "Amount is required for add/subtract operations"
                         }))
                     }
-                },
-                _ => {
-                    Ok(json!({
-                        "success": false,
-                        "error": format!("Unknown operation: {}", operation),
-                        "supported_operations": ["now", "parse", "format", "add", "subtract"]
-                    }))
                 }
+                _ => Ok(json!({
+                    "success": false,
+                    "error": format!("Unknown operation: {}", operation),
+                    "supported_operations": ["now", "parse", "format", "add", "subtract"]
+                })),
             }
         },
     )
@@ -223,31 +227,31 @@ pub fn create_uuid_generator_tool() -> FunctionTool {
         "Generate UUIDs in various formats and versions",
         schema,
         |params| {
-            let version = params.get("version")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(4);
-            
-            let count = params.get("count")
+            let version = params.get("version").and_then(|v| v.as_u64()).unwrap_or(4);
+
+            let count = params
+                .get("count")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(1)
                 .min(100); // Limit to 100 UUIDs
-            
-            let format = params.get("format")
+
+            let format = params
+                .get("format")
                 .and_then(|v| v.as_str())
                 .unwrap_or("standard");
 
             let mut uuids = Vec::new();
-            
+
             for i in 0..count {
                 // Mock UUID generation - in real implementation would use uuid crate
-                let mock_uuid = format!("550e8400-e29b-41d4-a716-44665544{:04}", i);
-                
+                let mock_uuid = format!("550e8400-e29b-41d4-a716-44665544{i:04}");
+
                 let formatted_uuid = match format {
                     "simple" => mock_uuid.replace("-", ""),
-                    "urn" => format!("urn:uuid:{}", mock_uuid),
+                    "urn" => format!("urn:uuid:{mock_uuid}"),
                     _ => mock_uuid, // standard format
                 };
-                
+
                 uuids.push(formatted_uuid);
             }
 
@@ -301,15 +305,18 @@ pub fn create_hash_generator_tool() -> FunctionTool {
         "Generate cryptographic hashes of input data",
         schema,
         |params| {
-            let input = params.get("input")
+            let input = params
+                .get("input")
                 .and_then(|v| v.as_str())
                 .ok_or("Input is required")?;
-            
-            let algorithm = params.get("algorithm")
+
+            let algorithm = params
+                .get("algorithm")
                 .and_then(|v| v.as_str())
                 .unwrap_or("sha256");
-            
-            let encoding = params.get("encoding")
+
+            let encoding = params
+                .get("encoding")
                 .and_then(|v| v.as_str())
                 .unwrap_or("hex");
 
@@ -324,7 +331,7 @@ pub fn create_hash_generator_tool() -> FunctionTool {
 
             let encoded_hash = match encoding {
                 "base64" => base64::encode(mock_hash), // Mock base64 encoding
-                _ => mock_hash.to_string(), // hex format
+                _ => mock_hash.to_string(),            // hex format
             };
 
             Ok(json!({
@@ -346,7 +353,7 @@ pub fn create_hash_generator_tool() -> FunctionTool {
 // Mock base64 module for compilation
 mod base64 {
     pub fn encode(input: &str) -> String {
-        format!("base64_{}", input)
+        format!("base64_{input}")
     }
 }
 
@@ -392,7 +399,7 @@ impl CodeExecutorTool {
         Self {
             base: crate::base::BaseComponent::new_with_name(
                 "code_executor".to_string(),
-                crate::logger::Component::Tool
+                crate::compat::Component::Tool,
             ),
             id: "code_executor".to_string(),
             description: "Execute code snippets in various languages".to_string(),
@@ -402,17 +409,18 @@ impl CodeExecutorTool {
 
     fn execute_python(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
         let mut temp_file = NamedTempFile::new()
-            .map_err(|e| Error::Tool(format!("Failed to create temp file: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to create temp file: {e}")))?;
 
-        temp_file.write_all(code.as_bytes())
-            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {}", e)))?;
+        temp_file
+            .write_all(code.as_bytes())
+            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {e}")))?;
 
         let output = Command::new("python3")
             .arg(temp_file.path())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to execute Python code: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to execute Python code: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -423,17 +431,18 @@ impl CodeExecutorTool {
 
     fn execute_javascript(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
         let mut temp_file = NamedTempFile::new()
-            .map_err(|e| Error::Tool(format!("Failed to create temp file: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to create temp file: {e}")))?;
 
-        temp_file.write_all(code.as_bytes())
-            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {}", e)))?;
+        temp_file
+            .write_all(code.as_bytes())
+            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {e}")))?;
 
         let output = Command::new("node")
             .arg(temp_file.path())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to execute JavaScript code: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to execute JavaScript code: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -449,7 +458,7 @@ impl CodeExecutorTool {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to execute Bash code: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to execute Bash code: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -460,16 +469,14 @@ impl CodeExecutorTool {
 
     fn execute_rust(&self, code: &str, timeout: u64) -> Result<(String, String, i32)> {
         // For Rust, we'll create a simple main function wrapper
-        let wrapped_code = format!(
-            "fn main() {{\n{}\n}}",
-            code
-        );
+        let wrapped_code = format!("fn main() {{\n{code}\n}}");
 
         let mut temp_file = NamedTempFile::with_suffix(".rs")
-            .map_err(|e| Error::Tool(format!("Failed to create temp file: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to create temp file: {e}")))?;
 
-        temp_file.write_all(wrapped_code.as_bytes())
-            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {}", e)))?;
+        temp_file
+            .write_all(wrapped_code.as_bytes())
+            .map_err(|e| Error::Tool(format!("Failed to write code to temp file: {e}")))?;
 
         // Compile first
         let compile_output = Command::new("rustc")
@@ -479,7 +486,7 @@ impl CodeExecutorTool {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to compile Rust code: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to compile Rust code: {e}")))?;
 
         if !compile_output.status.success() {
             let stderr = String::from_utf8_lossy(&compile_output.stderr).to_string();
@@ -491,7 +498,7 @@ impl CodeExecutorTool {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .map_err(|e| Error::Tool(format!("Failed to execute Rust binary: {}", e)))?;
+            .map_err(|e| Error::Tool(format!("Failed to execute Rust binary: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -518,7 +525,7 @@ impl Base for CodeExecutorTool {
         self.base.name()
     }
 
-    fn component(&self) -> crate::logger::Component {
+    fn component(&self) -> crate::compat::Component {
         self.base.component()
     }
 
@@ -557,26 +564,26 @@ impl Tool for CodeExecutorTool {
         &self,
         params: Value,
         _context: ToolExecutionContext,
-        _options: &ToolExecutionOptions
+        _options: &ToolExecutionOptions,
     ) -> Result<Value> {
-        let language = params.get("language")
+        let language = params
+            .get("language")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::Tool("Language parameter is required".to_string()))?;
 
-        let code = params.get("code")
+        let code = params
+            .get("code")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::Tool("Code parameter is required".to_string()))?;
 
-        let timeout = params.get("timeout")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(30);
+        let timeout = params.get("timeout").and_then(|v| v.as_u64()).unwrap_or(30);
 
         let (stdout, stderr, exit_code) = match language.to_lowercase().as_str() {
             "python" | "py" => self.execute_python(code, timeout)?,
             "javascript" | "js" | "node" => self.execute_javascript(code, timeout)?,
             "bash" | "sh" => self.execute_bash(code, timeout)?,
             "rust" | "rs" => self.execute_rust(code, timeout)?,
-            _ => return Err(Error::Tool(format!("Unsupported language: {}", language)))
+            _ => return Err(Error::Tool(format!("Unsupported language: {language}"))),
         };
 
         Ok(json!({
@@ -607,15 +614,17 @@ mod tests {
     #[tokio::test]
     async fn test_datetime_tool_now() {
         let tool = create_datetime_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("operation".to_string(), json!("now"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["operation"], "now");
@@ -625,16 +634,18 @@ mod tests {
     #[tokio::test]
     async fn test_uuid_generator_tool() {
         let tool = create_uuid_generator_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("count".to_string(), json!(3));
         params.insert("format".to_string(), json!("standard"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["count"], 3);
@@ -644,16 +655,18 @@ mod tests {
     #[tokio::test]
     async fn test_hash_generator_tool() {
         let tool = create_hash_generator_tool();
-        
+
         let mut params = HashMap::new();
         params.insert("input".to_string(), json!("hello world"));
         params.insert("algorithm".to_string(), json!("sha256"));
 
         let context = crate::tool::context::ToolExecutionContext::new();
         let options = crate::tool::schema::ToolExecutionOptions::new();
-        let result = tool.execute(serde_json::to_value(&params).unwrap(), context, &options).await;
+        let result = tool
+            .execute(serde_json::to_value(&params).unwrap(), context, &options)
+            .await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert_eq!(response["success"], true);
         assert_eq!(response["algorithm"], "sha256");
@@ -665,7 +678,10 @@ mod tests {
         let tool = CodeExecutorTool::new();
 
         assert_eq!(tool.name(), Some("code_executor"));
-        assert_eq!(tool.description(), "Execute code snippets in various languages");
+        assert_eq!(
+            tool.description(),
+            "Execute code snippets in various languages"
+        );
     }
 
     #[tokio::test]

@@ -222,7 +222,7 @@ mod tests {
     async fn test_collaboration_session_creation() {
         // 测试协作会话创建
         let event_bus = std::sync::Arc::new(EventBus::new(100));
-        
+
         let task = CollaborationTask {
             id: "collab_test".to_string(),
             name: "Collaboration Test".to_string(),

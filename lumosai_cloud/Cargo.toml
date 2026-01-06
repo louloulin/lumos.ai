@@ -17,7 +17,7 @@ lumosai_core = { path = "../lumosai_core" }
 lumosai_enterprise = { path = "../lumosai_enterprise" }
 
 # Async runtime
-tokio = { version = "1.0", features = ["full"] }
+tokio = { workspace = true }
 tokio-util = "0.7"
 
 # Kubernetes client
@@ -25,35 +25,36 @@ kube = { version = "0.87", features = ["runtime", "derive", "client"], optional 
 k8s-openapi = { version = "0.20", features = ["v1_28"], optional = true }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
 serde_yaml = "0.9"
 
 # Error handling
-anyhow = "1.0"
-thiserror = "1.0"
+anyhow = { workspace = true }
+thiserror = { workspace = true }
 
 # Logging and tracing
-tracing = "0.1"
+tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # HTTP client and server
-reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
-axum = { version = "0.7", features = ["ws", "headers"] }
+reqwest = { workspace = true }
+axum = { workspace = true }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
-# Docker integration
-bollard = { version = "0.15", optional = true }
+# Docker integration (暂时禁用，依赖冲突)
+# bollard = { version = "0.15", optional = true }
+async-trait = "0.1"
 
 # Configuration
 config = "0.14"
 clap = { version = "4.0", features = ["derive"] }
 
 # Utilities
-uuid = { version = "1.0", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-futures = "0.3"
+uuid = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
 bytes = "1.0"
 
 # Metrics and monitoring
@@ -70,8 +71,8 @@ azure_core = { version = "0.19", optional = true }
 azure_storage = { version = "0.19", optional = true }
 google-cloud-storage = { version = "0.15", optional = true }
 
-# Helm integration
-helm-rs = { version = "0.1", optional = true }
+# Helm integration (暂时移除，等待稳定版本)
+# helm-rs = { version = "0.1", optional = true }
 
 # Security
 jsonwebtoken = "9.0"
@@ -82,11 +83,11 @@ tempfile = "3.0"
 wiremock = "0.5"
 
 [features]
-default = ["kubernetes", "docker", "monitoring"]
+default = ["kubernetes", "monitoring"]
 
 # Core features
 kubernetes = ["kube", "k8s-openapi"]
-docker = ["bollard"]
+# docker = ["bollard"]  # 暂时禁用
 monitoring = ["prometheus", "opentelemetry-prometheus"]
 
 # Cloud providers
@@ -95,25 +96,26 @@ azure = ["azure_core", "azure_storage"]
 gcp = ["google-cloud-storage"]
 
 # Additional features
-helm = ["helm-rs"]
+# helm = ["helm-rs"]  # 暂时移除
 jaeger = ["opentelemetry-jaeger"]
 all-clouds = ["aws", "azure", "gcp"]
 
-[[bin]]
-name = "lumosai-operator"
-path = "src/bin/operator.rs"
-required-features = ["kubernetes"]
+# 暂时禁用，文件不存在
+# [[bin]]
+# name = "lumosai-operator"
+# path = "src/bin/operator.rs"
+# required-features = ["kubernetes"]
 
-[[bin]]
-name = "lumosai-deploy"
-path = "src/bin/deploy.rs"
+# [[bin]]
+# name = "lumosai-deploy"
+# path = "src/bin/deploy.rs"
 
-[[example]]
-name = "kubernetes_deployment"
-path = "examples/kubernetes_deployment.rs"
-required-features = ["kubernetes"]
+# [[example]]
+# name = "kubernetes_deployment"
+# path = "examples/kubernetes_deployment.rs"
+# required-features = ["kubernetes"]
 
-[[example]]
-name = "docker_deployment"
-path = "examples/docker_deployment.rs"
-required-features = ["docker"]
+# [[example]]
+# name = "docker_deployment"
+# path = "examples/docker_deployment.rs"
+# required-features = ["docker"]

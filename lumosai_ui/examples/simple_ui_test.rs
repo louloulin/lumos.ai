@@ -8,19 +8,19 @@ use lumosai_ui::prelude::*;
 
 fn main() {
     println!("🎨 LumosAI UI Simple Test");
-    
+
     // Test basic component rendering
     test_basic_components();
-    
+
     // Test HTML generation
     test_html_generation();
-    
+
     println!("✅ All UI tests completed successfully!");
 }
 
 fn test_basic_components() {
     println!("\n📦 Testing basic components...");
-    
+
     // Test Button component
     let button_html = render(rsx! {
         Button {
@@ -29,9 +29,9 @@ fn test_basic_components() {
             "Test Button"
         }
     });
-    
+
     println!("✅ Button component rendered: {} chars", button_html.len());
-    
+
     // Test Card component
     let card_html = render(rsx! {
         Card {
@@ -43,9 +43,9 @@ fn test_basic_components() {
             }
         }
     });
-    
+
     println!("✅ Card component rendered: {} chars", card_html.len());
-    
+
     // Test Input component
     let input_html = render(rsx! {
         Input {
@@ -56,13 +56,13 @@ fn test_basic_components() {
             value: "".to_string(),
         }
     });
-    
+
     println!("✅ Input component rendered: {} chars", input_html.len());
 }
 
 fn test_html_generation() {
     println!("\n🌐 Testing HTML generation...");
-    
+
     // Test a simple page structure
     let page_html = render(rsx! {
         div {
@@ -137,15 +137,15 @@ fn test_html_generation() {
             }
         }
     });
-    
+
     println!("✅ Complete page rendered: {} chars", page_html.len());
-    
+
     // Verify HTML contains expected elements
     assert!(page_html.contains("LumosAI UI Test Page"));
     assert!(page_html.contains("Primary Action"));
     assert!(page_html.contains("input"));
     assert!(page_html.contains("button"));
-    
+
     println!("✅ HTML validation passed");
 }
 
@@ -160,10 +160,10 @@ fn TestApp() -> Element {
                     class: "text-4xl font-bold text-center mb-8 text-gray-800",
                     "🌟 LumosAI UI Component Test"
                 }
-                
+
                 div {
                     class: "grid grid-cols-1 md:grid-cols-2 gap-6",
-                    
+
                     // Button showcase
                     Card {
                         class: "p-6",
@@ -216,7 +216,7 @@ fn TestApp() -> Element {
                             }
                         }
                     }
-                    
+
                     // Form showcase
                     Card {
                         class: "p-6",
@@ -250,7 +250,7 @@ fn TestApp() -> Element {
                         }
                     }
                 }
-                
+
                 // Status section
                 div {
                     class: "mt-8 text-center",

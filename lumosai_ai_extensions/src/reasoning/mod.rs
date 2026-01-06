@@ -1,5 +1,5 @@
 //! 推理引擎模块
-//! 
+//!
 //! 提供逻辑推理、因果推理、类比推理等高级推理能力
 
 use std::collections::HashMap;
@@ -17,16 +17,16 @@ pub struct ReasoningEngine {
 pub struct ReasoningQuery {
     /// 查询类型
     pub query_type: ReasoningType,
-    
+
     /// 输入前提
     pub premises: Vec<String>,
-    
+
     /// 查询问题
     pub question: String,
-    
+
     /// 上下文信息
     pub context: HashMap<String, serde_json::Value>,
-    
+
     /// 推理参数
     pub parameters: ReasoningParameters,
 }
@@ -53,13 +53,13 @@ pub enum ReasoningType {
 pub struct ReasoningParameters {
     /// 最大推理步数
     pub max_steps: u32,
-    
+
     /// 置信度阈值
     pub confidence_threshold: f32,
-    
+
     /// 是否返回推理过程
     pub return_reasoning_chain: bool,
-    
+
     /// 推理策略
     pub strategy: ReasoningStrategy,
 }
@@ -82,22 +82,22 @@ pub enum ReasoningStrategy {
 pub struct ReasoningResult {
     /// 推理结论
     pub conclusion: String,
-    
+
     /// 置信度
     pub confidence: f32,
-    
+
     /// 推理链
     pub reasoning_chain: Vec<ReasoningStep>,
-    
+
     /// 支持证据
     pub supporting_evidence: Vec<Evidence>,
-    
+
     /// 反驳证据
     pub contradicting_evidence: Vec<Evidence>,
-    
+
     /// 推理统计
     pub statistics: ReasoningStatistics,
-    
+
     /// 时间戳
     pub timestamp: DateTime<Utc>,
 }
@@ -107,19 +107,19 @@ pub struct ReasoningResult {
 pub struct ReasoningStep {
     /// 步骤编号
     pub step_number: u32,
-    
+
     /// 推理规则
     pub rule: String,
-    
+
     /// 输入前提
     pub input_premises: Vec<String>,
-    
+
     /// 输出结论
     pub output_conclusion: String,
-    
+
     /// 置信度
     pub confidence: f32,
-    
+
     /// 推理类型
     pub reasoning_type: ReasoningType,
 }
@@ -129,16 +129,16 @@ pub struct ReasoningStep {
 pub struct Evidence {
     /// 证据内容
     pub content: String,
-    
+
     /// 证据类型
     pub evidence_type: EvidenceType,
-    
+
     /// 证据强度
     pub strength: f32,
-    
+
     /// 证据来源
     pub source: String,
-    
+
     /// 相关性分数
     pub relevance_score: f32,
 }
@@ -163,16 +163,16 @@ pub enum EvidenceType {
 pub struct ReasoningStatistics {
     /// 推理时间（毫秒）
     pub reasoning_time_ms: u64,
-    
+
     /// 推理步数
     pub total_steps: u32,
-    
+
     /// 探索的假设数
     pub hypotheses_explored: u32,
-    
+
     /// 使用的规则数
     pub rules_applied: u32,
-    
+
     /// 内存使用（字节）
     pub memory_usage_bytes: u64,
 }
@@ -182,11 +182,11 @@ impl ReasoningEngine {
     pub async fn new(config: ReasoningConfig) -> Result<Self> {
         Ok(Self { config })
     }
-    
+
     /// 执行推理
     pub async fn reason(&self, query: ReasoningQuery) -> Result<ReasoningResult> {
         let start_time = std::time::Instant::now();
-        
+
         match query.query_type {
             ReasoningType::Logical => self.logical_reasoning(query).await,
             ReasoningType::Causal => self.causal_reasoning(query).await,
@@ -196,16 +196,16 @@ impl ReasoningEngine {
             ReasoningType::Abductive => self.abductive_reasoning(query).await,
         }
     }
-    
+
     /// 逻辑推理
     async fn logical_reasoning(&self, query: ReasoningQuery) -> Result<ReasoningResult> {
         let start_time = std::time::Instant::now();
-        
+
         // 简化的逻辑推理实现
         let mut reasoning_chain = Vec::new();
         let mut current_premises = query.premises.clone();
         let mut step_number = 1;
-        
+
         // 应用逻辑规则
         for premise in &current_premises {
             if premise.contains("所有") && premise.contains("是") {
@@ -222,18 +222,18 @@ impl ReasoningEngine {
                 step_number += 1;
             }
         }
-        
+
         // 生成结论
         let conclusion = if query.question.contains("是否") {
             "基于给定前提，结论为真".to_string()
         } else {
             "无法从给定前提得出确定结论".to_string()
         };
-        
+
         let confidence = if reasoning_chain.len() > 0 { 0.85 } else { 0.3 };
-        
+
         let processing_time = start_time.elapsed();
-        
+
         Ok(ReasoningResult {
             conclusion,
             confidence,
@@ -258,11 +258,11 @@ impl ReasoningEngine {
             timestamp: Utc::now(),
         })
     }
-    
+
     /// 因果推理
     async fn causal_reasoning(&self, query: ReasoningQuery) -> Result<ReasoningResult> {
         let start_time = std::time::Instant::now();
-        
+
         // 简化的因果推理实现
         let reasoning_chain = vec![
             ReasoningStep {
@@ -274,10 +274,10 @@ impl ReasoningEngine {
                 reasoning_type: ReasoningType::Causal,
             }
         ];
-        
+
         let conclusion = "存在潜在的因果关系".to_string();
         let processing_time = start_time.elapsed();
-        
+
         Ok(ReasoningResult {
             conclusion,
             confidence: 0.7,
@@ -294,11 +294,11 @@ impl ReasoningEngine {
             timestamp: Utc::now(),
         })
     }
-    
+
     /// 类比推理
     async fn analogical_reasoning(&self, query: ReasoningQuery) -> Result<ReasoningResult> {
         let start_time = std::time::Instant::now();
-        
+
         // 简化的类比推理实现
         let reasoning_chain = vec![
             ReasoningStep {
@@ -310,10 +310,10 @@ impl ReasoningEngine {
                 reasoning_type: ReasoningType::Analogical,
             }
         ];
-        
+
         let conclusion = "基于类比推理的结论".to_string();
         let processing_time = start_time.elapsed();
-        
+
         Ok(ReasoningResult {
             conclusion,
             confidence: 0.6,
@@ -330,11 +330,11 @@ impl ReasoningEngine {
             timestamp: Utc::now(),
         })
     }
-    
+
     /// 归纳推理
     async fn inductive_reasoning(&self, query: ReasoningQuery) -> Result<ReasoningResult> {
         let start_time = std::time::Instant::now();
-        
+
         // 简化的归纳推理实现
         let reasoning_chain = vec![
             ReasoningStep {
@@ -346,10 +346,10 @@ impl ReasoningEngine {
                 reasoning_type: ReasoningType::Inductive,
             }
         ];
-        
+
         let conclusion = "基于观察的一般性结论".to_string();
         let processing_time = start_time.elapsed();
-        
+
         Ok(ReasoningResult {
             conclusion,
             confidence: 0.75,
@@ -366,11 +366,11 @@ impl ReasoningEngine {
             timestamp: Utc::now(),
         })
     }
-    
+
     /// 演绎推理
     async fn deductive_reasoning(&self, query: ReasoningQuery) -> Result<ReasoningResult> {
         let start_time = std::time::Instant::now();
-        
+
         // 简化的演绎推理实现
         let reasoning_chain = vec![
             ReasoningStep {
@@ -382,10 +382,10 @@ impl ReasoningEngine {
                 reasoning_type: ReasoningType::Deductive,
             }
         ];
-        
+
         let conclusion = "基于演绎推理的必然结论".to_string();
         let processing_time = start_time.elapsed();
-        
+
         Ok(ReasoningResult {
             conclusion,
             confidence: 0.95,
@@ -402,11 +402,11 @@ impl ReasoningEngine {
             timestamp: Utc::now(),
         })
     }
-    
+
     /// 溯因推理
     async fn abductive_reasoning(&self, query: ReasoningQuery) -> Result<ReasoningResult> {
         let start_time = std::time::Instant::now();
-        
+
         // 简化的溯因推理实现
         let reasoning_chain = vec![
             ReasoningStep {
@@ -418,10 +418,10 @@ impl ReasoningEngine {
                 reasoning_type: ReasoningType::Abductive,
             }
         ];
-        
+
         let conclusion = "最佳解释假设".to_string();
         let processing_time = start_time.elapsed();
-        
+
         Ok(ReasoningResult {
             conclusion,
             confidence: 0.65,

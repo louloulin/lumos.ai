@@ -13,9 +13,9 @@
 
 #![allow(non_snake_case)]
 use crate::routes;
+use crate::types::BionicToolDefinition;
 use daisy_rsx::*;
 use dioxus::prelude::*;
-use crate::types::BionicToolDefinition;
 
 /// 工具模态框组件
 #[component]
@@ -133,10 +133,7 @@ pub fn ToolsModal(
 
 /// 工具卡片组件
 #[component]
-fn ToolCard(
-    tool: BionicToolDefinition,
-    is_enabled: bool,
-) -> Element {
+fn ToolCard(tool: BionicToolDefinition, is_enabled: bool) -> Element {
     rsx! {
         div {
             class: "card bg-base-200 shadow-sm border border-base-300 hover:shadow-md transition-all duration-200",
@@ -232,9 +229,7 @@ fn ToolCard(
 
 /// 工具详情面板组件
 #[component]
-fn ToolDetailsPanel(
-    tool: BionicToolDefinition,
-) -> Element {
+fn ToolDetailsPanel(tool: BionicToolDefinition) -> Element {
     rsx! {
         div {
             class: "alert alert-info mb-4",
@@ -293,7 +288,7 @@ fn get_tool_icon(tool_name: &str) -> &'static str {
         "code_executor" => "⚡",
         "image_generator" => "🎨",
         "translator" => "🌍",
-        _ => "🛠️"
+        _ => "🛠️",
     }
 }
 
@@ -308,7 +303,7 @@ fn get_tool_category(tool_name: &str) -> &'static str {
         "code_executor" => "代码工具",
         "image_generator" => "创意工具",
         "translator" => "语言工具",
-        _ => "通用工具"
+        _ => "通用工具",
     }
 }
 

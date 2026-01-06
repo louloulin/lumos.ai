@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use crate::app_layout::{Layout, SideBar};
+use crate::types::{Integration, Rbac};
 use daisy_rsx::*;
-use crate::types::{Rbac, Integration};
 use dioxus::prelude::*;
 use serde::Deserialize;
 use validator::Validate;

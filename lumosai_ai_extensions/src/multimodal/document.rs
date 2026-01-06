@@ -21,7 +21,7 @@ impl DocumentProcessor {
     pub async fn new(config: DocumentConfig) -> Result<Self> {
         Ok(Self { config })
     }
-    
+
     pub async fn process_document(
         &self,
         data: Vec<u8>,

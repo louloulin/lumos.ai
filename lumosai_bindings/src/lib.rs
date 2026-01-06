@@ -1,5 +1,5 @@
 //! Lumos.ai 多语言绑定
-//! 
+//!
 //! 为Lumos.ai提供Python、JavaScript/TypeScript、Go等语言的绑定支持
 
 pub mod core;
@@ -35,19 +35,19 @@ fn lumosai(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<python::PyAgentBuilder>()?;
     m.add_class::<python::PyTool>()?;
     m.add_class::<python::PyResponse>()?;
-    
+
     // 注册工具模块
     let tools_module = PyModule::new(_py, "tools")?;
     python::tools::register_tools(tools_module)?;
     m.add_submodule(tools_module)?;
-    
+
     // 注册错误类型
     m.add("LumosError", _py.get_type::<python::PyLumosError>())?;
-    
+
     // 注册便利函数
     m.add_function(wrap_pyfunction!(python::quick_agent, m)?)?;
     m.add_function(wrap_pyfunction!(python::create_agent_builder, m)?)?;
-    
+
     Ok(())
 }
 

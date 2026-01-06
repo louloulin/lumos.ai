@@ -1,17 +1,12 @@
 //! 第三方集成综合示例
-//! 
+//!
 //! 展示LumosAI的第三方集成能力，包括：
 //! - 多个LLM提供商
 //! - 云服务适配器
 //! - 统一API使用
 //! - 部署配置
 
-use lumosai_core::{
-    llm::*,
-    cloud::*,
-    unified_api,
-    error::Result,
-};
+use lumosai_core::{cloud::*, error::Result, llm::*, unified_api};
 use std::collections::HashMap;
 
 #[tokio::main]
@@ -21,13 +16,13 @@ async fn main() -> Result<()> {
 
     // 1. 展示所有LLM提供商
     demonstrate_llm_providers().await?;
-    
+
     // 2. 展示云服务适配器
     demonstrate_cloud_adapters().await?;
-    
+
     // 3. 展示统一API
     demonstrate_unified_api().await?;
-    
+
     // 4. 展示部署配置
     demonstrate_deployment_config().await?;
 
@@ -42,21 +37,87 @@ async fn demonstrate_llm_providers() -> Result<()> {
 
     // 创建所有提供商实例
     let providers = vec![
-        ("OpenAI", Box::new(OpenAiProvider::new("demo-key".to_string(), "gpt-4".to_string())) as Box<dyn LlmProvider>),
-        ("Anthropic", Box::new(AnthropicProvider::new("demo-key".to_string(), "claude-3-sonnet".to_string()))),
-        ("Claude", Box::new(ClaudeProvider::new("demo-key".to_string(), "claude-3-5-sonnet".to_string()))),
-        ("Qwen", Box::new(QwenProvider::new("demo-key".to_string(), "qwen-turbo".to_string(), "https://api.qwen.com".to_string()))),
-        ("DeepSeek", Box::new(DeepSeekProvider::new("demo-key".to_string(), Some("deepseek-chat".to_string())))),
-        ("Cohere", Box::new(CohereProvider::new("demo-key".to_string(), "command-r".to_string()))),
-        ("Gemini", Box::new(GeminiProvider::new("demo-key".to_string(), "gemini-pro".to_string()))),
-        ("Ollama", Box::new(OllamaProvider::localhost("llama2".to_string()))),
-        ("Together", Box::new(TogetherProvider::new("demo-key".to_string(), "meta-llama/Llama-2-7b-chat-hf".to_string()))),
+        (
+            "OpenAI",
+            Box::new(OpenAiProvider::new(
+                "demo-key".to_string(),
+                "gpt-4".to_string(),
+            )) as Box<dyn LlmProvider>,
+        ),
+        (
+            "Anthropic",
+            Box::new(AnthropicProvider::new(
+                "demo-key".to_string(),
+                "claude-3-sonnet".to_string(),
+            )),
+        ),
+        (
+            "Claude",
+            Box::new(ClaudeProvider::new(
+                "demo-key".to_string(),
+                "claude-3-5-sonnet".to_string(),
+            )),
+        ),
+        (
+            "Qwen",
+            Box::new(QwenProvider::new(
+                "demo-key".to_string(),
+                "qwen-turbo".to_string(),
+                "https://api.qwen.com".to_string(),
+            )),
+        ),
+        (
+            "DeepSeek",
+            Box::new(DeepSeekProvider::new(
+                "demo-key".to_string(),
+                Some("deepseek-chat".to_string()),
+            )),
+        ),
+        (
+            "Cohere",
+            Box::new(CohereProvider::new(
+                "demo-key".to_string(),
+                "command-r".to_string(),
+            )),
+        ),
+        (
+            "Gemini",
+            Box::new(GeminiProvider::new(
+                "demo-key".to_string(),
+                "gemini-pro".to_string(),
+            )),
+        ),
+        (
+            "Ollama",
+            Box::new(OllamaProvider::localhost("llama2".to_string())),
+        ),
+        (
+            "Together",
+            Box::new(TogetherProvider::new(
+                "demo-key".to_string(),
+                "meta-llama/Llama-2-7b-chat-hf".to_string(),
+            )),
+        ),
     ];
 
     for (name, provider) in &providers {
         println!("🔵 {}: {}", name, provider.name());
-        println!("   - 函数调用支持: {}", if provider.supports_function_calling() { "✅" } else { "❌" });
-        println!("   - 函数调用支持: {}", if provider.supports_function_calling() { "✅" } else { "❌" });
+        println!(
+            "   - 函数调用支持: {}",
+            if provider.supports_function_calling() {
+                "✅"
+            } else {
+                "❌"
+            }
+        );
+        println!(
+            "   - 函数调用支持: {}",
+            if provider.supports_function_calling() {
+                "✅"
+            } else {
+                "❌"
+            }
+        );
     }
 
     // 特别展示Claude的模型变体
@@ -64,7 +125,7 @@ async fn demonstrate_llm_providers() -> Result<()> {
     let claude_sonnet = ClaudeProvider::sonnet("demo-key".to_string());
     let claude_opus = ClaudeProvider::opus("demo-key".to_string());
     let claude_haiku = ClaudeProvider::haiku("demo-key".to_string());
-    
+
     println!("   - Sonnet: {}", claude_sonnet.model());
     println!("   - Opus: {}", claude_opus.model());
     println!("   - Haiku: {}", claude_haiku.model());
@@ -83,7 +144,8 @@ async fn demonstrate_cloud_adapters() -> Result<()> {
         "us-east-1".to_string(),
         "demo-key".to_string(),
         "demo-secret".to_string(),
-    ).with_ecs_cluster("my-cluster".to_string());
+    )
+    .with_ecs_cluster("my-cluster".to_string());
 
     let azure = AzureAdapter::new(
         "subscription-123".to_string(),
@@ -98,7 +160,8 @@ async fn demonstrate_cloud_adapters() -> Result<()> {
         "my-project".to_string(),
         "service-account.json".to_string(),
         "us-central1".to_string(),
-    ).with_zone("us-central1-a".to_string());
+    )
+    .with_zone("us-central1-a".to_string());
 
     let adapters: Vec<(&str, Box<dyn CloudAdapter>)> = vec![
         ("AWS", Box::new(aws)),
@@ -232,7 +295,10 @@ async fn demonstrate_deployment_config() -> Result<()> {
     println!("🌐 网络配置:");
     println!("   - 端口数量: {}", config.network.ports.len());
     println!("   - 公开访问: {}", config.network.public);
-    println!("   - 域名: {}", config.network.domain.as_ref().unwrap_or(&"无".to_string()));
+    println!(
+        "   - 域名: {}",
+        config.network.domain.as_ref().unwrap_or(&"无".to_string())
+    );
 
     if let Some(autoscaling) = &config.autoscaling {
         println!("📈 自动扩缩容:");
@@ -251,13 +317,13 @@ async fn demonstrate_deployment_config() -> Result<()> {
 
     // 模拟部署到不同云平台
     println!("\n🚀 模拟部署:");
-    
+
     let aws_adapter = AwsAdapter::new(
         "us-east-1".to_string(),
         "demo-key".to_string(),
         "demo-secret".to_string(),
     );
-    
+
     match aws_adapter.deploy_application(&config).await {
         Ok(result) => {
             println!("   - AWS部署: ✅ 成功");

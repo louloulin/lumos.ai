@@ -4,21 +4,21 @@ use async_trait::async_trait;
 use regex::Regex;
 use std::collections::HashSet;
 
-use crate::models::{ToolPackage, ValidationRule, Severity, SecurityIssue, SecurityIssueType};
 use crate::error::{MarketplaceError, Result};
+use crate::models::{SecurityIssue, SecurityIssueType, Severity, ToolPackage, ValidationRule};
 
 /// 验证结果
 #[derive(Debug, Clone)]
 pub struct ValidationResult {
     /// 是否通过验证
     pub passed: bool,
-    
+
     /// 验证分数 (0-100)
     pub score: u8,
-    
+
     /// 发现的问题
     pub issues: Vec<ValidationIssue>,
-    
+
     /// 验证报告
     pub report: String,
 }
@@ -28,13 +28,13 @@ pub struct ValidationResult {
 pub struct ValidationIssue {
     /// 问题类型
     pub issue_type: ValidationIssueType,
-    
+
     /// 严重程度
     pub severity: Severity,
-    
+
     /// 问题描述
     pub description: String,
-    
+
     /// 修复建议
     pub fix_suggestion: Option<String>,
 }
@@ -61,16 +61,16 @@ pub enum ValidationIssueType {
 pub trait ToolValidator: Send + Sync {
     /// 验证工具包
     async fn validate(&self, package: &ToolPackage) -> Result<ValidationResult>;
-    
+
     /// 验证元数据
     async fn validate_metadata(&self, package: &ToolPackage) -> Result<Vec<ValidationIssue>>;
-    
+
     /// 验证依赖
     async fn validate_dependencies(&self, package: &ToolPackage) -> Result<Vec<ValidationIssue>>;
-    
+
     /// 验证许可证
     async fn validate_license(&self, package: &ToolPackage) -> Result<Vec<ValidationIssue>>;
-    
+
     /// 验证安全性
     async fn validate_security(&self, package: &ToolPackage) -> Result<Vec<ValidationIssue>>;
 }
@@ -87,21 +87,31 @@ impl DefaultToolValidator {
     /// 创建新的默认验证器
     pub fn new() -> Result<Self> {
         let allowed_licenses = [
-            "MIT", "Apache-2.0", "BSD-3-Clause", "ISC", 
-            "GPL-3.0", "LGPL-3.0", "MPL-2.0"
-        ].iter().map(|s| s.to_string()).collect();
-        
+            "MIT",
+            "Apache-2.0",
+            "BSD-3-Clause",
+            "ISC",
+            "GPL-3.0",
+            "LGPL-3.0",
+            "MPL-2.0",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
         let forbidden_keywords = [
-            "eval", "exec", "system", "shell", "unsafe",
-            "password", "secret", "token", "key"
-        ].iter().map(|s| s.to_string()).collect();
-        
+            "eval", "exec", "system", "shell", "unsafe", "password", "secret", "token", "key",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
         let name_regex = Regex::new(r"^[a-zA-Z0-9_-]+$")
             .map_err(|e| MarketplaceError::validation(format!("Invalid regex: {}", e)))?;
-        
+
         let version_regex = Regex::new(r"^\d+\.\d+\.\d+")
             .map_err(|e| MarketplaceError::validation(format!("Invalid regex: {}", e)))?;
-        
+
         Ok(Self {
             allowed_licenses,
             forbidden_keywords,
@@ -109,11 +119,11 @@ impl DefaultToolValidator {
             version_regex,
         })
     }
-    
+
     /// 计算验证分数
     fn calculate_score(&self, issues: &[ValidationIssue]) -> u8 {
         let mut score = 100u8;
-        
+
         for issue in issues {
             let deduction = match issue.severity {
                 Severity::Critical => 30,
@@ -122,22 +132,22 @@ impl DefaultToolValidator {
                 Severity::Low => 5,
                 Severity::Info => 1,
             };
-            
+
             score = score.saturating_sub(deduction);
         }
-        
+
         score
     }
-    
+
     /// 生成验证报告
     fn generate_report(&self, issues: &[ValidationIssue], score: u8) -> String {
         let mut report = format!("验证分数: {}/100\n\n", score);
-        
+
         if issues.is_empty() {
             report.push_str("✅ 所有验证检查都通过了！\n");
         } else {
             report.push_str(&format!("发现 {} 个问题:\n\n", issues.len()));
-            
+
             for (i, issue) in issues.iter().enumerate() {
                 report.push_str(&format!(
                     "{}. [{:?}] {:?}: {}\n",
@@ -146,14 +156,14 @@ impl DefaultToolValidator {
                     issue.issue_type,
                     issue.description
                 ));
-                
+
                 if let Some(fix) = &issue.fix_suggestion {
                     report.push_str(&format!("   建议: {}\n", fix));
                 }
                 report.push('\n');
             }
         }
-        
+
         report
     }
 }
@@ -162,17 +172,17 @@ impl DefaultToolValidator {
 impl ToolValidator for DefaultToolValidator {
     async fn validate(&self, package: &ToolPackage) -> Result<ValidationResult> {
         let mut all_issues = Vec::new();
-        
+
         // 执行各种验证
         all_issues.extend(self.validate_metadata(package).await?);
         all_issues.extend(self.validate_dependencies(package).await?);
         all_issues.extend(self.validate_license(package).await?);
         all_issues.extend(self.validate_security(package).await?);
-        
+
         let score = self.calculate_score(&all_issues);
         let passed = score >= 70; // 70分以上算通过
         let report = self.generate_report(&all_issues, score);
-        
+
         Ok(ValidationResult {
             passed,
             score,
@@ -180,10 +190,10 @@ impl ToolValidator for DefaultToolValidator {
             report,
         })
     }
-    
+
     async fn validate_metadata(&self, package: &ToolPackage) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
-        
+
         // 验证名称
         if package.name.is_empty() {
             issues.push(ValidationIssue {
@@ -200,7 +210,7 @@ impl ToolValidator for DefaultToolValidator {
                 fix_suggestion: Some("名称只能包含字母、数字、下划线和连字符".to_string()),
             });
         }
-        
+
         // 验证描述
         if package.description.is_empty() {
             issues.push(ValidationIssue {
@@ -217,7 +227,7 @@ impl ToolValidator for DefaultToolValidator {
                 fix_suggestion: Some("描述应该至少包含20个字符".to_string()),
             });
         }
-        
+
         // 验证作者
         if package.author.is_empty() {
             issues.push(ValidationIssue {
@@ -227,7 +237,7 @@ impl ToolValidator for DefaultToolValidator {
                 fix_suggestion: Some("请提供作者姓名或组织名称".to_string()),
             });
         }
-        
+
         // 验证版本
         if !self.version_regex.is_match(&package.version.to_string()) {
             issues.push(ValidationIssue {
@@ -237,7 +247,7 @@ impl ToolValidator for DefaultToolValidator {
                 fix_suggestion: Some("请使用语义化版本号格式 (如: 1.0.0)".to_string()),
             });
         }
-        
+
         // 验证关键词
         if package.keywords.is_empty() {
             issues.push(ValidationIssue {
@@ -247,7 +257,7 @@ impl ToolValidator for DefaultToolValidator {
                 fix_suggestion: Some("添加相关关键词有助于工具被发现".to_string()),
             });
         }
-        
+
         // 验证分类
         if package.categories.is_empty() {
             issues.push(ValidationIssue {
@@ -257,13 +267,13 @@ impl ToolValidator for DefaultToolValidator {
                 fix_suggestion: Some("请为工具包选择合适的分类".to_string()),
             });
         }
-        
+
         Ok(issues)
     }
-    
+
     async fn validate_dependencies(&self, package: &ToolPackage) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
-        
+
         // 检查依赖数量
         if package.dependencies.len() > 50 {
             issues.push(ValidationIssue {
@@ -273,7 +283,7 @@ impl ToolValidator for DefaultToolValidator {
                 fix_suggestion: Some("考虑减少不必要的依赖".to_string()),
             });
         }
-        
+
         // 检查循环依赖（简化检查）
         for (dep_name, _version) in &package.dependencies {
             if dep_name == &package.name {
@@ -285,13 +295,13 @@ impl ToolValidator for DefaultToolValidator {
                 });
             }
         }
-        
+
         Ok(issues)
     }
-    
+
     async fn validate_license(&self, package: &ToolPackage) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
-        
+
         if package.license.is_empty() {
             issues.push(ValidationIssue {
                 issue_type: ValidationIssueType::License,
@@ -307,13 +317,13 @@ impl ToolValidator for DefaultToolValidator {
                 fix_suggestion: Some("请使用支持的开源许可证 (MIT, Apache-2.0, 等)".to_string()),
             });
         }
-        
+
         Ok(issues)
     }
-    
+
     async fn validate_security(&self, package: &ToolPackage) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
-        
+
         // 检查描述中的敏感关键词
         let description_lower = package.description.to_lowercase();
         for keyword in &self.forbidden_keywords {
@@ -326,7 +336,7 @@ impl ToolValidator for DefaultToolValidator {
                 });
             }
         }
-        
+
         // 检查工具清单中的权限
         for tool_def in &package.manifest.tools {
             if tool_def.requires_auth && tool_def.permissions.is_empty() {
@@ -338,7 +348,7 @@ impl ToolValidator for DefaultToolValidator {
                 });
             }
         }
-        
+
         Ok(issues)
     }
 }
@@ -353,48 +363,51 @@ impl Default for DefaultToolValidator {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    
+
     #[tokio::test]
     async fn test_validator_creation() {
         let validator = DefaultToolValidator::new().unwrap();
         assert!(!validator.allowed_licenses.is_empty());
     }
-    
+
     #[tokio::test]
     async fn test_metadata_validation() {
         let validator = DefaultToolValidator::new().unwrap();
         let package = create_test_package();
-        
+
         let issues = validator.validate_metadata(&package).await.unwrap();
         // 应该没有严重问题
-        assert!(!issues.iter().any(|i| matches!(i.severity, Severity::Critical)));
+        assert!(!issues
+            .iter()
+            .any(|i| matches!(i.severity, Severity::Critical)));
     }
-    
+
     #[tokio::test]
     async fn test_invalid_package_validation() {
         let validator = DefaultToolValidator::new().unwrap();
         let mut package = create_test_package();
-        
+
         // 创建无效的包
         package.name = "".to_string(); // 空名称
         package.license = "INVALID".to_string(); // 无效许可证
-        
+
         let result = validator.validate(&package).await.unwrap();
         assert!(!result.passed);
         assert!(result.score < 70);
         assert!(!result.issues.is_empty());
     }
-    
+
     fn create_test_package() -> ToolPackage {
         use chrono::Utc;
         use semver::Version;
         use uuid::Uuid;
-        
+
         ToolPackage {
             id: Uuid::new_v4(),
             name: "test_tool".to_string(),
             version: Version::new(1, 0, 0),
-            description: "This is a comprehensive test tool description with sufficient length".to_string(),
+            description: "This is a comprehensive test tool description with sufficient length"
+                .to_string(),
             author: "Test Author".to_string(),
             author_email: Some("test@example.com".to_string()),
             license: "MIT".to_string(),

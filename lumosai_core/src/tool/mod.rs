@@ -3,32 +3,38 @@
 #![allow(non_camel_case_types, ambiguous_glob_reexports, hidden_glob_reexports)]
 #![allow(unexpected_cfgs, unused_assignments)]
 
+pub mod builder;
+pub mod builtin;
+mod context;
+pub mod enhanced;
+pub mod function;
+pub mod function_calling;
+
+pub mod registry;
 mod schema;
 mod tool;
-pub mod function;
-mod context;
-pub mod registry;
-pub mod builtin;
-pub mod builder;
-pub mod enhanced;
 pub mod toolset;
 
 #[cfg(test)]
 mod tests;
 
-pub use schema::{ParameterSchema, ToolSchema, ToolExecutionOptions, SchemaFormat};
-pub use tool::{Tool, GenericTool};
-pub use function::{FunctionTool, FunctionSchema};
-pub use context::ToolExecutionContext;
-pub use registry::{ToolRegistry, ToolMetadata, ToolCategory, ToolRegistryStats};
+#[cfg(test)]
+mod real_api_tests;
+
+pub use builder::{create_tool, ToolBuilder};
 pub use builtin::{
-    create_all_builtin_tools, create_safe_builtin_tools, create_dev_builtin_tools,
-    BuiltinToolsConfig, FileOpsConfig, HttpClientConfig, DataProcessingConfig,
-    get_tool_categories, get_tool_info, ToolInfo
+    create_all_builtin_tools, create_dev_builtin_tools, create_safe_builtin_tools,
+    get_tool_categories, get_tool_info, BuiltinToolsConfig, DataProcessingConfig, FileOpsConfig,
+    HttpClientConfig, ToolInfo,
 };
-pub use builder::{ToolBuilder, create_tool};
+pub use context::ToolExecutionContext;
 pub use enhanced::{EnhancedTool, ToolCapability, ToolCategory as EnhancedToolCategory};
+pub use function::{FunctionSchema, FunctionTool};
+
+pub use registry::{ToolCategory, ToolMetadata, ToolRegistry, ToolRegistryStats};
+pub use schema::{ParameterSchema, SchemaFormat, ToolExecutionOptions, ToolSchema};
+pub use tool::{GenericTool, Tool};
 pub use toolset::{ToolSet, ToolSetBuilder, ToolSetError};
 
 // Export built-in tools from builtin module
-pub use builtin::{WebSearchTool, CalculatorTool, FileManagerTool, CodeExecutorTool};
+pub use builtin::{CalculatorTool, CodeExecutorTool, FileManagerTool, WebSearchTool};

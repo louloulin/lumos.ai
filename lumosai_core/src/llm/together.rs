@@ -1,5 +1,5 @@
 //! Together AI LLM provider implementation
-//! 
+//!
 //! This module provides integration with Together AI for accessing open-source models.
 
 use async_trait::async_trait;
@@ -7,12 +7,12 @@ use futures::stream::BoxStream;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Error, Result};
 use super::{
-    LlmProvider, LlmOptions, Message, Role,
     function_calling::{FunctionDefinition, ToolChoice},
-    provider::FunctionCallingResponse
+    provider::FunctionCallingResponse,
+    LlmOptions, LlmProvider, Message, Role,
 };
+use crate::error::{Error, Result};
 
 /// Together AI API configuration
 #[derive(Debug, Clone)]
@@ -123,7 +123,7 @@ impl TogetherProvider {
             model,
             ..Default::default()
         };
-        
+
         let client = Client::builder()
             .default_headers({
                 let mut headers = reqwest::header::HeaderMap::new();
@@ -133,10 +133,7 @@ impl TogetherProvider {
                         .parse()
                         .expect("Invalid API key format"),
                 );
-                headers.insert(
-                    "Content-Type",
-                    "application/json".parse().unwrap(),
-                );
+                headers.insert("Content-Type", "application/json".parse().unwrap());
                 headers
             })
             .build()
@@ -147,12 +144,13 @@ impl TogetherProvider {
 
     /// Create from environment variables
     pub fn from_env() -> Result<Self> {
-        let api_key = std::env::var("TOGETHER_API_KEY")
-            .map_err(|_| Error::Configuration("TOGETHER_API_KEY environment variable not set".to_string()))?;
-        
+        let api_key = std::env::var("TOGETHER_API_KEY").map_err(|_| {
+            Error::Configuration("TOGETHER_API_KEY environment variable not set".to_string())
+        })?;
+
         let model = std::env::var("TOGETHER_MODEL")
             .unwrap_or_else(|_| "meta-llama/Llama-2-7b-chat-hf".to_string());
-            
+
         Ok(Self::new(api_key, model))
     }
 
@@ -187,73 +185,97 @@ impl LlmProvider for TogetherProvider {
             model: self.config.model.clone(),
             prompt: prompt.to_string(),
             max_tokens: options.max_tokens,
-            temperature: options.temperature,
-            top_p: options.extra.get("top_p").and_then(|v| v.as_f64()).map(|f| f as f32),
+            temperature: options.temperature.map(|t| t.value()),
+            top_p: options
+                .extra
+                .get("top_p")
+                .and_then(|v| v.as_f64())
+                .map(|f| f as f32),
             top_k: None,
             stop: options.stop.clone(),
         };
 
-        let response = self.client
-            .post(&format!("{}/v1/completions", self.config.base_url))
+        let response = self
+            .client
+            .post(format!("{}/v1/completions", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Together API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Together API error: {error_text}"
+            )));
         }
 
-        let response_json: TogetherResponse = response.json().await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+        let response_json: TogetherResponse = response
+            .json()
+            .await
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.choices.is_empty() {
             return Err(Error::Parsing("No choices in response".to_string()));
         }
 
         let choice = &response_json.choices[0];
-        choice.text
+        choice
+            .text
             .as_ref()
             .map(|text| text.trim().to_string())
             .ok_or_else(|| Error::Parsing("No text in choice".to_string()))
     }
 
-    async fn generate_with_messages(&self, messages: &[Message], options: &LlmOptions) -> Result<String> {
+    async fn generate_with_messages(
+        &self,
+        messages: &[Message],
+        options: &LlmOptions,
+    ) -> Result<String> {
         let together_messages = self.convert_messages(messages);
-        
+
         let request = TogetherChatRequest {
             model: self.config.model.clone(),
             messages: together_messages,
             max_tokens: options.max_tokens,
-            temperature: options.temperature,
-            top_p: options.extra.get("top_p").and_then(|v| v.as_f64()).map(|f| f as f32),
+            temperature: options.temperature.map(|t| t.value()),
+            top_p: options
+                .extra
+                .get("top_p")
+                .and_then(|v| v.as_f64())
+                .map(|f| f as f32),
             top_k: None,
             stop: options.stop.clone(),
             stream: Some(false),
         };
 
-        let response = self.client
-            .post(&format!("{}/v1/chat/completions", self.config.base_url))
+        let response = self
+            .client
+            .post(format!("{}/v1/chat/completions", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Together API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Together API error: {error_text}"
+            )));
         }
 
-        let response_json: TogetherResponse = response.json().await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+        let response_json: TogetherResponse = response
+            .json()
+            .await
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.choices.is_empty() {
             return Err(Error::Parsing("No choices in response".to_string()));
         }
 
         let choice = &response_json.choices[0];
-        choice.message
+        choice
+            .message
             .as_ref()
             .map(|msg| msg.content.clone())
             .ok_or_else(|| Error::Parsing("No message in choice".to_string()))
@@ -265,7 +287,8 @@ impl LlmProvider for TogetherProvider {
         options: &'a LlmOptions,
     ) -> Result<BoxStream<'a, Result<String>>> {
         // For now, return a simple stream with the full response
-        // TODO: Implement proper streaming when needed
+        // Note: Proper streaming would require Together AI's streaming API
+        // This is a fallback implementation that returns the complete response at once
         let response = self.generate(prompt, options).await?;
         let stream = futures::stream::once(async move { Ok(response) });
         Ok(Box::pin(stream))
@@ -277,20 +300,25 @@ impl LlmProvider for TogetherProvider {
             input: text.to_string(),
         };
 
-        let response = self.client
-            .post(&format!("{}/v1/embeddings", self.config.base_url))
+        let response = self
+            .client
+            .post(format!("{}/v1/embeddings", self.config.base_url))
             .json(&request)
             .send()
             .await
-            .map_err(|e| Error::Network(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| Error::Network(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::LlmProvider(format!("Together API error: {}", error_text)));
+            return Err(Error::LlmProvider(format!(
+                "Together API error: {error_text}"
+            )));
         }
 
-        let response_json: TogetherEmbeddingResponse = response.json().await
-            .map_err(|e| Error::Parsing(format!("Failed to parse response: {}", e)))?;
+        let response_json: TogetherEmbeddingResponse = response
+            .json()
+            .await
+            .map_err(|e| Error::Parsing(format!("Failed to parse response: {e}")))?;
 
         if response_json.data.is_empty() {
             return Err(Error::Parsing("No embedding data in response".to_string()));
@@ -330,7 +358,7 @@ mod tests {
             "test-key".to_string(),
             "meta-llama/Llama-2-7b-chat-hf".to_string(),
         );
-        
+
         assert_eq!(provider.name(), "together");
         assert_eq!(provider.config.model, "meta-llama/Llama-2-7b-chat-hf");
     }
@@ -341,7 +369,7 @@ mod tests {
             "test-key".to_string(),
             "meta-llama/Llama-2-7b-chat-hf".to_string(),
         );
-        
+
         let messages = vec![
             Message {
                 role: Role::System,
@@ -356,7 +384,7 @@ mod tests {
                 name: None,
             },
         ];
-        
+
         let together_messages = provider.convert_messages(&messages);
         assert_eq!(together_messages.len(), 2);
         assert_eq!(together_messages[0].role, "system");
@@ -370,11 +398,11 @@ mod tests {
     async fn test_together_integration() {
         let api_key = std::env::var("TOGETHER_API_KEY").expect("TOGETHER_API_KEY not set");
         let provider = TogetherProvider::new(api_key, "meta-llama/Llama-2-7b-chat-hf".to_string());
-        
+
         let options = LlmOptions::default()
             .with_temperature(0.7)
             .with_max_tokens(50);
-        
+
         let response = provider.generate("Say hello", &options).await;
         assert!(response.is_ok());
         println!("Together response: {}", response.unwrap());

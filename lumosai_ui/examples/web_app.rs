@@ -21,8 +21,8 @@ cargo run --example web_app
 ```
 */
 
-use lumosai_ui::prelude::*;
 use dioxus::prelude::*;
+use lumosai_ui::prelude::*;
 use std::io::{prelude::*, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -30,23 +30,22 @@ use std::thread;
 fn main() {
     println!("🚀 Starting LumosAI Interactive Web Application");
     println!("===============================================");
-    
+
     // Create a simple HTTP server to serve the application
     start_web_server();
 }
 
 fn start_web_server() {
-    
     let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
     println!("🌐 Server running at: http://127.0.0.1:8080");
     println!("📱 Open this URL in your browser to view the application");
-    
+
     // Try to open browser automatically
     if let Err(e) = open::that("http://127.0.0.1:8080") {
         println!("⚠️  Could not open browser automatically: {}", e);
         println!("📖 Please manually open: http://127.0.0.1:8080");
     }
-    
+
     for stream in listener.incoming() {
         let stream = stream.unwrap();
         thread::spawn(|| {
@@ -58,25 +57,21 @@ fn start_web_server() {
 fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
-    
+
     let request = String::from_utf8_lossy(&buffer[..]);
     let path = extract_path(&request);
-    
+
     let (status, content_type, body) = match path.as_str() {
-        "/" | "/index.html" => {
-            ("200 OK", "text/html", generate_interactive_html())
-        },
-        "/app.js" => {
-            ("200 OK", "application/javascript", generate_app_js())
-        },
-        "/styles.css" => {
-            ("200 OK", "text/css", generate_app_css())
-        },
-        _ => {
-            ("404 NOT FOUND", "text/html", "<h1>404 - Page Not Found</h1>".to_string())
-        }
+        "/" | "/index.html" => ("200 OK", "text/html", generate_interactive_html()),
+        "/app.js" => ("200 OK", "application/javascript", generate_app_js()),
+        "/styles.css" => ("200 OK", "text/css", generate_app_css()),
+        _ => (
+            "404 NOT FOUND",
+            "text/html",
+            "<h1>404 - Page Not Found</h1>".to_string(),
+        ),
     };
-    
+
     let response = format!(
         "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n{}",
         status,
@@ -84,7 +79,7 @@ fn handle_connection(mut stream: TcpStream) {
         body.len(),
         body
     );
-    
+
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
 }
@@ -103,7 +98,7 @@ fn extract_path(request: &str) -> String {
 fn generate_interactive_html() -> String {
     // Generate the main app component
     let app_html = render(rsx! { InteractiveApp {} });
-    
+
     format!(
         r#"<!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -196,7 +191,7 @@ function updateNavigation() {
 function updateMainContent() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
-    
+
     let content = '';
     switch (appState.currentPage) {
         case 'dashboard':
@@ -217,7 +212,7 @@ function updateMainContent() {
         default:
             content = generateDashboardContent();
     }
-    
+
     mainContent.innerHTML = content;
     attachEventListeners();
 }
@@ -232,7 +227,7 @@ function generateDashboardContent() {
                     <button class="btn btn-secondary" onclick="showNotification('Import Data feature coming soon!')">Import Data</button>
                 </div>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div class="card bg-base-100 shadow-xl">
                     <div class="card-body">
@@ -245,7 +240,7 @@ function generateDashboardContent() {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="card bg-base-100 shadow-xl">
                     <div class="card-body">
                         <div class="flex items-center">
@@ -257,7 +252,7 @@ function generateDashboardContent() {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="card bg-base-100 shadow-xl">
                     <div class="card-body">
                         <div class="flex items-center">
@@ -269,7 +264,7 @@ function generateDashboardContent() {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="card bg-base-100 shadow-xl">
                     <div class="card-body">
                         <div class="flex items-center">
@@ -282,7 +277,7 @@ function generateDashboardContent() {
                     </div>
                 </div>
             </div>
-            
+
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
                     <h3 class="text-xl font-semibold mb-4">Recent Activity</h3>
@@ -336,14 +331,14 @@ function generateAssistantsContent() {
             </div>
         </div>
     `).join('');
-    
+
     return `
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <h2 class="text-3xl font-bold">🤖 AI Assistants</h2>
                 <button class="btn btn-primary" onclick="showNotification('Create new assistant feature coming soon!')">Create New</button>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 ${assistantCards}
             </div>
@@ -355,7 +350,7 @@ function generateConsoleContent() {
     return `
         <div class="space-y-6">
             <h2 class="text-3xl font-bold">💬 AI Console</h2>
-            
+
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
                     <div class="space-y-4">
@@ -373,7 +368,7 @@ function generateConsoleContent() {
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="flex space-x-2">
                             <input type="text" placeholder="Type your message..." class="input input-bordered flex-1" id="message-input" onkeypress="handleMessageKeyPress(event)">
                             <button class="btn btn-primary" onclick="sendMessage()">Send</button>
@@ -405,7 +400,7 @@ function generateSettingsContent() {
     return `
         <div class="space-y-6">
             <h2 class="text-3xl font-bold">⚙️ Settings</h2>
-            
+
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
                     <h3 class="text-lg font-semibold mb-4">General Settings</h3>
@@ -416,14 +411,14 @@ function generateSettingsContent() {
                             </label>
                             <input type="text" value="LumosAI Dashboard" class="input input-bordered">
                         </div>
-                        
+
                         <div class="form-control">
                             <label class="label">
                                 <span class="label-text">Admin Email</span>
                             </label>
                             <input type="email" value="admin@lumosai.com" class="input input-bordered">
                         </div>
-                        
+
                         <div class="form-control">
                             <label class="label">
                                 <span class="label-text">Theme</span>
@@ -433,7 +428,7 @@ function generateSettingsContent() {
                                 <option value="dark" ${appState.theme === 'dark' ? 'selected' : ''}>Dark</option>
                             </select>
                         </div>
-                        
+
                         <div class="pt-4">
                             <button class="btn btn-primary" onclick="showNotification('Settings saved successfully!')">Save Settings</button>
                         </div>
@@ -461,9 +456,9 @@ function showNotification(message) {
             <span>${message}</span>
         </div>
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     // Remove after 3 seconds
     setTimeout(() => {
         notification.remove();
@@ -473,7 +468,7 @@ function showNotification(message) {
 function sendMessage() {
     const input = document.getElementById('message-input');
     const message = input.value.trim();
-    
+
     if (message) {
         const chatContainer = document.getElementById('chat-container');
         const messageDiv = document.createElement('div');
@@ -483,10 +478,10 @@ function sendMessage() {
                 ${message}
             </div>
         `;
-        
+
         chatContainer.appendChild(messageDiv);
         input.value = '';
-        
+
         // Simulate AI response
         setTimeout(() => {
             const responseDiv = document.createElement('div');
@@ -499,7 +494,7 @@ function sendMessage() {
             chatContainer.appendChild(responseDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }, 1000);
-        
+
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 }
@@ -531,25 +526,25 @@ function attachEventListeners() {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Initializing LumosAI Dashboard...');
-    
+
     // Set up navigation
     updateNavigation();
     updateMainContent();
     updateThemeButton();
-    
+
     // Attach global event listeners
     const sidebarToggle = document.querySelector('.sidebar-toggle');
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', toggleSidebar);
     }
-    
+
     const themeToggle = document.querySelector('.theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
     }
-    
+
     attachEventListeners();
-    
+
     console.log('✅ LumosAI Dashboard initialized successfully!');
     showNotification('Welcome to LumosAI Dashboard! 🌟');
 });
@@ -595,7 +590,7 @@ fn generate_app_css() -> String {
     .sidebar {
         @apply w-16;
     }
-    
+
     .main-content {
         @apply p-4;
     }
@@ -640,7 +635,8 @@ fn generate_app_css() -> String {
 #chat-container::-webkit-scrollbar-thumb:hover {
     background-color: rgba(156, 163, 175, 0.7);
 }
-"#.to_string()
+"#
+    .to_string()
 }
 
 #[component]
@@ -648,7 +644,7 @@ fn InteractiveApp() -> Element {
     rsx! {
         div {
             class: "min-h-screen bg-base-100",
-            
+
             // Navigation Header
             header {
                 class: "navbar bg-base-200 shadow-lg",
@@ -667,13 +663,13 @@ fn InteractiveApp() -> Element {
                     class: "navbar-end",
                     div {
                         class: "flex items-center space-x-2",
-                        
+
                         // Theme Toggle
                         button {
                             class: "btn btn-ghost btn-sm theme-toggle",
                             "🌙"
                         }
-                        
+
                         // User Menu
                         div {
                             class: "dropdown dropdown-end",
@@ -685,64 +681,64 @@ fn InteractiveApp() -> Element {
                     }
                 }
             }
-            
+
             div {
                 class: "flex",
-                
+
                 // Sidebar
                 aside {
                     class: "w-64 bg-base-200 min-h-screen transition-all duration-300 sidebar",
-                    
+
                     nav {
                         class: "p-4",
                         ul {
                             class: "space-y-2",
-                            
+
                             li {
                                 button {
                                     class: "w-full flex items-center p-3 text-left bg-primary text-primary-content rounded-lg nav-item",
                                     "data-page": "dashboard",
-                                    
+
                                     span { class: "text-lg", "📊" }
                                     span { class: "ml-3", "Dashboard" }
                                 }
                             }
-                            
+
                             li {
                                 button {
                                     class: "w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg nav-item",
                                     "data-page": "assistants",
-                                    
+
                                     span { class: "text-lg", "🤖" }
                                     span { class: "ml-3", "Assistants" }
                                 }
                             }
-                            
+
                             li {
                                 button {
                                     class: "w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg nav-item",
                                     "data-page": "console",
-                                    
+
                                     span { class: "text-lg", "💬" }
                                     span { class: "ml-3", "Console" }
                                 }
                             }
-                            
+
                             li {
                                 button {
                                     class: "w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg nav-item",
                                     "data-page": "analytics",
-                                    
+
                                     span { class: "text-lg", "📈" }
                                     span { class: "ml-3", "Analytics" }
                                 }
                             }
-                            
+
                             li {
                                 button {
                                     class: "w-full flex items-center p-3 text-left hover:bg-base-300 rounded-lg nav-item",
                                     "data-page": "settings",
-                                    
+
                                     span { class: "text-lg", "⚙️" }
                                     span { class: "ml-3", "Settings" }
                                 }
@@ -750,11 +746,11 @@ fn InteractiveApp() -> Element {
                         }
                     }
                 }
-                
+
                 // Main Content
                 main {
                     class: "main-content",
-                    
+
                     // Content will be dynamically updated by JavaScript
                     div {
                         class: "space-y-6",

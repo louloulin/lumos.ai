@@ -1,61 +1,124 @@
-//! Lumos.ai Prelude - Simplified API for easy imports
-//! 
-//! This module provides the simplified API as specified in plan6.md Phase 1,
-//! offering Rig-level simplicity while maintaining Rust performance.
+//! LumosAI Prelude - 统一简化的 API 接口
 //!
-//! # Example
+//! 这个模块提供了 LumosAI 的统一 API，遵循"简洁优于复杂"的设计原则。
+//! 参考了 Rig 和 Mastra 的设计理念，提供直观易用的开发体验。
+//!
+//! # 基本使用
 //!
 //! ```rust
 //! use lumosai_core::prelude::*;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
-//!     let agent = Agent::quick("assistant", "你是一个AI助手")
-//!         .model("gpt-4")
+//!     // 快速创建 Agent
+//!     let agent = Agent::new("assistant", "你是一个AI助手")
+//!         .model(openai("gpt-4")?)
 //!         .build()?;
-//!     
+//!
+//!     // 生成响应
 //!     let response = agent.generate("Hello!").await?;
 //!     println!("{}", response.content);
-//!     
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! # 高级使用
+//!
+//! ```rust
+//! use lumosai_core::prelude::*;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<()> {
+//!     // 创建专业化 Agent
+//!     let agent = Agent::new("research_assistant", "你是专业的研究助手")
+//!         .model(anthropic("claude-3-sonnet")?)
+//!         .tools(vec![web_search(), file_reader(), calculator()])
+//!         .max_tool_calls(10)
+//!         .build()?;
+//!
+//!     let response = agent.generate("帮我研究AI的最新发展").await?;
+//!     println!("{}", response.content);
+//!
 //!     Ok(())
 //! }
 //! ```
 
-// Re-export core types
-pub use crate::{Result, Error};
+// ============================================================================
+// 核心类型导出
+// ============================================================================
 
-// Re-export simplified Agent API
-pub use crate::agent::{
-    Agent, AgentBuilder,
-    quick, web_agent, file_agent, data_agent,
-};
+/// 核心错误和结果类型
+pub use crate::{Error, Result};
 
-// Re-export tool creation functions
+// ============================================================================
+// Agent API - 统一的渐进式 Agent 创建接口
+// ============================================================================
+
+/// 统一的 Agent 接口 - 渐进式 API 设计
+///
+/// **Level 1 - 5分钟上手**:
+/// ```rust
+/// let agent = Agent::new("assistant", "你是一个AI助手").await?;
+/// let response = agent.generate("你好").await?;
+/// ```
+///
+/// **Level 2 - 链式配置**:
+/// ```rust
+/// let agent = Agent::new("assistant", "你是一个AI助手").await?
+///     .with_model("gpt-4")?
+///     .with_tools(vec![calculator(), web_search()])?;
+/// ```
+///
+/// **Level 3 - 完整构建器**:
+/// ```rust
+/// let agent = Agent::builder()
+///     .name("research_agent")
+///     .instructions("专业研究助手")
+///     .model(openai("gpt-4")?)
+///     .max_tool_calls(10)
+///     .build()?;
+/// ```
+pub use crate::agent::simplified_api::{Agent, AgentInstance};
+pub use crate::agent::AgentBuilder;
+
+// ============================================================================
+// 工具系统 - 简化的工具创建接口
+// ============================================================================
+
+/// 核心工具创建函数（按类别组织）
 pub use crate::tool::builtin::{
-    // Web tools
-    create_http_request_tool, create_web_scraper_tool, create_json_api_tool, create_url_validator_tool,
-    // File tools
-    create_file_reader_tool, create_file_writer_tool, create_directory_lister_tool, create_file_info_tool,
-    // Data tools
-    create_json_parser_tool, create_csv_parser_tool, create_data_transformer_tool, create_excel_reader_tool,
-    // Math tools
-    create_calculator_tool, create_statistics_tool,
-    // System tools
-    create_datetime_tool, create_uuid_generator_tool, create_hash_generator_tool,
-    // AI tools (when implemented)
-    // create_image_analyzer_tool, create_text_summarizer_tool, create_sentiment_analyzer_tool,
-    // Database tools (when implemented)
-    // create_sql_executor_tool, create_mongodb_client_tool,
-    // Communication tools (when implemented)
-    // create_email_sender_tool, create_slack_notifier_tool, create_webhook_caller_tool,
+    // 数学和计算工具
+    create_calculator_tool,
+    create_csv_parser_tool,
+    create_data_transformer_tool,
+
+    // 系统工具
+    create_datetime_tool,
+    create_directory_lister_tool,
+    create_file_info_tool,
+    // 文件和数据处理工具
+    create_file_reader_tool,
+    create_file_writer_tool,
+    create_hash_generator_tool,
+    // 网络和 Web 工具
+    create_http_request_tool,
+    create_json_api_tool,
+    create_json_parser_tool,
+    create_statistics_tool,
+
+    create_url_validator_tool,
+
+    create_uuid_generator_tool,
+    create_web_scraper_tool,
 };
 
-// Convenience functions for tool creation
-pub fn web_search() -> Box<dyn crate::tool::Tool> {
-    Box::new(create_http_request_tool())
-}
+// ============================================================================
+// 工具便利函数 - 简化的工具实例化
+// ============================================================================
 
-pub fn http_request() -> Box<dyn crate::tool::Tool> {
+/// 网络和 Web 工具
+pub fn web_search() -> Box<dyn crate::tool::Tool> {
     Box::new(create_http_request_tool())
 }
 
@@ -67,10 +130,7 @@ pub fn json_api() -> Box<dyn crate::tool::Tool> {
     Box::new(create_json_api_tool())
 }
 
-pub fn url_validator() -> Box<dyn crate::tool::Tool> {
-    Box::new(create_url_validator_tool())
-}
-
+/// 文件和数据工具
 pub fn file_reader() -> Box<dyn crate::tool::Tool> {
     Box::new(create_file_reader_tool())
 }
@@ -79,14 +139,7 @@ pub fn file_writer() -> Box<dyn crate::tool::Tool> {
     Box::new(create_file_writer_tool())
 }
 
-pub fn directory_lister() -> Box<dyn crate::tool::Tool> {
-    Box::new(create_directory_lister_tool())
-}
-
-pub fn file_info() -> Box<dyn crate::tool::Tool> {
-    Box::new(create_file_info_tool())
-}
-
+/// 数据处理工具
 pub fn json_parser() -> Box<dyn crate::tool::Tool> {
     Box::new(create_json_parser_tool())
 }
@@ -95,14 +148,7 @@ pub fn csv_parser() -> Box<dyn crate::tool::Tool> {
     Box::new(create_csv_parser_tool())
 }
 
-pub fn data_transformer() -> Box<dyn crate::tool::Tool> {
-    Box::new(create_data_transformer_tool())
-}
-
-pub fn excel_reader() -> Box<dyn crate::tool::Tool> {
-    Box::new(create_excel_reader_tool())
-}
-
+/// 数学和计算工具
 pub fn calculator() -> Box<dyn crate::tool::Tool> {
     Box::new(create_calculator_tool())
 }
@@ -111,7 +157,8 @@ pub fn statistics() -> Box<dyn crate::tool::Tool> {
     Box::new(create_statistics_tool())
 }
 
-pub fn time_tool() -> Box<dyn crate::tool::Tool> {
+/// 系统工具
+pub fn datetime() -> Box<dyn crate::tool::Tool> {
     Box::new(create_datetime_tool())
 }
 
@@ -119,98 +166,84 @@ pub fn uuid_generator() -> Box<dyn crate::tool::Tool> {
     Box::new(create_uuid_generator_tool())
 }
 
-pub fn hash_tool() -> Box<dyn crate::tool::Tool> {
-    Box::new(create_hash_generator_tool())
-}
+// ============================================================================
+// LLM 提供商 - 简化的模型访问接口
+// ============================================================================
 
-// Re-export provider convenience functions
+/// LLM 提供商便利函数
 pub use crate::agent::convenience::{
-    openai, openai_with_key, openai_builder,
-    anthropic, anthropic_with_key,
-    deepseek, deepseek_with_key, deepseek_builder,
-    qwen, qwen_with_key,
-    ModelBuilder, LlmProviderExt,
+    anthropic, deepseek, openai, qwen, LlmProviderExt, ModelBuilder,
 };
 
-// Re-export memory types
-pub use crate::memory::{
-    WorkingMemory, WorkingMemoryContent,
-};
+// ============================================================================
+// 核心组件 - 内存、向量存储、消息类型
+// ============================================================================
 
-// Re-export vector storage types
+/// 内存系统
+pub use crate::memory::{WorkingMemory, WorkingMemoryContent};
+
+/// 向量存储
 pub use crate::vector::{
-    VectorStorage, VectorStorageConfig, create_vector_storage,
-    SimilarityMetric, IndexStats, QueryResult, FilterCondition,
+    create_vector_storage, QueryResult, SimilarityMetric, VectorStorage, VectorStorageConfig,
 };
 
-// Re-export common types
-pub use crate::llm::{Message, Role, LlmOptions};
-pub use crate::agent::{
-    AgentConfig, AgentGenerateOptions, AgentStreamOptions,
-    AgentGenerateResult, AgentStep, AgentToolCall,
-};
+pub use crate::agent::{AgentGenerateResult, AgentStep};
+/// 消息和配置类型
+pub use crate::llm::{Message, Role};
 
-/// Quick agent creation function (plan6.md convenience function)
-/// 
-/// This is the most convenient way to create an agent:
+// ============================================================================
+// Agent 便利创建函数 - 统一的 Agent 创建接口
+// ============================================================================
+
+/// 快速创建 Agent（推荐使用）
+///
+/// 这是创建 Agent 最简单的方式：
 /// ```rust
 /// use lumosai_core::prelude::*;
-/// 
-/// let agent = quick_agent("assistant", "You are helpful")
+///
+/// let agent = Agent::new("assistant", "你是一个AI助手")
 ///     .model(openai("gpt-4")?)
 ///     .build()?;
 /// ```
 pub fn quick_agent(name: &str, instructions: &str) -> AgentBuilder {
-    Agent::quick(name, instructions)
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .enable_smart_defaults()
 }
 
-/// Create a web-enabled agent with common web tools
-/// 
-/// # Example
-/// 
-/// ```rust
-/// use lumosai_core::prelude::*;
-/// 
-/// let agent = web_agent_quick("web_helper", "You can browse the web")
-///     .model(openai("gpt-4")?)
-///     .build()?;
-/// ```
-pub fn web_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
-    Agent::quick(name, instructions)
-        .with_web_tools()
+/// 创建专业化 Agent
+
+/// 创建网络功能 Agent
+pub fn web_agent(name: &str, instructions: &str) -> AgentBuilder {
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .tools(vec![web_search(), web_scraper(), json_api()])
+        .enable_smart_defaults()
 }
 
-/// Create a file-enabled agent with common file tools
-/// 
-/// # Example
-/// 
-/// ```rust
-/// use lumosai_core::prelude::*;
-/// 
-/// let agent = file_agent_quick("file_helper", "You can manage files")
-///     .model(openai("gpt-4")?)
-///     .build()?;
-/// ```
-pub fn file_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
-    Agent::quick(name, instructions)
-        .with_file_tools()
+/// 创建文件处理 Agent
+pub fn file_agent(name: &str, instructions: &str) -> AgentBuilder {
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .tools(vec![file_reader(), file_writer()])
+        .enable_smart_defaults()
 }
 
-/// Create a data processing agent with common data tools
-/// 
-/// # Example
-/// 
-/// ```rust
-/// use lumosai_core::prelude::*;
-/// 
-/// let agent = data_agent_quick("data_helper", "You can process data")
-///     .model(openai("gpt-4")?)
-///     .build()?;
-/// ```
-pub fn data_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
-    Agent::quick(name, instructions)
-        .with_data_tools()
-        .with_math_tools()
+/// 创建数据处理 Agent
+pub fn data_agent(name: &str, instructions: &str) -> AgentBuilder {
+    AgentBuilder::new()
+        .name(name)
+        .instructions(instructions)
+        .tools(vec![
+            json_parser(),
+            csv_parser(),
+            calculator(),
+            statistics(),
+        ])
+        .enable_smart_defaults()
 }
 
 // Vector storage convenience functions
@@ -224,8 +257,14 @@ pub fn data_agent_quick(name: &str, instructions: &str) -> AgentBuilder {
 ///
 /// let storage = memory_vector_storage(1536, None)?;
 /// ```
-pub fn memory_vector_storage(dimensions: usize, capacity: Option<usize>) -> crate::Result<Box<dyn VectorStorage>> {
-    let config = VectorStorageConfig::Memory { dimensions, capacity };
+pub fn memory_vector_storage(
+    dimensions: usize,
+    capacity: Option<usize>,
+) -> crate::Result<Box<dyn VectorStorage>> {
+    let config = VectorStorageConfig::Memory {
+        dimensions,
+        capacity,
+    };
     create_vector_storage(Some(config)).map_err(|e| crate::Error::Storage(e.to_string()))
 }
 
@@ -264,14 +303,14 @@ pub fn memory_vector_storage(dimensions: usize, capacity: Option<usize>) -> crat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::MockLlmProvider;
     use crate::agent::trait_def::Agent as AgentTrait;
+    use crate::llm::test_helpers::create_test_zhipu_provider_arc;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_prelude_quick_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
+        let llm = create_test_zhipu_provider_arc();
+
         let agent = quick_agent("assistant", "You are helpful")
             .model(llm)
             .build()
@@ -281,11 +320,12 @@ mod tests {
         assert_eq!(agent.get_instructions(), "You are helpful");
     }
 
+    // 专业化 Agent 快速函数测试
     #[tokio::test]
-    async fn test_prelude_web_agent_quick() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
-        let agent = web_agent_quick("web_helper", "You can browse the web")
+    async fn test_prelude_web_agent() {
+        let llm = create_test_zhipu_provider_arc();
+
+        let agent = web_agent("web_helper", "You can browse the web")
             .model(llm)
             .build()
             .expect("Failed to create web agent");
@@ -297,10 +337,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_prelude_file_agent_quick() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
-        let agent = file_agent_quick("file_helper", "You can manage files")
+    async fn test_prelude_file_agent() {
+        let llm = create_test_zhipu_provider_arc();
+
+        let agent = file_agent("file_helper", "You can manage files")
             .model(llm)
             .build()
             .expect("Failed to create file agent");
@@ -312,10 +352,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_prelude_data_agent_quick() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
-        let agent = data_agent_quick("data_helper", "You can process data")
+    async fn test_prelude_data_agent() {
+        let llm = create_test_zhipu_provider_arc();
+
+        let agent = data_agent("data_helper", "You can process data")
             .model(llm)
             .build()
             .expect("Failed to create data agent");

@@ -1,15 +1,15 @@
 //! Mastra-compatible API layer
-//! 
+//!
 //! This module provides a Mastra-compatible API for easy migration and familiar usage patterns
 
-use crate::agent::{AgentBuilder, BasicAgent};
 use crate::agent::trait_def::Agent as AgentTrait;
+use crate::agent::{AgentBuilder, BasicAgent};
 use crate::llm::LlmProvider;
-use crate::tool::Tool;
 use crate::tool::builtin::{create_all_builtin_tools, BuiltinToolsConfig};
+use crate::tool::Tool;
 use serde_json::Value;
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Mastra-style Agent creation API
 /// Provides a familiar interface for developers coming from Mastra
@@ -17,16 +17,15 @@ pub struct Agent;
 
 impl Agent {
     /// Create a new agent with Mastra-style API
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```rust
     /// use lumosai_core::agent::mastra_compat::Agent;
-    /// use lumosai_core::llm::MockLlmProvider;
-    /// use std::sync::Arc;
-    /// 
-    /// let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-    /// 
+    ///     /// use std::sync::Arc;
+    ///
+    /// let llm = create_test_zhipu_provider_arc();
+    ///
     /// let agent = Agent::create()
     ///     .name("assistant")
     ///     .instructions("You are a helpful assistant")
@@ -144,6 +143,12 @@ pub struct AgentBuilderWithTools {
     selected_tools: Vec<String>,
 }
 
+impl Default for AgentBuilderWithTools {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AgentBuilderWithTools {
     pub fn new() -> Self {
         Self {
@@ -211,10 +216,8 @@ impl AgentBuilderWithTools {
 
     /// Add math tools (calculator, statistics)
     pub fn with_math_tools(mut self) -> Self {
-        self.selected_tools.extend(vec![
-            "calculator".to_string(),
-            "statistics".to_string(),
-        ]);
+        self.selected_tools
+            .extend(vec!["calculator".to_string(), "statistics".to_string()]);
         self
     }
 
@@ -232,7 +235,7 @@ impl AgentBuilderWithTools {
         // Get all available tools
         let config = BuiltinToolsConfig::default();
         let all_tools = create_all_builtin_tools(&config);
-        
+
         // Filter tools based on selection
         for tool in all_tools {
             if let Some(name) = tool.name() {
@@ -317,12 +320,12 @@ pub mod utils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::MockLlmProvider;
+    use crate::llm::test_helpers::create_test_zhipu_provider_arc;
 
     #[tokio::test]
     async fn test_mastra_style_agent_creation() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
+        let llm = create_test_zhipu_provider_arc();
+
         let agent = Agent::create()
             .name("test_agent")
             .instructions("You are a test assistant")
@@ -336,8 +339,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_with_tools() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
+        let llm = create_test_zhipu_provider_arc();
+
         let agent = Agent::with_tools()
             .name("tool_agent")
             .instructions("You are a tool-enabled assistant")
@@ -353,13 +356,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_quick_agent() {
-        let llm = Arc::new(MockLlmProvider::new(vec!["Hello!".to_string()]));
-        
-        let agent = utils::quick_agent(
-            "quick_test",
-            "Quick test agent",
-            llm,
-        ).expect("Failed to create quick agent");
+        let llm = create_test_zhipu_provider_arc();
+
+        let agent = utils::quick_agent("quick_test", "Quick test agent", llm)
+            .expect("Failed to create quick agent");
 
         assert_eq!(agent.get_name(), "quick_test");
     }

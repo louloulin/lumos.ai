@@ -1,9 +1,9 @@
 //! 消息定义和处理
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::time::{Duration, SystemTime};
-use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 use crate::types::AgentId;
@@ -138,10 +138,10 @@ pub struct Message {
 impl Message {
     /// 创建新消息
     pub fn new(
-        sender: impl Into<AgentId>, 
-        receivers: Vec<AgentId>, 
-        message_type: MessageType, 
-        content: impl Into<serde_json::Value>
+        sender: impl Into<AgentId>,
+        receivers: Vec<AgentId>,
+        message_type: MessageType,
+        content: impl Into<serde_json::Value>,
     ) -> Self {
         Self {
             id: MessageId::new(),
@@ -157,47 +157,54 @@ impl Message {
             metadata: HashMap::new(),
         }
     }
-    
+
     /// 设置过期时间
     pub fn with_expiry(mut self, duration: Duration) -> Self {
-        let expires_at = self.created_at.checked_add(duration).unwrap_or(self.created_at);
+        let expires_at = self
+            .created_at
+            .checked_add(duration)
+            .unwrap_or(self.created_at);
         self.expires_at = Some(expires_at);
         self
     }
-    
+
     /// 设置优先级
     pub fn with_priority(mut self, priority: MessagePriority) -> Self {
         self.priority = priority;
         self
     }
-    
+
     /// 设置引用消息ID
     pub fn with_reference(mut self, reference_id: MessageId) -> Self {
         self.reference_id = Some(reference_id);
         self
     }
-    
+
     /// 添加元数据
-    pub fn with_metadata(mut self, key: impl Into<String>, value: impl Into<serde_json::Value>) -> Self {
+    pub fn with_metadata(
+        mut self,
+        key: impl Into<String>,
+        value: impl Into<serde_json::Value>,
+    ) -> Self {
         self.metadata.insert(key.into(), value.into());
         self
     }
-    
+
     /// 将状态设置为已发送
     pub fn mark_as_sent(&mut self) {
         self.status = MessageStatus::Sent;
     }
-    
+
     /// 将状态设置为已接收
     pub fn mark_as_received(&mut self) {
         self.status = MessageStatus::Received;
     }
-    
+
     /// 将状态设置为已处理
     pub fn mark_as_processed(&mut self) {
         self.status = MessageStatus::Processed;
     }
-    
+
     /// 创建对此消息的回复
     pub fn create_reply(&self, content: impl Into<serde_json::Value>) -> Self {
         Self {
@@ -214,7 +221,7 @@ impl Message {
             metadata: HashMap::new(),
         }
     }
-    
+
     /// 检查消息是否已过期
     pub fn is_expired(&self) -> bool {
         if let Some(expires_at) = self.expires_at {
@@ -228,19 +235,19 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_message_creation() {
         let sender = AgentId::from_str("agent1");
         let receiver = AgentId::from_str("agent2");
-        
+
         let message = Message::new(
             sender.clone(),
             vec![receiver.clone()],
             MessageType::Text,
-            "Hello, Agent 2!"
+            "Hello, Agent 2!",
         );
-        
+
         assert_eq!(message.sender, sender);
         assert_eq!(message.receivers[0], receiver);
         assert_eq!(message.message_type, MessageType::Text);
@@ -248,48 +255,49 @@ mod tests {
         assert_eq!(message.status, MessageStatus::Created);
         assert_eq!(message.priority, MessagePriority::Normal);
     }
-    
+
     #[test]
     fn test_message_reply() {
         let sender = AgentId::from_str("agent1");
         let receiver = AgentId::from_str("agent2");
-        
+
         let message = Message::new(
             sender.clone(),
             vec![receiver.clone()],
             MessageType::Query,
-            "What's the status?"
+            "What's the status?",
         );
-        
+
         let reply = message.create_reply("Everything is fine");
-        
+
         assert_eq!(reply.sender, receiver);
         assert_eq!(reply.receivers[0], sender);
         assert_eq!(reply.message_type, MessageType::Response);
         assert_eq!(reply.content, serde_json::json!("Everything is fine"));
         assert_eq!(reply.reference_id.unwrap(), message.id);
     }
-    
+
     #[test]
     fn test_message_expiry() {
         // 创建一个很快过期的消息
         let sender = AgentId::from_str("agent1");
         let receiver = AgentId::from_str("agent2");
-        
+
         let mut message = Message::new(
             sender,
             vec![receiver],
             MessageType::Text,
-            "This will expire"
-        ).with_expiry(Duration::from_nanos(1));
-        
+            "This will expire",
+        )
+        .with_expiry(Duration::from_nanos(1));
+
         // 确保时间已经过去
         std::thread::sleep(Duration::from_millis(1));
-        
+
         assert!(message.is_expired());
-        
+
         // 创建一个不会很快过期的消息
         message.expires_at = Some(SystemTime::now() + Duration::from_secs(3600));
         assert!(!message.is_expired());
     }
-} 
+}

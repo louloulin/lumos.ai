@@ -1,10 +1,10 @@
 //! 统一API入口
-//! 
+//!
 //! 提供简化的API接口，让开发者能够快速上手LumosAI。
 //! 这个模块参考了Rig和Mastra的设计理念，提供了简洁直观的API。
 
+use crate::error::{Error, Result};
 use std::sync::Arc;
-use crate::error::Result;
 // use crate::agent::{AgentTrait, BasicAgent, AgentConfig};
 
 /// LLM提供商便利函数
@@ -14,8 +14,8 @@ pub mod llm {
 
     /// 创建OpenAI提供商
     pub fn openai(model: &str) -> Result<Arc<dyn LlmProvider>> {
-        let api_key = std::env::var("OPENAI_API_KEY")
-            .map_err(|_| crate::error::LumosError::ConfigError {
+        let api_key =
+            std::env::var("OPENAI_API_KEY").map_err(|_| crate::error::LumosError::ConfigError {
                 message: "OPENAI_API_KEY environment variable not found".to_string(),
             })?;
         let provider = OpenAiProvider::new(api_key, model.to_string());
@@ -24,10 +24,11 @@ pub mod llm {
 
     /// 创建Anthropic提供商
     pub fn anthropic(model: &str) -> Result<Arc<dyn LlmProvider>> {
-        let api_key = std::env::var("ANTHROPIC_API_KEY")
-            .map_err(|_| crate::error::LumosError::ConfigError {
+        let api_key = std::env::var("ANTHROPIC_API_KEY").map_err(|_| {
+            crate::error::LumosError::ConfigError {
                 message: "ANTHROPIC_API_KEY environment variable not found".to_string(),
-            })?;
+            }
+        })?;
         let provider = AnthropicProvider::new(api_key, model.to_string());
         Ok(Arc::new(provider))
     }
@@ -40,20 +41,25 @@ pub mod llm {
 
     /// 创建Qwen提供商
     pub fn qwen(model: &str) -> Result<Arc<dyn LlmProvider>> {
-        let api_key = std::env::var("QWEN_API_KEY")
-            .map_err(|_| crate::error::LumosError::ConfigError {
+        let api_key =
+            std::env::var("QWEN_API_KEY").map_err(|_| crate::error::LumosError::ConfigError {
                 message: "QWEN_API_KEY environment variable not found".to_string(),
             })?;
-        let provider = QwenProvider::new(api_key, model.to_string(), "https://api.qwen.com".to_string());
+        let provider = QwenProvider::new(
+            api_key,
+            model.to_string(),
+            "https://api.qwen.com".to_string(),
+        );
         Ok(Arc::new(provider))
     }
 
     /// 创建DeepSeek提供商
     pub fn deepseek(model: &str) -> Result<Arc<dyn LlmProvider>> {
-        let api_key = std::env::var("DEEPSEEK_API_KEY")
-            .map_err(|_| crate::error::LumosError::ConfigError {
+        let api_key = std::env::var("DEEPSEEK_API_KEY").map_err(|_| {
+            crate::error::LumosError::ConfigError {
                 message: "DEEPSEEK_API_KEY environment variable not found".to_string(),
-            })?;
+            }
+        })?;
         let provider = DeepSeekProvider::new(api_key, Some(model.to_string()));
         Ok(Arc::new(provider))
     }
@@ -94,7 +100,7 @@ pub mod llm {
         if let Ok(provider) = qwen("qwen-turbo") {
             return Ok(provider);
         }
-        
+
         // 最后尝试本地Ollama
         Ok(ollama("llama2"))
     }
@@ -115,7 +121,7 @@ pub mod vector {
     #[cfg(feature = "postgres")]
     pub async fn postgres(url: Option<&str>) -> Result<Arc<dyn VectorStorage>> {
         use lumosai_vector_postgres::PostgresVectorStorage;
-        
+
         let database_url = url
             .map(|s| s.to_string())
             .or_else(|| std::env::var("DATABASE_URL").ok())
@@ -131,7 +137,7 @@ pub mod vector {
     #[cfg(feature = "qdrant")]
     pub async fn qdrant(url: Option<&str>) -> Result<Arc<dyn VectorStorage>> {
         use lumosai_vector_qdrant::QdrantVectorStorage;
-        
+
         let qdrant_url = url
             .map(|s| s.to_string())
             .or_else(|| std::env::var("QDRANT_URL").ok())
@@ -145,7 +151,7 @@ pub mod vector {
     #[cfg(feature = "weaviate")]
     pub async fn weaviate(url: Option<&str>) -> Result<Arc<dyn VectorStorage>> {
         use lumosai_vector_weaviate::WeaviateVectorStorage;
-        
+
         let weaviate_url = url
             .map(|s| s.to_string())
             .or_else(|| std::env::var("WEAVIATE_URL").ok())
@@ -162,17 +168,17 @@ pub mod vector {
         if let Ok(storage) = postgres(None).await {
             return Ok(storage);
         }
-        
+
         #[cfg(feature = "qdrant")]
         if let Ok(storage) = qdrant(None).await {
             return Ok(storage);
         }
-        
+
         #[cfg(feature = "weaviate")]
         if let Ok(storage) = weaviate(None).await {
             return Ok(storage);
         }
-        
+
         // 最后使用内存存储
         memory().await
     }
@@ -185,48 +191,57 @@ pub mod agent {
     /// 创建简单的Agent（占位符实现）
     pub async fn simple(model: &str, instructions: &str) -> Result<String> {
         // 简化实现，返回一个描述字符串
-        Ok(format!("Simple agent with model: {}, instructions: {}", model, instructions))
+        Ok(format!(
+            "Simple agent with model: {model}, instructions: {instructions}"
+        ))
     }
 
     /// 创建带工具的Agent（占位符实现）
     pub async fn with_tools(
         model: &str,
         instructions: &str,
-        _tools: Vec<String>  // 简化为字符串列表
+        _tools: Vec<String>, // 简化为字符串列表
     ) -> Result<String> {
-        Ok(format!("Agent with tools - model: {}, instructions: {}", model, instructions))
+        Ok(format!(
+            "Agent with tools - model: {model}, instructions: {instructions}"
+        ))
     }
 
     /// 创建RAG Agent（占位符实现）
     pub async fn rag(
         model: &str,
         instructions: &str,
-        _vector_storage: Arc<dyn std::fmt::Debug>
+        _vector_storage: Arc<dyn std::fmt::Debug>,
     ) -> Result<String> {
-        Ok(format!("RAG agent - model: {}, instructions: {}", model, instructions))
+        Ok(format!(
+            "RAG agent - model: {model}, instructions: {instructions}"
+        ))
     }
 }
 
 /// 云服务便利函数
 pub mod cloud {
     use super::*;
-    use crate::cloud::*;
+    use crate::compat::{
+        AwsAdapter, AzureAdapter, CloudAdapter, DeploymentConfig, GcpAdapter, NetworkConfig,
+        PortMapping, ResourceConfig,
+    };
 
     /// 创建AWS适配器
     pub fn aws() -> Result<Box<dyn CloudAdapter>> {
-        let adapter = AwsAdapter::from_env()?;
+        let adapter = AwsAdapter::from_env().map_err(|e| Error::Cloud(e.to_string()))?;
         Ok(Box::new(adapter))
     }
 
     /// 创建Azure适配器
     pub fn azure() -> Result<Box<dyn CloudAdapter>> {
-        let adapter = AzureAdapter::from_env()?;
+        let adapter = AzureAdapter::from_env().map_err(|e| Error::Cloud(e.to_string()))?;
         Ok(Box::new(adapter))
     }
 
     /// 创建GCP适配器
     pub fn gcp() -> Result<Box<dyn CloudAdapter>> {
-        let adapter = GcpAdapter::from_env()?;
+        let adapter = GcpAdapter::from_env().map_err(|e| Error::Cloud(e.to_string()))?;
         Ok(Box::new(adapter))
     }
 
@@ -242,20 +257,16 @@ pub mod cloud {
         if let Ok(adapter) = gcp() {
             return Ok(adapter);
         }
-        
+
         Err(crate::error::LumosError::ConfigError {
             message: "No cloud provider credentials found".to_string(),
         })
     }
 
     /// 快速部署应用
-    pub async fn deploy(
-        app_name: &str,
-        image: &str,
-        provider: Option<&str>
-    ) -> Result<String> {
-        let adapter = if let Some(p) = provider {
-            crate::cloud::create_adapter(p)?
+    pub async fn deploy(app_name: &str, image: &str, provider: Option<&str>) -> Result<String> {
+        let adapter = if let Some(_p) = provider {
+            cloud::auto()?
         } else {
             auto()?
         };
@@ -264,15 +275,14 @@ pub mod cloud {
             name: app_name.to_string(),
             version: "1.0.0".to_string(),
             image: image.to_string(),
+            replicas: 1,
             environment: std::collections::HashMap::new(),
-            resources: crate::cloud::ResourceConfig {
+            resources: ResourceConfig {
                 cpu: 1.0,
-                memory: 1024,
-                storage: None,
-                gpu: None,
+                memory: "1024Mi".to_string(),
             },
-            network: crate::cloud::NetworkConfig {
-                ports: vec![crate::cloud::PortMapping {
+            network: NetworkConfig {
+                ports: vec![PortMapping {
                     container_port: 8080,
                     host_port: None,
                     protocol: "HTTP".to_string(),
@@ -286,8 +296,11 @@ pub mod cloud {
             health_check: None,
         };
 
-        let result = adapter.deploy_application(&config).await?;
-        Ok(result.deployment_id)
+        let result = adapter
+            .deploy(&config)
+            .await
+            .map_err(|e| crate::error::Error::Cloud(e.to_string()))?;
+        Ok(result)
     }
 }
 
@@ -316,7 +329,7 @@ pub mod quick {
     pub async fn ai_app(
         _name: &str,
         instructions: &str,
-        _tools: Vec<String>
+        _tools: Vec<String>,
     ) -> Result<(String, Arc<dyn std::fmt::Debug>)> {
         let storage = vector::auto().await?;
         let agent = agent::with_tools("gpt-4", instructions, _tools).await?;
@@ -347,7 +360,9 @@ mod tests {
     #[tokio::test]
     async fn test_quick_chatbot() {
         // 简化测试
-        let agent = quick::chatbot("You are a helpful assistant.").await.unwrap();
+        let agent = quick::chatbot("You are a helpful assistant.")
+            .await
+            .unwrap();
         assert!(agent.contains("gpt-4"));
     }
 }

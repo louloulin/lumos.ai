@@ -1,6 +1,109 @@
-# 5. API参考
+# 5. API 参考 (历史版本)
 
-本章节详细说明Lumos-X提供的主要API接口、数据结构和使用示例，帮助开发者更好地理解和使用Lumos-X平台。
+> ⚠️ **重要提示**: 本页面为历史版本，请使用 [API 参考主入口](./api-reference/README.md) 获取最新的 API 文档。
+
+## 📚 最新文档入口
+
+- **🔧 [API 参考主页面](./api-reference/README.md)** - 最新的完整 API 文档
+- **[CONTENT_MAP.md](./CONTENT_MAP.md)** - 文档结构映射和迁移说明
+
+## 📋 本页内容（已过时）
+
+本章节详细说明LumosAI提供的主要API接口、数据结构和使用示例，帮助开发者更好地理解和使用LumosAI平台。
+
+### 🤖 核心模块
+
+| 模块 | 描述 | 文档链接 |
+|------|------|----------|
+| [Agent](./agent.md) | AI Agent 核心接口 | 创建、配置和管理 Agent |
+| [Tool](./tool.md) | 工具系统接口 | 工具定义、注册和执行 |
+| [Memory](./memory.md) | 内存系统接口 | 内存管理和检索 |
+| [Message](./message.md) | 消息处理接口 | 消息格式和处理 |
+
+### 🧠 LLM 模块
+
+| 模块 | 描述 | 文档链接 |
+|------|------|----------|
+| [LLM Provider](./llm-provider.md) | LLM 提供商接口 | 模型配置和调用 |
+| [Model Config](./model-config.md) | 模型配置接口 | 参数设置和优化 |
+| [Streaming](./streaming.md) | 流式响应接口 | 实时响应处理 |
+
+### 🔧 工具模块
+
+| 模块 | 描述 | 文档链接 |
+|------|------|----------|
+| [Tool Macro](./tool-macro.md) | 工具宏接口 | `#[tool]` 宏使用 |
+| [Function Tool](./function-tool.md) | 函数工具接口 | 函数工具定义 |
+| [Tool Execution](./tool-execution.md) | 工具执行接口 | 工具调用和结果处理 |
+
+### 💾 存储模块
+
+| 模块 | 描述 | 文档链接 |
+|------|------|----------|
+| [Vector Store](./vector-store.md) | 向量存储接口 | 向量数据库操作 |
+| [Document](./document.md) | 文档处理接口 | 文档解析和分块 |
+| [Embedding](./embedding.md) | 嵌入生成接口 | 文本向量化 |
+
+### 🔍 RAG 模块
+
+| 模块 | 描述 | 文档链接 |
+|------|------|----------|
+| [RAG System](./rag-system.md) | RAG 系统接口 | 检索增强生成 |
+| [Retriever](./retriever.md) | 检索器接口 | 文档检索策略 |
+| [Chunker](./chunker.md) | 分块器接口 | 文档分块策略 |
+
+### 🌐 网络模块
+
+| 模块 | 描述 | 文档链接 |
+|------|------|----------|
+| [Network](./network.md) | 网络通信接口 | Agent 间通信 |
+| [Router](./router.md) | 消息路由接口 | 消息路由和分发 |
+| [Discovery](./discovery.md) | 服务发现接口 | 服务注册和发现 |
+
+### 🏢 企业模块
+
+| 模块 | 描述 | 文档链接 |
+|------|------|----------|
+| [Auth](./auth.md) | 认证授权接口 | 用户认证和权限 |
+| [Monitoring](./monitoring.md) | 监控接口 | 性能监控和日志 |
+| [Billing](./billing.md) | 计费接口 | 使用量统计和计费 |
+
+### 🎨 UI 模块
+
+| 模块 | 描述 | 文档链接 |
+|------|------|----------|
+| [Web UI](./web-ui.md) | Web 界面接口 | Web 界面组件 |
+| [Components](./components.md) | UI 组件接口 | 可复用 UI 组件 |
+
+---
+
+## 📝 迁移说明
+
+为了提供更好的用户体验和文档质量，我们对 API 文档进行了重新组织和改进：
+
+### 主要变更
+
+1. **统一入口** - 所有 API 文档现在集中在 `api-reference/` 目录
+2. **基于实际代码** - API 文档基于当前代码库生成，确保准确性
+3. **简化结构** - 减少了层级，提供更直接的导航
+4. **实用示例** - 所有示例都是可运行的真实代码
+
+### 迁移路径
+
+如果您有书签或链接指向本页面的子页面，请参考以下迁移映射：
+
+| 旧位置 | 新位置 |
+|----------|----------|
+| `./agent.md` | `./api-reference/agents.md` |
+| `./tool.md` | `./api-reference/tools.md` |
+| `./memory.md` | `./api-reference/memory.md` |
+| `./rag-system.md` | `./api-reference/rag.md` |
+
+---
+
+**🔗 请使用最新的 [API 参考主页面](./api-reference/README.md) 获取完整、准确的 API 文档。**
+
+本章节详细说明LumosAI提供的主要API接口、数据结构和使用示例，帮助开发者更好地理解和使用LumosAI平台。
 
 ## 5.1 客户端API (@lomusai/client-js)
 
@@ -972,4 +1075,4 @@ async function memoryManagementExample() {
 }
 
 memoryManagementExample().catch(console.error);
-``` 
+```

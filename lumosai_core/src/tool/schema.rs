@@ -1,7 +1,7 @@
+use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use crate::error::Result;
 
 /// Schema for a tool parameter
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,19 +44,19 @@ impl Default for SchemaFormat {
 }
 
 /// Schema for a tool
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ToolSchema {
     /// Parameters for the tool
     pub parameters: Vec<ParameterSchema>,
-    
+
     /// JSON Schema representation (alternative to parameters)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub json_schema: Option<Value>,
-    
+
     /// The format of the schema
     #[serde(default)]
     pub format: SchemaFormat,
-    
+
     /// JSON Schema for the output (for validation)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_schema: Option<Value>,
@@ -72,7 +72,7 @@ impl ToolSchema {
             output_schema: None,
         }
     }
-    
+
     /// Create a new tool schema with JSON Schema
     pub fn with_json_schema(json_schema: Value) -> Self {
         Self {
@@ -82,13 +82,13 @@ impl ToolSchema {
             output_schema: None,
         }
     }
-    
+
     /// Add output schema for validation
     pub fn with_output_schema(mut self, output_schema: Value) -> Self {
         self.output_schema = Some(output_schema);
         self
     }
-    
+
     /// Validate parameters against the schema
     pub fn validate_params(&self, params: &Value) -> Result<()> {
         // If we have a JSON Schema, use it for validation
@@ -96,12 +96,12 @@ impl ToolSchema {
             validate_with_json_schema(schema, params)?;
             return Ok(());
         }
-        
+
         // Otherwise, do basic validation with our parameter schema
         validate_with_parameter_schema(&self.parameters, params)?;
         Ok(())
     }
-    
+
     /// Validate the output against the output schema
     pub fn validate_output(&self, output: &Value) -> Result<()> {
         if let Some(output_schema) = &self.output_schema {
@@ -117,11 +117,11 @@ pub struct ToolExecutionOptions {
     /// Additional context for the tool execution
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<HashMap<String, Value>>,
-    
+
     /// Whether parameter validation should be performed
     #[serde(default)]
     pub validate_params: bool,
-    
+
     /// Whether output validation should be performed
     #[serde(default)]
     pub validate_output: bool,
@@ -132,7 +132,7 @@ impl ToolExecutionOptions {
     pub fn new() -> Self {
         Default::default()
     }
-    
+
     /// Create options with validation enabled
     pub fn with_validation() -> Self {
         Self {
@@ -141,7 +141,7 @@ impl ToolExecutionOptions {
             ..Default::default()
         }
     }
-    
+
     /// Add a context value
     pub fn with_context(mut self, key: impl Into<String>, value: impl Into<Value>) -> Self {
         let context = self.context.get_or_insert_with(HashMap::new);
@@ -154,22 +154,25 @@ impl ToolExecutionOptions {
 fn validate_with_parameter_schema(parameters: &[ParameterSchema], params: &Value) -> Result<()> {
     // For now, just a simple implementation
     // Could be enhanced with more detailed validation
-    
+
     if !params.is_object() {
-        return Err(crate::error::Error::InvalidParams("Parameters must be an object".to_string()));
+        return Err(crate::error::Error::InvalidParams(
+            "Parameters must be an object".to_string(),
+        ));
     }
-    
+
     let params_obj = params.as_object().unwrap();
-    
+
     // Check required parameters
     for param in parameters {
         if param.required && !params_obj.contains_key(&param.name) {
-            return Err(crate::error::Error::InvalidParams(
-                format!("Required parameter '{}' is missing", param.name)
-            ));
+            return Err(crate::error::Error::InvalidParams(format!(
+                "Required parameter '{}' is missing",
+                param.name
+            )));
         }
     }
-    
+
     Ok(())
 }
 
@@ -184,9 +187,9 @@ fn validate_with_json_schema(schema: &Value, instance: &Value) -> Result<()> {
                     for field in required_fields {
                         if let Some(field_str) = field.as_str() {
                             if !instance_obj.contains_key(field_str) {
-                                return Err(crate::error::Error::ValidationError(
-                                    format!("Required field '{}' is missing in output", field_str)
-                                ));
+                                return Err(crate::error::Error::ValidationError(format!(
+                                    "Required field '{field_str}' is missing in output"
+                                )));
                             }
                         }
                     }
@@ -194,8 +197,8 @@ fn validate_with_json_schema(schema: &Value, instance: &Value) -> Result<()> {
             }
         }
     }
-    
+
     // For now, we just do basic required field validation
     // A complete implementation would use a full JSON Schema validator library
     Ok(())
-} 
+}

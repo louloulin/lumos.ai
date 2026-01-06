@@ -1,0 +1,34 @@
+[package]
+name = "lumosai_voice"
+version = "0.2.0"
+edition = "2021"
+authors = ["Lumosai Team <team@lumosai.dev>"]
+description = "LumosAI 语音处理模块"
+license = "MIT"
+repository = "https://github.com/louloulin/lumos.ai.git"
+homepage = "https://lumosai.dev"
+documentation = "https://docs.rs/lumosai_voice"
+keywords = ["ai", "voice", "speech", "tts", "stt"]
+categories = ["multimedia", "api-bindings"]
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+futures = { workspace = true }
+
+# 音频处理
+rodio = { version = "0.17", optional = true }
+# Base64 编码
+base64 = "0.22"
+
+[features]
+default = []
+audio = ["rodio"]
